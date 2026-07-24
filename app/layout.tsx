@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Analytics } from "@vercel/analytics/react";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -43,6 +44,7 @@ export default function RootLayout({
       <body className={`${inter.variable} antialiased selection:bg-brand-600 selection:text-white`}
             style={{ backgroundColor: "var(--body-bg)", color: "var(--body-text)" }}>
         <AppLayout>{children}</AppLayout>
+        <Analytics />
       </body>
     </html>
   );
