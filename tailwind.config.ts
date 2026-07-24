@@ -35,12 +35,13 @@ const config: Config = {
           border: "rgba(239, 68, 68, 0.3)",
           text: "#F87171",
         },
+        // Theme-aware colors — driven by CSS variables in globals.css
         dark: {
-          bg: "#080B11",
-          card: "#111726",
-          hover: "#182238",
-          border: "rgba(255, 255, 255, 0.08)",
-          subtle: "#1F293D",
+          bg: "rgb(var(--dark-bg) / <alpha-value>)",
+          card: "rgb(var(--dark-card) / <alpha-value>)",
+          hover: "rgb(var(--dark-hover) / <alpha-value>)",
+          border: "var(--dark-border)",
+          subtle: "rgb(var(--dark-subtle) / <alpha-value>)",
         },
       },
       fontFamily: {

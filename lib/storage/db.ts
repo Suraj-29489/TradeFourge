@@ -1,84 +1,137 @@
 import { get, set, del } from "idb-keyval";
 import { NormalizedTrade } from "@/lib/engine/types";
-import { JournalHistoryItem, UserSettings } from "@/types/trade";
+import { Journal } from "@/lib/engine/types";
+import { UserSettings } from "@/types/trade";
 
-const KEYS = {
-  TRADES: "trading_journal_normalized_trades_v2",
-  JOURNALS: "trading_journal_history_v2",
-  SETTINGS: "trading_journal_settings_v2",
+/* ─── Storage Keys ─────────────────────────────────────────────────────────── */
+const IDB_KEYS = {
+  JOURNALS_V3:   "tj_journals_v3",        // Journal[] with embedded trades
+  SELECTED_IDS:  "tj_selected_ids_v1",    // string[] of selected journal IDs
+  SETTINGS_V3:   "tj_settings_v3",
 };
 
-export async function saveTradesToStorage(trades: NormalizedTrade[]): Promise<void> {
+const LS_KEYS = {
+  THEME:            "tj_theme",
+  DISPLAY_CURRENCY: "trading_journal_display_currency",
+  // Legacy keys for one-time migration
+  TRADES_LEGACY:    "trading_journal_normalized_trades_v2",
+  JOURNALS_LEGACY:  "trading_journal_history_v2",
+  SETTINGS_LEGACY:  "trading_journal_settings_v2",
+};
+
+/* ─── Journals (authoritative source) ─────────────────────────────────────── */
+
+export async function saveJournals(journals: Journal[]): Promise<void> {
   try {
-    await set(KEYS.TRADES, trades);
-  } catch (err) {
-    console.warn("IndexedDB write failed, falling back to localStorage", err);
-    localStorage.setItem(KEYS.TRADES, JSON.stringify(trades));
+    await set(IDB_KEYS.JOURNALS_V3, journals);
+  } catch {
+    localStorage.setItem(IDB_KEYS.JOURNALS_V3, JSON.stringify(journals));
   }
 }
 
-export async function loadTradesFromStorage(): Promise<NormalizedTrade[]> {
+export async function loadJournals(): Promise<Journal[]> {
   try {
-    const data = await get<NormalizedTrade[]>(KEYS.TRADES);
+    const data = await get<Journal[]>(IDB_KEYS.JOURNALS_V3);
     if (data && Array.isArray(data)) return data;
-
-    const local = localStorage.getItem(KEYS.TRADES);
-    if (local) return JSON.parse(local);
-
-    return [];
-  } catch (err) {
-    console.error("Failed loading trades from storage", err);
-    return [];
-  }
-}
-
-export async function saveJournalsHistory(history: JournalHistoryItem[]): Promise<void> {
-  try {
-    await set(KEYS.JOURNALS, history);
-  } catch (err) {
-    localStorage.setItem(KEYS.JOURNALS, JSON.stringify(history));
-  }
-}
-
-export async function loadJournalsHistory(): Promise<JournalHistoryItem[]> {
-  try {
-    const data = await get<JournalHistoryItem[]>(KEYS.JOURNALS);
-    if (data) return data;
-    const local = localStorage.getItem(KEYS.JOURNALS);
+    const local = localStorage.getItem(IDB_KEYS.JOURNALS_V3);
     if (local) return JSON.parse(local);
     return [];
-  } catch (err) {
+  } catch {
     return [];
   }
 }
+
+/* ─── Selected Journal IDs ─────────────────────────────────────────────────── */
+
+export async function saveSelectedJournalIds(ids: string[]): Promise<void> {
+  try {
+    await set(IDB_KEYS.SELECTED_IDS, ids);
+  } catch {
+    localStorage.setItem(IDB_KEYS.SELECTED_IDS, JSON.stringify(ids));
+  }
+}
+
+export async function loadSelectedJournalIds(): Promise<string[]> {
+  try {
+    const data = await get<string[]>(IDB_KEYS.SELECTED_IDS);
+    if (data && Array.isArray(data)) return data;
+    const local = localStorage.getItem(IDB_KEYS.SELECTED_IDS);
+    if (local) return JSON.parse(local);
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+/* ─── Settings ─────────────────────────────────────────────────────────────── */
 
 export async function saveSettingsToStorage(settings: UserSettings): Promise<void> {
   try {
-    await set(KEYS.SETTINGS, settings);
-  } catch (err) {
-    localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
+    await set(IDB_KEYS.SETTINGS_V3, settings);
+  } catch {
+    localStorage.setItem(IDB_KEYS.SETTINGS_V3, JSON.stringify(settings));
   }
 }
 
 export async function loadSettingsFromStorage(): Promise<UserSettings | null> {
   try {
-    const data = await get<UserSettings>(KEYS.SETTINGS);
+    const data = await get<UserSettings>(IDB_KEYS.SETTINGS_V3);
     if (data) return data;
-    const local = localStorage.getItem(KEYS.SETTINGS);
+    const local = localStorage.getItem(IDB_KEYS.SETTINGS_V3);
     if (local) return JSON.parse(local);
     return null;
-  } catch (err) {
+  } catch {
     return null;
   }
 }
 
-export async function clearAllJournalStorage(): Promise<void> {
+/* ─── Theme (localStorage only — needed before hydration) ─────────────────── */
+
+export function saveTheme(theme: "dark" | "light"): void {
   try {
-    await del(KEYS.TRADES);
-    await del(KEYS.JOURNALS);
-    localStorage.removeItem(KEYS.TRADES);
-    localStorage.removeItem(KEYS.JOURNALS);
-  } catch (err) {
-    console.error("Error clearing storage", err);
+    localStorage.setItem(LS_KEYS.THEME, theme);
+  } catch { /* SSR */ }
+}
+
+export function loadTheme(): "dark" | "light" {
+  try {
+    const v = localStorage.getItem(LS_KEYS.THEME);
+    if (v === "dark" || v === "light") return v;
+  } catch { /* SSR */ }
+  return "dark";
+}
+
+/* ─── Clear All ─────────────────────────────────────────────────────────────── */
+
+export async function clearAllStorage(): Promise<void> {
+  try {
+    await del(IDB_KEYS.JOURNALS_V3);
+    await del(IDB_KEYS.SELECTED_IDS);
+    await del(IDB_KEYS.SETTINGS_V3);
+    Object.values(IDB_KEYS).forEach(k => localStorage.removeItem(k));
+  } catch {
+    console.error("Error clearing storage");
   }
+}
+
+/* ─── Legacy Shims (keep old imports compiling) ──────────────────────────── */
+/** @deprecated Use saveJournals instead */
+export async function saveTradesToStorage(trades: NormalizedTrade[]): Promise<void> {
+  // No-op shim — trades are now embedded in Journal objects
+  void trades;
+}
+
+/** @deprecated Use loadJournals instead */
+export async function loadTradesFromStorage(): Promise<NormalizedTrade[]> {
+  return [];
+}
+
+/** @deprecated */
+export async function saveJournalsHistory(history: unknown[]): Promise<void> {
+  void history;
+}
+
+/** @deprecated */
+export async function loadJournalsHistory(): Promise<unknown[]> {
+  return [];
 }

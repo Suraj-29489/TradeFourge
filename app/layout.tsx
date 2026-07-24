@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Trading Journal - Professional Terminal & Performance Analytics",
-  description: "Production-grade trading journal inspired by TradeZella, Edgewonk & TraderSync with dark Bloomberg Apple aesthetic.",
+  title: "Yamada Trading Journal — Professional Performance Analytics",
+  description: "Production-grade multi-journal trading analytics with equity curves, calendar heatmaps, and professional PDF reports.",
 };
 
 export default function RootLayout({
@@ -19,8 +19,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.variable} bg-[#080B11] text-gray-100 antialiased selection:bg-brand-600 selection:text-white`}>
+    <html lang="en" data-theme="dark">
+      {/*
+        Inline script to apply theme BEFORE React hydration (prevents flash).
+        Reads from localStorage and sets data-theme on <html> synchronously.
+      */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var t = localStorage.getItem('tj_theme');
+                  if (t === 'light' || t === 'dark') {
+                    document.documentElement.setAttribute('data-theme', t);
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className={`${inter.variable} antialiased selection:bg-brand-600 selection:text-white`}
+            style={{ backgroundColor: "var(--body-bg)", color: "var(--body-text)" }}>
         <AppLayout>{children}</AppLayout>
       </body>
     </html>

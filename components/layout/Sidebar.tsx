@@ -14,8 +14,6 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
-  Activity,
-  Zap,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
@@ -36,10 +34,10 @@ export const Sidebar: React.FC = () => {
     <motion.aside
       animate={{ width: collapsed ? 80 : 260 }}
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
-      className="relative z-30 flex flex-col h-screen bg-[#0C1019] border-r border-[#1F293D] select-none"
+      className="relative z-30 flex flex-col h-screen bg-dark-card border-r border-dark-border select-none"
     >
       {/* Brand Header */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-[#1F293D]">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-dark-border">
         <Link href="/" className="flex items-center gap-3 overflow-hidden">
           <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 shadow-glow shrink-0">
             <TrendingUp className="w-5 h-5 text-white" />
@@ -124,7 +122,7 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* Terminal Live Status Badge */}
-      <div className="p-3 border-t border-[#1F293D]">
+      <div className="p-3 border-t border-dark-border">
         <div
           className={cn(
             "flex items-center gap-3 p-2.5 rounded-xl bg-dark-card border border-dark-border",
@@ -143,7 +141,7 @@ export const Sidebar: React.FC = () => {
             )}
           </div>
           {!collapsed && (
-            <span className="text-[10px] text-gray-500 font-mono">v1.0.0</span>
+            <span className="text-[10px] text-gray-500 font-mono">v1.2.0</span>
           )}
         </div>
       </div>

@@ -1,44 +1,57 @@
 /**
  * Currency configuration — single source of truth.
- * Symbol-only switching without numeric rate conversions.
+ * Internal DB always stores USD.
+ * Display layer applies conversion via these helpers.
  */
 
 export type DisplayCurrency = "USD" | "USC" | "INR";
 
+/** 1 USD = 84.5 INR. Change only this constant to update the entire app. */
+export const INR_EXCHANGE_RATE = 84.5;
+
+/** 1 USD = 100 USC (cents). Display-only conversion. */
+export const USC_RATE = 100;
+
 /**
- * Returns raw value directly — conversion disabled per user specification.
+ * Convert an internal USD value to the selected display currency.
+ * DB is always USD; this is for presentation only.
  */
-export function convertFromUSD(value: number, _currency: DisplayCurrency): number {
-  return value;
+export function convertFromUSD(usdValue: number, currency: DisplayCurrency): number {
+  if (currency === "USC") return usdValue * USC_RATE;
+  if (currency === "INR") return usdValue * INR_EXCHANGE_RATE;
+  return usdValue;
 }
 
 /**
- * Format a value for display in the selected currency symbol.
- * Does NOT alter or convert the numeric value.
+ * Format an internal USD value for display in the selected currency.
  */
-export function formatCurrency(value: number, currency: DisplayCurrency): string {
-  const formattedNum = Math.abs(value).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-
-  const sign = value < 0 ? "-" : "";
+export function formatCurrency(usdValue: number, currency: DisplayCurrency): string {
+  const converted = convertFromUSD(usdValue, currency);
+  const absConverted = Math.abs(converted);
+  const sign = usdValue < 0 ? "-" : "";
 
   if (currency === "USD") {
-    return `${sign}$${formattedNum}`;
+    return `${sign}$${absConverted.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   }
   if (currency === "USC") {
-    return `${sign}¢${formattedNum}`;
+    return `${sign}¢${absConverted.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   }
   if (currency === "INR") {
-    return `${sign}₹${formattedNum}`;
+    return `${sign}₹${absConverted.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   }
-  return `${sign}$${formattedNum}`;
+  return `${sign}$${absConverted.toFixed(2)}`;
 }
 
-/**
- * Returns just the currency symbol for the selected currency.
- */
+/** Returns just the currency symbol. */
 export function getCurrencySymbol(currency: DisplayCurrency): string {
   if (currency === "USD") return "$";
   if (currency === "USC") return "¢";
@@ -46,7 +59,7 @@ export function getCurrencySymbol(currency: DisplayCurrency): string {
   return "$";
 }
 
-/** Currency label shown in the UI */
+/** Currency label shown in the settings UI. */
 export const CURRENCY_LABELS: Record<DisplayCurrency, string> = {
   USD: "USD ($)",
   USC: "USC (¢)",
@@ -55,7 +68,6 @@ export const CURRENCY_LABELS: Record<DisplayCurrency, string> = {
 
 export const SUPPORTED_CURRENCIES: DisplayCurrency[] = ["USD", "USC", "INR"];
 
-/** localStorage key for persisting currency selection */
 export const CURRENCY_STORAGE_KEY = "trading_journal_display_currency";
 
 export function saveCurrencyToStorage(currency: DisplayCurrency): void {

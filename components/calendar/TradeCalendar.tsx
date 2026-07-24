@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useJournalMetrics } from "@/hooks/useJournalMetrics";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { NormalizedTrade } from "@/lib/engine/types";
@@ -19,12 +20,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TradeDetailDrawer } from "../trades/TradeDetailDrawer";
 
 export const TradeCalendar: React.FC = () => {
+  const theme = useJournalStore(s => s.theme);
   const { filteredTrades } = useJournalMetrics();
   const { format: formatCurrency } = useCurrencyFormatter();
 
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [selectedDayTrades, setSelectedDayTrades] = useState<{ date: Date; trades: NormalizedTrade[] } | null>(null);
   const [activeDrawerTrade, setActiveDrawerTrade] = useState<NormalizedTrade | null>(null);
+
+  const isLight = theme === "light";
 
   React.useEffect(() => {
     if (filteredTrades.length > 0) {
@@ -38,12 +42,10 @@ export const TradeCalendar: React.FC = () => {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
   const startDayOfWeek = getDay(monthStart);
 
   const tradesByDay = React.useMemo(() => {
     const map = new Map<string, { trades: NormalizedTrade[]; pnl: number }>();
-
     filteredTrades.forEach((t) => {
       const dateKey = format(parseISO(t.closeTime), "yyyy-MM-dd");
       const existing = map.get(dateKey) || { trades: [], pnl: 0 };
@@ -51,7 +53,6 @@ export const TradeCalendar: React.FC = () => {
       existing.pnl += t.profit;
       map.set(dateKey, existing);
     });
-
     return map;
   }, [filteredTrades]);
 
@@ -84,8 +85,8 @@ export const TradeCalendar: React.FC = () => {
           <div>
             <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
               {format(currentMonth, "MMMM yyyy")}
-              <span className="text-xs font-mono font-normal px-2 py-0.5 rounded bg-dark-bg text-gray-400 border border-dark-border">
-                HEATMAP (USD)
+              <span className="text-xs font-mono font-normal px-2 py-0.5 rounded bg-dark-card text-gray-400 border border-dark-border">
+                HEATMAP
               </span>
             </h2>
             <p className="text-xs text-gray-400 font-mono">Monthly closed PnL calendar & position totals</p>
@@ -99,7 +100,7 @@ export const TradeCalendar: React.FC = () => {
               <span className="text-gray-400 block text-[10px]">MONTHLY P&L</span>
               <span
                 className={`font-bold text-sm ${
-                  monthStats.monthlyPnL >= 0 ? "text-emerald-400" : "text-rose-400"
+                  monthStats.monthlyPnL >= 0 ? "text-emerald-500" : "text-rose-500"
                 }`}
               >
                 {monthStats.monthlyPnL >= 0 ? "+" : ""}
@@ -109,8 +110,8 @@ export const TradeCalendar: React.FC = () => {
             <div className="text-right border-l border-dark-border pl-4">
               <span className="text-gray-400 block text-[10px]">WIN/LOSS DAYS</span>
               <span className="text-white font-bold">
-                <span className="text-emerald-400">{monthStats.greenDays}W</span> /{" "}
-                <span className="text-rose-400">{monthStats.redDays}L</span>
+                <span className="text-emerald-500">{monthStats.greenDays}W</span> /{" "}
+                <span className="text-rose-500">{monthStats.redDays}L</span>
               </span>
             </div>
           </div>
@@ -150,7 +151,7 @@ export const TradeCalendar: React.FC = () => {
 
         <div className="grid grid-cols-7 gap-2">
           {Array.from({ length: startDayOfWeek }).map((_, idx) => (
-            <div key={`empty-${idx}`} className="h-24 md:h-28 rounded-xl bg-dark-bg/30 border border-transparent" />
+            <div key={`empty-${idx}`} className="h-24 md:h-28 rounded-xl bg-dark-subtle/30 border border-transparent" />
           ))}
 
           {daysInMonth.map((day) => {
@@ -161,6 +162,26 @@ export const TradeCalendar: React.FC = () => {
             const isProfit = pnl > 0;
             const isLoss = pnl < 0;
 
+            // Clean styling for Light Theme
+            let cellStyle = "bg-dark-card border-dark-border text-gray-500 hover:border-gray-300";
+            if (hasTrades) {
+              if (isProfit) {
+                cellStyle = isLight
+                  ? "bg-[#F0FDF4] border-[#BBF7D0] hover:bg-[#DCFCE7] shadow-sm"
+                  : "bg-emerald-500/10 border-emerald-500/40 hover:bg-emerald-500/20 shadow-profit-glow";
+              } else if (isLoss) {
+                cellStyle = isLight
+                  ? "bg-[#FEF2F2] border-[#FECACA] hover:bg-[#FEE2E2] shadow-sm"
+                  : "bg-rose-500/10 border-rose-500/40 hover:bg-rose-500/20 shadow-loss-glow";
+              } else {
+                cellStyle = isLight
+                  ? "bg-[#F9FAFC] border-[#E5E7EB] hover:bg-[#F3F4F6]"
+                  : "bg-gray-800/40 border-gray-700 hover:bg-gray-800/70";
+              }
+            } else if (isLight) {
+              cellStyle = "bg-[#FFFFFF] border-[#E5E7EB] text-gray-400 hover:border-gray-300";
+            }
+
             return (
               <motion.div
                 key={dateKey}
@@ -170,22 +191,14 @@ export const TradeCalendar: React.FC = () => {
                     setSelectedDayTrades({ date: day, trades: dayData.trades });
                   }
                 }}
-                className={`h-24 md:h-28 rounded-xl p-2 md:p-3 flex flex-col justify-between transition-all duration-200 border cursor-pointer relative overflow-hidden group ${
-                  hasTrades
-                    ? isProfit
-                      ? "bg-emerald-500/10 border-emerald-500/40 hover:bg-emerald-500/20 shadow-profit-glow"
-                      : isLoss
-                      ? "bg-rose-500/10 border-rose-500/40 hover:bg-rose-500/20 shadow-loss-glow"
-                      : "bg-gray-800/40 border-gray-700 hover:bg-gray-800/70"
-                    : "bg-dark-card/40 border-dark-border/60 text-gray-500 hover:border-gray-700"
-                }`}
+                className={`h-24 md:h-28 rounded-xl p-2 md:p-3 flex flex-col justify-between transition-all duration-200 border cursor-pointer relative overflow-hidden group ${cellStyle}`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`text-xs font-mono font-bold ${hasTrades ? "text-white" : "text-gray-500"}`}>
+                  <span className={`text-xs font-mono font-bold ${hasTrades ? "text-white" : "text-gray-400"}`}>
                     {format(day, "d")}
                   </span>
                   {hasTrades && (
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-gray-300">
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${isLight ? "bg-gray-100 text-gray-700 border border-gray-200" : "bg-black/40 text-gray-300"}`}>
                       {dayData.trades.length} {dayData.trades.length === 1 ? "trade" : "trades"}
                     </span>
                   )}
@@ -195,7 +208,9 @@ export const TradeCalendar: React.FC = () => {
                   <div className="mt-auto">
                     <span
                       className={`text-xs md:text-sm font-bold font-mono tracking-tight block ${
-                        isProfit ? "text-emerald-400" : isLoss ? "text-rose-400" : "text-gray-300"
+                        isProfit ? (isLight ? "text-[#16A34A]" : "text-emerald-400")
+                        : isLoss ? (isLight ? "text-[#DC2626]" : "text-rose-400")
+                        : "text-gray-400"
                       }`}
                     >
                       {pnl >= 0 ? "+" : ""}
@@ -203,7 +218,7 @@ export const TradeCalendar: React.FC = () => {
                     </span>
                   </div>
                 ) : (
-                  <span className="text-[10px] font-mono text-gray-600 mt-auto">No Trades</span>
+                  <span className="text-[10px] font-mono text-gray-400 mt-auto">No Trades</span>
                 )}
               </motion.div>
             );
@@ -220,14 +235,14 @@ export const TradeCalendar: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedDayTrades(null)}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             />
 
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative z-10 w-full max-w-2xl bg-[#0F1420] border border-[#1F293D] rounded-2xl p-6 shadow-2xl max-h-[85vh] flex flex-col"
+              className="relative z-10 w-full max-w-2xl bg-dark-card border border-dark-border rounded-2xl p-6 shadow-2xl max-h-[85vh] flex flex-col"
             >
               <div className="flex items-center justify-between border-b border-dark-border pb-4 mb-4">
                 <div>
@@ -261,8 +276,8 @@ export const TradeCalendar: React.FC = () => {
                         <div
                           className={`p-2 rounded-lg border ${
                             t.direction === "LONG"
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                              : "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                              ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                              : "bg-rose-500/10 text-rose-500 border-rose-500/30"
                           }`}
                         >
                           {t.direction === "LONG" ? (
@@ -274,7 +289,7 @@ export const TradeCalendar: React.FC = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-white font-mono">{t.symbol}</span>
-                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-dark-bg border border-dark-border text-gray-300">
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-dark-subtle border border-dark-border text-gray-300">
                               {t.volume} Lot
                             </span>
                           </div>
@@ -287,13 +302,13 @@ export const TradeCalendar: React.FC = () => {
                       <div className="text-right">
                         <span
                           className={`text-sm font-bold font-mono block ${
-                            isWin ? "text-emerald-400" : isLoss ? "text-rose-400" : "text-gray-300"
+                            isWin ? "text-emerald-500" : isLoss ? "text-rose-500" : "text-gray-400"
                           }`}
                         >
                           {t.profit >= 0 ? "+" : ""}
                           {formatCurrency(t.profit)}
                         </span>
-                        <span className="text-[10px] font-mono text-brand-300">
+                        <span className="text-[10px] font-mono text-brand-400">
                           {t.rr !== null ? `${t.rr} R` : "R:R N/A"}
                         </span>
                       </div>

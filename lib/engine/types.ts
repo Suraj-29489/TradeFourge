@@ -6,17 +6,17 @@ export type AccountType = "Standard" | "Standard Cent" | "Raw" | "Pro" | "Demo";
 export type BrokerType = "Exness" | "MetaTrader 5" | "TradeLocker" | "TradeZella" | "Generic Broker";
 
 export interface NormalizedTrade {
-  ticket: string; // Unique position ticket / ID
-  openTime: string | null; // ISO string
-  closeTime: string; // ISO string
+  ticket: string;
+  openTime: string | null;
+  closeTime: string;
   symbol: string;
   direction: Direction;
   volume: number;
   openPrice: number | null;
   closePrice: number;
-  commission: number;
-  swap: number;
-  profit: number; // Realized Net PnL in USD
+  commission: number;     // Always stored in USD
+  swap: number;           // Always stored in USD
+  profit: number;         // Always stored in USD (USC ÷ 100 on import)
   currency: "USD";
   accountType: AccountType;
   accountName: string;
@@ -25,18 +25,48 @@ export interface NormalizedTrade {
   magic?: string;
   stopLoss?: number | null;
   takeProfit?: number | null;
-  rr: number | null; // Strictly null if SL/TP unavailable (renders N/A)
+  rr: number | null;
   status: TradeStatus;
-  holdDurationMs: number | null; // Strictly null if openTime unavailable (renders N/A)
-  balanceAfterTrade?: number | null;
+  holdDurationMs: number | null;
+  balanceAfterTrade?: number | null; // Running balance in USD
   closeReason?: string;
+  journalId?: string;    // Parent journal reference
 }
+
+/**
+ * A fully self-contained imported journal.
+ * ALL monetary values (profit, commission, swap, balanceAfterTrade, lastKnownBalance)
+ * are stored internally in USD. USC (cent) accounts are normalized on import (÷100).
+ */
+export interface Journal {
+  id: string;
+  filename: string;
+  displayName: string;   // User-editable label (defaults to filename)
+  uploadDate: string;
+  accountName: string;
+  trades: NormalizedTrade[];
+  tradeCount: number;
+  broker: BrokerType;
+  accountType: AccountType;
+  isCentAccount: boolean;         // true = USC account, already normalized to USD
+  lastKnownBalance: number | null; // Last equity value in USD
+  dateFrom: string | null;         // ISO closeTime of earliest trade
+  dateTo: string | null;           // ISO closeTime of latest trade
+}
+
+/* ─── Chart Point Types ──────────────────────────────────────────────────── */
 
 export interface EquityPoint {
   date: string;
   pnl: number;
   equity: number;
   tradeCount: number;
+  isReconstructed?: boolean;
+}
+
+export interface EquityCurveResult {
+  points: EquityPoint[];
+  isReconstructed: boolean; // true = no real balance, reconstructed from cumulative PnL
 }
 
 export interface DailyPnLPoint {
@@ -44,6 +74,12 @@ export interface DailyPnLPoint {
   pnl: number;
   trades: number;
   winRate: number;
+}
+
+export interface WeeklyPnLPoint {
+  week: string;
+  pnl: number;
+  trades: number;
 }
 
 export interface MonthlyPnLPoint {
@@ -63,13 +99,29 @@ export interface ProfitDistributionPoint {
   count: number;
 }
 
+export interface HourlyPerformancePoint {
+  hour: string;
+  pnl: number;
+  trades: number;
+  winRate: number;
+}
+
+export interface WeekdayPerformancePoint {
+  day: string;
+  pnl: number;
+  trades: number;
+  winRate: number;
+}
+
+/* ─── Aggregate Statistics ───────────────────────────────────────────────── */
+
 export interface EngineStats {
   netProfit: number;
   grossProfit: number;
   grossLoss: number;
   balance: number;
-  winRate: number; // percentage 0-100
-  lossRate: number; // percentage 0-100
+  winRate: number;
+  lossRate: number;
   breakevenCount: number;
   totalTrades: number;
   winningTrades: number;
@@ -80,8 +132,8 @@ export interface EngineStats {
   averageLoss: number;
   largestWin: number;
   largestLoss: number;
-  averageRR: number | null; // null if no valid RRs
-  averageHoldTime: string; // "N/A" or formatted time
+  averageRR: number | null;
+  averageHoldTime: string;
   currentStreak: { type: "WIN" | "LOSS" | "NONE"; count: number };
   bestStreak: number;
   worstStreak: number;
@@ -92,17 +144,20 @@ export interface EngineStats {
   monthlyPnL: number;
 }
 
+/* ─── Parser Result ──────────────────────────────────────────────────────── */
+
 export interface ParseValidationResult {
   success: boolean;
   trades: NormalizedTrade[];
   broker: BrokerType;
   currency: "USD";
   accountType: AccountType;
-  csvTotalProfit: number;
-  normalizedTotalProfit: number;
+  isCentAccount: boolean;
+  csvTotalProfit: number;         // Raw sum from CSV (pre-normalization)
+  normalizedTotalProfit: number;  // Sum after normalization
   isMatch: boolean;
   delta: number;
   warningMessage: string | null;
   errors: string[];
-  lastKnownBalance: number | null; // Last equity value from the CSV
+  lastKnownBalance: number | null; // Last equity in USD (already normalized)
 }

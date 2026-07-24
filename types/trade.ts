@@ -100,10 +100,10 @@ export interface UserSettings {
   currency: AccountCurrency;
   timezone: string;
   dateFormat: "YYYY-MM-DD" | "DD/MM/YYYY" | "MM/DD/YYYY";
-  theme: "dark";
+  theme: "dark" | "light";
   initialBalance: number;
   sidebarCollapsed: boolean;
-  accountBalance: number | null; // Last known balance from CSV equity column
+  accountBalance: number | null;
 }
 
 export interface JournalHistoryItem {
@@ -119,6 +119,8 @@ export interface JournalHistoryItem {
 
 export interface ColumnVisibility {
   date: boolean;
+  time: boolean;
+  ticket: boolean;
   symbol: boolean;
   direction: boolean;
   lot: boolean;

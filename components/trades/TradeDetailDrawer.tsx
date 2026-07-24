@@ -8,11 +8,6 @@ import {
   X,
   TrendingUp,
   TrendingDown,
-  Clock,
-  DollarSign,
-  Layers,
-  Award,
-  Calendar,
   FileText,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,7 +34,7 @@ export const TradeDetailDrawer: React.FC<TradeDetailDrawerProps> = ({ trade, onC
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         />
 
         {/* Drawer Slide */}
@@ -48,7 +43,7 @@ export const TradeDetailDrawer: React.FC<TradeDetailDrawerProps> = ({ trade, onC
           animate={{ x: 0 }}
           exit={{ x: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="relative z-10 w-full max-w-lg bg-[#0F1420] border-l border-dark-border h-full overflow-y-auto p-6 space-y-6 flex flex-col justify-between"
+          className="relative z-10 w-full max-w-lg bg-dark-card border-l border-dark-border h-full overflow-y-auto p-6 space-y-6 flex flex-col justify-between shadow-2xl"
         >
           <div className="space-y-6">
             {/* Header */}
@@ -57,8 +52,8 @@ export const TradeDetailDrawer: React.FC<TradeDetailDrawerProps> = ({ trade, onC
                 <div
                   className={`p-2.5 rounded-xl border ${
                     trade.direction === "LONG"
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                      : "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                      : "bg-rose-500/10 text-rose-500 border-rose-500/30"
                   }`}
                 >
                   {trade.direction === "LONG" ? (
@@ -81,7 +76,7 @@ export const TradeDetailDrawer: React.FC<TradeDetailDrawerProps> = ({ trade, onC
 
               <button
                 onClick={onClose}
-                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-dark-card transition-colors"
+                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-dark-hover transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -91,10 +86,10 @@ export const TradeDetailDrawer: React.FC<TradeDetailDrawerProps> = ({ trade, onC
             <div
               className={`p-5 rounded-2xl border ${
                 isWin
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
                   : isLoss
-                  ? "bg-rose-500/10 border-rose-500/30 text-rose-400"
-                  : "bg-gray-800/40 border-gray-700 text-gray-300"
+                  ? "bg-rose-500/10 border-rose-500/30 text-rose-500"
+                  : "bg-gray-500/10 border-gray-400 text-gray-400"
               }`}
             >
               <span className="text-xs font-mono uppercase tracking-wider text-gray-400 block mb-1">
@@ -105,7 +100,7 @@ export const TradeDetailDrawer: React.FC<TradeDetailDrawerProps> = ({ trade, onC
                   {trade.profit >= 0 ? "+" : ""}
                   {formatCurrency(trade.profit)}
                 </span>
-                <span className="text-sm font-semibold text-brand-300">
+                <span className="text-sm font-semibold text-brand-400">
                   {trade.rr !== null ? `(${trade.rr} R)` : "(R:R N/A)"}
                 </span>
               </div>
@@ -125,7 +120,7 @@ export const TradeDetailDrawer: React.FC<TradeDetailDrawerProps> = ({ trade, onC
 
                 <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
                   <span className="text-gray-400 block text-[10px]">RISK : REWARD</span>
-                  <span className="text-brand-300 font-bold text-sm">
+                  <span className="text-brand-400 font-bold text-sm">
                     {trade.rr !== null ? `${trade.rr} R` : "N/A"}
                   </span>
                 </div>
@@ -144,14 +139,14 @@ export const TradeDetailDrawer: React.FC<TradeDetailDrawerProps> = ({ trade, onC
 
                 <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
                   <span className="text-gray-400 block text-[10px]">STOP LOSS</span>
-                  <span className="text-rose-400 font-bold text-sm">
+                  <span className="text-rose-500 font-bold text-sm">
                     {trade.stopLoss ? trade.stopLoss : "N/A"}
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
                   <span className="text-gray-400 block text-[10px]">TAKE PROFIT</span>
-                  <span className="text-emerald-400 font-bold text-sm">
+                  <span className="text-emerald-500 font-bold text-sm">
                     {trade.takeProfit ? trade.takeProfit : "N/A"}
                   </span>
                 </div>
@@ -176,13 +171,13 @@ export const TradeDetailDrawer: React.FC<TradeDetailDrawerProps> = ({ trade, onC
             <div className="p-4 rounded-xl bg-dark-card border border-dark-border space-y-2 text-xs font-mono">
               <div className="flex justify-between text-gray-400">
                 <span>Opened:</span>
-                <span className="text-white">
+                <span className="text-white font-bold">
                   {trade.openTime ? format(parseISO(trade.openTime), "yyyy-MM-dd HH:mm:ss") : "N/A"}
                 </span>
               </div>
               <div className="flex justify-between text-gray-400">
                 <span>Closed:</span>
-                <span className="text-white">
+                <span className="text-white font-bold">
                   {trade.closeTime ? format(parseISO(trade.closeTime), "yyyy-MM-dd HH:mm:ss") : "N/A"}
                 </span>
               </div>
@@ -199,7 +194,7 @@ export const TradeDetailDrawer: React.FC<TradeDetailDrawerProps> = ({ trade, onC
             )}
           </div>
 
-          <div className="pt-4 border-t border-dark-border text-center text-xs font-mono text-gray-500">
+          <div className="pt-4 border-t border-dark-border text-center text-xs font-mono text-gray-400">
             Broker: {trade.broker} • Currency: {trade.currency} • Account: {trade.accountType}
           </div>
         </motion.div>

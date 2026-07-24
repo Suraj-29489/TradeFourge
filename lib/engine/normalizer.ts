@@ -2,9 +2,9 @@ import Papa from "papaparse";
 import { NormalizedTrade, Direction, TradeStatus, AccountType } from "./types";
 
 /**
- * Parse an ISO-8601-like timestamp from Exness CSV.
- * Format observed: "2026-07-23T11:36:20"
- * Returns a Date object or null — NEVER falls back to today's date.
+ * Parse an ISO-like timestamp from Exness CSV.
+ * Format: "2026-07-23T11:36:20"
+ * Returns null if invalid — never falls back to today.
  */
 function parseExnessTimestamp(raw: string): Date | null {
   if (!raw || raw.trim() === "") return null;
@@ -13,13 +13,19 @@ function parseExnessTimestamp(raw: string): Date | null {
   return null;
 }
 
-/** Parse a float, returning null if the raw string is empty or unparseable. */
 function parseFloatOrNull(raw: string): number | null {
   if (!raw || raw.trim() === "") return null;
   const v = parseFloat(raw.trim());
   return isNaN(v) ? null : v;
 }
 
+/**
+ * Normalize Exness CSV export.
+ *
+ * USC (cent account) normalization:
+ *   If isCentAccount is detected, ALL monetary values (profit, commission, swap,
+ *   equity/balanceAfterTrade) are divided by 100 so the DB always stores USD.
+ */
 export function normalizeCsvData(
   csvText: string,
   accountName = "Primary Account"
@@ -27,19 +33,21 @@ export function normalizeCsvData(
   trades: NormalizedTrade[];
   detectedCurrency: "USD";
   detectedAccountType: AccountType;
+  isCentAccount: boolean;
   rawProfitSum: number;
+  normalizedProfitSum: number;
   lastKnownBalance: number | null;
   errors: string[];
 } {
   const errors: string[] = [];
   const trades: NormalizedTrade[] = [];
   let rawProfitSum = 0;
+  let normalizedProfitSum = 0;
   let lastKnownBalance: number | null = null;
 
   const parsed = Papa.parse<Record<string, string>>(csvText, {
     header: true,
     skipEmptyLines: true,
-    // Keep headers exactly as-is (Exness CSV already uses lowercase)
     transformHeader: (h) => h.trim(),
   });
 
@@ -48,71 +56,77 @@ export function normalizeCsvData(
       trades: [],
       detectedCurrency: "USD",
       detectedAccountType: "Standard",
+      isCentAccount: false,
       rawProfitSum: 0,
+      normalizedProfitSum: 0,
       lastKnownBalance: null,
       errors: ["CSV file is empty or could not be parsed."],
     };
   }
 
-  // Detect account type from CSV text
+  // ── Detect account type ────────────────────────────────────────────────────
   let detectedAccountType: AccountType = "Pro";
   const textUpper = csvText.toUpperCase();
-  if (textUpper.includes("CENT")) detectedAccountType = "Standard Cent";
-  else if (textUpper.includes("STANDARD")) detectedAccountType = "Standard";
-  else if (textUpper.includes("RAW") || textUpper.includes("ZERO")) detectedAccountType = "Raw";
-  else if (textUpper.includes("DEMO")) detectedAccountType = "Demo";
+  if (textUpper.includes("CENT") || textUpper.includes("STANDARD CENT")) {
+    detectedAccountType = "Standard Cent";
+  } else if (textUpper.includes("STANDARD")) {
+    detectedAccountType = "Standard";
+  } else if (textUpper.includes("RAW") || textUpper.includes("ZERO")) {
+    detectedAccountType = "Raw";
+  } else if (textUpper.includes("DEMO")) {
+    detectedAccountType = "Demo";
+  }
+
+  // ── USC / Cent account detection ───────────────────────────────────────────
+  // Cent accounts store values in USC (cents). 100 USC = 1 USD.
+  // We divide all monetary values by 100 to store USD internally.
+  const isCentAccount =
+    detectedAccountType === "Standard Cent" ||
+    textUpper.includes("CENT");
+
+  const normFactor = isCentAccount ? 100 : 1;
 
   const seenTickets = new Set<string>();
 
   parsed.data.forEach((row, index) => {
-    // ── EXACT column mapping — confirmed from user's Exness CSV ──────────────
-    // Headers: ticket, opening_time_utc, closing_time_utc, type, lots,
-    //   original_position_size, symbol, opening_price, closing_price,
-    //   stop_loss, take_profit, commission, swap, profit, equity,
-    //   margin_level, close_reason
+    // ── Column mapping (confirmed Exness CSV headers) ──────────────────────
+    const ticketRaw      = (row["ticket"]              ?? "").trim();
+    const openTimeRaw    = (row["opening_time_utc"]    ?? "").trim();
+    const closeTimeRaw   = (row["closing_time_utc"]    ?? "").trim();
+    const typeRaw        = (row["type"]                ?? "").trim().toLowerCase();
+    const lotsRaw        = (row["lots"]                ?? "").trim();
+    const symbolRaw      = (row["symbol"]              ?? "").trim().toUpperCase();
+    const openPriceRaw   = (row["opening_price"]       ?? "").trim();
+    const closePriceRaw  = (row["closing_price"]       ?? "").trim();
+    const stopLossRaw    = (row["stop_loss"]           ?? "").trim();
+    const takeProfitRaw  = (row["take_profit"]         ?? "").trim();
+    const commissionRaw  = (row["commission"]          ?? "").trim();
+    const swapRaw        = (row["swap"]                ?? "").trim();
+    const profitRaw      = (row["profit"]              ?? "").trim();
+    const equityRaw      = (row["equity"]              ?? "").trim();
+    const closeReasonRaw = (row["close_reason"]        ?? "").trim();
 
-    const ticketRaw = (row["ticket"] ?? "").trim();
-    const openTimeRaw = (row["opening_time_utc"] ?? "").trim();
-    const closeTimeRaw = (row["closing_time_utc"] ?? "").trim();
-    const typeRaw = (row["type"] ?? "").trim().toLowerCase();
-    const lotsRaw = (row["lots"] ?? "").trim();
-    const symbolRaw = (row["symbol"] ?? "").trim().toUpperCase();
-    const openPriceRaw = (row["opening_price"] ?? "").trim();
-    const closePriceRaw = (row["closing_price"] ?? "").trim();
-    const stopLossRaw = (row["stop_loss"] ?? "").trim();
-    const takeProfitRaw = (row["take_profit"] ?? "").trim();
-    const commissionRaw = (row["commission"] ?? "").trim();
-    const swapRaw = (row["swap"] ?? "").trim();
-    const profitRaw = (row["profit"] ?? "").trim();
-    const equityRaw = (row["equity"] ?? "").trim();
-    const closeReasonRaw = (row["close_reason"] ?? "").trim();
-    // margin_level is intentionally ignored
-
-    // ── Track last non-empty equity value ────────────────────────────────────
+    // ── Track last known equity (normalize to USD) ────────────────────────
     const equityVal = parseFloatOrNull(equityRaw);
     if (equityVal !== null) {
-      lastKnownBalance = equityVal;
+      lastKnownBalance = equityVal / normFactor;
     }
 
-    // ── Unique ticket ─────────────────────────────────────────────────────────
+    // ── Unique ticket ────────────────────────────────────────────────────
     let ticket = ticketRaw !== "" ? ticketRaw : `POS-${index + 1}`;
-    if (seenTickets.has(ticket)) {
-      ticket = `${ticket}_${index + 1}`;
-    }
+    if (seenTickets.has(ticket)) ticket = `${ticket}_dup${index + 1}`;
     seenTickets.add(ticket);
 
-    // ── Timestamps ────────────────────────────────────────────────────────────
-    const parsedOpenDate = parseExnessTimestamp(openTimeRaw);
+    // ── Timestamps ────────────────────────────────────────────────────────
+    const parsedOpenDate  = parseExnessTimestamp(openTimeRaw);
     const parsedCloseDate = parseExnessTimestamp(closeTimeRaw);
 
     if (!parsedCloseDate) {
-      errors.push(
-        `Row ${index + 1} (Ticket: ${ticket}): Missing or invalid closing_time_utc: "${closeTimeRaw}". Row skipped.`
-      );
+      errors.push(`Row ${index + 1} (Ticket: ${ticket}): Invalid closing_time_utc "${closeTimeRaw}" — skipped.`);
       return;
     }
 
-    const openTime = parsedOpenDate ? parsedOpenDate.toISOString() : null;
+    const openTime  = parsedOpenDate ? parsedOpenDate.toISOString()  : null;
     const closeTime = parsedCloseDate.toISOString();
 
     let holdDurationMs: number | null = null;
@@ -121,28 +135,33 @@ export function normalizeCsvData(
       if (diff >= 0) holdDurationMs = diff;
     }
 
-    // ── Numeric fields ────────────────────────────────────────────────────────
-    const volume = parseFloat(lotsRaw) || 0.01;
-    const openPrice = parseFloatOrNull(openPriceRaw);
+    // ── Numeric fields ─────────────────────────────────────────────────────
+    const volume     = parseFloat(lotsRaw) || 0.01;
+    const openPrice  = parseFloatOrNull(openPriceRaw);
     const closePrice = parseFloatOrNull(closePriceRaw) ?? openPrice ?? 0;
-    const stopLoss = parseFloatOrNull(stopLossRaw);
+    const stopLoss   = parseFloatOrNull(stopLossRaw);
     const takeProfit = parseFloatOrNull(takeProfitRaw);
-    const commission = parseFloatOrNull(commissionRaw) ?? 0;
-    const swap = parseFloatOrNull(swapRaw) ?? 0;
-    const profit = parseFloatOrNull(profitRaw) ?? 0;
-    const balanceAfterTrade = parseFloatOrNull(equityRaw);
 
-    rawProfitSum += profit;
+    // Raw profit sum (pre-normalization, for validation)
+    const profitRaw_ = parseFloatOrNull(profitRaw) ?? 0;
+    rawProfitSum += profitRaw_;
 
-    // ── Direction & Status ────────────────────────────────────────────────────
-    const direction: Direction =
-      typeRaw === "buy" || typeRaw === "long" ? "LONG" : "SHORT";
+    // Normalize monetary values to USD
+    const commission       = Math.abs(parseFloatOrNull(commissionRaw) ?? 0) / normFactor;
+    const swap             = (parseFloatOrNull(swapRaw) ?? 0) / normFactor;
+    const profit           = profitRaw_ / normFactor;
+    const balanceAfterTrade = equityVal !== null ? equityVal / normFactor : null;
+
+    normalizedProfitSum += profit;
+
+    // ── Direction & Status ────────────────────────────────────────────────
+    const direction: Direction = typeRaw === "buy" || typeRaw === "long" ? "LONG" : "SHORT";
 
     let status: TradeStatus = "BREAKEVEN";
-    if (profit > 0.01) status = "WIN";
-    else if (profit < -0.01) status = "LOSS";
+    if (profit > 0.001) status = "WIN";
+    else if (profit < -0.001) status = "LOSS";
 
-    // ── Risk:Reward (only when SL is present and valid) ───────────────────────
+    // ── Risk:Reward (only when SL present) ───────────────────────────────
     let rr: number | null = null;
     if (openPrice !== null && stopLoss !== null) {
       const riskDist = Math.abs(openPrice - stopLoss);
@@ -161,13 +180,13 @@ export function normalizeCsvData(
       volume,
       openPrice,
       closePrice,
-      commission: parseFloat(Math.abs(commission).toFixed(2)),
-      swap: parseFloat(swap.toFixed(2)),
-      profit: parseFloat(profit.toFixed(2)),
-      currency: "USD",
-      accountType: detectedAccountType,
+      commission:       parseFloat(commission.toFixed(2)),
+      swap:             parseFloat(swap.toFixed(2)),
+      profit:           parseFloat(profit.toFixed(2)),
+      currency:         "USD",
+      accountType:      detectedAccountType,
       accountName,
-      broker: "Exness",
+      broker:           "Exness",
       stopLoss,
       takeProfit,
       rr,
@@ -180,10 +199,27 @@ export function normalizeCsvData(
 
   return {
     trades,
-    detectedCurrency: "USD",
+    detectedCurrency:   "USD",
     detectedAccountType,
-    rawProfitSum: parseFloat(rawProfitSum.toFixed(2)),
+    isCentAccount,
+    rawProfitSum:        parseFloat(rawProfitSum.toFixed(2)),
+    normalizedProfitSum: parseFloat(normalizedProfitSum.toFixed(2)),
     lastKnownBalance,
     errors,
   };
+}
+
+/**
+ * Generate a fingerprint for duplicate detection.
+ * Uses: ticket + openTime + closeTime + symbol + lots + profit (raw string values).
+ */
+export function tradeFingerprint(row: {
+  ticket: string;
+  openTime: string | null;
+  closeTime: string;
+  symbol: string;
+  volume: number;
+  profit: number;
+}): string {
+  return [row.ticket, row.openTime ?? "", row.closeTime, row.symbol, row.volume, row.profit].join("|");
 }

@@ -38,6 +38,8 @@ export default function DashboardPage() {
   const loadDemoJournal = useJournalStore((state) => state.loadDemoJournal);
   const accountType = useJournalStore((state) => state.accountType);
   const accountBalance = useJournalStore((state) => state.accountBalance);
+  const journals = useJournalStore((state) => state.journals);
+  const selectedJournalIds = useJournalStore((state) => state.selectedJournalIds);
 
   const { trades, stats } = useJournalMetrics();
   const { format, formatSigned, currency } = useCurrencyFormatter();
@@ -53,7 +55,7 @@ export default function DashboardPage() {
 
   const balanceIsKnown = accountBalance !== null;
 
-  if (trades.length === 0) {
+  if (journals.length === 0 || selectedJournalIds.length === 0 || trades.length === 0) {
     return (
       <div className="max-w-3xl mx-auto my-12 p-8 md:p-12 rounded-3xl glass-card border border-dark-border text-center space-y-6">
         <div className="w-20 h-20 mx-auto rounded-3xl bg-brand-600/20 border border-brand-500/30 text-brand-400 flex items-center justify-center shadow-glow">
