@@ -149,9 +149,9 @@ export const TradeCalendar: React.FC = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
           {Array.from({ length: startDayOfWeek }).map((_, idx) => (
-            <div key={`empty-${idx}`} className="h-24 md:h-28 rounded-xl bg-dark-subtle/30 border border-transparent" />
+            <div key={`empty-${idx}`} className="h-16 sm:h-24 md:h-28 rounded-xl bg-dark-subtle/30 border border-transparent" />
           ))}
 
           {daysInMonth.map((day) => {
@@ -191,7 +191,7 @@ export const TradeCalendar: React.FC = () => {
                     setSelectedDayTrades({ date: day, trades: dayData.trades });
                   }
                 }}
-                className={`h-24 md:h-28 rounded-xl p-2 md:p-3 flex flex-col justify-between transition-all duration-200 border cursor-pointer relative overflow-hidden group ${cellStyle}`}
+                className={`h-16 sm:h-24 md:h-28 rounded-xl p-1.5 sm:p-2 md:p-3 flex flex-col justify-between transition-all duration-200 border cursor-pointer relative overflow-hidden group ${cellStyle}`}
               >
                 <div className="flex items-center justify-between">
                   <span className={`text-xs font-mono font-bold ${hasTrades ? "text-white" : "text-gray-400"}`}>

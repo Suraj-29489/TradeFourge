@@ -191,13 +191,13 @@ export const TradesTable: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Controls Bar */}
-      <div className="p-4 rounded-2xl glass-card border border-dark-border flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="p-3 sm:p-4 rounded-2xl glass-card border border-dark-border flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4">
         {/* Search */}
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search symbol, ticket, comment..."
+            placeholder="Search symbol, ticket..."
             value={filters.search}
             onChange={e => setFilters(prev => ({ ...prev, search: e.target.value }))}
             className="w-full pl-9 pr-4 py-2 rounded-xl bg-dark-card border border-dark-border text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-brand-500 transition-colors font-mono"
@@ -205,13 +205,13 @@ export const TradesTable: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full md:w-auto justify-end">
           <select
             value={filters.direction}
             onChange={e => setFilters(prev => ({ ...prev, direction: e.target.value as never }))}
-            className="px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300 focus:outline-none focus:border-brand-500"
+            className="px-2.5 py-2 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300 focus:outline-none focus:border-brand-500"
           >
-            <option value="ALL">All Directions</option>
+            <option value="ALL">All Dir.</option>
             <option value="LONG">Long</option>
             <option value="SHORT">Short</option>
           </select>
@@ -219,9 +219,9 @@ export const TradesTable: React.FC = () => {
           <select
             value={filters.status}
             onChange={e => setFilters(prev => ({ ...prev, status: e.target.value as never }))}
-            className="px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300 focus:outline-none focus:border-brand-500"
+            className="px-2.5 py-2 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300 focus:outline-none focus:border-brand-500"
           >
-            <option value="ALL">All Statuses</option>
+            <option value="ALL">All Status</option>
             <option value="WIN">Win</option>
             <option value="LOSS">Loss</option>
             <option value="BREAKEVEN">Breakeven</option>
@@ -230,7 +230,7 @@ export const TradesTable: React.FC = () => {
           <select
             value={filters.dateRange}
             onChange={e => setFilters(prev => ({ ...prev, dateRange: e.target.value as never }))}
-            className="px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300 focus:outline-none focus:border-brand-500"
+            className="px-2.5 py-2 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300 focus:outline-none focus:border-brand-500 col-span-2 sm:col-span-1"
           >
             <option value="ALL">All Time</option>
             <option value="7D">Last 7 Days</option>
@@ -244,7 +244,7 @@ export const TradesTable: React.FC = () => {
           <button
             ref={colBtnRef}
             onClick={openColMenu}
-            className="p-2 rounded-xl bg-dark-card border border-dark-border hover:bg-dark-hover text-gray-300 transition-colors flex items-center gap-1.5 text-xs font-mono"
+            className="p-2 rounded-xl bg-dark-card border border-dark-border hover:bg-dark-hover text-gray-300 transition-colors flex items-center justify-center gap-1.5 text-xs font-mono hidden md:flex"
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span>Columns</span>
@@ -261,8 +261,98 @@ export const TradesTable: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="rounded-2xl glass-card border border-dark-border overflow-hidden">
+      {/* Mobile Trade Cards View (<768px) */}
+      <div className="space-y-3 md:hidden">
+        {paginatedTrades.length === 0 ? (
+          <div className="p-8 text-center text-xs font-mono text-gray-400 glass-card rounded-2xl border border-dark-border">
+            No trades match the current filters
+          </div>
+        ) : (
+          paginatedTrades.map((t) => {
+            const isWin = t.status === "WIN";
+            const isLoss = t.status === "LOSS";
+            const closeDate = parseISO(t.closeTime);
+
+            return (
+              <div
+                key={`mobile-${t.journalId ?? ""}-${t.ticket}`}
+                onClick={() => setActiveTrade(t)}
+                className="p-4 rounded-2xl glass-card border border-dark-border hover:border-brand-500/40 cursor-pointer transition-all space-y-3"
+              >
+                {/* Top row: Ticket & Date */}
+                <div className="flex items-center justify-between text-xs font-mono text-gray-400 border-b border-dark-border pb-2">
+                  <span className="font-bold text-gray-300">Ticket: #{t.ticket}</span>
+                  <span>{format(closeDate, "yyyy-MM-dd HH:mm")}</span>
+                </div>
+
+                {/* Main row: Symbol, Direction, PnL, RR */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base font-bold font-mono text-white">{t.symbol}</span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 ${
+                        t.direction === "LONG"
+                          ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30"
+                          : "bg-rose-500/10 text-rose-500 border border-rose-500/30"
+                      }`}
+                    >
+                      {t.direction === "LONG" ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      {t.direction}
+                    </span>
+                  </div>
+
+                  <div className="text-right">
+                    <span
+                      className={`text-base font-bold font-mono block ${
+                        isWin ? "text-emerald-500" : isLoss ? "text-rose-500" : "text-gray-400"
+                      }`}
+                    >
+                      {t.profit >= 0 ? "+" : ""}
+                      {formatCurrency(t.profit)}
+                    </span>
+                    <span className="text-[10px] font-mono text-brand-400">
+                      {t.rr !== null ? `${t.rr} R` : "R:R N/A"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Secondary stats: Entry, Exit, Lot, Status */}
+                <div className="grid grid-cols-4 gap-2 pt-1 text-[11px] font-mono text-gray-400 border-t border-dark-border">
+                  <div>
+                    <span className="block text-[9px] text-gray-500 uppercase">Lot</span>
+                    <span className="font-bold text-gray-200">{t.volume}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] text-gray-500 uppercase">Entry</span>
+                    <span className="font-bold text-gray-200">{t.openPrice ?? "-"}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[9px] text-gray-500 uppercase">Exit</span>
+                    <span className="font-bold text-gray-200">{t.closePrice}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="block text-[9px] text-gray-500 uppercase">Status</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                        isWin
+                          ? "bg-emerald-500/10 text-emerald-500"
+                          : isLoss
+                          ? "bg-rose-500/10 text-rose-500"
+                          : "bg-gray-500/10 text-gray-400"
+                      }`}
+                    >
+                      {t.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Main Table (Desktop & Tablet >=768px) */}
+      <div className="rounded-2xl glass-card border border-dark-border overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left font-mono text-xs">
             <thead className="bg-dark-card text-gray-400 border-b border-dark-border sticky top-0 z-10">
@@ -286,7 +376,7 @@ export const TradesTable: React.FC = () => {
             <tbody className="divide-y divide-dark-border text-gray-300">
               {paginatedTrades.length === 0 && (
                 <tr>
-                  <td colSpan={14} className="py-12 text-center text-gray-600 text-xs font-mono">
+                  <td colSpan={14} className="py-12 text-center text-gray-400 text-xs font-mono">
                     No trades match the current filters
                   </td>
                 </tr>
@@ -300,11 +390,11 @@ export const TradesTable: React.FC = () => {
                   <tr key={`${t.journalId ?? ""}-${t.ticket}`} className="hover:bg-dark-hover/40 transition-colors">
                     {colVis.date      && <td className="py-3 px-4 text-gray-400">{format(closeDate, "yyyy-MM-dd")}</td>}
                     {colVis.time      && <td className="py-3 px-4 text-gray-400">{format(closeDate, "HH:mm")}</td>}
-                    {colVis.ticket    && <td className="py-3 px-4 text-gray-500">{t.ticket}</td>}
+                    {colVis.ticket    && <td className="py-3 px-4 text-gray-400">{t.ticket}</td>}
                     {colVis.symbol    && <td className="py-3 px-4 font-bold text-white">{t.symbol}</td>}
                     {colVis.direction && (
                       <td className="py-3 px-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 w-fit ${t.direction === "LONG" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/10 text-rose-400 border border-rose-500/30"}`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 w-fit ${t.direction === "LONG" ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30" : "bg-rose-500/10 text-rose-500 border border-rose-500/30"}`}>
                           {t.direction === "LONG" ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                           {t.direction}
                         </span>
@@ -313,13 +403,13 @@ export const TradesTable: React.FC = () => {
                     {colVis.lot       && <td className="py-3 px-4">{t.volume}</td>}
                     {colVis.entry     && <td className="py-3 px-4">{t.openPrice !== null ? t.openPrice : "-"}</td>}
                     {colVis.exit      && <td className="py-3 px-4">{t.closePrice}</td>}
-                    {colVis.pnl       && <td className={`py-3 px-4 font-bold ${isWin ? "text-emerald-400" : isLoss ? "text-rose-400" : "text-gray-300"}`}>{t.profit >= 0 ? "+" : ""}{formatCurrency(t.profit)}</td>}
-                    {colVis.commission && <td className="py-3 px-4 text-gray-500">{formatCurrency(t.commission)}</td>}
-                    {colVis.swap      && <td className="py-3 px-4 text-gray-500">{formatCurrency(t.swap)}</td>}
-                    {colVis.rr        && <td className="py-3 px-4 text-brand-300">{t.rr !== null ? `${t.rr}R` : "N/A"}</td>}
+                    {colVis.pnl       && <td className={`py-3 px-4 font-bold ${isWin ? "text-emerald-500" : isLoss ? "text-rose-500" : "text-gray-300"}`}>{t.profit >= 0 ? "+" : ""}{formatCurrency(t.profit)}</td>}
+                    {colVis.commission && <td className="py-3 px-4 text-gray-400">{formatCurrency(t.commission)}</td>}
+                    {colVis.swap      && <td className="py-3 px-4 text-gray-400">{formatCurrency(t.swap)}</td>}
+                    {colVis.rr        && <td className="py-3 px-4 text-brand-400">{t.rr !== null ? `${t.rr}R` : "N/A"}</td>}
                     {colVis.status    && (
                       <td className="py-3 px-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isWin ? "bg-emerald-500/10 text-emerald-400" : isLoss ? "bg-rose-500/10 text-rose-400" : "bg-gray-800 text-gray-300"}`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isWin ? "bg-emerald-500/10 text-emerald-500" : isLoss ? "bg-rose-500/10 text-rose-500" : "bg-gray-500/10 text-gray-400"}`}>
                           {t.status}
                         </span>
                       </td>
@@ -336,7 +426,7 @@ export const TradesTable: React.FC = () => {
                               deleteTrade(jid, t.ticket);
                             }
                           }}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-dark-card transition-colors"
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-dark-card transition-colors"
                           title="Delete position"
                         >
                           <Trash2 className="w-4 h-4" />

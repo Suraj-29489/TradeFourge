@@ -110,8 +110,8 @@ export const DashboardCharts: React.FC = () => {
             </p>
           </div>
 
-          {/* Tab switcher */}
-          <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-dark-card border border-dark-border text-xs font-mono">
+          {/* Tab switcher — horizontally scrollable on mobile */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-dark-card border border-dark-border text-xs font-mono overflow-x-auto max-w-full flex-nowrap shrink-0">
             {TABS.map(tab => (
               <button
                 key={tab.key}
