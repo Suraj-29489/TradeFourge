@@ -73,7 +73,7 @@ export const SettingsView: React.FC = () => {
     const url = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `yamada_journals_backup_${Date.now()}.json`;
+    a.download = `tradefourge_journals_backup_${Date.now()}.json`;
     document.body.appendChild(a); a.click(); a.remove();
   }, [journals]);
 

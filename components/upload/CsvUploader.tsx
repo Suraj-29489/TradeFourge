@@ -118,7 +118,7 @@ export const CsvUploader: React.FC = () => {
       <div className="p-6 rounded-2xl glass-card border border-dark-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-            Upload Trading Journal CSV
+            Upload TradeFourge CSV
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-brand-600/20 text-brand-400 border border-brand-500/30">
               v1.2
             </span>

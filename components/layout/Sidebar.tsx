@@ -9,20 +9,22 @@ import {
   TableProperties,
   CalendarDays,
   BarChart3,
+  FileSpreadsheet,
   Upload,
   Settings,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
+  Zap,
   X,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 export const NAV_ITEMS = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Trades", href: "/trades", icon: TableProperties },
+  { name: "Mission Control", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Performance Lab", href: "/performance", icon: BarChart3 },
+  { name: "Trade Log", href: "/journal", icon: TableProperties },
+  { name: "Audit Reports", href: "/reports", icon: FileSpreadsheet },
   { name: "Calendar", href: "/calendar", icon: CalendarDays },
-  { name: "Statistics", href: "/statistics", icon: BarChart3 },
   { name: "Upload CSV", href: "/upload", icon: Upload },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
@@ -50,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onCloseMobile}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
           />
         )}
       </AnimatePresence>
@@ -63,26 +65,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 350, damping: 30 }}
-            className="fixed inset-y-0 left-0 z-50 w-72 bg-dark-card border-r border-dark-border flex flex-col justify-between md:hidden shadow-2xl"
+            className="fixed inset-y-0 left-0 z-50 w-72 bg-[#111726] border-r border-white/10 flex flex-col justify-between md:hidden shadow-2xl"
           >
             <div>
               {/* Header with Close button */}
-              <div className="flex items-center justify-between h-16 px-4 border-b border-dark-border">
+              <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
                 <Link href="/" onClick={handleNavClick} className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 shadow-glow shrink-0">
-                    <TrendingUp className="w-5 h-5 text-white" />
+                    <Zap className="w-5 h-5 text-white" />
                   </div>
-                  <span className="text-base font-bold tracking-tight text-white flex items-center gap-1.5 font-mono">
-                    TRADING
-                    <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-brand-600/30 text-brand-400 border border-brand-500/30">
-                      Pro
+                  <span className="text-base font-extrabold tracking-tight text-white flex items-center gap-1.5 font-mono">
+                    TRADE<span className="text-purple-400">FOURGE</span>
+                    <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-purple-600/30 text-purple-400 border border-purple-500/30">
+                      SaaS
                     </span>
                   </span>
                 </Link>
 
                 <button
                   onClick={onCloseMobile}
-                  className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-dark-hover transition-colors"
+                  className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -91,7 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
               {/* Mobile Nav Links */}
               <nav className="px-3 py-4 space-y-1.5">
                 {NAV_ITEMS.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isActive = pathname === item.href || (item.href === "/dashboard" && pathname === "/mission-control");
                   const Icon = item.icon;
 
                   return (
@@ -100,11 +102,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                         className={cn(
                           "flex items-center gap-3 px-3 py-3 rounded-xl font-medium text-sm transition-all duration-200",
                           isActive
-                            ? "bg-brand-600/20 text-white border border-brand-500/30 shadow-glow font-bold"
-                            : "text-gray-400 hover:text-gray-200 hover:bg-dark-hover"
+                            ? "bg-purple-600/20 text-white border border-purple-500/30 shadow-glow font-bold"
+                            : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
                         )}
                       >
-                        <Icon className={cn("w-5 h-5 shrink-0", isActive ? "text-brand-400" : "text-gray-400")} />
+                        <Icon className={cn("w-5 h-5 shrink-0", isActive ? "text-purple-400" : "text-gray-400")} />
                         <span>{item.name}</span>
                       </div>
                     </Link>
@@ -114,8 +116,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
             </div>
 
             {/* Mobile Footer */}
-            <div className="p-4 border-t border-dark-border text-center text-xs font-mono text-gray-400">
-              Yamada Trading Journal · v1.2.0
+            <div className="p-4 border-t border-white/10 text-center text-xs font-mono text-gray-400">
+              TradeFourge SaaS Terminal · v2.4.0
             </div>
           </motion.aside>
         )}
@@ -125,13 +127,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
       <motion.aside
         animate={{ width: collapsed ? 80 : 260 }}
         transition={{ type: "spring", stiffness: 350, damping: 30 }}
-        className="relative z-30 hidden md:flex flex-col h-screen bg-dark-card border-r border-dark-border select-none shrink-0"
+        className="relative z-30 hidden md:flex flex-col h-screen bg-[#111726] border-r border-white/10 select-none shrink-0"
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-dark-border">
+        <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
           <Link href="/" className="flex items-center gap-3 overflow-hidden">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 shadow-glow shrink-0">
-              <TrendingUp className="w-5 h-5 text-white" />
+              <Zap className="w-5 h-5 text-white" />
             </div>
             <AnimatePresence>
               {!collapsed && (
@@ -141,14 +143,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                   exit={{ opacity: 0, x: -10 }}
                   className="flex flex-col whitespace-nowrap"
                 >
-                  <span className="text-base font-bold tracking-tight text-white flex items-center gap-1.5">
-                    TRADING
-                    <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-brand-600/30 text-brand-400 border border-brand-500/30">
-                      Pro
+                  <span className="text-base font-extrabold tracking-tight text-white flex items-center gap-1.5 font-mono">
+                    TRADE<span className="text-purple-400">FOURGE</span>
+                    <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-purple-600/30 text-purple-400 border border-purple-500/30">
+                      SaaS
                     </span>
                   </span>
                   <span className="text-[10px] text-gray-400 tracking-wider font-mono">
-                    JOURNAL TERMINAL
+                    TERMINAL SUITE
                   </span>
                 </motion.div>
               )}
@@ -157,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
 
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-dark-hover transition-colors flex items-center justify-center"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center"
             title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -167,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
         {/* Navigation Links */}
         <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname === item.href || (item.href === "/dashboard" && pathname === "/mission-control");
             const Icon = item.icon;
 
             return (
@@ -176,14 +178,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 group",
                     isActive
-                      ? "bg-brand-600/20 text-white border border-brand-500/30 shadow-glow"
-                      : "text-gray-400 hover:text-gray-200 hover:bg-dark-hover"
+                      ? "bg-purple-600/20 text-white border border-purple-500/30 shadow-glow"
+                      : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
                   )}
                 >
                   <Icon
                     className={cn(
                       "w-5 h-5 shrink-0 transition-transform duration-200 group-hover:scale-110",
-                      isActive ? "text-brand-400" : "text-gray-400 group-hover:text-gray-200"
+                      isActive ? "text-purple-400" : "text-gray-400 group-hover:text-gray-200"
                     )}
                   />
                   <AnimatePresence>
@@ -202,7 +204,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                   {isActive && (
                     <motion.div
                       layoutId="sidebar-active-indicator"
-                      className="absolute right-2 w-1.5 h-5 rounded-full bg-brand-500 shadow-glow"
+                      className="absolute right-2 w-1.5 h-5 rounded-full bg-purple-500 shadow-glow"
                       transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     />
                   )}
@@ -213,10 +215,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
         </nav>
 
         {/* Terminal Live Status Badge */}
-        <div className="p-3 border-t border-dark-border">
+        <div className="p-3 border-t border-white/10">
           <div
             className={cn(
-              "flex items-center gap-3 p-2.5 rounded-xl bg-dark-card border border-dark-border",
+              "flex items-center gap-3 p-2.5 rounded-xl bg-[#080B11] border border-white/10",
               collapsed ? "justify-center" : "justify-between"
             )}
           >
@@ -226,13 +228,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
               {!collapsed && (
-                <span className="text-xs font-mono font-medium text-emerald-500">
-                  CONNECTED
+                <span className="text-xs font-mono font-medium text-emerald-400">
+                  ONLINE
                 </span>
               )}
             </div>
             {!collapsed && (
-              <span className="text-[10px] text-gray-500 font-mono">v1.2.0</span>
+              <span className="text-[10px] text-gray-400 font-mono">v2.4.0</span>
             )}
           </div>
         </div>

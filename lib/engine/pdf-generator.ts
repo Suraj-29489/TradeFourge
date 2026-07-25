@@ -32,7 +32,7 @@ export function generateProfessionalPdf(
   doc.setTextColor(textWhite[0], textWhite[1], textWhite[2]);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(24);
-  doc.text("TRADING JOURNAL", 14, 25);
+  doc.text("TRADEFOURGE", 14, 25);
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -164,8 +164,8 @@ export function generateProfessionalPdf(
     doc.setPage(i);
     doc.setFontSize(8);
     doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
-    doc.text(`Trading Journal Performance Audit  •  Page ${i} of ${totalPages}`, pageWidth - 70, pageHeight - 10);
+    doc.text(`TradeFourge Performance Audit  •  Page ${i} of ${totalPages}`, pageWidth - 70, pageHeight - 10);
   }
 
-  doc.save(`Trading_Journal_Audit_${format(new Date(), "yyyyMMdd")}.pdf`);
+  doc.save(`TradeFourge_Audit_${format(new Date(), "yyyyMMdd")}.pdf`);
 }

@@ -12,13 +12,13 @@ export function exportJournalPDF(
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
   // 1. Header & Branding Banner
-  doc.setFillColor(15, 20, 32); // Bloomberg dark header background
+  doc.setFillColor(15, 20, 32); // Dark header background
   doc.rect(0, 0, 210, 38, "F");
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("TRADING JOURNAL", 14, 18);
+  doc.text("TRADEFOURGE", 14, 18);
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -83,5 +83,5 @@ export function exportJournalPDF(
     },
   });
 
-  doc.save(`Trading_Journal_Report_${format(new Date(), "yyyyMMdd_HHmm")}.pdf`);
+  doc.save(`TradeFourge_Report_${format(new Date(), "yyyyMMdd_HHmm")}.pdf`);
 }

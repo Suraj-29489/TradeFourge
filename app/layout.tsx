@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { Analytics } from "@vercel/analytics/react";
 
 const inter = Inter({
@@ -10,8 +9,11 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Yamada Trading Journal — Professional Performance Analytics",
-  description: "Production-grade multi-journal trading analytics with equity curves, calendar heatmaps, and professional PDF reports.",
+  title: "TradeFourge — Advanced Trading Intelligence & Analytics",
+  description: "Institutional-grade multi-journal trading analytics platform with equity curves, AI insights, calendar heatmaps, and professional audit reports.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -21,10 +23,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" data-theme="dark">
-      {/*
-        Inline script to apply theme BEFORE React hydration (prevents flash).
-        Reads from localStorage and sets data-theme on <html> synchronously.
-      */}
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -41,9 +39,11 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.variable} antialiased selection:bg-brand-600 selection:text-white`}
-            style={{ backgroundColor: "var(--body-bg)", color: "var(--body-text)" }}>
-        <AppLayout>{children}</AppLayout>
+      <body
+        className={`${inter.variable} antialiased selection:bg-purple-600 selection:text-white`}
+        style={{ backgroundColor: "var(--body-bg)", color: "var(--body-text)" }}
+      >
+        {children}
         <Analytics />
       </body>
     </html>

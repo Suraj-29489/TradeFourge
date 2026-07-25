@@ -11,7 +11,7 @@ export function exportJournalExcel(
 
   // Sheet 1: Summary Statistics
   const summaryData = [
-    ["TRADING JOURNAL - PERFORMANCE REPORT"],
+    ["TRADEFOURGE - PERFORMANCE REPORT"],
     ["Generated At", format(new Date(), "yyyy-MM-dd HH:mm:ss")],
     ["Account Currency", currency],
     [""],
@@ -59,5 +59,5 @@ export function exportJournalExcel(
   const wsTrades = XLSX.utils.json_to_sheet(tradeRows);
   XLSX.utils.book_append_sheet(wb, wsTrades, "Positions Log");
 
-  XLSX.writeFile(wb, `Trading_Journal_${format(new Date(), "yyyyMMdd")}.xlsx`);
+  XLSX.writeFile(wb, `TradeFourge_Export_${format(new Date(), "yyyyMMdd")}.xlsx`);
 }

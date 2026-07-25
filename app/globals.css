@@ -5,34 +5,34 @@
 /* ─── Dark Theme (default) ─────────────────────────────────────────────────── */
 :root,
 [data-theme="dark"] {
-  --dark-bg:     8 11 17;       /* #080B11 */
-  --dark-card:   17 23 38;      /* #111726 */
-  --dark-hover:  24 34 56;      /* #182238 */
-  --dark-subtle: 31 41 61;      /* #1F293D */
+  --dark-bg:     11 13 19;       /* #0B0D13 */
+  --dark-card:   19 22 34;      /* #131622 */
+  --dark-hover:  26 30 46;      /* #1A1E2E */
+  --dark-subtle: 34 39 58;      /* #22273A */
   --dark-border: rgba(255, 255, 255, 0.08);
 
-  --body-bg: #080B11;
+  --body-bg: #0B0D13;
   --body-text: #F3F4F6;
   --body-text-muted: #9CA3AF;
-  --scrollbar-track: #080B11;
-  --scrollbar-thumb: #1F293D;
-  --glass-bg: rgba(17, 23, 38, 0.75);
+  --scrollbar-track: #0B0D13;
+  --scrollbar-thumb: #1A1E2E;
+  --glass-bg: rgba(19, 22, 34, 0.75);
   --glass-border: rgba(255, 255, 255, 0.08);
   --gradient-text-from: #FFFFFF;
   --gradient-text-to: #A78BFA;
   --terminal-grid-line: rgba(255, 255, 255, 0.02);
   --input-bg: rgba(255, 255, 255, 0.04);
   --input-border: rgba(255, 255, 255, 0.08);
-  --select-bg: #111726;
+  --select-bg: #131622;
 }
 
-/* ─── Premium Light Theme (Stripe / Linear / Notion / TradeZella aesthetic) ─ */
+/* ─── Premium Light Theme ────────────────────────────────────────── */
 [data-theme="light"] {
-  --dark-bg:     246 248 251;   /* #F6F8FB */
-  --dark-card:   255 255 255;   /* #FFFFFF */
-  --dark-hover:  243 244 246;   /* #F3F4F6 */
-  --dark-subtle: 249 250 252;   /* #F9FAFC */
-  --dark-border: #E5E7EB;       /* #E5E7EB */
+  --dark-bg:     246 248 251;
+  --dark-card:   255 255 255;
+  --dark-hover:  243 244 246;
+  --dark-subtle: 249 250 252;
+  --dark-border: #E5E7EB;
 
   --body-bg: #F6F8FB;
   --body-text: #111827;
@@ -68,13 +68,12 @@
   ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 9999px; }
   ::-webkit-scrollbar-thumb:hover { background: #7C3AED; }
 
-  /* ─── Light Mode Clean Color Overrides ──────────────────────────────────── */
+  /* Light Mode Clean Overrides */
   [data-theme="light"] body {
     background-color: #F6F8FB !important;
     color: #111827 !important;
   }
 
-  /* Text color mapping */
   [data-theme="light"] .text-white    { color: #111827 !important; }
   [data-theme="light"] .text-gray-100 { color: #111827 !important; }
   [data-theme="light"] .text-gray-200 { color: #1F2937 !important; }
@@ -83,7 +82,6 @@
   [data-theme="light"] .text-gray-500 { color: #6B7280 !important; }
   [data-theme="light"] .text-gray-600 { color: #9CA3AF !important; }
 
-  /* Accent & Status text colors */
   [data-theme="light"] .text-brand-300 { color: #7C3AED !important; }
   [data-theme="light"] .text-brand-400 { color: #7C3AED !important; }
   [data-theme="light"] .text-emerald-400,
@@ -94,7 +92,6 @@
   [data-theme="light"] .text-amber-400,
   [data-theme="light"] .text-amber-500 { color: #F59E0B !important; }
 
-  /* Soft background fills for status badges */
   [data-theme="light"] .bg-emerald-500\/10 { background-color: #F0FDF4 !important; border-color: #BBF7D0 !important; }
   [data-theme="light"] .bg-rose-500\/10,
   [data-theme="light"] .bg-red-500\/10     { background-color: #FEF2F2 !important; border-color: #FECACA !important; }
@@ -102,56 +99,12 @@
   [data-theme="light"] .bg-brand-500\/10,
   [data-theme="light"] .bg-brand-600\/20    { background-color: #F5F3FF !important; border-color: #DDD6FE !important; }
 
-  /* Hardcoded dark hex code overrides */
-  [data-theme="light"] .bg-\[\#080B11\],
-  [data-theme="light"] .bg-\[\#0C1019\],
-  [data-theme="light"] .bg-\[\#0F1420\],
-  [data-theme="light"] .bg-\[\#111726\] {
-    background-color: #FFFFFF !important;
-  }
-
-  [data-theme="light"] .border-\[\#1F293D\] {
-    border-color: #E5E7EB !important;
-  }
-
-  /* Input fields, select boxes & textareas */
   [data-theme="light"] input,
   [data-theme="light"] select,
   [data-theme="light"] textarea {
     background-color: #FFFFFF !important;
     border-color: #E5E7EB !important;
     color: #111827 !important;
-  }
-
-  [data-theme="light"] input:focus,
-  [data-theme="light"] select:focus {
-    border-color: #7C3AED !important;
-    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15) !important;
-  }
-
-  [data-theme="light"] select option {
-    background-color: #FFFFFF !important;
-    color: #111827 !important;
-  }
-
-  /* Table styling */
-  [data-theme="light"] table thead {
-    background-color: #F9FAFC !important;
-    color: #6B7280 !important;
-    border-bottom: 1px solid #E5E7EB !important;
-  }
-
-  [data-theme="light"] table tbody tr {
-    border-bottom: 1px solid #E5E7EB !important;
-    background-color: #FFFFFF;
-  }
-
-  [data-theme="light"] table tbody tr:nth-child(even) {
-    background-color: #F9FAFC;
-  }
-
-  [data-theme="light"] table tbody tr:hover {
-    background-color: #F3F4F6 !important;
   }
 }
 
@@ -175,7 +128,7 @@
   }
 
   .terminal-grid {
-    background-size: 30px 30px;
+    background-size: 32px 32px;
     background-image:
       linear-gradient(to right, var(--terminal-grid-line) 1px, transparent 1px),
       linear-gradient(to bottom, var(--terminal-grid-line) 1px, transparent 1px);

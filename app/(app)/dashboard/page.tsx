@@ -58,23 +58,23 @@ export default function DashboardPage() {
   if (journals.length === 0 || selectedJournalIds.length === 0 || trades.length === 0) {
     return (
       <div className="max-w-3xl mx-auto my-12 p-8 md:p-12 rounded-3xl glass-card border border-dark-border text-center space-y-6">
-        <div className="w-20 h-20 mx-auto rounded-3xl bg-brand-600/20 border border-brand-500/30 text-brand-400 flex items-center justify-center shadow-glow">
+        <div className="w-20 h-20 mx-auto rounded-3xl bg-purple-600/20 border border-purple-500/30 text-purple-400 flex items-center justify-center shadow-glow">
           <FileSpreadsheet className="w-10 h-10" />
         </div>
 
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-            No Trading Journal Imported
+            No TradeFourge Journal Imported
           </h1>
           <p className="text-sm text-gray-400 max-w-md mx-auto mt-2">
-            Import your Exness MT4 / MT5 position CSV file to unlock real-time financial analytics, equity curves, calendar heatmaps, and stats.
+            Import your Exness MT4 / MT5 position CSV file to unlock real-time financial analytics, equity curves, calendar heatmaps, and AI insights.
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
           <Link
             href="/upload"
-            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all"
+            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all"
           >
             <Upload className="w-4 h-4" />
             <span>Upload Trading CSV</span>
@@ -104,7 +104,7 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl glass-card border border-dark-border">
         <div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight gradient-text">
-            Trading Terminal Overview
+            TradeFourge Mission Control Overview
           </h1>
           <p className="text-xs text-gray-400 mt-1">
             Real-time trade performance metrics, risk ratios, and equity growth analytics ({currency})
