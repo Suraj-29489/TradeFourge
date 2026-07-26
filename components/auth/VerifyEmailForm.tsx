@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, ArrowRight, RefreshCw, AlertCircle } from "lucide-react";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 export const VerifyEmailForm: React.FC = () => {
   const router = useRouter();
@@ -13,7 +13,6 @@ export const VerifyEmailForm: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const supabase = createClient();
-  const configured = isSupabaseConfigured();
 
   const handleChange = (index: number, value: string) => {
     if (value.length > 1) return;
@@ -46,17 +45,9 @@ export const VerifyEmailForm: React.FC = () => {
 
     setLoading(true);
 
-    if (!configured) {
-      setTimeout(() => {
-        setLoading(false);
-        router.push("/dashboard");
-      }, 500);
-      return;
-    }
-
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: "", // User verifies with token
+      const { error } = await supabase.auth.verifyOtp({
+        email: "",
         token,
         type: "signup",
       });

@@ -6,22 +6,8 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
-
-  // Validate that Supabase URL and Anon Key are valid production or local environment values
-  const isConfigured = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("your-project-ref") &&
-    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") &&
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes("your-actual-anon-key") &&
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes("placeholder")
-  );
-
-  if (!isConfigured) {
-    return supabaseResponse;
-  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -47,7 +33,7 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Refresh auth user
+  // Refresh auth user session
   const {
     data: { user },
   } = await supabase.auth.getUser();

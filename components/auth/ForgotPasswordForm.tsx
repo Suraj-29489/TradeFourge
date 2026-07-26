@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Mail, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 export const ForgotPasswordForm: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -12,20 +12,11 @@ export const ForgotPasswordForm: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const supabase = createClient();
-  const configured = isSupabaseConfigured();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setLoading(true);
-
-    if (!configured) {
-      setTimeout(() => {
-        setLoading(false);
-        setSubmitted(true);
-      }, 500);
-      return;
-    }
 
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : "";

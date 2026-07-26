@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 function LoginFormContent() {
   const router = useRouter();
@@ -19,9 +19,7 @@ function LoginFormContent() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const supabase = createClient();
-  const configured = isSupabaseConfigured();
 
-  // Check URL query parameters for callback errors
   useEffect(() => {
     const errorParam = searchParams.get("error");
     if (errorParam) {
@@ -34,16 +32,6 @@ function LoginFormContent() {
     setErrorMessage(null);
     setSuccessMessage(null);
     setLoading(true);
-
-    if (!configured) {
-      // Demo fallback if Supabase keys are default placeholders
-      setTimeout(() => {
-        setLoading(false);
-        setSuccessMessage("Configured in UI demo mode. Opening terminal...");
-        setTimeout(() => router.push("/dashboard"), 600);
-      }, 500);
-      return;
-    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -71,14 +59,6 @@ function LoginFormContent() {
     setErrorMessage(null);
     setGoogleLoading(true);
 
-    if (!configured) {
-      setTimeout(() => {
-        setGoogleLoading(false);
-        setErrorMessage("Supabase is not configured. Please paste your NEXT_PUBLIC_SUPABASE_URL and ANON_KEY into .env.local.");
-      }, 500);
-      return;
-    }
-
     try {
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const { error } = await supabase.auth.signInWithOAuth({
@@ -100,15 +80,6 @@ function LoginFormContent() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {!configured && (
-        <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-mono flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-          <div>
-            <strong>Demo Mode Active:</strong> Paste your Supabase Project URL and Anon Key into <code className="text-white">.env.local</code> to activate live Supabase Auth.
-          </div>
-        </div>
-      )}
-
       {errorMessage && (
         <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />

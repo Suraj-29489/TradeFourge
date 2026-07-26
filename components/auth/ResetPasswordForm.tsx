@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Lock, Eye, EyeOff, ArrowRight, CheckCircle2, ShieldCheck, AlertCircle } from "lucide-react";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 export const ResetPasswordForm: React.FC = () => {
   const [password, setPassword] = useState("");
@@ -15,7 +15,6 @@ export const ResetPasswordForm: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const supabase = createClient();
-  const configured = isSupabaseConfigured();
 
   const getStrength = (pass: string) => {
     if (!pass) return { score: 0, label: "Enter Password", color: "bg-gray-700" };
@@ -36,14 +35,6 @@ export const ResetPasswordForm: React.FC = () => {
     }
 
     setLoading(true);
-
-    if (!configured) {
-      setTimeout(() => {
-        setLoading(false);
-        setSubmitted(true);
-      }, 500);
-      return;
-    }
 
     try {
       const { error } = await supabase.auth.updateUser({
