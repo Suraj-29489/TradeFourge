@@ -13,14 +13,20 @@ export function sanitizeSupabaseUrl(rawUrl?: string): string {
 
 /**
  * Utility to resolve the application's base URL for Supabase Auth redirects.
- * Guarantees zero trailing slashes and zero double slashes in constructed path URLs.
+ * Prioritizes NEXT_PUBLIC_SITE_URL as the single source of truth.
  */
 export function getSiteUrl(): string {
-  let url =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXT_PUBLIC_VERCEL_URL ||
-    (typeof window !== "undefined" && window.location.origin ? window.location.origin : "http://localhost:3000");
+  let url = process.env.NEXT_PUBLIC_SITE_URL;
 
+  if (!url || url.trim() === "") {
+    if (typeof window !== "undefined" && window.location.origin) {
+      url = window.location.origin;
+    } else {
+      url = "https://tradefourge.vercel.app";
+    }
+  }
+
+  url = url.trim();
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     url = `https://${url}`;
   }
@@ -29,7 +35,8 @@ export function getSiteUrl(): string {
 }
 
 /**
- * Construct safe redirect URL for Supabase Auth callbacks without double slashes.
+ * Construct safe redirect URL for Supabase Auth callbacks.
+ * Returns ${NEXT_PUBLIC_SITE_URL}/auth/callback
  */
 export function getAuthCallbackUrl(targetPath: string = "/auth/callback"): string {
   const baseUrl = getSiteUrl();

@@ -1,16 +1,18 @@
 "use client";
 
-import React from "react";
-import { AuthLayout } from "@/components/auth/AuthLayout";
-import { VerifyEmailForm } from "@/components/auth/VerifyEmailForm";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function VerifyEmailPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/login");
+  }, [router]);
+
   return (
-    <AuthLayout
-      title="Verify Email Address"
-      subtitle="Confirm your identity to unlock your TradeFourge terminal session."
-    >
-      <VerifyEmailForm />
-    </AuthLayout>
+    <div className="flex items-center justify-center min-h-screen bg-[#0B0F17] text-gray-400 font-mono text-xs">
+      Redirecting to Sign In...
+    </div>
   );
 }

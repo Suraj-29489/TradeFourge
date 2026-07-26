@@ -30,13 +30,12 @@ export const SignupForm: React.FC = () => {
     const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
     const callbackUrl = getAuthCallbackUrl("/auth/callback");
 
-    console.log("[SignupForm.tsx:handleSubmit:Tracing]", {
+    console.log("[SignupForm.tsx:handleSubmit]", {
       file: "components/auth/SignupForm.tsx",
       function: "handleSubmit",
-      parameters: { email: email.trim(), fullName: fullName.trim() },
-      redirectTo: callbackUrl,
+      email: email.trim(),
+      emailRedirectTo: callbackUrl,
       supabaseUrl,
-      callingFunction: "supabase.auth.signUp",
     });
 
     try {
@@ -51,37 +50,28 @@ export const SignupForm: React.FC = () => {
         },
       });
 
-      console.log("[SignupForm.tsx:signUp:ResponseTracing]", {
-        file: "components/auth/SignupForm.tsx",
-        function: "supabase.auth.signUp",
+      console.log("[SignupForm.tsx:signUp:Response]", {
         userCreated: Boolean(data?.user),
-        userIdentities: data?.user?.identities,
+        identities: data?.user?.identities,
         hasSession: Boolean(data?.session),
         error,
-        errorMessage: error?.message,
-        status: error?.status,
       });
 
       if (error) {
         setErrorMessage(error.message);
         setLoading(false);
       } else if (data.user && data.user.identities && data.user.identities.length === 0) {
-        // Supabase returns user with empty identities array when email is already registered
         setErrorMessage("An account with this email address already exists. Please Sign In instead.");
         setLoading(false);
       } else if (data.session) {
-        // Immediate session granted (e.g. Email confirmation disabled in Supabase)
-        setSuccessMessage("Account created successfully! Redirecting to terminal...");
+        setSuccessMessage("Account created successfully! Loading terminal...");
         setTimeout(() => {
           router.push("/dashboard");
           router.refresh();
         }, 500);
       } else if (data.user) {
-        // New user created in auth.users, verification email link dispatched
-        setSuccessMessage("Account created! Verification email sent to your inbox.");
-        setTimeout(() => {
-          router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
-        }, 800);
+        setSuccessMessage(`Account created! A verification link has been sent to ${email.trim()}. Please check your email inbox and click the link to log in.`);
+        setLoading(false);
       } else {
         setErrorMessage("Signup request sent, but no user record was returned.");
         setLoading(false);
@@ -97,7 +87,6 @@ export const SignupForm: React.FC = () => {
     setErrorMessage(null);
     setGoogleLoading(true);
 
-    const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
     const callbackUrl = getAuthCallbackUrl("/auth/callback");
 
     try {
@@ -121,16 +110,18 @@ export const SignupForm: React.FC = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {errorMessage && (
-        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {successMessage && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{successMessage}</span>
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono space-y-1">
+          <div className="flex items-center gap-2 font-bold text-sm">
+            <CheckCircle2 className="w-4 h-4 shrink-0" /> Verification Email Sent
+          </div>
+          <p className="text-emerald-300/90 leading-relaxed font-sans">{successMessage}</p>
         </div>
       )}
 
