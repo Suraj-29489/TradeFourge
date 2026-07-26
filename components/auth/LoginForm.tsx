@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle, CheckCircle2, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getAuthCallbackUrl, sanitizeSupabaseUrl } from "@/lib/supabase/config";
 
@@ -18,13 +18,21 @@ function LoginFormContent() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isVerifiedNotice, setIsVerifiedNotice] = useState(false);
 
   const supabase = createClient();
 
   useEffect(() => {
     const errorParam = searchParams.get("error");
+    const verifiedParam = searchParams.get("verified");
+
     if (errorParam) {
       setErrorMessage(decodeURIComponent(errorParam));
+    }
+
+    if (verifiedParam === "true") {
+      setIsVerifiedNotice(true);
+      setSuccessMessage("Your email has been verified successfully. Please sign in to continue.");
     }
   }, [searchParams]);
 
@@ -34,31 +42,19 @@ function LoginFormContent() {
     setSuccessMessage(null);
     setLoading(true);
 
-    const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    console.log("[LoginForm.tsx:handleSubmit]", {
-      file: "components/auth/LoginForm.tsx",
-      function: "handleSubmit",
-      line: 25,
-      parameters: { email: email.trim() },
-      supabaseUrl,
-      callingFunction: "supabase.auth.signInWithPassword",
-    });
+    if (!envUrl || !envKey || envUrl.includes("placeholder") || envKey.includes("placeholder")) {
+      setErrorMessage("Supabase project credentials missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
-      });
-
-      console.log("[LoginForm.tsx:signInWithPassword:Response]", {
-        file: "components/auth/LoginForm.tsx",
-        function: "supabase.auth.signInWithPassword",
-        data,
-        error,
-        errorMessage: error?.message,
-        status: error?.status,
-        code: error?.code,
       });
 
       if (error) {
@@ -72,7 +68,6 @@ function LoginFormContent() {
         }, 300);
       }
     } catch (err: any) {
-      console.error("[LoginForm.tsx:signInWithPassword:CatchError]", err);
       setErrorMessage(err?.message || "An unexpected error occurred during sign in.");
       setLoading(false);
     }
@@ -82,18 +77,17 @@ function LoginFormContent() {
     setErrorMessage(null);
     setGoogleLoading(true);
 
-    const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
-    const callbackUrl = getAuthCallbackUrl("/auth/callback");
+    const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    console.log("[LoginForm.tsx:handleGoogleSignIn]", {
-      file: "components/auth/LoginForm.tsx",
-      function: "handleGoogleSignIn",
-      redirectTo: callbackUrl,
-      supabaseUrl,
-      callingFunction: "supabase.auth.signInWithOAuth",
-    });
+    if (!envUrl || !envKey || envUrl.includes("placeholder") || envKey.includes("placeholder")) {
+      setErrorMessage("Supabase project credentials missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local.");
+      setGoogleLoading(false);
+      return;
+    }
 
     try {
+      const callbackUrl = getAuthCallbackUrl("/auth/callback");
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -113,15 +107,28 @@ function LoginFormContent() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Email Verified Banner (Cross-device support) */}
+      {isVerifiedNotice && (
+        <div className="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 space-y-1.5 shadow-glow">
+          <div className="flex items-center gap-2 font-bold text-sm text-emerald-400">
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <span>Email Verified Successfully</span>
+          </div>
+          <p className="text-xs text-emerald-200/90 leading-relaxed">
+            Your account is active. Please sign in below to open your TradeFourge terminal.
+          </p>
+        </div>
+      )}
+
       {errorMessage && (
-        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      {successMessage && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono flex items-center gap-2">
+      {successMessage && !isVerifiedNotice && (
+        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{successMessage}</span>
         </div>
@@ -165,7 +172,7 @@ function LoginFormContent() {
             <Lock className="w-4 h-4" />
           </div>
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -206,7 +213,7 @@ function LoginFormContent() {
           <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
         ) : (
           <>
-            <span>Sign In to Terminal</span>
+            <span>{isVerifiedNotice ? "Continue to Sign In" : "Sign In to Terminal"}</span>
             <ArrowRight className="w-4 h-4" />
           </>
         )}
