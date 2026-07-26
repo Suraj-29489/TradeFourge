@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { getAuthCallbackUrl } from "@/lib/supabase/config";
+import { getAuthCallbackUrl, sanitizeSupabaseUrl } from "@/lib/supabase/config";
 
 function LoginFormContent() {
   const router = useRouter();
@@ -34,19 +34,31 @@ function LoginFormContent() {
     setSuccessMessage(null);
     setLoading(true);
 
-    const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
-    if (!envUrl || !envKey || envUrl.includes("placeholder") || envKey.includes("placeholder")) {
-      setErrorMessage("Supabase project credentials missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local.");
-      setLoading(false);
-      return;
-    }
+    console.log("[LoginForm.tsx:handleSubmit]", {
+      file: "components/auth/LoginForm.tsx",
+      function: "handleSubmit",
+      line: 25,
+      parameters: { email: email.trim() },
+      supabaseUrl,
+      callingFunction: "supabase.auth.signInWithPassword",
+    });
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
+      });
+
+      console.log("[LoginForm.tsx:signInWithPassword:Response]", {
+        file: "components/auth/LoginForm.tsx",
+        function: "supabase.auth.signInWithPassword",
+        data,
+        error,
+        errorMessage: error?.message,
+        status: error?.status,
+        code: error?.code,
       });
 
       if (error) {
@@ -60,6 +72,7 @@ function LoginFormContent() {
         }, 300);
       }
     } catch (err: any) {
+      console.error("[LoginForm.tsx:signInWithPassword:CatchError]", err);
       setErrorMessage(err?.message || "An unexpected error occurred during sign in.");
       setLoading(false);
     }
@@ -69,17 +82,18 @@ function LoginFormContent() {
     setErrorMessage(null);
     setGoogleLoading(true);
 
-    const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const callbackUrl = getAuthCallbackUrl("/auth/callback");
 
-    if (!envUrl || !envKey || envUrl.includes("placeholder") || envKey.includes("placeholder")) {
-      setErrorMessage("Supabase project credentials missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local.");
-      setGoogleLoading(false);
-      return;
-    }
+    console.log("[LoginForm.tsx:handleGoogleSignIn]", {
+      file: "components/auth/LoginForm.tsx",
+      function: "handleGoogleSignIn",
+      redirectTo: callbackUrl,
+      supabaseUrl,
+      callingFunction: "supabase.auth.signInWithOAuth",
+    });
 
     try {
-      const callbackUrl = getAuthCallbackUrl("/auth/callback");
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -151,7 +165,7 @@ function LoginFormContent() {
             <Lock className="w-4 h-4" />
           </div>
           <input
-            type={showPassword ? "text" : "password"}
+            type="password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}

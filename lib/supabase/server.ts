@@ -1,11 +1,19 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { sanitizeSupabaseUrl } from "./config";
 
 export async function createClient() {
   const cookieStore = await cookies();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
+  let supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  let supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
+
+  if (!supabaseUrl || supabaseUrl.includes("placeholder")) {
+    supabaseUrl = "https://placeholder.supabase.co";
+  }
+  if (!supabaseAnonKey || supabaseAnonKey.includes("placeholder")) {
+    supabaseAnonKey = "placeholder-anon-key";
+  }
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -18,8 +26,7 @@ export async function createClient() {
             cookieStore.set(name, value, options)
           );
         } catch {
-          // The `setAll` method was called from a Server Component.
-          // This can be ignored if you have middleware refreshing user sessions.
+          // Server component setAll call
         }
       },
     },

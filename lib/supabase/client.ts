@@ -1,14 +1,14 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { sanitizeSupabaseUrl } from "./config";
 
 let clientInstance: ReturnType<typeof createBrowserClient> | null = null;
 
 export function createClient() {
   if (clientInstance) return clientInstance;
 
-  let supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim().replace(/\/+$/, "");
+  let supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   let supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
 
-  // Handle missing or placeholder credentials safely
   if (!supabaseUrl || supabaseUrl.includes("placeholder")) {
     supabaseUrl = "https://placeholder.supabase.co";
   }

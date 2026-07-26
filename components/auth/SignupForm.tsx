@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { getSiteUrl } from "@/lib/supabase/config";
+import { getAuthCallbackUrl, sanitizeSupabaseUrl } from "@/lib/supabase/config";
 
 export const SignupForm: React.FC = () => {
   const router = useRouter();
@@ -27,10 +27,20 @@ export const SignupForm: React.FC = () => {
     setSuccessMessage(null);
     setLoading(true);
 
-    try {
-      const siteUrl = getSiteUrl();
-      const callbackUrl = `${siteUrl}/auth/callback`;
+    const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const callbackUrl = getAuthCallbackUrl("/auth/callback");
 
+    console.log("[SignupForm.tsx:handleSubmit]", {
+      file: "components/auth/SignupForm.tsx",
+      function: "handleSubmit",
+      line: 24,
+      parameters: { email: email.trim(), fullName: fullName.trim() },
+      redirectTo: callbackUrl,
+      supabaseUrl,
+      callingFunction: "supabase.auth.signUp",
+    });
+
+    try {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
@@ -42,18 +52,26 @@ export const SignupForm: React.FC = () => {
         },
       });
 
+      console.log("[SignupForm.tsx:signUp:Response]", {
+        file: "components/auth/SignupForm.tsx",
+        function: "supabase.auth.signUp",
+        data,
+        error,
+        errorMessage: error?.message,
+        status: error?.status,
+        code: error?.code,
+      });
+
       if (error) {
         setErrorMessage(error.message);
         setLoading(false);
       } else if (data.session) {
-        // Immediate session granted (e.g. Email confirmation disabled in Supabase)
         setSuccessMessage("Account created successfully! Loading terminal...");
         setTimeout(() => {
           router.push("/dashboard");
           router.refresh();
         }, 500);
       } else if (data.user) {
-        // Account created in Supabase auth.users, email confirmation link sent
         setSuccessMessage("Account created! Check your inbox for the confirmation email.");
         setTimeout(() => {
           router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
@@ -63,6 +81,7 @@ export const SignupForm: React.FC = () => {
         setLoading(false);
       }
     } catch (err: any) {
+      console.error("[SignupForm.tsx:signUp:CatchError]", err);
       setErrorMessage(err?.message || "An unexpected error occurred during signup.");
       setLoading(false);
     }
@@ -72,12 +91,22 @@ export const SignupForm: React.FC = () => {
     setErrorMessage(null);
     setGoogleLoading(true);
 
+    const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const callbackUrl = getAuthCallbackUrl("/auth/callback");
+
+    console.log("[SignupForm.tsx:handleGoogleSignUp]", {
+      file: "components/auth/SignupForm.tsx",
+      function: "handleGoogleSignUp",
+      redirectTo: callbackUrl,
+      supabaseUrl,
+      callingFunction: "supabase.auth.signInWithOAuth",
+    });
+
     try {
-      const siteUrl = getSiteUrl();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${siteUrl}/auth/callback`,
+          redirectTo: callbackUrl,
         },
       });
 
