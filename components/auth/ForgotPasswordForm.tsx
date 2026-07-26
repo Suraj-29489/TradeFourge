@@ -28,8 +28,9 @@ export const ForgotPasswordForm: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${origin}/auth/callback?next=/reset-password`,
       });
 
       if (error) {

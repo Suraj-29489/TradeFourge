@@ -36,10 +36,12 @@ export const SignupForm: React.FC = () => {
     }
 
     try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
+          emailRedirectTo: `${origin}/auth/callback`,
           data: {
             full_name: fullName,
           },
@@ -49,8 +51,14 @@ export const SignupForm: React.FC = () => {
       if (error) {
         setErrorMessage(error.message);
         setLoading(false);
+      } else if (data.session) {
+        setSuccessMessage("Account created successfully! Loading terminal...");
+        setTimeout(() => {
+          router.push("/dashboard");
+          router.refresh();
+        }, 500);
       } else {
-        setSuccessMessage("Account created successfully! Verification email sent.");
+        setSuccessMessage("Account created! Check your inbox for the confirmation email.");
         setTimeout(() => {
           router.push("/verify-email");
         }, 800);
@@ -68,16 +76,17 @@ export const SignupForm: React.FC = () => {
     if (!configured) {
       setTimeout(() => {
         setGoogleLoading(false);
-        setErrorMessage("Supabase is not configured yet. Please add your SUPABASE_URL and ANON_KEY to .env.local.");
-      }, 600);
+        setErrorMessage("Supabase is not configured. Please paste your NEXT_PUBLIC_SUPABASE_URL and ANON_KEY into .env.local.");
+      }, 500);
       return;
     }
 
     try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${origin}/auth/callback`,
         },
       });
 

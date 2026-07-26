@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
-export const LoginForm: React.FC = () => {
+function LoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +21,14 @@ export const LoginForm: React.FC = () => {
   const supabase = createClient();
   const configured = isSupabaseConfigured();
 
+  // Check URL query parameters for callback errors
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      setErrorMessage(decodeURIComponent(errorParam));
+    }
+  }, [searchParams]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -27,18 +36,18 @@ export const LoginForm: React.FC = () => {
     setLoading(true);
 
     if (!configured) {
-      // Fallback for UI demonstration mode if Supabase env vars are not set
+      // Demo fallback if Supabase keys are default placeholders
       setTimeout(() => {
         setLoading(false);
-        setSuccessMessage("Configured in UI demo mode. Redirecting to terminal...");
-        setTimeout(() => router.push("/dashboard"), 800);
+        setSuccessMessage("Configured in UI demo mode. Opening terminal...");
+        setTimeout(() => router.push("/dashboard"), 600);
       }, 500);
       return;
     }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -46,11 +55,11 @@ export const LoginForm: React.FC = () => {
         setErrorMessage(error.message);
         setLoading(false);
       } else if (data.session) {
-        setSuccessMessage("Authentication successful. Opening terminal...");
+        setSuccessMessage("Authentication successful. Loading terminal...");
         setTimeout(() => {
           router.push("/dashboard");
           router.refresh();
-        }, 500);
+        }, 400);
       }
     } catch (err: any) {
       setErrorMessage(err?.message || "An unexpected authentication error occurred.");
@@ -65,16 +74,17 @@ export const LoginForm: React.FC = () => {
     if (!configured) {
       setTimeout(() => {
         setGoogleLoading(false);
-        setErrorMessage("Supabase is not configured yet. Please add your SUPABASE_URL and ANON_KEY to .env.local.");
-      }, 600);
+        setErrorMessage("Supabase is not configured. Please paste your NEXT_PUBLIC_SUPABASE_URL and ANON_KEY into .env.local.");
+      }, 500);
       return;
     }
 
     try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${origin}/auth/callback`,
         },
       });
 
@@ -83,7 +93,7 @@ export const LoginForm: React.FC = () => {
         setGoogleLoading(false);
       }
     } catch (err: any) {
-      setErrorMessage(err?.message || "Google sign in failed.");
+      setErrorMessage(err?.message || "Google OAuth sign in failed.");
       setGoogleLoading(false);
     }
   };
@@ -250,5 +260,13 @@ export const LoginForm: React.FC = () => {
         </Link>
       </div>
     </form>
+  );
+}
+
+export const LoginForm: React.FC = () => {
+  return (
+    <Suspense fallback={<div className="text-center py-6 text-xs text-gray-400 font-mono">Loading TradeFourge Auth...</div>}>
+      <LoginFormContent />
+    </Suspense>
   );
 };

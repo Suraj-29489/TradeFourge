@@ -9,6 +9,20 @@ export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
 
+  // Validate that Supabase URL and Anon Key are valid production or local environment values
+  const isConfigured = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("your-project-ref") &&
+    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") &&
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes("your-actual-anon-key") &&
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes("placeholder")
+  );
+
+  if (!isConfigured) {
+    return supabaseResponse;
+  }
+
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
@@ -26,23 +40,17 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // Do not run session check if Supabase env vars are placeholder / unconfigured
-  const isConfigured = Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("your-project-ref") &&
-    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
-  );
+  const pathname = request.nextUrl.pathname;
 
-  if (!isConfigured) {
+  // Always allow static files and auth callback route to execute directly
+  if (pathname.startsWith("/auth/callback") || pathname.startsWith("/_next")) {
     return supabaseResponse;
   }
 
-  // Refresh auth token
+  // Refresh auth user
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
 
   // List of protected routes requiring login
   const protectedRoutes = [
@@ -63,21 +71,19 @@ export async function updateSession(request: NextRequest) {
   );
 
   const isAuthRoute =
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/signup");
+    pathname === "/login" ||
+    pathname === "/signup";
 
   // Redirect unauthenticated user attempting to access protected route to /login
   if (!user && isProtectedRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+    const loginUrl = new URL("/login", request.url);
+    return NextResponse.redirect(loginUrl);
   }
 
   // Redirect authenticated user attempting to access auth page to /dashboard
   if (user && isAuthRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+    const dashboardUrl = new URL("/dashboard", request.url);
+    return NextResponse.redirect(dashboardUrl);
   }
 
   return supabaseResponse;
