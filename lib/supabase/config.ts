@@ -13,17 +13,14 @@ export function sanitizeSupabaseUrl(rawUrl?: string): string {
 
 /**
  * Utility to resolve the application's base URL for Supabase Auth redirects.
- * Prioritizes NEXT_PUBLIC_SITE_URL as the single source of truth.
+ * Strictly uses NEXT_PUBLIC_SITE_URL as single source of truth with strict fallback to https://tradefourge.vercel.app.
+ * Never uses window.location.origin or Vercel preview domains.
  */
 export function getSiteUrl(): string {
   let url = process.env.NEXT_PUBLIC_SITE_URL;
 
-  if (!url || url.trim() === "") {
-    if (typeof window !== "undefined" && window.location.origin) {
-      url = window.location.origin;
-    } else {
-      url = "https://tradefourge.vercel.app";
-    }
+  if (!url || url.trim() === "" || url.includes("placeholder")) {
+    url = "https://tradefourge.vercel.app";
   }
 
   url = url.trim();
