@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { getSiteUrl } from "@/lib/supabase/config";
+import { getAuthCallbackUrl } from "@/lib/supabase/config";
 
 function LoginFormContent() {
   const router = useRouter();
@@ -34,6 +34,15 @@ function LoginFormContent() {
     setSuccessMessage(null);
     setLoading(true);
 
+    const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!envUrl || !envKey || envUrl.includes("placeholder") || envKey.includes("placeholder")) {
+      setErrorMessage("Supabase project credentials missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -44,14 +53,14 @@ function LoginFormContent() {
         setErrorMessage(error.message);
         setLoading(false);
       } else if (data.session) {
-        setSuccessMessage("Authentication successful. Loading terminal...");
+        setSuccessMessage("Authentication successful. Opening terminal...");
         setTimeout(() => {
           router.push("/dashboard");
           router.refresh();
-        }, 400);
+        }, 300);
       }
     } catch (err: any) {
-      setErrorMessage(err?.message || "An unexpected authentication error occurred.");
+      setErrorMessage(err?.message || "An unexpected error occurred during sign in.");
       setLoading(false);
     }
   };
@@ -60,12 +69,21 @@ function LoginFormContent() {
     setErrorMessage(null);
     setGoogleLoading(true);
 
+    const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!envUrl || !envKey || envUrl.includes("placeholder") || envKey.includes("placeholder")) {
+      setErrorMessage("Supabase project credentials missing. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local.");
+      setGoogleLoading(false);
+      return;
+    }
+
     try {
-      const siteUrl = getSiteUrl();
+      const callbackUrl = getAuthCallbackUrl("/auth/callback");
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${siteUrl}/auth/callback`,
+          redirectTo: callbackUrl,
         },
       });
 
