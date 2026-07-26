@@ -30,10 +30,9 @@ export const SignupForm: React.FC = () => {
     const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
     const callbackUrl = getAuthCallbackUrl("/auth/callback");
 
-    console.log("[SignupForm.tsx:handleSubmit]", {
+    console.log("[SignupForm.tsx:handleSubmit:Tracing]", {
       file: "components/auth/SignupForm.tsx",
       function: "handleSubmit",
-      line: 24,
       parameters: { email: email.trim(), fullName: fullName.trim() },
       redirectTo: callbackUrl,
       supabaseUrl,
@@ -52,32 +51,39 @@ export const SignupForm: React.FC = () => {
         },
       });
 
-      console.log("[SignupForm.tsx:signUp:Response]", {
+      console.log("[SignupForm.tsx:signUp:ResponseTracing]", {
         file: "components/auth/SignupForm.tsx",
         function: "supabase.auth.signUp",
-        data,
+        userCreated: Boolean(data?.user),
+        userIdentities: data?.user?.identities,
+        hasSession: Boolean(data?.session),
         error,
         errorMessage: error?.message,
         status: error?.status,
-        code: error?.code,
       });
 
       if (error) {
         setErrorMessage(error.message);
         setLoading(false);
+      } else if (data.user && data.user.identities && data.user.identities.length === 0) {
+        // Supabase returns user with empty identities array when email is already registered
+        setErrorMessage("An account with this email address already exists. Please Sign In instead.");
+        setLoading(false);
       } else if (data.session) {
-        setSuccessMessage("Account created successfully! Loading terminal...");
+        // Immediate session granted (e.g. Email confirmation disabled in Supabase)
+        setSuccessMessage("Account created successfully! Redirecting to terminal...");
         setTimeout(() => {
           router.push("/dashboard");
           router.refresh();
         }, 500);
       } else if (data.user) {
-        setSuccessMessage("Account created! Check your inbox for the confirmation email.");
+        // New user created in auth.users, verification email link dispatched
+        setSuccessMessage("Account created! Verification email sent to your inbox.");
         setTimeout(() => {
           router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
         }, 800);
       } else {
-        setErrorMessage("Signup request sent, but no user record was returned. Please try logging in.");
+        setErrorMessage("Signup request sent, but no user record was returned.");
         setLoading(false);
       }
     } catch (err: any) {
@@ -93,14 +99,6 @@ export const SignupForm: React.FC = () => {
 
     const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
     const callbackUrl = getAuthCallbackUrl("/auth/callback");
-
-    console.log("[SignupForm.tsx:handleGoogleSignUp]", {
-      file: "components/auth/SignupForm.tsx",
-      function: "handleGoogleSignUp",
-      redirectTo: callbackUrl,
-      supabaseUrl,
-      callingFunction: "supabase.auth.signInWithOAuth",
-    });
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
