@@ -1,21 +1,21 @@
 "use client";
 
 import React from "react";
-import { SettingsTabs } from "@/components/settings/SettingsTabs";
+import { ProfileForm } from "@/components/profile/ProfileForm";
 
-export default function SettingsPage() {
+export default function ProfilePage() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight text-white font-mono">
-          Terminal & SaaS Settings
+          Trader Profile & Identity
         </h1>
         <p className="text-xs text-gray-400 font-mono mt-1">
-          Configure regional formatting, notifications, trading preferences, and terminal layout.
+          Manage your personal branding, regional localization, and institutional trader bio.
         </p>
       </div>
 
-      <SettingsTabs />
+      <ProfileForm />
     </div>
   );
 }

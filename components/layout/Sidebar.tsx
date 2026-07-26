@@ -11,7 +11,12 @@ import {
   BarChart3,
   FileSpreadsheet,
   Upload,
+  User,
   Settings,
+  Bell,
+  CreditCard,
+  Key,
+  ShieldCheck,
   ChevronLeft,
   ChevronRight,
   Zap,
@@ -28,7 +33,12 @@ export const NAV_ITEMS = [
   { name: "Audit Reports", href: "/reports", icon: FileSpreadsheet },
   { name: "Calendar", href: "/calendar", icon: CalendarDays },
   { name: "Upload CSV", href: "/upload", icon: Upload },
+  { name: "Trader Profile", href: "/profile", icon: User },
   { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Notifications", href: "/notifications", icon: Bell },
+  { name: "Billing & Plans", href: "/billing", icon: CreditCard },
+  { name: "API Keys", href: "/api-keys", icon: Key },
+  { name: "Security", href: "/security", icon: ShieldCheck },
 ];
 
 interface SidebarProps {
@@ -78,7 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 350, damping: 30 }}
-            className="fixed inset-y-0 left-0 z-50 w-72 bg-[#111726] border-r border-white/10 flex flex-col justify-between md:hidden shadow-2xl"
+            className="fixed inset-y-0 left-0 z-50 w-72 bg-[#111726] border-r border-white/10 flex flex-col justify-between md:hidden shadow-2xl overflow-y-auto"
           >
             <div>
               {/* Header with Close button */}
@@ -113,13 +123,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                     <Link key={item.href} href={item.href} onClick={handleNavClick} className="block relative">
                       <div
                         className={cn(
-                          "flex items-center gap-3 px-3 py-3 rounded-xl font-medium text-sm transition-all duration-200",
+                          "flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-xs font-mono transition-all duration-200",
                           isActive
                             ? "bg-purple-600/20 text-white border border-purple-500/30 shadow-glow font-bold"
                             : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
                         )}
                       >
-                        <Icon className={cn("w-5 h-5 shrink-0", isActive ? "text-purple-400" : "text-gray-400")} />
+                        <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-purple-400" : "text-gray-400")} />
                         <span>{item.name}</span>
                       </div>
                     </Link>
@@ -137,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                 <LogOut className="w-4 h-4" /> Sign Out
               </button>
               <div className="text-center text-[10px] font-mono text-gray-400">
-                TradeFourge SaaS Terminal · v2.0.0
+                TradeFourge SaaS Terminal · v2.5.0
               </div>
             </div>
           </motion.aside>
@@ -188,7 +198,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || (item.href === "/dashboard" && pathname === "/mission-control");
             const Icon = item.icon;
@@ -197,15 +207,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
               <Link key={item.href} href={item.href} className="block relative">
                 <div
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 group",
+                    "flex items-center gap-3 px-3 py-2 rounded-xl font-mono text-xs font-medium transition-all duration-200 group",
                     isActive
-                      ? "bg-purple-600/20 text-white border border-purple-500/30 shadow-glow"
+                      ? "bg-purple-600/20 text-white border border-purple-500/30 shadow-glow font-bold"
                       : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
                   )}
                 >
                   <Icon
                     className={cn(
-                      "w-5 h-5 shrink-0 transition-transform duration-200 group-hover:scale-110",
+                      "w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110",
                       isActive ? "text-purple-400" : "text-gray-400 group-hover:text-gray-200"
                     )}
                   />
@@ -225,7 +235,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                   {isActive && (
                     <motion.div
                       layoutId="sidebar-active-indicator"
-                      className="absolute right-2 w-1.5 h-5 rounded-full bg-purple-500 shadow-glow"
+                      className="absolute right-2 w-1.5 h-4 rounded-full bg-purple-500 shadow-glow"
                       transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     />
                   )}
@@ -255,7 +265,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
               )}
             </div>
             {!collapsed && (
-              <span className="text-[10px] text-gray-400 font-mono">v2.0.0</span>
+              <span className="text-[10px] text-gray-400 font-mono">v2.5.0</span>
             )}
           </div>
         </div>
