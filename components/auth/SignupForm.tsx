@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getSiteUrl } from "@/lib/supabase/config";
 
 export const SignupForm: React.FC = () => {
   const router = useRouter();
@@ -27,14 +28,16 @@ export const SignupForm: React.FC = () => {
     setLoading(true);
 
     try {
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const siteUrl = getSiteUrl();
+      const callbackUrl = `${siteUrl}/auth/callback`;
+
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          emailRedirectTo: `${origin}/auth/callback`,
+          emailRedirectTo: callbackUrl,
           data: {
-            full_name: fullName,
+            full_name: fullName.trim(),
           },
         },
       });
@@ -43,16 +46,21 @@ export const SignupForm: React.FC = () => {
         setErrorMessage(error.message);
         setLoading(false);
       } else if (data.session) {
+        // Immediate session granted (e.g. Email confirmation disabled in Supabase)
         setSuccessMessage("Account created successfully! Loading terminal...");
         setTimeout(() => {
           router.push("/dashboard");
           router.refresh();
         }, 500);
-      } else {
+      } else if (data.user) {
+        // Account created in Supabase auth.users, email confirmation link sent
         setSuccessMessage("Account created! Check your inbox for the confirmation email.");
         setTimeout(() => {
-          router.push("/verify-email");
+          router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
         }, 800);
+      } else {
+        setErrorMessage("Signup request sent, but no user record was returned. Please try logging in.");
+        setLoading(false);
       }
     } catch (err: any) {
       setErrorMessage(err?.message || "An unexpected error occurred during signup.");
@@ -65,11 +73,11 @@ export const SignupForm: React.FC = () => {
     setGoogleLoading(true);
 
     try {
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const siteUrl = getSiteUrl();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${origin}/auth/callback`,
+          redirectTo: `${siteUrl}/auth/callback`,
         },
       });
 

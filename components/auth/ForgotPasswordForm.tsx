@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { Mail, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getSiteUrl } from "@/lib/supabase/config";
 
 export const ForgotPasswordForm: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -19,9 +20,9 @@ export const ForgotPasswordForm: React.FC = () => {
     setLoading(true);
 
     try {
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const siteUrl = getSiteUrl();
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${origin}/auth/callback?next=/reset-password`,
+        redirectTo: `${siteUrl}/auth/callback?next=/reset-password`,
       });
 
       if (error) {

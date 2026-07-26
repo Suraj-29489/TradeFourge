@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getSiteUrl } from "@/lib/supabase/config";
 
 function LoginFormContent() {
   const router = useRouter();
@@ -60,11 +61,11 @@ function LoginFormContent() {
     setGoogleLoading(true);
 
     try {
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const siteUrl = getSiteUrl();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${origin}/auth/callback`,
+          redirectTo: `${siteUrl}/auth/callback`,
         },
       });
 

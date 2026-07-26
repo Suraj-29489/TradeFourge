@@ -6,8 +6,8 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -33,43 +33,52 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Refresh auth user session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // List of protected routes requiring login
-  const protectedRoutes = [
-    "/dashboard",
-    "/journal",
-    "/performance",
-    "/reports",
-    "/calendar",
-    "/trades",
-    "/upload",
-    "/settings",
-    "/mission-control",
-    "/statistics",
-  ];
-
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-
-  const isAuthRoute =
-    pathname === "/login" ||
-    pathname === "/signup";
-
-  // Redirect unauthenticated user attempting to access protected route to /login
-  if (!user && isProtectedRoute) {
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+  // Check if env vars are configured before attempting network call
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")) {
+    return supabaseResponse;
   }
 
-  // Redirect authenticated user attempting to access auth page to /dashboard
-  if (user && isAuthRoute) {
-    const dashboardUrl = new URL("/dashboard", request.url);
-    return NextResponse.redirect(dashboardUrl);
+  // Refresh auth user session
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // List of protected routes requiring login
+    const protectedRoutes = [
+      "/dashboard",
+      "/journal",
+      "/performance",
+      "/reports",
+      "/calendar",
+      "/trades",
+      "/upload",
+      "/settings",
+      "/mission-control",
+      "/statistics",
+    ];
+
+    const isProtectedRoute = protectedRoutes.some((route) =>
+      pathname.startsWith(route)
+    );
+
+    const isAuthRoute =
+      pathname === "/login" ||
+      pathname === "/signup";
+
+    // Redirect unauthenticated user attempting to access protected route to /login
+    if (!user && isProtectedRoute) {
+      const loginUrl = new URL("/login", request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Redirect authenticated user attempting to access auth page to /dashboard
+    if (user && isAuthRoute) {
+      const dashboardUrl = new URL("/dashboard", request.url);
+      return NextResponse.redirect(dashboardUrl);
+    }
+  } catch {
+    // Graceful fallback for network issues or invalid keys
   }
 
   return supabaseResponse;
