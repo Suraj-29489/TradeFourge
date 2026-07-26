@@ -2,25 +2,17 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
 
 export const SignupForm: React.FC = () => {
-  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(true);
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      router.push("/verify-email");
-    }, 600);
   };
 
   return (
@@ -100,7 +92,7 @@ export const SignupForm: React.FC = () => {
           required
           checked={agreedTerms}
           onChange={(e) => setAgreedTerms(e.target.checked)}
-          className="w-4 h-4 mt-0.5 rounded border-gray-700 bg-white/5 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-900"
+          className="w-4 h-4 mt-0.5 rounded border-gray-700 bg-white/5 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-900 cursor-pointer"
         />
         <label htmlFor="terms" className="ml-2.5 text-xs text-gray-400 leading-snug">
           I agree to TradeFourge's{" "}
@@ -113,17 +105,10 @@ export const SignupForm: React.FC = () => {
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={loading}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 mt-2"
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 mt-2"
       >
-        {loading ? (
-          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <>
-            <span>Create Free Account</span>
-            <ArrowRight className="w-4 h-4" />
-          </>
-        )}
+        <span>Create Free Account</span>
+        <ArrowRight className="w-4 h-4" />
       </button>
 
       {/* Security badge */}

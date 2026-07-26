@@ -2,20 +2,15 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle2, KeyRound } from "lucide-react";
 
 export const ForgotPasswordForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSubmitted(true);
-    }, 600);
+    setSubmitted(true);
   };
 
   if (submitted) {
@@ -26,13 +21,20 @@ export const ForgotPasswordForm: React.FC = () => {
         </div>
 
         <div className="space-y-2">
-          <h3 className="text-xl font-bold text-white">Reset Link Sent</h3>
+          <h3 className="text-xl font-bold text-white">Reset Instructions Sent</h3>
           <p className="text-sm text-gray-400 leading-relaxed">
-            We have sent password recovery instructions to <strong className="text-purple-300 font-mono">{email}</strong>.
+            If an account exists for <strong className="text-purple-300 font-mono">{email || "your email"}</strong>, password recovery instructions have been sent.
           </p>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-2 space-y-3">
+          <Link
+            href="/reset-password"
+            className="w-full py-3 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 font-bold text-xs flex items-center justify-center gap-2 transition-all"
+          >
+            <KeyRound className="w-4 h-4" /> Open Password Reset Page (UI Preview)
+          </Link>
+
           <Link
             href="/login"
             className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all"
@@ -67,14 +69,9 @@ export const ForgotPasswordForm: React.FC = () => {
 
       <button
         type="submit"
-        disabled={loading}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95"
       >
-        {loading ? (
-          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <span>Send Recovery Email</span>
-        )}
+        <span>Send Recovery Instructions</span>
       </button>
 
       <div className="pt-2 text-center">

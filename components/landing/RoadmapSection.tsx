@@ -6,55 +6,51 @@ import {
   RefreshCw,
   Cpu,
   History,
-  Shield,
   Smartphone,
-  PlaySquare,
   Users,
   Store,
   Sparkles,
+  PlaySquare,
+  Shield,
 } from "lucide-react";
 import { useMouseSpotlight } from "@/hooks/useMouseSpotlight";
 
 const ROADMAP_ITEMS = [
   {
     title: "Live Broker Sync",
-    description: "Real-time socket & API connection for Exness MT4/MT5, cTrader, and Interactive Brokers.",
+    description: "Real-time socket connection & direct API sync for Exness MT4/MT5, cTrader, and Interactive Brokers.",
     icon: RefreshCw,
+    badge: "In Development",
   },
   {
     title: "AI Strategy Builder",
-    description: "Generate rule-based setup playbooks with machine learning pattern recognition.",
+    description: "Generate rule-based setup playbooks with machine learning pattern recognition and backtest validation.",
     icon: Cpu,
+    badge: "Planning Phase",
   },
   {
     title: "Backtesting Lab",
-    description: "Simulate multi-asset strategies across 10+ years of institutional tick data.",
+    description: "Simulate multi-asset strategies across 10+ years of institutional tick data with slippage modeling.",
     icon: History,
-  },
-  {
-    title: "Prop Firm Dashboard",
-    description: "Live challenge rules monitoring for FTMO, FundedNext, and top funding evaluations.",
-    icon: Shield,
+    badge: "Q3 Roadmap",
   },
   {
     title: "Mobile Application",
-    description: "Native iOS & Android mobile companion app with push notifications for tilt alerts.",
+    description: "Native iOS & Android mobile companion app with push notifications for real-time tilt & drawdown alerts.",
     icon: Smartphone,
+    badge: "Q4 Roadmap",
   },
   {
-    title: "Trade Replay",
-    description: "Candle-by-candle position playback to review execution psychology and entry timing.",
-    icon: PlaySquare,
-  },
-  {
-    title: "Community Hub",
-    description: "Benchmark your metrics against verified profitable traders and share audited logs.",
+    title: "Trader Community",
+    description: "Benchmark your metrics against verified profitable traders and share audited execution playbooks.",
     icon: Users,
+    badge: "Community Hub",
   },
   {
     title: "Strategy Marketplace",
-    description: "Monetize and license verified trading playbooks and algorithmic edge rules.",
+    description: "Monetize and license verified trading playbooks, algorithmic edge rules, and custom indicator scripts.",
     icon: Store,
+    badge: "Marketplace",
   },
 ];
 
@@ -63,7 +59,7 @@ const containerVariants: Variants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08,
+      staggerChildren: 0.1,
       delayChildren: 0.1,
     },
   },
@@ -103,12 +99,12 @@ function RoadmapCard({ item }: { item: typeof ROADMAP_ITEMS[0] }) {
         }}
       />
 
-      <div className="space-y-3 relative z-10">
+      <div className="space-y-4 relative z-10">
         <div className="flex items-center justify-between">
           <div className="p-2.5 rounded-xl bg-[#0B0D13] border border-white/10 text-gray-300 group-hover:text-purple-400 transition-colors">
             <Icon className="w-5 h-5" />
           </div>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 animate-pulse">
+          <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30">
             Coming Soon
           </span>
         </div>
@@ -120,6 +116,11 @@ function RoadmapCard({ item }: { item: typeof ROADMAP_ITEMS[0] }) {
         <p className="text-xs text-gray-400 leading-relaxed font-sans">
           {item.description}
         </p>
+      </div>
+
+      <div className="pt-4 mt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-gray-500 relative z-10">
+        <span>Status:</span>
+        <span className="text-purple-300 font-semibold">{item.badge}</span>
       </div>
     </motion.div>
   );
@@ -135,23 +136,23 @@ export const RoadmapSection: React.FC = () => {
             <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Platform Roadmap
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
-            Coming Soon. <br />
+            Future Innovations. <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-purple-400">
               TradeFourge Is Constantly Evolving.
             </span>
           </h2>
           <p className="text-gray-400 text-base sm:text-lg">
-            We are building the future of institutional trading analytics. Here is a preview of upcoming modules in development.
+            We are engineering the future of institutional trading analytics. Here is a preview of upcoming modules in active development.
           </p>
         </div>
 
-        {/* Roadmap Cards Grid with Staggered Motion */}
+        {/* Roadmap Cards Grid */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-50px" }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
           {ROADMAP_ITEMS.map((item) => (
             <RoadmapCard key={item.title} item={item} />

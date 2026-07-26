@@ -2,25 +2,16 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Github } from "lucide-react";
 
 export const LoginForm: React.FC = () => {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [remember, setRemember] = useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    // Client-side authentication simulation -> Navigate to /dashboard
-    setTimeout(() => {
-      setLoading(false);
-      router.push("/dashboard");
-    }, 600);
   };
 
   return (
@@ -87,7 +78,7 @@ export const LoginForm: React.FC = () => {
           id="remember"
           checked={remember}
           onChange={(e) => setRemember(e.target.checked)}
-          className="w-4 h-4 rounded border-gray-700 bg-white/5 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-900"
+          className="w-4 h-4 rounded border-gray-700 bg-white/5 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-900 cursor-pointer"
         />
         <label htmlFor="remember" className="ml-2.5 text-xs text-gray-300 cursor-pointer">
           Remember this session for 30 days
@@ -97,17 +88,10 @@ export const LoginForm: React.FC = () => {
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={loading}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95"
       >
-        {loading ? (
-          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <>
-            <span>Sign In to Terminal</span>
-            <ArrowRight className="w-4 h-4" />
-          </>
-        )}
+        <span>Sign In to Terminal</span>
+        <ArrowRight className="w-4 h-4" />
       </button>
 
       {/* Social Divider */}
@@ -120,10 +104,9 @@ export const LoginForm: React.FC = () => {
         </span>
       </div>
 
-      {/* Social Button */}
+      {/* Social Button (UI Placeholder) */}
       <button
         type="button"
-        onClick={() => router.push("/dashboard")}
         className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 font-semibold text-xs flex items-center justify-center gap-2 transition-all"
       >
         <Github className="w-4 h-4" /> Sign In with GitHub

@@ -1,13 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ShieldCheck, ArrowRight, RefreshCw } from "lucide-react";
 
 export const VerifyEmailForm: React.FC = () => {
-  const router = useRouter();
   const [code, setCode] = useState(["", "", "", "", "", ""]);
-  const [loading, setLoading] = useState(false);
   const [resent, setResent] = useState(false);
 
   const handleChange = (index: number, value: string) => {
@@ -32,11 +29,6 @@ export const VerifyEmailForm: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      router.push("/dashboard");
-    }, 600);
   };
 
   const handleResend = () => {
@@ -74,17 +66,10 @@ export const VerifyEmailForm: React.FC = () => {
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={loading}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95"
       >
-        {loading ? (
-          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <>
-            <span>Verify & Access Terminal</span>
-            <ArrowRight className="w-4 h-4" />
-          </>
-        )}
+        <span>Verify & Access Terminal</span>
+        <ArrowRight className="w-4 h-4" />
       </button>
 
       {/* Resend Code Button */}

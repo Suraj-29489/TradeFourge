@@ -6,48 +6,39 @@ import { ChevronDown, HelpCircle } from "lucide-react";
 
 const FAQS = [
   {
-    q: "What is TradeFourge and how does it help my trading?",
-    a: "TradeFourge is an institutional-grade trading analytics and intelligence platform. It converts raw position CSV exports and broker API executions into real-time equity curves, win-rate metrics, risk-to-reward ratios, and AI-driven performance feedback to help you eliminate costly mistakes and scale your edge.",
+    category: "Pricing",
+    q: "How does TradeFourge pricing work?",
+    a: "TradeFourge offers a free perpetual Starter tier and a Pro tier priced at $24/month (billed annually) or $29/month. You can upgrade, downgrade, or cancel your plan anytime without hidden fees.",
   },
   {
-    q: "How do I import my trade data into TradeFourge?",
-    a: "You can import your trades in under 10 seconds by dragging and dropping your Exness MT4/MT5 position report, cTrader CSV, or NinjaTrader export file into our parser. Pro users can also enable automated real-time broker synchronization.",
+    category: "Refunds",
+    q: "What is your refund policy?",
+    a: "We offer a hassle-free 14-day money-back guarantee on all Pro subscriptions. If TradeFourge doesn't improve your trading discipline, simply contact our support team for a full refund—no questions asked.",
   },
   {
-    q: "Which brokers and trading platforms are supported?",
-    a: "TradeFourge supports Exness, MetaTrader 4, MetaTrader 5, cTrader, TradingView, Interactive Brokers, TD Ameritrade, and top prop firms including FTMO, FundedNext, MFF, and 5%ers.",
+    category: "Security",
+    q: "Is my financial and trade data secure?",
+    a: "Yes. Security is our top priority. All synced cloud data is encrypted at rest using AES-256 and transmitted via SSL/TLS encryption. We operate read-only and never request broker withdrawal credentials.",
   },
   {
-    q: "Is my financial and trading data secure?",
-    a: "Yes. Your privacy is paramount. In addition to client-side storage options, all synced cloud data is encrypted at rest using AES-256 and transmitted via SSL/TLS encryption. We never sell or share your trading data.",
+    category: "Brokers",
+    q: "Which brokers and prop firms are supported?",
+    a: "TradeFourge supports Exness, MetaTrader 4 (MT4), MetaTrader 5 (MT5), cTrader, Interactive Brokers, TradingView, and top prop funding evaluation exports including FTMO, FundedNext, and 5%ers.",
   },
   {
-    q: "How does the AI Coach analyze my trading edge?",
-    a: "The AI Coach runs statistical pattern matching algorithms across your historical trades. It evaluates session-based win rates, risk-to-reward ratios, setup duration, and streak anomalies to detect revenge trading, over-leveraging, and optimal execution windows.",
+    category: "AI",
+    q: "How does the AI Coach audit my trading edge?",
+    a: "Our AI Engine analyzes historical trade executions to detect behavioral anomalies such as revenge sizing, over-trading post-loss, and off-peak execution hours, providing instant actionable recommendations.",
   },
   {
-    q: "Can I generate reports for prop firms or investor updates?",
-    a: "Absolutely. TradeFourge includes 1-click PDF and Excel performance report generators that produce clean, professional audited statements complete with equity growth graphs, monthly breakdowns, and drawdown metrics.",
+    category: "CSV",
+    q: "How fast is the CSV trade log parser?",
+    a: "Our client-side parser ingests thousands of trade rows in under 2 seconds. Simply drop your broker's CSV or HTML report to generate instant equity curves, win rate heatmaps, and profit factor stats.",
   },
   {
-    q: "What is the difference between Free and Pro plans?",
-    a: "The Free plan provides full access to manual CSV uploads, equity charts, calendar heatmaps, and basic reports. The Pro plan adds automated real-time broker sync, unlimited accounts, the AI Coach engine, Trader DNA behavioral profiling, and cloud backup.",
-  },
-  {
-    q: "Can I cancel or switch plans at any time?",
-    a: "Yes. There are no lock-in contracts. You can upgrade, downgrade, or cancel your subscription at any time directly from your TradeFourge settings page with one click.",
-  },
-  {
-    q: "Does TradeFourge store my broker account passwords or API keys?",
-    a: "No. TradeFourge operates with read-only API access and read-only CSV history parser inputs. We never request trading or withdrawal credentials for your broker accounts.",
-  },
-  {
-    q: "What metrics does TradeFourge calculate for my strategy?",
-    a: "TradeFourge automatically calculates Net Realized Profit, Profit Factor, Win Rate, Average Risk:Reward (RR), Trade Expectancy, Gross W/L, Max Drawdown, Win/Loss Streaks, Average Hold Time, and Commission/Swap totals.",
-  },
-  {
-    q: "Can I use TradeFourge across multiple devices?",
-    a: "Yes. TradeFourge is fully web-based and responsive across desktop monitors, laptops, tablets, and smartphones.",
+    category: "Cloud",
+    q: "How does multi-device Cloud Backup work?",
+    a: "Pro users enjoy automatic encrypted cloud backup and cross-device synchronization, allowing you to seamlessly analyze trading performance across desktop, laptop, tablet, and mobile browsers.",
   },
 ];
 
@@ -73,7 +64,7 @@ export const FAQSection: React.FC = () => {
             </span>
           </h2>
           <p className="text-gray-400 text-base sm:text-lg">
-            Everything you need to know about TradeFourge, data privacy, and supported platforms.
+            Everything you need to know about TradeFourge pricing, security, AI auditing, and broker compatibility.
           </p>
         </div>
 
@@ -94,7 +85,10 @@ export const FAQSection: React.FC = () => {
                     <span className="text-xs font-mono text-purple-400">
                       {index + 1 < 10 ? `0${index + 1}` : index + 1}.
                     </span>
-                    {faq.q}
+                    <span>{faq.q}</span>
+                    <span className="text-[10px] font-mono font-normal uppercase px-2 py-0.5 rounded bg-white/5 text-gray-400 border border-white/10 hidden sm:inline-block">
+                      {faq.category}
+                    </span>
                   </span>
                   <div
                     className={`p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 transition-transform duration-200 shrink-0 ${
