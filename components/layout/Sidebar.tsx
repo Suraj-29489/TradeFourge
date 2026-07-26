@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -16,8 +16,10 @@ import {
   ChevronRight,
   Zap,
   X,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { createClient } from "@/lib/supabase/client";
 
 export const NAV_ITEMS = [
   { name: "Mission Control", href: "/dashboard", icon: LayoutDashboard },
@@ -37,9 +39,20 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMobile }) => {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
 
   const handleNavClick = () => {
     if (onCloseMobile) onCloseMobile();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {}
+    if (onCloseMobile) onCloseMobile();
+    router.push("/login");
+    router.refresh();
   };
 
   return (
@@ -115,9 +128,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
               </nav>
             </div>
 
-            {/* Mobile Footer */}
-            <div className="p-4 border-t border-white/10 text-center text-xs font-mono text-gray-400">
-              TradeFourge SaaS Terminal · v2.4.0
+            {/* Mobile Footer with Logout */}
+            <div className="p-4 border-t border-white/10 space-y-3">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono text-xs font-bold"
+              >
+                <LogOut className="w-4 h-4" /> Sign Out
+              </button>
+              <div className="text-center text-[10px] font-mono text-gray-400">
+                TradeFourge SaaS Terminal · v2.0.0
+              </div>
             </div>
           </motion.aside>
         )}
@@ -215,7 +236,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
         </nav>
 
         {/* Terminal Live Status Badge */}
-        <div className="p-3 border-t border-white/10">
+        <div className="p-3 border-t border-white/10 space-y-2">
           <div
             className={cn(
               "flex items-center gap-3 p-2.5 rounded-xl bg-[#080B11] border border-white/10",
@@ -234,7 +255,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
               )}
             </div>
             {!collapsed && (
-              <span className="text-[10px] text-gray-400 font-mono">v2.4.0</span>
+              <span className="text-[10px] text-gray-400 font-mono">v2.0.0</span>
             )}
           </div>
         </div>

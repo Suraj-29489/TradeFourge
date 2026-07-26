@@ -2,15 +2,47 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Mail, ArrowLeft, CheckCircle2, KeyRound } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export const ForgotPasswordForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const supabase = createClient();
+  const configured = isSupabaseConfigured();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setErrorMessage(null);
+    setLoading(true);
+
+    if (!configured) {
+      setTimeout(() => {
+        setLoading(false);
+        setSubmitted(true);
+      }, 500);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        setLoading(false);
+      } else {
+        setLoading(false);
+        setSubmitted(true);
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to send reset email.");
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -23,18 +55,11 @@ export const ForgotPasswordForm: React.FC = () => {
         <div className="space-y-2">
           <h3 className="text-xl font-bold text-white">Reset Instructions Sent</h3>
           <p className="text-sm text-gray-400 leading-relaxed">
-            If an account exists for <strong className="text-purple-300 font-mono">{email || "your email"}</strong>, password recovery instructions have been sent.
+            Password recovery instructions have been sent to <strong className="text-purple-300 font-mono">{email}</strong>.
           </p>
         </div>
 
         <div className="pt-2 space-y-3">
-          <Link
-            href="/reset-password"
-            className="w-full py-3 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 font-bold text-xs flex items-center justify-center gap-2 transition-all"
-          >
-            <KeyRound className="w-4 h-4" /> Open Password Reset Page (UI Preview)
-          </Link>
-
           <Link
             href="/login"
             className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all"
@@ -48,6 +73,13 @@ export const ForgotPasswordForm: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {errorMessage && (
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       <div className="space-y-1.5">
         <label className="text-xs font-mono font-medium text-gray-300 block">
           Your Account Email
@@ -69,9 +101,14 @@ export const ForgotPasswordForm: React.FC = () => {
 
       <button
         type="submit"
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95"
+        disabled={loading}
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
       >
-        <span>Send Recovery Instructions</span>
+        {loading ? (
+          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <span>Send Recovery Instructions</span>
+        )}
       </button>
 
       <div className="pt-2 text-center">

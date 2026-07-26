@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Lock, Eye, EyeOff, ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Lock, Eye, EyeOff, ArrowRight, CheckCircle2, ShieldCheck, AlertCircle } from "lucide-react";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export const ResetPasswordForm: React.FC = () => {
   const [password, setPassword] = useState("");
@@ -10,8 +11,12 @@ export const ResetPasswordForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Password strength helper (UI visual only)
+  const supabase = createClient();
+  const configured = isSupabaseConfigured();
+
   const getStrength = (pass: string) => {
     if (!pass) return { score: 0, label: "Enter Password", color: "bg-gray-700" };
     if (pass.length < 6) return { score: 1, label: "Weak", color: "bg-rose-500" };
@@ -21,9 +26,41 @@ export const ResetPasswordForm: React.FC = () => {
 
   const strength = getStrength(password);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setErrorMessage(null);
+
+    if (password !== confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+
+    if (!configured) {
+      setTimeout(() => {
+        setLoading(false);
+        setSubmitted(true);
+      }, 500);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password,
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        setLoading(false);
+      } else {
+        setLoading(false);
+        setSubmitted(true);
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to update password.");
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -55,6 +92,13 @@ export const ResetPasswordForm: React.FC = () => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {errorMessage && (
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
       {/* New Password */}
       <div className="space-y-1.5">
         <label className="text-xs font-mono font-medium text-gray-300 block">
@@ -81,7 +125,6 @@ export const ResetPasswordForm: React.FC = () => {
           </button>
         </div>
 
-        {/* Strength Meter Bar */}
         {password && (
           <div className="space-y-1 pt-1">
             <div className="flex items-center justify-between text-[10px] font-mono text-gray-400">
@@ -129,10 +172,17 @@ export const ResetPasswordForm: React.FC = () => {
       {/* Submit Button */}
       <button
         type="submit"
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 mt-2"
+        disabled={loading}
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 mt-2"
       >
-        <span>Reset Account Password</span>
-        <ArrowRight className="w-4 h-4" />
+        {loading ? (
+          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <>
+            <span>Reset Account Password</span>
+            <ArrowRight className="w-4 h-4" />
+          </>
+        )}
       </button>
 
       {/* Security badge */}

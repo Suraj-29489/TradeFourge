@@ -2,21 +2,120 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { User, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { User, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle, CheckCircle2 } from "lucide-react";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export const SignupForm: React.FC = () => {
+  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const supabase = createClient();
+  const configured = isSupabaseConfigured();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setLoading(true);
+
+    if (!configured) {
+      setTimeout(() => {
+        setLoading(false);
+        router.push("/verify-email");
+      }, 500);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        setLoading(false);
+      } else {
+        setSuccessMessage("Account created successfully! Verification email sent.");
+        setTimeout(() => {
+          router.push("/verify-email");
+        }, 800);
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "An unexpected error occurred during signup.");
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setErrorMessage(null);
+    setGoogleLoading(true);
+
+    if (!configured) {
+      setTimeout(() => {
+        setGoogleLoading(false);
+        setErrorMessage("Supabase is not configured yet. Please add your SUPABASE_URL and ANON_KEY to .env.local.");
+      }, 600);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        setGoogleLoading(false);
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Google sign up failed.");
+      setGoogleLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {!configured && (
+        <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-mono flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+          <div>
+            <strong>Demo Mode Active:</strong> Paste your Supabase Project URL and Anon Key into <code className="text-white">.env.local</code> to activate live Supabase Auth.
+          </div>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{successMessage}</span>
+        </div>
+      )}
+
       {/* Full Name */}
       <div className="space-y-1.5">
         <label className="text-xs font-mono font-medium text-gray-300 block">
@@ -105,10 +204,51 @@ export const SignupForm: React.FC = () => {
       {/* Submit Button */}
       <button
         type="submit"
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 mt-2"
+        disabled={loading}
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 mt-2"
       >
-        <span>Create Free Account</span>
-        <ArrowRight className="w-4 h-4" />
+        {loading ? (
+          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <>
+            <span>Create Free Account</span>
+            <ArrowRight className="w-4 h-4" />
+          </>
+        )}
+      </button>
+
+      {/* Google Sign Up */}
+      <button
+        type="button"
+        onClick={handleGoogleSignUp}
+        disabled={googleLoading}
+        className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 font-semibold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+      >
+        {googleLoading ? (
+          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <>
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path
+                fill="#EA4335"
+                d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
+              />
+              <path
+                fill="#4285F4"
+                d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 10.8 0 12.5s.7 2.8 1.9 5.2l3.7-2.9z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"
+              />
+            </svg>
+            <span>Sign Up with Google</span>
+          </>
+        )}
       </button>
 
       {/* Security badge */}

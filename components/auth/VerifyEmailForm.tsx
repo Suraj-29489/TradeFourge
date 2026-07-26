@@ -1,11 +1,19 @@
 "use client";
 
 import React, { useState } from "react";
-import { ShieldCheck, ArrowRight, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ShieldCheck, ArrowRight, RefreshCw, AlertCircle } from "lucide-react";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export const VerifyEmailForm: React.FC = () => {
+  const router = useRouter();
   const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [loading, setLoading] = useState(false);
   const [resent, setResent] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const supabase = createClient();
+  const configured = isSupabaseConfigured();
 
   const handleChange = (index: number, value: string) => {
     if (value.length > 1) return;
@@ -13,7 +21,6 @@ export const VerifyEmailForm: React.FC = () => {
     newCode[index] = value;
     setCode(newCode);
 
-    // Auto-focus next input
     if (value && index < 5) {
       const nextInput = document.getElementById(`code-input-${index + 1}`);
       if (nextInput) nextInput.focus();
@@ -27,8 +34,44 @@ export const VerifyEmailForm: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+    const token = code.join("");
+
+    if (token.length < 6) {
+      setErrorMessage("Please enter all 6 digits.");
+      return;
+    }
+
+    setLoading(true);
+
+    if (!configured) {
+      setTimeout(() => {
+        setLoading(false);
+        router.push("/dashboard");
+      }, 500);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: "", // User verifies with token
+        token,
+        type: "signup",
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        setLoading(false);
+      } else {
+        router.push("/dashboard");
+        router.refresh();
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Verification failed.");
+      setLoading(false);
+    }
   };
 
   const handleResend = () => {
@@ -46,6 +89,13 @@ export const VerifyEmailForm: React.FC = () => {
           Enter the 6-digit confirmation code sent to your email.
         </p>
       </div>
+
+      {errorMessage && (
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
 
       {/* 6-Digit OTP Inputs */}
       <div className="flex items-center justify-center gap-2 sm:gap-3">
@@ -66,10 +116,17 @@ export const VerifyEmailForm: React.FC = () => {
       {/* Submit Button */}
       <button
         type="submit"
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95"
+        disabled={loading}
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
       >
-        <span>Verify & Access Terminal</span>
-        <ArrowRight className="w-4 h-4" />
+        {loading ? (
+          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <>
+            <span>Verify & Access Terminal</span>
+            <ArrowRight className="w-4 h-4" />
+          </>
+        )}
       </button>
 
       {/* Resend Code Button */}
