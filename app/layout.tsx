@@ -9,10 +9,38 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "TradeFourge — Advanced Trading Intelligence & Analytics",
-  description: "Institutional-grade multi-journal trading analytics platform with equity curves, AI insights, calendar heatmaps, and professional audit reports.",
+  title: "TradeFourge — Institutional Trading Analytics & AI Intelligence",
+  description:
+    "TradeFourge is an institutional-grade multi-journal trading analytics terminal with equity curves, real-time AI Coach insights, calendar heatmaps, and audited performance statements.",
+  applicationName: "TradeFourge",
+  keywords: [
+    "TradeFourge",
+    "Trading Analytics",
+    "Forex Journal",
+    "Trading Journal",
+    "Prop Firm Journal",
+    "AI Trading Coach",
+    "Equity Curve Audit",
+  ],
+  authors: [{ name: "TradeFourge Inc." }],
+  creator: "TradeFourge",
+  publisher: "TradeFourge",
   icons: {
     icon: "/favicon.ico",
+  },
+  openGraph: {
+    title: "TradeFourge — Advanced Trading Intelligence Terminal",
+    description:
+      "Transform your trading history into institutional performance analytics, AI pattern audits, and audited investor reports.",
+    siteName: "TradeFourge",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TradeFourge — Advanced Trading Intelligence Terminal",
+    description:
+      "Institutional trading analytics, AI pattern auditing, and trade log management built for disciplined traders.",
+    creator: "@tradefourge",
   },
 };
 
