@@ -149,10 +149,19 @@ export async function updateImportRecord(
 
 export async function deleteImportRecord(
   id: string,
-  userId: string
+  userId: string,
+  deleteTrades = false
 ): Promise<ServiceResult<boolean>> {
   const supabase = createClient();
   try {
+    if (deleteTrades) {
+      await supabase
+        .from('trades')
+        .delete()
+        .eq('import_id', id)
+        .eq('user_id', userId);
+    }
+
     const { error } = await supabase
       .from('csv_imports')
       .delete()

@@ -16,6 +16,8 @@ import {
   Sparkles, Calendar, HelpCircle
 } from "lucide-react";
 
+import { ExportToolbar } from "@/components/export/ExportToolbar";
+
 function formatDuration(seconds: number): string {
   if (!seconds || seconds <= 0) return "N/A";
   const mins = Math.floor(seconds / 60);
@@ -84,13 +86,16 @@ export const StatisticsView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={loadData}
-          className="p-2.5 rounded-xl bg-dark-card border border-dark-border hover:bg-dark-hover text-gray-300 flex items-center gap-2 self-start md:self-auto"
-        >
-          <RefreshCw className="w-4 h-4 text-purple-400" />
-          <span>Refresh</span>
-        </button>
+        <div className="flex items-center gap-3 self-start md:self-auto flex-wrap">
+          <ExportToolbar trades={trades} />
+          <button
+            onClick={loadData}
+            className="p-2.5 rounded-xl bg-dark-card border border-dark-border hover:bg-dark-hover text-gray-300 flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4 text-purple-400" />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       {/* Trader Classification Banner */}

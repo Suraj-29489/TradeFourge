@@ -196,11 +196,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 350, damping: 30 }}
-            className="fixed inset-y-0 left-0 z-50 w-72 bg-[#111726] border-r border-white/10 flex flex-col justify-between md:hidden shadow-2xl overflow-y-auto"
+            className="fixed inset-y-0 left-0 z-50 w-72 bg-dark-bg border-r border-dark-border flex flex-col justify-between md:hidden shadow-2xl overflow-y-auto"
           >
             <div>
               {/* Header */}
-              <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
+              <div className="flex items-center justify-between h-16 px-4 border-b border-dark-border">
                 <Link href="/" onClick={handleNavClick} className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 shadow-glow shrink-0">
                     <Zap className="w-5 h-5 text-white" />
@@ -245,7 +245,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-white/10 space-y-3">
+            <div className="p-4 border-t border-dark-border space-y-3">
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono text-xs font-bold"
@@ -267,10 +267,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
     <motion.aside
       animate={{ width: collapsed ? 72 : 260 }}
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
-      className="relative z-30 hidden md:flex flex-col h-screen bg-[#111726] border-r border-white/10 select-none shrink-0 overflow-hidden"
+      className="relative z-30 hidden md:flex flex-col h-screen bg-dark-bg border-r border-dark-border select-none shrink-0 overflow-hidden"
     >
       {/* Brand */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-white/10 shrink-0">
+      <div className="flex items-center justify-between h-16 px-4 border-b border-dark-border shrink-0">
         <Link href="/" className="flex items-center gap-3 overflow-hidden min-w-0">
           <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 shadow-glow shrink-0">
             <Zap className="w-5 h-5 text-white" />
@@ -328,10 +328,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
       </nav>
 
       {/* Status Footer */}
-      <div className="p-3 border-t border-white/10 shrink-0">
+      <div className="p-3 border-t border-dark-border shrink-0">
         <div
           className={cn(
-            "flex items-center gap-3 p-2.5 rounded-xl bg-[#080B11] border border-white/10",
+            "flex items-center gap-3 p-2.5 rounded-xl bg-[#080B11] border border-dark-border",
             collapsed ? "justify-center" : "justify-between"
           )}
         >

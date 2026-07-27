@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Dark Theme (default: Institutional Dark Glass) ────────────────────────── */
+/* ─── Dark Theme (default) ─────────────────────────────────────────────────── */
 :root,
 [data-theme="dark"] {
   --dark-bg:     11 13 19;       /* #0B0D13 */
@@ -26,72 +26,26 @@
   --select-bg: #131622;
 }
 
-/* ─── OLED Black Theme (Midnight) ──────────────────────────────────────────── */
-[data-theme="midnight"] {
-  --dark-bg:     0 0 0;          /* #000000 */
-  --dark-card:   8 8 10;        /* #08080A */
-  --dark-hover:  18 18 22;      /* #121216 */
-  --dark-subtle: 28 28 34;      /* #1C1C22 */
-  --dark-border: rgba(255, 255, 255, 0.12);
-
-  --body-bg: #000000;
-  --body-text: #FFFFFF;
-  --body-text-muted: #A1A1AA;
-  --scrollbar-track: #000000;
-  --scrollbar-thumb: #27272A;
-  --glass-bg: rgba(8, 8, 10, 0.95);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --gradient-text-from: #FFFFFF;
-  --gradient-text-to: #8B5CF6;
-  --terminal-grid-line: rgba(255, 255, 255, 0.03);
-  --input-bg: #0C0C0E;
-  --input-border: rgba(255, 255, 255, 0.15);
-  --select-bg: #08080A;
-}
-
-/* ─── Cyberpunk Neon Theme ────────────────────────────────────────────────── */
-[data-theme="cyberpunk"] {
-  --dark-bg:     9 3 20;         /* #090314 */
-  --dark-card:   19 7 40;        /* #130728 */
-  --dark-hover:  32 12 64;       /* #200C40 */
-  --dark-subtle: 45 16 88;       /* #2D1058 */
-  --dark-border: rgba(0, 240, 255, 0.25);
-
-  --body-bg: #090314;
-  --body-text: #F3F4F6;
-  --body-text-muted: #C084FC;
-  --scrollbar-track: #090314;
-  --scrollbar-thumb: #3B0764;
-  --glass-bg: rgba(19, 7, 40, 0.9);
-  --glass-border: rgba(0, 240, 255, 0.25);
-  --gradient-text-from: #00F0FF;
-  --gradient-text-to: #FF007F;
-  --terminal-grid-line: rgba(0, 240, 255, 0.05);
-  --input-bg: rgba(0, 240, 255, 0.05);
-  --input-border: rgba(0, 240, 255, 0.3);
-  --select-bg: #130728;
-}
-
-/* ─── Pristine Light Theme ───────────────────────────────────────────────── */
+/* ─── Production Light Theme ─────────────────────────────────────────────── */
 [data-theme="light"] {
-  --dark-bg:     246 248 251;
-  --dark-card:   255 255 255;
-  --dark-hover:  243 244 246;
-  --dark-subtle: 249 250 252;
-  --dark-border: #E5E7EB;
+  --dark-bg:     248 250 252;   /* #F8FAFC */
+  --dark-card:   255 255 255;   /* #FFFFFF */
+  --dark-hover:  241 245 249;   /* #F1F5F9 */
+  --dark-subtle: 248 250 252;   /* #F8FAFC */
+  --dark-border: #E2E8F0;
 
-  --body-bg: #F6F8FB;
-  --body-text: #111827;
-  --body-text-muted: #6B7280;
-  --scrollbar-track: #F6F8FB;
-  --scrollbar-thumb: #D1D5DB;
+  --body-bg: #F8FAFC;
+  --body-text: #0F172A;
+  --body-text-muted: #64748B;
+  --scrollbar-track: #F8FAFC;
+  --scrollbar-thumb: #CBD5E1;
   --glass-bg: #FFFFFF;
-  --glass-border: #E5E7EB;
-  --gradient-text-from: #111827;
+  --glass-border: #E2E8F0;
+  --gradient-text-from: #0F172A;
   --gradient-text-to: #7C3AED;
   --terminal-grid-line: rgba(0, 0, 0, 0.03);
   --input-bg: #FFFFFF;
-  --input-border: #E5E7EB;
+  --input-border: #CBD5E1;
   --select-bg: #FFFFFF;
 }
 
@@ -114,54 +68,47 @@
   ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 9999px; }
   ::-webkit-scrollbar-thumb:hover { background: #7C3AED; }
 
-  /* Light Mode Clean Overrides */
+  /* ── Light Mode Complete System Overrides ────────────────────────── */
   [data-theme="light"] body {
-    background-color: #F6F8FB !important;
-    color: #111827 !important;
+    background-color: #F8FAFC !important;
+    color: #0F172A !important;
   }
 
-  [data-theme="light"] .text-white    { color: #111827 !important; }
-  [data-theme="light"] .text-gray-100 { color: #111827 !important; }
-  [data-theme="light"] .text-gray-200 { color: #1F2937 !important; }
-  [data-theme="light"] .text-gray-300 { color: #374151 !important; }
-  [data-theme="light"] .text-gray-400 { color: #6B7280 !important; }
-  [data-theme="light"] .text-gray-500 { color: #6B7280 !important; }
+  [data-theme="light"] .text-white    { color: #0F172A !important; }
+  [data-theme="light"] .text-gray-100 { color: #0F172A !important; }
+  [data-theme="light"] .text-gray-200 { color: #1E293B !important; }
+  [data-theme="light"] .text-gray-300 { color: #334155 !important; }
+  [data-theme="light"] .text-gray-400 { color: #64748B !important; }
+  [data-theme="light"] .text-gray-500 { color: #64748B !important; }
 
   [data-theme="light"] .bg-[#111726],
   [data-theme="light"] .bg-[#131622],
   [data-theme="light"] .bg-[#0B0D13],
-  [data-theme="light"] .bg-[#0F1523] {
+  [data-theme="light"] .bg-[#0F1523],
+  [data-theme="light"] .bg-[#080B11],
+  [data-theme="light"] .bg-dark-bg,
+  [data-theme="light"] .bg-dark-card {
     background-color: #FFFFFF !important;
-    border-color: #E5E7EB !important;
+    border-color: #E2E8F0 !important;
   }
 
   [data-theme="light"] .border-white\/10,
   [data-theme="light"] .border-dark-border {
-    border-color: #E5E7EB !important;
+    border-color: #E2E8F0 !important;
+  }
+
+  [data-theme="light"] table thead {
+    background-color: #F1F5F9 !important;
+    color: #475569 !important;
   }
 
   [data-theme="light"] input,
   [data-theme="light"] select,
   [data-theme="light"] textarea {
     background-color: #FFFFFF !important;
-    border-color: #E5E7EB !important;
-    color: #111827 !important;
+    border-color: #CBD5E1 !important;
+    color: #0F172A !important;
   }
-}
-
-/* ─── Dashboard Layout Variants ───────────────────────────────────────────── */
-[data-layout="compact"] .glass-card {
-  padding: 1rem !important;
-}
-[data-layout="compact"] h1 {
-  font-size: 1.25rem !important;
-}
-[data-layout="compact"] h2 {
-  font-size: 1rem !important;
-}
-
-[data-layout="analytics"] .grid {
-  gap: 1rem !important;
 }
 
 @layer utilities {
