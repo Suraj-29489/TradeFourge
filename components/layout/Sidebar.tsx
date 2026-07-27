@@ -43,7 +43,7 @@ interface NavSection {
 const NAV_SECTIONS: NavSection[] = [
   {
     items: [
-      { name: "Mission Control",  href: "/dashboard",       icon: LayoutDashboard },
+      { name: "Dashboard",        href: "/dashboard",       icon: LayoutDashboard },
       { name: "Performance Lab",  href: "/performance",     icon: BarChart3 },
     ],
   },

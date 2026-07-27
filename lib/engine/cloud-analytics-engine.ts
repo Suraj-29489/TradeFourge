@@ -134,6 +134,7 @@ export interface CompleteAnalyticsSummary {
   hoursOfDay: PeriodPerformance[];
   sessions: SessionPerformance[];
   equityCurve: EquityPoint[];
+  insights: string[];
 }
 
 /**
@@ -426,7 +427,66 @@ export function calculateCloudAnalytics(trades: (CloudTrade | CloudTradeWithRela
     hoursOfDay,
     sessions,
     equityCurve,
+    insights: generateInsights({
+      totalTrades,
+      netProfit,
+      winRate,
+      profitFactor,
+      bestSymbol,
+      worstSymbol,
+      bestSession: sessions.filter(s => s.trades > 0).sort((a, b) => b.netProfit - a.netProfit)[0] || null,
+      bestDay,
+      longWinRate,
+      shortWinRate,
+      classificationTitle: classification.title,
+    }),
   };
+}
+
+function generateInsights(params: {
+  totalTrades: number;
+  netProfit: number;
+  winRate: number;
+  profitFactor: number;
+  bestSymbol: SymbolPerformance | null;
+  worstSymbol: SymbolPerformance | null;
+  bestSession: SessionPerformance | null;
+  bestDay: PeriodPerformance | null;
+  longWinRate: number;
+  shortWinRate: number;
+  classificationTitle: string;
+}): string[] {
+  if (params.totalTrades === 0) {
+    return ["Upload or log trades to generate deterministic trade intelligence insights."];
+  }
+
+  const list: string[] = [];
+
+  list.push(`You are currently in a ${params.classificationTitle} phase.`);
+
+  if (params.bestSymbol && params.bestSymbol.netProfit > 0) {
+    list.push(`${params.bestSymbol.symbol} is currently your strongest market with $${params.bestSymbol.netProfit.toLocaleString("en-US", { minimumFractionDigits: 2 })} net profit (${params.bestSymbol.winRate}% WR).`);
+  }
+
+  if (params.bestSession && params.bestSession.netProfit > 0) {
+    list.push(`You perform best during ${params.bestSession.session} Session ($${params.bestSession.netProfit.toLocaleString("en-US", { minimumFractionDigits: 2 })} net profit).`);
+  }
+
+  if (params.bestDay && params.bestDay.netProfit > 0) {
+    list.push(`${params.bestDay.period} is your most profitable trading day.`);
+  }
+
+  if (params.longWinRate > params.shortWinRate && params.longWinRate > 0) {
+    list.push(`Your Long positions (${params.longWinRate.toFixed(1)}% WR) outperform Short positions (${params.shortWinRate.toFixed(1)}% WR).`);
+  } else if (params.shortWinRate > params.longWinRate && params.shortWinRate > 0) {
+    list.push(`Your Short positions (${params.shortWinRate.toFixed(1)}% WR) outperform Long positions (${params.longWinRate.toFixed(1)}% WR).`);
+  }
+
+  if (params.profitFactor >= 1.5) {
+    list.push(`Your Profit Factor of ${params.profitFactor.toFixed(2)} reflects positive expectancy and strong risk management.`);
+  }
+
+  return list;
 }
 
 function classifyTrader(params: {
@@ -721,5 +781,6 @@ function createEmptyAnalytics(): CompleteAnalyticsSummary {
     hoursOfDay: [],
     sessions: [],
     equityCurve: [],
+    insights: ["Import or log trades to generate deterministic trade intelligence insights."],
   };
 }
