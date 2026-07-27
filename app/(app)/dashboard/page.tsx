@@ -105,15 +105,11 @@ export default function DashboardPage() {
       <div className="p-5 rounded-2xl glass-card border border-dark-border flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xl">
         {/* User Info & Status */}
         <div className="flex items-center gap-3.5">
-          <Link href="/profile" className="relative group shrink-0">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 p-0.5 shadow-glow flex items-center justify-center">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover rounded-lg" />
-              ) : (
-                <div className="w-full h-full rounded-lg bg-dark-bg flex items-center justify-center text-sm font-bold text-purple-400">
-                  {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : "T"}
-                </div>
-              )}
+          <Link href="/profile" className="relative group shrink-0" title="View Trader Profile">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 p-0.5 shadow-glow flex items-center justify-center">
+              <div className="w-full h-full rounded-lg bg-dark-bg flex items-center justify-center text-sm font-bold text-purple-400">
+                {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : "T"}
+              </div>
             </div>
           </Link>
 

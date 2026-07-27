@@ -1,13 +1,13 @@
 "use client";
 // components/layout/Navbar.tsx
-// Production Navbar with interactive Account Selector Dropdown, Profile Sync, Theme Toggle, and Logout.
+// Production Navbar with Account Selector Dropdown, Theme Toggle, and User Email Dropdown.
 
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useUserProfile } from "@/context/UserProfileContext";
-import { Moon, Sun, Menu, LogOut, Wallet, ChevronDown, Plus, Check } from "lucide-react";
+import { Moon, Sun, Menu, LogOut, Wallet, ChevronDown, Plus, Check, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface NavbarProps {
@@ -22,16 +22,31 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
 
   const { profile, accounts, defaultAccount, switchDefaultAccount } = useUserProfile();
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>("");
+
+  const accountRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
   useEffect(() => {
     init();
 
-    // Close dropdown when clicking outside
+    async function loadAuthUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        setUserEmail(user.email);
+      }
+    }
+    loadAuthUser();
+
+    // Close dropdowns when clicking outside
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (accountRef.current && !accountRef.current.contains(event.target as Node)) {
         setAccountDropdownOpen(false);
+      }
+      if (userRef.current && !userRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -39,6 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
   }, [init]);
 
   const handleLogout = async () => {
+    setUserDropdownOpen(false);
     try {
       await supabase.auth.signOut();
     } catch {}
@@ -50,6 +66,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
     await switchDefaultAccount(accId);
     setAccountDropdownOpen(false);
   };
+
+  const displayName = profile?.username
+    ? `@${profile.username}`
+    : profile?.full_name || "Trader";
 
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-3 sm:px-6 backdrop-blur-md border-b bg-dark-bg/80 border-dark-border text-xs font-mono">
@@ -65,10 +85,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
         </button>
 
         {/* Account Selector Dropdown Container */}
-        <div className="relative" ref={dropdownRef}>
+        <div className="relative" ref={accountRef}>
           <button
-            onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
-            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border hover:border-purple-500/40 text-xs text-left transition-all"
+            onClick={() => {
+              setAccountDropdownOpen(!accountDropdownOpen);
+              setUserDropdownOpen(false);
+            }}
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border hover:border-purple-500/40 text-xs text-left transition-all"
           >
             <Wallet className="w-4 h-4 text-purple-400 flex-shrink-0" />
             <div className="flex flex-col">
@@ -95,9 +118,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
             <ChevronDown className="w-3.5 h-3.5 text-gray-400 ml-0.5 shrink-0" />
           </button>
 
-          {/* Dropdown Menu — Solid High-Contrast Backdrop */}
+          {/* Account Dropdown Menu */}
           {accountDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-72 p-2.5 rounded-2xl dropdown-menu z-50 space-y-1">
+            <div className="absolute left-0 mt-2 w-72 p-2.5 rounded-2xl dropdown-menu z-50 space-y-1 shadow-2xl">
               <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-dark-border mb-1">
                 Your Trading Accounts ({accounts.length})
               </div>
@@ -155,23 +178,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
         </div>
       </div>
 
-      {/* Right: User Profile Chip + Theme Toggle + Logout */}
+      {/* Right: Theme Toggle + Username Dropdown */}
       <div className="flex items-center gap-2">
-        {/* User Profile Avatar Link */}
-        <Link
-          href="/profile"
-          className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-dark-card border border-dark-border hover:border-purple-500/40 text-xs font-mono text-gray-200 transition-colors"
-        >
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt={profile.full_name} className="w-6 h-6 rounded-lg object-cover" />
-          ) : (
-            <div className="w-6 h-6 rounded-lg bg-purple-600/30 text-purple-300 font-bold flex items-center justify-center text-[10px]">
-              {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : "T"}
-            </div>
-          )}
-          <span className="hidden md:inline font-bold">{profile?.full_name || "Trader"}</span>
-        </Link>
-
         {/* Theme Toggle */}
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -184,15 +192,52 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
           }
         </button>
 
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 hover:text-rose-300 text-xs font-mono font-medium transition-all"
-          title="Sign out of TradeFourge"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Logout</span>
-        </button>
+        {/* Username Dropdown Container */}
+        <div className="relative" ref={userRef}>
+          <button
+            onClick={() => {
+              setUserDropdownOpen(!userDropdownOpen);
+              setAccountDropdownOpen(false);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border hover:border-purple-500/40 text-xs font-mono text-gray-200 transition-all"
+          >
+            <User className="w-3.5 h-3.5 text-purple-400" />
+            <span className="font-bold max-w-[120px] truncate">{displayName}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+          </button>
+
+          {/* User Account Dropdown */}
+          {userDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-64 p-3 rounded-2xl dropdown-menu z-50 space-y-2 shadow-2xl">
+              {/* User Email Header */}
+              <div className="px-2 py-1.5 border-b border-dark-border space-y-0.5">
+                <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Signed in as</p>
+                <p className="text-xs font-bold text-white font-mono truncate">{userEmail || "user@tradefourge.com"}</p>
+              </div>
+
+              {/* Trader Profile Link */}
+              <Link
+                href="/profile"
+                onClick={() => setUserDropdownOpen(false)}
+                className="flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-dark-hover transition-colors"
+              >
+                <User className="w-4 h-4 text-purple-400" />
+                <span>Trader Profile</span>
+              </Link>
+
+              {/* Log Out Action */}
+              <div className="pt-1 border-t border-dark-border">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Log Out</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

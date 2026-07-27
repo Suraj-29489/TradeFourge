@@ -302,58 +302,7 @@ export async function checkUsernameAvailable(
   }
 }
 
-/**
- * Upload avatar image to Supabase Storage `avatars` bucket or fallback to Base64 data URL.
- */
-export async function uploadAvatar(
-  userId: string,
-  file: File
-): Promise<{ url: string | null; error: string | null }> {
-  if (file.size > 5 * 1024 * 1024) {
-    return { url: null, error: "Image size must be less than 5MB." };
-  }
 
-  const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-  if (!validTypes.includes(file.type)) {
-    return { url: null, error: "Supported formats are JPG, PNG, WEBP, and GIF." };
-  }
-
-  const supabase = createClient();
-
-  try {
-    const fileExt = file.name.split(".").pop();
-    const filePath = `${userId}/avatar-${Date.now()}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: true,
-      });
-
-    if (!uploadError) {
-      const { data: publicUrlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
-
-      const publicUrl = publicUrlData.publicUrl;
-      await updateUserProfile(userId, { avatar_url: publicUrl });
-      return { url: publicUrl, error: null };
-    }
-  } catch {}
-
-  // Fallback to Data URL in localStorage if bucket fails or permissions restricted
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const dataUrl = reader.result as string;
-      await updateUserProfile(userId, { avatar_url: dataUrl });
-      resolve({ url: dataUrl, error: null });
-    };
-    reader.onerror = () => resolve({ url: null, error: "Failed to read file." });
-    reader.readAsDataURL(file);
-  });
-}
 
 /* ─── Preferences Services ────────────────────────────────────────────────── */
 
@@ -512,15 +461,9 @@ export async function fetchUserStatistics(userId: string): Promise<UserStatistic
  * Calculate profile completion percentage (0 - 100%)
  */
 export function calculateProfileCompletion(profile: UserProfile | null): number {
-  if (!profile) return 20;
-  let score = 20;
-
-  if (profile.full_name && profile.full_name.trim().length > 0 && profile.full_name !== "Trader") score += 15;
-  if (profile.username && profile.username.trim().length > 0) score += 15;
-  if (profile.avatar_url && profile.avatar_url.trim().length > 0) score += 20;
-  if (profile.bio && profile.bio.trim().length > 0) score += 10;
-  if (profile.country && profile.country !== "United States") score += 10;
-  if (profile.trading_experience) score += 10;
-
+  if (!profile) return 33;
+  let score = 33;
+  if (profile.full_name && profile.full_name.trim().length > 0 && profile.full_name !== "Trader") score += 33;
+  if (profile.username && profile.username.trim().length > 0) score += 34;
   return Math.min(100, score);
 }
