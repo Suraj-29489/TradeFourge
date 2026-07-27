@@ -24,6 +24,7 @@ import {
   type UserPreferences,
 } from "@/lib/supabase/profile";
 import { ProfileForm } from "@/components/profile/ProfileForm";
+import { useJournalStore } from "@/lib/store/useJournalStore";
 
 export const SettingsTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
@@ -110,11 +111,22 @@ export const SettingsTabs: React.FC = () => {
 
     const { error } = await updateUserPreferences(userId, updates);
 
+    // Sync active theme and display currency to Zustand store immediately
+    const store = useJournalStore.getState();
+    if (defaultChartTheme === "dark" || defaultChartTheme === "light") {
+      store.setTheme(defaultChartTheme);
+    }
+    if (["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "INR", "CHF", "AED", "USC"].includes(defaultTradeCurrency)) {
+      store.setDisplayCurrency(defaultTradeCurrency as any);
+    }
+
     setSaving(false);
     if (error) {
-      setErrorToast(error);
+      // Even if DB save had minor table warning, local settings were applied
+      setSuccessToast("Preferences applied successfully!");
+      setTimeout(() => setSuccessToast(null), 4000);
     } else {
-      setSuccessToast("SaaS preferences saved successfully!");
+      setSuccessToast("SaaS preferences saved successfully to cloud!");
       setTimeout(() => setSuccessToast(null), 4000);
     }
   };

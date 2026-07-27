@@ -1,17 +1,39 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ExportToolbar } from "@/components/export/ExportToolbar";
-import { FileSpreadsheet, Download, ShieldCheck, CheckCircle2 } from "lucide-react";
-import { useJournalMetrics } from "@/hooks/useJournalMetrics";
+import { FileSpreadsheet, ShieldCheck, CheckCircle2, RefreshCw } from "lucide-react";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
+import { createClient } from "@/lib/supabase/client";
+import { fetchTrades } from "@/lib/supabase/trades";
+import { calculateCloudAnalytics, CompleteAnalyticsSummary } from "@/lib/engine/cloud-analytics-engine";
+import type { CloudTradeWithRelations } from "@/types/database";
 
 export default function ReportsPage() {
-  const { trades, stats } = useJournalMetrics();
-  const { format, formatSigned } = useCurrencyFormatter();
+  const { formatSigned } = useCurrencyFormatter();
+  const supabase = createClient();
+
+  const [trades, setTrades] = useState<CloudTradeWithRelations[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data } = await fetchTrades(user.id, {}, 1, 10000, "close_time", false);
+      if (data?.data) setTrades(data.data);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const stats: CompleteAnalyticsSummary = calculateCloudAnalytics(trades);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-xs font-mono">
       {/* Header Banner */}
       <div className="p-6 rounded-2xl glass-card border border-dark-border flex items-center justify-between">
         <div>
@@ -22,7 +44,7 @@ export default function ReportsPage() {
             </span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            Generate production-grade PDF and Excel performance audit reports for prop-firm challenges and investors.
+            Generate production-grade PDF, Excel, CSV, and JSON performance audit reports directly from your cloud trades.
           </p>
         </div>
 
@@ -39,12 +61,12 @@ export default function ReportsPage() {
               <ShieldCheck className="w-5 h-5 text-purple-400" /> Executive Performance Summary
             </h2>
             <p className="text-xs text-gray-400">
-              Ready to export {trades.length} audited positions into official PDF & Excel format.
+              Ready to export {trades.length} audited positions into official PDF, Excel, CSV & JSON format.
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <ExportToolbar />
+            <ExportToolbar trades={trades} />
           </div>
         </div>
 
@@ -81,7 +103,7 @@ export default function ReportsPage() {
 
         <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-xs font-mono text-gray-300 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-purple-400 shrink-0" />
-          <span>All reports are dynamically formatted using the active TradeFourge theme and currency settings.</span>
+          <span>All reports are dynamically generated from live cloud trade records stored in Supabase.</span>
         </div>
       </div>
     </div>

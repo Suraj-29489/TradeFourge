@@ -11,6 +11,8 @@ import { fetchTrades, deleteTrade } from "@/lib/supabase/trades";
 import { fetchTradingAccounts } from "@/lib/supabase/accounts";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { CloudTradesTable } from "@/components/trades/CloudTradesTable";
+import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
+import { AddTradeModal } from "@/components/trades/AddTradeModal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type {
   CloudTradeWithRelations,
@@ -18,14 +20,14 @@ import type {
   PaginatedResult,
   TradingAccount,
 } from "@/types/database";
-import { DEFAULT_CLOUD_FILTERS } from "@/types/database";
 
 export default function JournalPage() {
-  const [userId, setUserId]         = useState<string | null>(null);
-  const [result, setResult]         = useState<PaginatedResult<CloudTradeWithRelations> | null>(null);
-  const [accounts, setAccounts]     = useState<TradingAccount[]>([]);
-  const [loading, setLoading]       = useState(true);
+  const [userId, setUserId]           = useState<string | null>(null);
+  const [result, setResult]           = useState<PaginatedResult<CloudTradeWithRelations> | null>(null);
+  const [accounts, setAccounts]       = useState<TradingAccount[]>([]);
+  const [loading, setLoading]         = useState(true);
   const [activeTrade, setActiveTrade] = useState<CloudTradeWithRelations | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Filters live in Zustand (ephemeral UI state only)
   const filters = useJournalStore((s) => s.filters);
@@ -116,9 +118,8 @@ export default function JournalPage() {
             Import CSV
           </Link>
           <button
-            disabled
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600/30 border border-purple-500/30 text-purple-300 font-bold text-sm font-mono opacity-60 cursor-not-allowed"
-            title="Manual trade entry — coming in Phase 3.1"
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm font-mono shadow-glow transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" />
             Add Trade
@@ -156,106 +157,19 @@ export default function JournalPage() {
         />
       )}
 
-      {/* Trade Detail Drawer — Phase 3.1 will build the cloud version */}
-      {activeTrade && (
-        <div
-          className="fixed inset-0 z-50 flex items-end md:items-center justify-end"
-          onClick={() => setActiveTrade(null)}
-        >
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div
-            className="relative z-10 w-full md:w-[480px] h-[90vh] md:h-full bg-[#111726] border-l border-white/10 shadow-2xl overflow-y-auto p-6 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white font-mono">
-                Trade Details
-              </h2>
-              <button
-                onClick={() => setActiveTrade(null)}
-                className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5"
-              >
-                ✕
-              </button>
-            </div>
+      {/* Manual Trade Entry Modal */}
+      <AddTradeModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={loadTrades}
+      />
 
-            {/* Core fields */}
-            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-              {[
-                { label: "Symbol",     value: activeTrade.symbol },
-                { label: "Side",       value: activeTrade.side },
-                { label: "Volume",     value: activeTrade.volume },
-                { label: "Outcome",    value: activeTrade.outcome ?? "—" },
-                { label: "Entry",      value: activeTrade.open_price ?? "—" },
-                { label: "Exit",       value: activeTrade.close_price ?? "—" },
-                { label: "Net PnL",    value: `${activeTrade.net_profit >= 0 ? "+" : ""}${activeTrade.net_profit.toFixed(2)}` },
-                { label: "R:R",        value: activeTrade.rr_ratio !== null ? `${activeTrade.rr_ratio}R` : "—" },
-                { label: "Commission", value: activeTrade.commission.toFixed(2) },
-                { label: "Swap",       value: activeTrade.swap.toFixed(2) },
-                { label: "Ticket",     value: activeTrade.ticket ?? "—" },
-                { label: "Source",     value: activeTrade.source },
-              ].map(({ label, value }) => (
-                <div key={label} className="p-3 rounded-xl bg-dark-card border border-dark-border">
-                  <p className="text-gray-500 mb-1">{label}</p>
-                  <p className="text-white font-bold">{String(value)}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Journal fields */}
-            {(activeTrade.notes || activeTrade.strategy || activeTrade.emotions || activeTrade.lessons) && (
-              <div className="space-y-3 border-t border-white/10 pt-4">
-                {activeTrade.strategy && (
-                  <div>
-                    <p className="text-xs text-gray-500 font-mono mb-1">Strategy</p>
-                    <p className="text-sm text-gray-200">{activeTrade.strategy}</p>
-                  </div>
-                )}
-                {activeTrade.notes && (
-                  <div>
-                    <p className="text-xs text-gray-500 font-mono mb-1">Notes</p>
-                    <p className="text-sm text-gray-200">{activeTrade.notes}</p>
-                  </div>
-                )}
-                {activeTrade.emotions && (
-                  <div>
-                    <p className="text-xs text-gray-500 font-mono mb-1">Emotions</p>
-                    <p className="text-sm text-gray-200">{activeTrade.emotions}</p>
-                  </div>
-                )}
-                {activeTrade.lessons && (
-                  <div>
-                    <p className="text-xs text-gray-500 font-mono mb-1">Lessons</p>
-                    <p className="text-sm text-gray-200">{activeTrade.lessons}</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Tags */}
-            {activeTrade.tags && activeTrade.tags.length > 0 && (
-              <div className="border-t border-white/10 pt-4">
-                <p className="text-xs text-gray-500 font-mono mb-2">Tags</p>
-                <div className="flex flex-wrap gap-2">
-                  {activeTrade.tags.map((tag) => (
-                    <span
-                      key={tag.id}
-                      className="px-2 py-0.5 rounded text-xs font-mono font-bold border"
-                      style={{
-                        backgroundColor: `${tag.color}20`,
-                        color: tag.color,
-                        borderColor: `${tag.color}40`,
-                      }}
-                    >
-                      {tag.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Cloud Trade Detail Drawer */}
+      <CloudTradeDetailDrawer
+        trade={activeTrade}
+        onClose={() => setActiveTrade(null)}
+        onRefresh={loadTrades}
+      />
     </div>
   );
 }

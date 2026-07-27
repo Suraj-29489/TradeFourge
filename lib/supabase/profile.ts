@@ -87,8 +87,7 @@ export async function updateUserProfile(
 
     const { data, error } = await supabase
       .from("profiles")
-      .update(payload)
-      .eq("id", userId)
+      .upsert({ id: userId, ...payload }, { onConflict: "id" })
       .select()
       .single();
 

@@ -89,17 +89,28 @@ export const ProfileForm: React.FC = () => {
         if (user) {
           setUserEmail(user.email || "");
           const userProf = await fetchUserProfile(user.id);
-          if (userProf) {
-            setProfile(userProf);
-            setFullName(userProf.full_name || "");
-            setUsername(userProf.username || "");
-            setBio(userProf.bio || "");
-            setCountry(userProf.country || "United States");
-            setTimezone(userProf.timezone || "UTC");
-            setPreferredCurrency(userProf.preferred_currency || "USD");
-            setPreferredLanguage(userProf.preferred_language || "en");
-            setTradingExperience(userProf.trading_experience || "Intermediate (1-3 Years)");
-          }
+          const initialProf: UserProfile = userProf || {
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Trader",
+            username: user.email?.split("@")[0].toLowerCase() || "trader",
+            avatar_url: user.user_metadata?.avatar_url || "",
+            bio: "",
+            country: "United States",
+            timezone: "UTC",
+            preferred_currency: "USD",
+            preferred_language: "en",
+            trading_experience: "Intermediate (1-3 Years)",
+          };
+
+          setProfile(initialProf);
+          setFullName(initialProf.full_name || "");
+          setUsername(initialProf.username || "");
+          setBio(initialProf.bio || "");
+          setCountry(initialProf.country || "United States");
+          setTimezone(initialProf.timezone || "UTC");
+          setPreferredCurrency(initialProf.preferred_currency || "USD");
+          setPreferredLanguage(initialProf.preferred_language || "en");
+          setTradingExperience(initialProf.trading_experience || "Intermediate (1-3 Years)");
         }
       } catch (err) {
         console.error(err);

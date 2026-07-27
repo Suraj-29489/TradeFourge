@@ -8,7 +8,8 @@ import { X } from "lucide-react";
 import { cn } from "@/utils/cn";
 
 interface ModalProps {
-  open: boolean;
+  open?: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   title: string;
   description?: string;
@@ -19,6 +20,7 @@ interface ModalProps {
 
 export function Modal({
   open,
+  isOpen,
   onClose,
   title,
   description,
@@ -26,27 +28,28 @@ export function Modal({
   size = "md",
   className,
 }: ModalProps) {
+  const isModalOpen = open ?? isOpen ?? false;
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape key
   useEffect(() => {
-    if (!open) return;
+    if (!isModalOpen) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open, onClose]);
+  }, [isModalOpen, onClose]);
 
   // Lock body scroll
   useEffect(() => {
-    if (open) {
+    if (isModalOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
     }
     return () => { document.body.style.overflow = ""; };
-  }, [open]);
+  }, [isModalOpen]);
 
   const maxWidths = {
     sm: "max-w-sm",
@@ -57,7 +60,7 @@ export function Modal({
 
   return (
     <AnimatePresence>
-      {open && (
+      {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           {/* Backdrop */}
           <motion.div
