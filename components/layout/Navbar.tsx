@@ -72,7 +72,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
     : profile?.full_name || "Trader";
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-3 sm:px-6 backdrop-blur-md border-b bg-dark-bg/80 border-dark-border text-xs font-mono">
+    <header className="sticky top-0 z-20 h-16 backdrop-blur-md border-b bg-dark-bg/80 border-dark-border text-xs font-mono">
+      <div className="max-w-7xl mx-auto w-full h-full px-3 sm:px-6 lg:px-8 flex items-center justify-between">
       {/* Left: Mobile Hamburger + Account Selector Dropdown */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Mobile Hamburger */}
@@ -250,6 +251,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
           )}
         </div>
       </div>
-    </header>
+    </div>
+  </header>
   );
 };
