@@ -11,6 +11,7 @@ import {
   calculateProfileCompletion,
   type UserProfile,
 } from "@/lib/supabase/profile";
+import { useUserProfile } from "@/context/UserProfileContext";
 
 const COUNTRIES = [
   "United States",
@@ -55,7 +56,8 @@ const LANGUAGES = [
 
 const EXPERIENCES = ["Beginner (< 1 Year)", "Intermediate (1-3 Years)", "Advanced (3-5 Years)", "Institutional / Professional (5+ Years)"];
 
-export const ProfileForm: React.FC = () => {
+export function ProfileForm() {
+  const { refreshProfile } = useUserProfile();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [userEmail, setUserEmail] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -204,9 +206,11 @@ export const ProfileForm: React.FC = () => {
     setSaving(false);
     if (error) {
       setErrorToast(error);
-    } else if (data) {
-      setProfile(data);
+    } else {
+      const updatedProf = data || { ...profile, ...updates };
+      setProfile(updatedProf);
       setHasChanges(false);
+      await refreshProfile();
       setSuccessToast("Profile settings saved successfully!");
       setTimeout(() => setSuccessToast(null), 4000);
     }

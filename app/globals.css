@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Dark Theme (default) ─────────────────────────────────────────────────── */
+/* ─── Dark Theme (default: Institutional Dark Glass) ────────────────────────── */
 :root,
 [data-theme="dark"] {
   --dark-bg:     11 13 19;       /* #0B0D13 */
@@ -16,7 +16,7 @@
   --body-text-muted: #9CA3AF;
   --scrollbar-track: #0B0D13;
   --scrollbar-thumb: #1A1E2E;
-  --glass-bg: rgba(19, 22, 34, 0.75);
+  --glass-bg: rgba(19, 22, 34, 0.85);
   --glass-border: rgba(255, 255, 255, 0.08);
   --gradient-text-from: #FFFFFF;
   --gradient-text-to: #A78BFA;
@@ -26,7 +26,53 @@
   --select-bg: #131622;
 }
 
-/* ─── Premium Light Theme ────────────────────────────────────────── */
+/* ─── OLED Black Theme (Midnight) ──────────────────────────────────────────── */
+[data-theme="midnight"] {
+  --dark-bg:     0 0 0;          /* #000000 */
+  --dark-card:   8 8 10;        /* #08080A */
+  --dark-hover:  18 18 22;      /* #121216 */
+  --dark-subtle: 28 28 34;      /* #1C1C22 */
+  --dark-border: rgba(255, 255, 255, 0.12);
+
+  --body-bg: #000000;
+  --body-text: #FFFFFF;
+  --body-text-muted: #A1A1AA;
+  --scrollbar-track: #000000;
+  --scrollbar-thumb: #27272A;
+  --glass-bg: rgba(8, 8, 10, 0.95);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --gradient-text-from: #FFFFFF;
+  --gradient-text-to: #8B5CF6;
+  --terminal-grid-line: rgba(255, 255, 255, 0.03);
+  --input-bg: #0C0C0E;
+  --input-border: rgba(255, 255, 255, 0.15);
+  --select-bg: #08080A;
+}
+
+/* ─── Cyberpunk Neon Theme ────────────────────────────────────────────────── */
+[data-theme="cyberpunk"] {
+  --dark-bg:     9 3 20;         /* #090314 */
+  --dark-card:   19 7 40;        /* #130728 */
+  --dark-hover:  32 12 64;       /* #200C40 */
+  --dark-subtle: 45 16 88;       /* #2D1058 */
+  --dark-border: rgba(0, 240, 255, 0.25);
+
+  --body-bg: #090314;
+  --body-text: #F3F4F6;
+  --body-text-muted: #C084FC;
+  --scrollbar-track: #090314;
+  --scrollbar-thumb: #3B0764;
+  --glass-bg: rgba(19, 7, 40, 0.9);
+  --glass-border: rgba(0, 240, 255, 0.25);
+  --gradient-text-from: #00F0FF;
+  --gradient-text-to: #FF007F;
+  --terminal-grid-line: rgba(0, 240, 255, 0.05);
+  --input-bg: rgba(0, 240, 255, 0.05);
+  --input-border: rgba(0, 240, 255, 0.3);
+  --select-bg: #130728;
+}
+
+/* ─── Pristine Light Theme ───────────────────────────────────────────────── */
 [data-theme="light"] {
   --dark-bg:     246 248 251;
   --dark-card:   255 255 255;
@@ -80,24 +126,19 @@
   [data-theme="light"] .text-gray-300 { color: #374151 !important; }
   [data-theme="light"] .text-gray-400 { color: #6B7280 !important; }
   [data-theme="light"] .text-gray-500 { color: #6B7280 !important; }
-  [data-theme="light"] .text-gray-600 { color: #9CA3AF !important; }
 
-  [data-theme="light"] .text-brand-300 { color: #7C3AED !important; }
-  [data-theme="light"] .text-brand-400 { color: #7C3AED !important; }
-  [data-theme="light"] .text-emerald-400,
-  [data-theme="light"] .text-emerald-500 { color: #16A34A !important; }
-  [data-theme="light"] .text-rose-400,
-  [data-theme="light"] .text-rose-500,
-  [data-theme="light"] .text-red-400   { color: #DC2626 !important; }
-  [data-theme="light"] .text-amber-400,
-  [data-theme="light"] .text-amber-500 { color: #F59E0B !important; }
+  [data-theme="light"] .bg-[#111726],
+  [data-theme="light"] .bg-[#131622],
+  [data-theme="light"] .bg-[#0B0D13],
+  [data-theme="light"] .bg-[#0F1523] {
+    background-color: #FFFFFF !important;
+    border-color: #E5E7EB !important;
+  }
 
-  [data-theme="light"] .bg-emerald-500\/10 { background-color: #F0FDF4 !important; border-color: #BBF7D0 !important; }
-  [data-theme="light"] .bg-rose-500\/10,
-  [data-theme="light"] .bg-red-500\/10     { background-color: #FEF2F2 !important; border-color: #FECACA !important; }
-  [data-theme="light"] .bg-amber-500\/10    { background-color: #FFFBEB !important; border-color: #FDE68A !important; }
-  [data-theme="light"] .bg-brand-500\/10,
-  [data-theme="light"] .bg-brand-600\/20    { background-color: #F5F3FF !important; border-color: #DDD6FE !important; }
+  [data-theme="light"] .border-white\/10,
+  [data-theme="light"] .border-dark-border {
+    border-color: #E5E7EB !important;
+  }
 
   [data-theme="light"] input,
   [data-theme="light"] select,
@@ -106,6 +147,21 @@
     border-color: #E5E7EB !important;
     color: #111827 !important;
   }
+}
+
+/* ─── Dashboard Layout Variants ───────────────────────────────────────────── */
+[data-layout="compact"] .glass-card {
+  padding: 1rem !important;
+}
+[data-layout="compact"] h1 {
+  font-size: 1.25rem !important;
+}
+[data-layout="compact"] h2 {
+  font-size: 1rem !important;
+}
+
+[data-layout="analytics"] .grid {
+  gap: 1rem !important;
 }
 
 @layer utilities {

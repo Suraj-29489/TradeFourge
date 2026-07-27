@@ -1,11 +1,13 @@
 "use client";
+// components/layout/Navbar.tsx
+// Global application navbar synchronized with useUserProfile context.
+// Clean layout without redundant toolbar exports.
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useJournalStore } from "@/lib/store/useJournalStore";
-import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
-import { ExportToolbar } from "@/components/export/ExportToolbar";
+import { useUserProfile } from "@/context/UserProfileContext";
 import { Upload, Moon, Sun, Menu, LogOut, User, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { fetchDefaultAccount } from "@/lib/supabase/accounts";
@@ -21,25 +23,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
   const theme    = useJournalStore(s => s.theme);
   const setTheme = useJournalStore(s => s.setTheme);
 
-  const { format } = useCurrencyFormatter();
-  const [userEmail, setUserEmail]             = useState<string | null>(null);
-  const [defaultAccount, setDefaultAccount]   = useState<TradingAccount | null>(null);
+  const { profile } = useUserProfile();
+  const [defaultAccount, setDefaultAccount] = useState<TradingAccount | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
     init();
 
-    async function fetchNavbarData() {
+    async function fetchNavbarAccount() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email) {
-          setUserEmail(user.email);
+        if (user) {
           const { data: acc } = await fetchDefaultAccount(user.id);
           if (acc) setDefaultAccount(acc);
         }
       } catch {}
     }
-    fetchNavbarData();
+    fetchNavbarAccount();
   }, [init]);
 
   const handleLogout = async () => {
@@ -51,8 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
   };
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-3 sm:px-6 backdrop-blur-md border-b"
-            style={{ backgroundColor: "var(--glass-bg)", borderColor: "var(--glass-border)" }}>
+    <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-3 sm:px-6 backdrop-blur-md border-b bg-dark-bg/80 border-dark-border">
       {/* Left: Mobile Menu Toggle + Account Info */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Mobile Hamburger */}
@@ -65,16 +64,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
         </button>
 
         {/* Default Account Chip */}
-        <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs sm:text-sm hover:border-brand-500/40 transition-colors">
-          <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-400 flex-shrink-0" />
+        <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs sm:text-sm hover:border-purple-500/40 transition-colors">
+          <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 flex-shrink-0" />
           <span className="text-gray-200 font-medium max-w-[100px] sm:max-w-[160px] truncate font-mono">
-            {defaultAccount?.account_name ?? "No Account"}
+            {defaultAccount?.account_name ?? "Default Account"}
           </span>
         </div>
 
         {/* Account Type Badge */}
         {defaultAccount && (
-          <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 font-mono text-xs font-semibold">
+          <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 font-mono text-xs font-semibold">
             {defaultAccount.account_type}
           </div>
         )}
@@ -91,33 +90,38 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        <ExportToolbar />
-
+      <div className="flex items-center gap-2">
         <Link
           href="/upload"
-          className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-medium text-xs sm:text-sm shadow-glow transition-all active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium text-xs sm:text-sm shadow-glow transition-all active:scale-95"
         >
           <Upload className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span className="hidden sm:inline">Upload CSV</span>
         </Link>
 
-        {/* User email chip */}
-        {userEmail && (
-          <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300">
-            <User className="w-3.5 h-3.5 text-purple-400" />
-            <span className="max-w-[120px] truncate">{userEmail}</span>
-          </div>
-        )}
+        {/* User Profile Avatar Link */}
+        <Link
+          href="/profile"
+          className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-dark-card border border-dark-border hover:border-purple-500/40 text-xs font-mono text-gray-200 transition-colors"
+        >
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt={profile.full_name} className="w-6 h-6 rounded-lg object-cover" />
+          ) : (
+            <div className="w-6 h-6 rounded-lg bg-purple-600/30 text-purple-300 font-bold flex items-center justify-center text-[10px]">
+              {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : "T"}
+            </div>
+          )}
+          <span className="hidden md:inline font-bold">{profile?.full_name || "Trader"}</span>
+        </Link>
 
         {/* Theme Toggle */}
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-dark-card border border-dark-border text-gray-400 hover:text-brand-400 hover:border-brand-500/40 transition-all"
+          className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-dark-card border border-dark-border text-gray-400 hover:text-purple-400 hover:border-purple-500/40 transition-all"
           title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
         >
           {theme === "dark"
-            ? <Moon className="w-4 h-4 text-brand-400" />
+            ? <Moon className="w-4 h-4 text-purple-400" />
             : <Sun className="w-4 h-4 text-amber-400" />
           }
         </button>

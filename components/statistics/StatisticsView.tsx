@@ -12,8 +12,20 @@ import { TableSkeleton } from "@/components/ui/LoadingSkeleton";
 import type { CloudTradeWithRelations } from "@/types/database";
 import {
   Zap, TrendingUp, TrendingDown, Target, Award, Clock, Layers, ShieldCheck,
-  Trophy, AlertTriangle, Activity, BarChart2, DollarSign, PieChart, RefreshCw
+  Trophy, AlertTriangle, Activity, BarChart2, DollarSign, PieChart, RefreshCw,
+  Sparkles, Calendar, HelpCircle
 } from "lucide-react";
+
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds <= 0) return "N/A";
+  const mins = Math.floor(seconds / 60);
+  const hrs = Math.floor(mins / 60);
+  const days = Math.floor(hrs / 24);
+  if (days > 0) return `${days}d ${hrs % 24}h`;
+  if (hrs > 0) return `${hrs}h ${mins % 60}m`;
+  if (mins > 0) return `${mins}m`;
+  return `${seconds}s`;
+}
 
 export const StatisticsView: React.FC = () => {
   const { format: fmtCurrency, formatSigned } = useCurrencyFormatter();
@@ -39,7 +51,6 @@ export const StatisticsView: React.FC = () => {
     loadData();
   }, []);
 
-  // Compute analytics
   const analytics: CompleteAnalyticsSummary = useMemo(() => {
     return calculateCloudAnalytics(trades);
   }, [trades]);
@@ -65,11 +76,11 @@ export const StatisticsView: React.FC = () => {
           <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
             Quantitative Performance Lab
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30">
-              LIVE CLOUD METRICS
+              INSTITUTIONAL METRICS
             </span>
           </h2>
           <p className="text-xs text-gray-400 mt-1">
-            Audited performance calculations from {analytics.totalTrades} closed positions in Supabase.
+            Audited statistical analytics from {analytics.totalTrades} closed positions in Supabase.
           </p>
         </div>
 
@@ -82,55 +93,100 @@ export const StatisticsView: React.FC = () => {
         </button>
       </div>
 
-      {/* Overview Stat Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-        <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
+      {/* Trader Classification Banner */}
+      <div className={`p-6 rounded-2xl border ${analytics.classification.color} flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xl`}>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider border">
+              {analytics.classification.badge}
+            </span>
+            <h3 className="text-lg font-extrabold text-white tracking-tight">
+              Trader Profile: {analytics.classification.title}
+            </h3>
+          </div>
+          <p className="text-xs text-gray-300 max-w-2xl">
+            {analytics.classification.description}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 shrink-0 text-right">
+          <div className="p-2.5 rounded-xl bg-black/30 border border-white/10">
+            <span className="text-gray-400 block text-[10px]">PROFIT FACTOR</span>
+            <span className="text-white font-extrabold text-sm">{analytics.profitFactor}</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-black/30 border border-white/10">
+            <span className="text-gray-400 block text-[10px]">AVG HOLD TIME</span>
+            <span className="text-purple-300 font-extrabold text-sm">{formatDuration(analytics.avgHoldSeconds)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Primary Overview Stat Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
+        <div className="p-3.5 rounded-2xl bg-dark-card border border-dark-border space-y-1">
           <span className="text-[10px] text-gray-400 block">NET PROFIT</span>
-          <span className={`text-lg font-extrabold block ${analytics.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+          <span className={`text-base font-extrabold block ${analytics.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
             {formatSigned(analytics.netProfit)}
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
+        <div className="p-3.5 rounded-2xl bg-dark-card border border-dark-border space-y-1">
           <span className="text-[10px] text-gray-400 block">WIN RATE</span>
-          <span className="text-lg font-extrabold text-purple-400 block">
+          <span className="text-base font-extrabold text-purple-400 block">
             {analytics.winRate}%
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
+        <div className="p-3.5 rounded-2xl bg-dark-card border border-dark-border space-y-1">
           <span className="text-[10px] text-gray-400 block">PROFIT FACTOR</span>
-          <span className="text-lg font-extrabold text-white block">
+          <span className="text-base font-extrabold text-white block">
             {analytics.profitFactor}
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
+        <div className="p-3.5 rounded-2xl bg-dark-card border border-dark-border space-y-1">
           <span className="text-[10px] text-gray-400 block">EXPECTANCY</span>
-          <span className="text-lg font-extrabold text-emerald-400 block">
+          <span className="text-base font-extrabold text-emerald-400 block">
             {formatSigned(analytics.expectancy)}
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
+        <div className="p-3.5 rounded-2xl bg-dark-card border border-dark-border space-y-1">
           <span className="text-[10px] text-gray-400 block">AVG RISK : REWARD</span>
-          <span className="text-lg font-extrabold text-purple-300 block">
+          <span className="text-base font-extrabold text-purple-300 block">
             {analytics.avgRR} R
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
+        <div className="p-3.5 rounded-2xl bg-dark-card border border-dark-border space-y-1">
+          <span className="text-[10px] text-gray-400 block">AVG LOT SIZE</span>
+          <span className="text-base font-extrabold text-gray-200 block">
+            {analytics.avgLotSize} Lots
+          </span>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-dark-card border border-dark-border space-y-1">
+          <span className="text-[10px] text-gray-400 block">AVG DAILY P&L</span>
+          <span className={`text-base font-extrabold block ${analytics.avgDailyProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+            {formatSigned(analytics.avgDailyProfit)}
+          </span>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-dark-card border border-dark-border space-y-1">
           <span className="text-[10px] text-gray-400 block">TOTAL VOLUME</span>
-          <span className="text-lg font-extrabold text-gray-200 block">
+          <span className="text-base font-extrabold text-gray-200 block">
             {analytics.totalVolume} Lots
           </span>
         </div>
       </div>
 
-      {/* Superlative Highlight Cards */}
+      {/* Superlative Highlight Cards with Hover Statistics Popups */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {/* Most Profitable Instrument */}
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/30 space-y-2">
+        <div
+          onClick={() => analytics.bestSymbol && setSelectedSymbol(analytics.bestSymbol.symbol)}
+          className="relative group p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/30 space-y-2 cursor-pointer transition-all hover:border-emerald-500"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1">
               <Trophy className="w-3.5 h-3.5" /> Best Instrument
@@ -147,10 +203,26 @@ export const StatisticsView: React.FC = () => {
           ) : (
             <p className="text-gray-500 text-xs">No trades logged</p>
           )}
+
+          {/* Hover Popover */}
+          {analytics.bestSymbol && (
+            <div className="absolute left-0 top-full mt-2 z-30 hidden group-hover:block w-64 p-3 rounded-xl bg-[#0F1420] border border-emerald-500/40 shadow-2xl space-y-1 text-[11px]">
+              <span className="font-bold text-white block border-b border-white/10 pb-1">{analytics.bestSymbol.symbol} Quick Stats</span>
+              <div className="flex justify-between text-gray-400"><span>Trades:</span><span className="text-white font-bold">{analytics.bestSymbol.trades}</span></div>
+              <div className="flex justify-between text-gray-400"><span>Net Profit:</span><span className="text-emerald-400 font-bold">{formatSigned(analytics.bestSymbol.netProfit)}</span></div>
+              <div className="flex justify-between text-gray-400"><span>Win Rate:</span><span className="text-purple-300 font-bold">{analytics.bestSymbol.winRate}%</span></div>
+              <div className="flex justify-between text-gray-400"><span>Profit Factor:</span><span className="text-white font-bold">{analytics.bestSymbol.profitFactor}</span></div>
+              <div className="flex justify-between text-gray-400"><span>Avg R:R:</span><span className="text-purple-400 font-bold">{analytics.bestSymbol.avgRR}R</span></div>
+              <div className="flex justify-between text-gray-400"><span>Avg Lot Size:</span><span className="text-white font-bold">{analytics.bestSymbol.avgLotSize} Lots</span></div>
+            </div>
+          )}
         </div>
 
         {/* Biggest Losing Instrument */}
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-500/10 to-transparent border border-rose-500/30 space-y-2">
+        <div
+          onClick={() => analytics.worstSymbol && setSelectedSymbol(analytics.worstSymbol.symbol)}
+          className="relative group p-4 rounded-2xl bg-gradient-to-br from-rose-500/10 to-transparent border border-rose-500/30 space-y-2 cursor-pointer transition-all hover:border-rose-500"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1">
               <AlertTriangle className="w-3.5 h-3.5" /> Biggest Loser
@@ -167,10 +239,24 @@ export const StatisticsView: React.FC = () => {
           ) : (
             <p className="text-gray-500 text-xs">No trades logged</p>
           )}
+
+          {/* Hover Popover */}
+          {analytics.worstSymbol && (
+            <div className="absolute left-0 top-full mt-2 z-30 hidden group-hover:block w-64 p-3 rounded-xl bg-[#0F1420] border border-rose-500/40 shadow-2xl space-y-1 text-[11px]">
+              <span className="font-bold text-white block border-b border-white/10 pb-1">{analytics.worstSymbol.symbol} Quick Stats</span>
+              <div className="flex justify-between text-gray-400"><span>Trades:</span><span className="text-white font-bold">{analytics.worstSymbol.trades}</span></div>
+              <div className="flex justify-between text-gray-400"><span>Net Profit:</span><span className="text-rose-400 font-bold">{formatSigned(analytics.worstSymbol.netProfit)}</span></div>
+              <div className="flex justify-between text-gray-400"><span>Largest Loss:</span><span className="text-rose-400 font-bold">{formatSigned(analytics.worstSymbol.largestLoss)}</span></div>
+              <div className="flex justify-between text-gray-400"><span>Win Rate:</span><span className="text-purple-300 font-bold">{analytics.worstSymbol.winRate}%</span></div>
+            </div>
+          )}
         </div>
 
         {/* Most Consistent Instrument */}
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/30 space-y-2">
+        <div
+          onClick={() => analytics.mostConsistentSymbol && setSelectedSymbol(analytics.mostConsistentSymbol.symbol)}
+          className="relative group p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 to-transparent border border-purple-500/30 space-y-2 cursor-pointer transition-all hover:border-purple-500"
+        >
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider flex items-center gap-1">
               <Target className="w-3.5 h-3.5" /> Most Consistent
@@ -187,10 +273,20 @@ export const StatisticsView: React.FC = () => {
           ) : (
             <p className="text-gray-500 text-xs">No trades logged</p>
           )}
+
+          {/* Hover Popover */}
+          {analytics.mostConsistentSymbol && (
+            <div className="absolute left-0 top-full mt-2 z-30 hidden group-hover:block w-64 p-3 rounded-xl bg-[#0F1420] border border-purple-500/40 shadow-2xl space-y-1 text-[11px]">
+              <span className="font-bold text-white block border-b border-white/10 pb-1">{analytics.mostConsistentSymbol.symbol} Consistency</span>
+              <div className="flex justify-between text-gray-400"><span>Win Rate:</span><span className="text-purple-300 font-bold">{analytics.mostConsistentSymbol.winRate}%</span></div>
+              <div className="flex justify-between text-gray-400"><span>Wins/Losses:</span><span className="text-white font-bold">{analytics.mostConsistentSymbol.wins}W / {analytics.mostConsistentSymbol.losses}L</span></div>
+              <div className="flex justify-between text-gray-400"><span>Profit Factor:</span><span className="text-white font-bold">{analytics.mostConsistentSymbol.profitFactor}</span></div>
+            </div>
+          )}
         </div>
 
-        {/* Best Session */}
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/30 space-y-2">
+        {/* Best Session / Hour */}
+        <div className="relative group p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-transparent border border-indigo-500/30 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" /> Best Hour / Time
@@ -210,87 +306,14 @@ export const StatisticsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Long vs Short Breakdown Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Long Positions Analysis */}
-        <div className="p-6 rounded-2xl glass-card border border-dark-border space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white font-mono">LONG Executions</h3>
-                <span className="text-xs text-gray-400 font-mono">{analytics.longTrades} trades</span>
-              </div>
-            </div>
-
-            <span className="text-sm font-bold font-mono text-emerald-400">
-              {analytics.longWinRate}% Win Rate
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
-              <span className="text-gray-400 block text-[10px]">TOTAL NET P&L</span>
-              <span className={`font-bold text-sm ${analytics.longPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                {formatSigned(analytics.longPnL)}
-              </span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
-              <span className="text-gray-400 block text-[10px]">WINS / LOSSES</span>
-              <span className="text-white font-bold text-sm">
-                {analytics.longWins}W / {analytics.longTrades - analytics.longWins}L
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Short Positions Analysis */}
-        <div className="p-6 rounded-2xl glass-card border border-dark-border space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30">
-                <TrendingDown className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white font-mono">SHORT Executions</h3>
-                <span className="text-xs text-gray-400 font-mono">{analytics.shortTrades} trades</span>
-              </div>
-            </div>
-
-            <span className="text-sm font-bold font-mono text-rose-400">
-              {analytics.shortWinRate}% Win Rate
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
-              <span className="text-gray-400 block text-[10px]">TOTAL NET P&L</span>
-              <span className={`font-bold text-sm ${analytics.shortPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                {formatSigned(analytics.shortPnL)}
-              </span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
-              <span className="text-gray-400 block text-[10px]">WINS / LOSSES</span>
-              <span className="text-white font-bold text-sm">
-                {analytics.shortWins}W / {analytics.shortTrades - analytics.shortWins}L
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Institutional Symbol Performance Table */}
+      {/* Expanded Institutional Symbol Performance Table */}
       <div className="p-6 rounded-2xl glass-card border border-dark-border space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2">
             <Zap className="w-4 h-4 text-purple-400" />
-            Institutional Symbol Analytics
+            Expanded Symbol Performance Breakdown
           </h3>
-          <span className="text-gray-400 text-[11px]">Click a symbol to inspect its trades</span>
+          <span className="text-gray-400 text-[11px]">Click a symbol row to inspect its trade log</span>
         </div>
 
         <div className="rounded-xl border border-dark-border overflow-x-auto bg-dark-card/60">
@@ -301,17 +324,19 @@ export const StatisticsView: React.FC = () => {
                 <th className="py-3 px-4">Trades</th>
                 <th className="py-3 px-4">Win Rate %</th>
                 <th className="py-3 px-4">Net PnL</th>
+                <th className="py-3 px-4">Gross Profit</th>
+                <th className="py-3 px-4">Gross Loss</th>
                 <th className="py-3 px-4">Profit Factor</th>
                 <th className="py-3 px-4">Avg R:R</th>
                 <th className="py-3 px-4">Largest Win</th>
                 <th className="py-3 px-4">Largest Loss</th>
-                <th className="py-3 px-4">Long / Short</th>
+                <th className="py-3 px-4">Avg Lot Size</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-dark-border text-gray-300">
               {analytics.symbols.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-gray-500">
+                  <td colSpan={11} className="py-8 text-center text-gray-500">
                     No trade symbols found in cloud journal.
                   </td>
                 </tr>
@@ -324,21 +349,19 @@ export const StatisticsView: React.FC = () => {
                       selectedSymbol === s.symbol ? "bg-purple-600/15 border-l-2 border-purple-500" : ""
                     }`}
                   >
-                    <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
-                      <span>{s.symbol}</span>
-                    </td>
+                    <td className="py-3 px-4 font-bold text-white">{s.symbol}</td>
                     <td className="py-3 px-4">{s.trades}</td>
                     <td className="py-3 px-4 text-purple-300 font-bold">{s.winRate}%</td>
                     <td className={`py-3 px-4 font-bold ${s.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {formatSigned(s.netProfit)}
                     </td>
+                    <td className="py-3 px-4 text-emerald-400">{formatSigned(s.grossProfit)}</td>
+                    <td className="py-3 px-4 text-rose-400">{formatSigned(s.grossLoss)}</td>
                     <td className="py-3 px-4">{s.profitFactor}</td>
                     <td className="py-3 px-4 text-purple-400 font-bold">{s.avgRR}R</td>
                     <td className="py-3 px-4 text-emerald-400">{formatSigned(s.largestWin)}</td>
                     <td className="py-3 px-4 text-rose-400">{formatSigned(s.largestLoss)}</td>
-                    <td className="py-3 px-4 text-gray-400">
-                      {s.longTrades}L / {s.shortTrades}S
-                    </td>
+                    <td className="py-3 px-4 text-gray-300">{s.avgLotSize} Lots</td>
                   </tr>
                 ))
               )}
@@ -347,19 +370,19 @@ export const StatisticsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Selected Symbol Trades Modal / Drawer */}
+      {/* Selected Symbol Trades Explorer */}
       {selectedSymbol && (
         <div className="p-6 rounded-2xl bg-dark-card border border-purple-500/40 space-y-4">
           <div className="flex items-center justify-between border-b border-dark-border pb-3">
             <h4 className="text-sm font-bold text-white font-mono flex items-center gap-2">
               <BarChart2 className="w-4 h-4 text-purple-400" />
-              Executions for {selectedSymbol} ({filteredSymbolTrades.length} trades)
+              Executions Explorer for {selectedSymbol} ({filteredSymbolTrades.length} trades)
             </h4>
             <button
               onClick={() => setSelectedSymbol(null)}
               className="text-gray-400 hover:text-white"
             >
-              Close
+              Close Explorer
             </button>
           </div>
 

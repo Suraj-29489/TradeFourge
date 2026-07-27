@@ -476,5 +476,85 @@ LEFT JOIN public.trade_tags tt ON tt.id = ttl.tag_id
 GROUP BY t.id;
 
 -- =============================================================================
+-- 10. USER PROFILES, PREFERENCES & STATISTICS
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT,
+    username TEXT UNIQUE,
+    avatar_url TEXT,
+    bio TEXT,
+    country TEXT DEFAULT 'United States',
+    timezone TEXT DEFAULT 'UTC',
+    preferred_currency TEXT DEFAULT 'USD',
+    preferred_language TEXT DEFAULT 'en',
+    trading_experience TEXT DEFAULT 'Intermediate',
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "profiles_select_own" ON public.profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "profiles_insert_own" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "profiles_update_own" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+CREATE TABLE IF NOT EXISTS public.user_preferences (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
+    dashboard_layout TEXT DEFAULT 'standard' NOT NULL,
+    default_account TEXT DEFAULT 'main' NOT NULL,
+    default_chart_theme TEXT DEFAULT 'dark' NOT NULL,
+    notifications_enabled BOOLEAN DEFAULT true NOT NULL,
+    email_notifications BOOLEAN DEFAULT true NOT NULL,
+    marketing_emails BOOLEAN DEFAULT false NOT NULL,
+    default_trade_currency TEXT DEFAULT 'USD' NOT NULL,
+    date_format TEXT DEFAULT 'YYYY-MM-DD' NOT NULL,
+    time_format TEXT DEFAULT '24h' NOT NULL,
+    week_start TEXT DEFAULT 'Monday' NOT NULL,
+    risk_display_mode TEXT DEFAULT 'percentage' NOT NULL,
+    analytics_defaults JSONB DEFAULT '{}'::jsonb NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "user_preferences_select_own" ON public.user_preferences FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "user_preferences_insert_own" ON public.user_preferences FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "user_preferences_update_own" ON public.user_preferences FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE TABLE IF NOT EXISTS public.user_statistics (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE NOT NULL,
+    total_trades INT DEFAULT 0 NOT NULL,
+    total_profit NUMERIC(15, 2) DEFAULT 0.00 NOT NULL,
+    total_loss NUMERIC(15, 2) DEFAULT 0.00 NOT NULL,
+    win_rate NUMERIC(5, 2) DEFAULT 0.00 NOT NULL,
+    average_rr NUMERIC(5, 2) DEFAULT 0.00 NOT NULL,
+    current_streak INT DEFAULT 0 NOT NULL,
+    best_day NUMERIC(15, 2) DEFAULT 0.00 NOT NULL,
+    worst_day NUMERIC(15, 2) DEFAULT 0.00 NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.user_statistics ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "user_statistics_select_own" ON public.user_statistics FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "user_statistics_insert_own" ON public.user_statistics FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "user_statistics_update_own" ON public.user_statistics FOR UPDATE USING (auth.uid() = user_id);
+
+-- Avatars Storage Bucket
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('avatars', 'avatars', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp'])
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+CREATE POLICY "avatars_select_own" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
+CREATE POLICY "avatars_insert_own" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatars');
+CREATE POLICY "avatars_update_own" ON storage.objects FOR UPDATE USING (bucket_id = 'avatars');
+
+-- =============================================================================
 -- END OF MIGRATION
 -- =============================================================================

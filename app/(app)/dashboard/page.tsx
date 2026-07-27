@@ -13,6 +13,7 @@ import { fetchTradeStats, type CloudTradeStats } from "@/lib/supabase/trades";
 import { fetchLatestImport } from "@/lib/supabase/csv-imports";
 import { StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
 import type { CsvImport, TradingAccount } from "@/types/database";
+import { useUserProfile } from "@/context/UserProfileContext";
 import {
   DollarSign,
   Percent,
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const { format: fmtCurrency, formatSigned } = useCurrencyFormatter();
   const supabase = createClient();
 
+  const { profile: contextProfile, completionPct } = useUserProfile();
   const [profile, setProfile]             = useState<UserProfile | null>(null);
   const [accounts, setAccounts]           = useState<TradingAccount[]>([]);
   const [tradeStats, setTradeStats]       = useState<CloudTradeStats | null>(null);
@@ -67,7 +69,7 @@ export default function DashboardPage() {
           fetchLatestImport(user.id),
         ]);
 
-        if (prof)  setProfile(prof);
+        if (prof)       setProfile(prof);
         if (accs.data)  setAccounts(accs.data);
         if (stats.data) setTradeStats(stats.data);
         if (imp.data)   setLatestImport(imp.data);
@@ -80,7 +82,7 @@ export default function DashboardPage() {
     loadCloudData();
   }, [init]);
 
-  const completionPct = calculateProfileCompletion(profile);
+  const activeProfile = contextProfile || profile;
   const defaultAccount = accounts.find((a) => a.is_default);
   const hasCloudData = tradeStats && tradeStats.totalTrades > 0;
 
@@ -91,11 +93,11 @@ export default function DashboardPage() {
         <div className="flex items-center gap-4">
           <Link href="/profile" className="relative group shrink-0">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-700 p-0.5 shadow-glow overflow-hidden flex items-center justify-center">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover rounded-xl" />
+              {activeProfile?.avatar_url ? (
+                <img src={activeProfile.avatar_url} alt={activeProfile.full_name} className="w-full h-full object-cover rounded-xl" />
               ) : (
                 <div className="w-full h-full rounded-xl bg-[#111726] flex items-center justify-center text-lg font-bold font-mono text-purple-400">
-                  {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : "T"}
+                  {activeProfile?.full_name ? activeProfile.full_name.charAt(0).toUpperCase() : "T"}
                 </div>
               )}
             </div>
@@ -104,19 +106,19 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl md:text-2xl font-extrabold text-white tracking-tight font-mono">
-                Welcome back, {profile?.full_name || "Trader"}
+                Welcome back, {activeProfile?.full_name || "Trader"}
               </h1>
               <span className="text-xs font-mono text-purple-400 font-bold">
-                @{profile?.username || "trader"}
+                @{activeProfile?.username || "trader"}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 font-mono mt-1">
               <span className="flex items-center gap-1">
-                <Globe className="w-3.5 h-3.5 text-indigo-400" /> {profile?.country || "—"}
+                <Globe className="w-3.5 h-3.5 text-indigo-400" /> {activeProfile?.country || "—"}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-emerald-400" /> {profile?.timezone || "UTC"}
+                <Clock className="w-3.5 h-3.5 text-emerald-400" /> {activeProfile?.timezone || "UTC"}
               </span>
               <span>•</span>
               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-600/20 text-purple-400 border border-purple-500/30 uppercase">

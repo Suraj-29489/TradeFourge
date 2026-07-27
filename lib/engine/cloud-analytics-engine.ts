@@ -1,6 +1,6 @@
 // lib/engine/cloud-analytics-engine.ts
 // Comprehensive institutional analytics engine operating on CloudTrade objects.
-// Computes metrics for performance lab, symbol analytics, time/session analytics, and equity curve.
+// Computes metrics for performance lab, symbol analytics, time/session analytics, trader classification, and equity curve.
 
 import { CloudTradeWithRelations, CloudTrade } from '@/types/database';
 import { parseISO, format, getHours, getDay } from 'date-fns';
@@ -23,6 +23,7 @@ export interface SymbolPerformance {
   largestWin: number;
   largestLoss: number;
   totalVolume: number;
+  avgLotSize: number;
   longTrades: number;
   shortTrades: number;
   longWinRate: number;
@@ -61,6 +62,13 @@ export interface EquityPoint {
   symbol: string;
 }
 
+export interface TraderClassification {
+  title: string;
+  badge: string;
+  description: string;
+  color: string; // Tailwind color class
+}
+
 export interface CompleteAnalyticsSummary {
   totalTrades: number;
   wins: number;
@@ -83,6 +91,17 @@ export interface CompleteAnalyticsSummary {
   totalCommission: number;
   totalSwap: number;
   avgHoldSeconds: number;
+  longestHoldSeconds: number;
+  shortestHoldSeconds: number;
+
+  // New Metrics
+  avgLotSize: number;
+  largestLotSize: number;
+  smallestLotSize: number;
+  avgProfitPerTrade: number;
+  avgLossPerTrade: number;
+  avgDailyProfit: number;
+  avgWeeklyProfit: number;
 
   // Long vs Short
   longTrades: number;
@@ -94,6 +113,9 @@ export interface CompleteAnalyticsSummary {
   shortPnL: number;
   shortWinRate: number;
 
+  // Trader Classification
+  classification: TraderClassification;
+
   // Highlights / Superlatives
   bestSymbol: SymbolPerformance | null;
   worstSymbol: SymbolPerformance | null;
@@ -103,6 +125,8 @@ export interface CompleteAnalyticsSummary {
   highestVolumeSymbol: SymbolPerformance | null;
   bestHour: PeriodPerformance | null;
   worstHour: PeriodPerformance | null;
+  bestDay: PeriodPerformance | null;
+  worstDay: PeriodPerformance | null;
 
   // Breakdown Collections
   symbols: SymbolPerformance[];
@@ -141,9 +165,13 @@ export function calculateCloudAnalytics(trades: (CloudTrade | CloudTradeWithRela
   let totalRR = 0;
   let rrCount = 0;
   let totalVolume = 0;
+  let largestLotSize = 0;
+  let smallestLotSize = Infinity;
   let totalCommission = 0;
   let totalSwap = 0;
   let totalHoldSeconds = 0;
+  let longestHoldSeconds = 0;
+  let shortestHoldSeconds = Infinity;
   let holdCount = 0;
 
   // Long vs Short
@@ -159,6 +187,7 @@ export function calculateCloudAnalytics(trades: (CloudTrade | CloudTradeWithRela
   const dayMap = new Map<number, (CloudTrade | CloudTradeWithRelations)[]>(); // 0-6 (Sun-Sat)
   const hourMap = new Map<number, (CloudTrade | CloudTradeWithRelations)[]>(); // 0-23
   const sessionMap = new Map<string, (CloudTrade | CloudTradeWithRelations)[]>();
+  const uniqueDatesSet = new Set<string>();
 
   // Equity Curve Points
   const equityCurve: EquityPoint[] = [];
@@ -168,7 +197,12 @@ export function calculateCloudAnalytics(trades: (CloudTrade | CloudTradeWithRela
     const pnl = trade.net_profit ?? (trade.profit + trade.commission + trade.swap);
     netProfit += pnl;
     runningPnL += pnl;
-    totalVolume += Number(trade.volume || 0);
+
+    const vol = Number(trade.volume || 0);
+    totalVolume += vol;
+    if (vol > largestLotSize) largestLotSize = vol;
+    if (vol > 0 && vol < smallestLotSize) smallestLotSize = vol;
+
     totalCommission += Number(trade.commission || 0);
     totalSwap += Number(trade.swap || 0);
 
@@ -204,18 +238,21 @@ export function calculateCloudAnalytics(trades: (CloudTrade | CloudTradeWithRela
     }
 
     if (trade.duration_seconds) {
-      totalHoldSeconds += Number(trade.duration_seconds);
+      const duration = Number(trade.duration_seconds);
+      totalHoldSeconds += duration;
+      if (duration > longestHoldSeconds) longestHoldSeconds = duration;
+      if (duration < shortestHoldSeconds) shortestHoldSeconds = duration;
       holdCount++;
     }
 
     // Equity point
-    const dateStr = trade.close_time
-      ? format(parseISO(trade.close_time), 'yyyy-MM-dd HH:mm')
-      : format(new Date(trade.created_at), 'yyyy-MM-dd HH:mm');
+    const tradeDate = trade.close_time ? parseISO(trade.close_time) : new Date(trade.created_at);
+    const dateStr = format(tradeDate, 'yyyy-MM-dd HH:mm');
+    uniqueDatesSet.add(format(tradeDate, 'yyyy-MM-dd'));
 
     equityCurve.push({
       date: dateStr,
-      timestamp: new Date(trade.close_time || trade.created_at).getTime(),
+      timestamp: tradeDate.getTime(),
       tradeProfit: pnl,
       cumulativeProfit: runningPnL,
       tradeTicket: trade.ticket || trade.id.slice(0, 8),
@@ -228,7 +265,6 @@ export function calculateCloudAnalytics(trades: (CloudTrade | CloudTradeWithRela
     symbolMap.get(symKey)!.push(trade);
 
     // Grouping by Day of Week & Hour of Day
-    const tradeDate = trade.close_time ? parseISO(trade.close_time) : new Date(trade.created_at);
     if (!isNaN(tradeDate.getTime())) {
       const dayIdx = getDay(tradeDate); // 0 (Sun) .. 6 (Sat)
       if (!dayMap.has(dayIdx)) dayMap.set(dayIdx, []);
@@ -252,34 +288,40 @@ export function calculateCloudAnalytics(trades: (CloudTrade | CloudTradeWithRela
   const avgLoss = losses > 0 ? totalLossAmount / losses : 0;
   const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 99.99 : 0;
 
-  // Expectancy = (Win Rate % * Avg Win) - (Loss Rate % * Avg Loss)
   const expectancy = (winRate / 100) * avgWin - (lossRate / 100) * avgLoss;
   const avgRR = rrCount > 0 ? totalRR / rrCount : avgLoss > 0 ? avgWin / avgLoss : 0;
   const avgHoldSeconds = holdCount > 0 ? Math.round(totalHoldSeconds / holdCount) : 0;
+  const avgLotSize = totalTrades > 0 ? totalVolume / totalTrades : 0;
+  const avgProfitPerTrade = totalTrades > 0 ? netProfit / totalTrades : 0;
+  const avgLossPerTrade = losses > 0 ? grossLoss / losses : 0;
+
+  const uniqueDaysCount = Math.max(1, uniqueDatesSet.size);
+  const avgDailyProfit = netProfit / uniqueDaysCount;
+  const avgWeeklyProfit = netProfit / Math.max(1, uniqueDaysCount / 7);
 
   const longWinRate = longTrades > 0 ? (longWins / longTrades) * 100 : 0;
   const shortWinRate = shortTrades > 0 ? (shortWins / shortTrades) * 100 : 0;
 
-  // Compute Symbol Analytics
+  // Symbol Analytics
   const symbols: SymbolPerformance[] = Array.from(symbolMap.entries()).map(([sym, symTrades]) => {
     return computeSymbolPerformance(sym, symTrades);
   }).sort((a, b) => b.netProfit - a.netProfit);
 
-  // Compute Days of Week
+  // Days of Week
   const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const daysOfWeek: PeriodPerformance[] = [1, 2, 3, 4, 5, 6, 0].map((dayIdx) => {
     const dayTrades = dayMap.get(dayIdx) || [];
     return computePeriodPerformance(DAY_NAMES[dayIdx], dayTrades);
   });
 
-  // Compute Hours of Day
+  // Hours of Day
   const hoursOfDay: PeriodPerformance[] = Array.from({ length: 24 }).map((_, h) => {
     const hTrades = hourMap.get(h) || [];
     const hourLabel = `${h.toString().padStart(2, '0')}:00`;
     return computePeriodPerformance(hourLabel, hTrades);
   });
 
-  // Compute Sessions
+  // Sessions
   const sessions: SessionPerformance[] = ['London', 'New York', 'Tokyo', 'Sydney', 'London/NY Overlap', 'Other'].map((sessName) => {
     const sessTrades = sessionMap.get(sessName) || [];
     const sWins = sessTrades.filter(t => (t.net_profit ?? t.profit) > 0).length;
@@ -308,6 +350,22 @@ export function calculateCloudAnalytics(trades: (CloudTrade | CloudTradeWithRela
   const bestHour = activeHours.length > 0 ? [...activeHours].sort((a, b) => b.netProfit - a.netProfit)[0] : null;
   const worstHour = activeHours.length > 0 ? [...activeHours].sort((a, b) => a.netProfit - b.netProfit)[0] : null;
 
+  const activeDays = daysOfWeek.filter(d => d.trades > 0);
+  const bestDay = activeDays.length > 0 ? [...activeDays].sort((a, b) => b.netProfit - a.netProfit)[0] : null;
+  const worstDay = activeDays.length > 0 ? [...activeDays].sort((a, b) => a.netProfit - b.netProfit)[0] : null;
+
+  // Trader Classification
+  const classification = classifyTrader({
+    totalTrades,
+    winRate,
+    profitFactor,
+    netProfit,
+    avgHoldSeconds,
+    avgRR,
+    avgLoss,
+    avgWin,
+  });
+
   return {
     totalTrades,
     wins,
@@ -330,6 +388,16 @@ export function calculateCloudAnalytics(trades: (CloudTrade | CloudTradeWithRela
     totalCommission: Number(totalCommission.toFixed(2)),
     totalSwap: Number(totalSwap.toFixed(2)),
     avgHoldSeconds,
+    longestHoldSeconds: longestHoldSeconds === Infinity ? 0 : longestHoldSeconds,
+    shortestHoldSeconds: shortestHoldSeconds === Infinity ? 0 : shortestHoldSeconds,
+
+    avgLotSize: Number(avgLotSize.toFixed(2)),
+    largestLotSize: Number(largestLotSize.toFixed(2)),
+    smallestLotSize: smallestLotSize === Infinity ? 0 : Number(smallestLotSize.toFixed(2)),
+    avgProfitPerTrade: Number(avgProfitPerTrade.toFixed(2)),
+    avgLossPerTrade: Number(avgLossPerTrade.toFixed(2)),
+    avgDailyProfit: Number(avgDailyProfit.toFixed(2)),
+    avgWeeklyProfit: Number(avgWeeklyProfit.toFixed(2)),
 
     longTrades,
     longWins,
@@ -340,6 +408,8 @@ export function calculateCloudAnalytics(trades: (CloudTrade | CloudTradeWithRela
     shortPnL: Number(shortPnL.toFixed(2)),
     shortWinRate: Number(shortWinRate.toFixed(1)),
 
+    classification,
+
     bestSymbol,
     worstSymbol,
     mostConsistentSymbol,
@@ -348,12 +418,97 @@ export function calculateCloudAnalytics(trades: (CloudTrade | CloudTradeWithRela
     highestVolumeSymbol,
     bestHour,
     worstHour,
+    bestDay,
+    worstDay,
 
     symbols,
     daysOfWeek,
     hoursOfDay,
     sessions,
     equityCurve,
+  };
+}
+
+function classifyTrader(params: {
+  totalTrades: number;
+  winRate: number;
+  profitFactor: number;
+  netProfit: number;
+  avgHoldSeconds: number;
+  avgRR: number;
+  avgLoss: number;
+  avgWin: number;
+}): TraderClassification {
+  const { totalTrades, winRate, profitFactor, netProfit, avgHoldSeconds, avgRR, avgLoss, avgWin } = params;
+
+  if (totalTrades < 10) {
+    return {
+      title: "Learning Phase",
+      badge: "INITIALIZING",
+      description: "Log at least 10 trades to unlock institutional statistical profile classification.",
+      color: "text-purple-400 bg-purple-500/10 border-purple-500/30",
+    };
+  }
+
+  if (profitFactor >= 2.0 && winRate >= 60 && avgRR >= 1.5) {
+    return {
+      title: "Institutional Discipline",
+      badge: "ELITE TRADER",
+      description: "Exhibits institutional risk management, high profit factor (>2.0), and superior R:R ratios.",
+      color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30",
+    };
+  }
+
+  if (profitFactor >= 1.5 && netProfit > 0) {
+    return {
+      title: "Consistently Profitable",
+      badge: "PROFITABLE",
+      description: "Demonstrates positive expectancy and sustainable win-to-loss distribution.",
+      color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/30",
+    };
+  }
+
+  if (avgHoldSeconds > 0 && avgHoldSeconds < 900 && totalTrades >= 20) {
+    return {
+      title: "Aggressive Scalper",
+      badge: "SCALPER",
+      description: "Executes rapid short-duration positions with average holding time under 15 minutes.",
+      color: "text-amber-400 bg-amber-500/10 border-amber-500/30",
+    };
+  }
+
+  if (avgHoldSeconds >= 86400) {
+    return {
+      title: "Swing Trader",
+      badge: "SWING TRADER",
+      description: "Holds positions over multi-day periods to capture macro trend movements.",
+      color: "text-indigo-400 bg-indigo-500/10 border-indigo-500/30",
+    };
+  }
+
+  if (avgLoss > 3 * Math.max(1, avgWin) || (winRate < 40 && profitFactor < 0.8)) {
+    return {
+      title: "High Risk Trader",
+      badge: "HIGH RISK",
+      description: "Position sizing and loss management require immediate tightening to mitigate drawdown risk.",
+      color: "text-rose-400 bg-rose-500/10 border-rose-500/30",
+    };
+  }
+
+  if (winRate >= 45 && winRate <= 55) {
+    return {
+      title: "Breakeven Trader",
+      badge: "BREAKEVEN",
+      description: "Performance is near equilibrium. Focus on increasing average win size relative to loss.",
+      color: "text-gray-300 bg-gray-500/10 border-gray-500/30",
+    };
+  }
+
+  return {
+    title: "Systematic Trader",
+    badge: "ACTIVE",
+    description: "Developing consistent strategy parameters across markets.",
+    color: "text-purple-400 bg-purple-500/10 border-purple-500/30",
   };
 }
 
@@ -425,6 +580,7 @@ function computeSymbolPerformance(symbol: string, trades: (CloudTrade | CloudTra
   const avgLoss = losses > 0 ? totalLoss / losses : 0;
   const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 99.99 : 0;
   const avgRR = rrCount > 0 ? totalRR / rrCount : avgLoss > 0 ? avgWin / avgLoss : 0;
+  const avgLotSize = total > 0 ? totalVolume / total : 0;
 
   return {
     symbol,
@@ -444,6 +600,7 @@ function computeSymbolPerformance(symbol: string, trades: (CloudTrade | CloudTra
     largestWin: Number(largestWin.toFixed(2)),
     largestLoss: Number(largestLoss.toFixed(2)),
     totalVolume: Number(totalVolume.toFixed(2)),
+    avgLotSize: Number(avgLotSize.toFixed(2)),
     longTrades,
     shortTrades,
     longWinRate: longTrades > 0 ? Number(((longWins / longTrades) * 100).toFixed(1)) : 0,
@@ -521,6 +678,16 @@ function createEmptyAnalytics(): CompleteAnalyticsSummary {
     totalCommission: 0,
     totalSwap: 0,
     avgHoldSeconds: 0,
+    longestHoldSeconds: 0,
+    shortestHoldSeconds: 0,
+
+    avgLotSize: 0,
+    largestLotSize: 0,
+    smallestLotSize: 0,
+    avgProfitPerTrade: 0,
+    avgLossPerTrade: 0,
+    avgDailyProfit: 0,
+    avgWeeklyProfit: 0,
 
     longTrades: 0,
     longWins: 0,
@@ -531,6 +698,13 @@ function createEmptyAnalytics(): CompleteAnalyticsSummary {
     shortPnL: 0,
     shortWinRate: 0,
 
+    classification: {
+      title: "Learning Phase",
+      badge: "INITIALIZING",
+      description: "Log trades to generate institutional statistical profile.",
+      color: "text-purple-400 bg-purple-500/10 border-purple-500/30",
+    },
+
     bestSymbol: null,
     worstSymbol: null,
     mostConsistentSymbol: null,
@@ -539,6 +713,8 @@ function createEmptyAnalytics(): CompleteAnalyticsSummary {
     highestVolumeSymbol: null,
     bestHour: null,
     worstHour: null,
+    bestDay: null,
+    worstDay: null,
 
     symbols: [],
     daysOfWeek: [],
