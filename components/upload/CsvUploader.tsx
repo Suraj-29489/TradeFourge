@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { useJournalStore } from "@/lib/store/useJournalStore";
 import { validateAndParseCsv } from "@/lib/engine/validator";
 import { ParseValidationResult } from "@/lib/engine/types";
+import { bulkInsertTrades } from "@/lib/supabase/trades";
+import { createImportRecord, updateImportRecord } from "@/lib/supabase/csv-imports";
+import { createClient } from "@/lib/supabase/client";
+import type { NewCloudTrade } from "@/types/database";
 import {
   Upload,
   CheckCircle2,
@@ -19,11 +22,10 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 
-export const CsvUploader: React.FC = () => {
-  const importCsvText  = useJournalStore(s => s.importCsvText);
-  const warningMessage = useJournalStore(s => s.warningMessage);
-  const clearAll       = useJournalStore(s => s.clearAll);
 
+export const CsvUploader: React.FC = () => {
+  // Phase 3.0: CsvUploader still parses locally.
+  // Phase 3.1 will call bulkInsertTrades() to push parsed data to Supabase.
   const router = useRouter();
 
   const [dragActive, setDragActive]       = useState(false);
@@ -81,31 +83,111 @@ export const CsvUploader: React.FC = () => {
     setIsImporting(true);
     setImportProgress(10);
 
-    // Animate progress
     const interval = setInterval(() => {
       setImportProgress(prev => (prev < 85 ? prev + 15 : prev));
     }, 120);
 
-    const res = await importCsvText(fileText, file.name);
-    clearInterval(interval);
-    setImportProgress(100);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-    if (res.success) {
-      const dupNote = res.duplicatesSkipped > 0 ? ` (${res.duplicatesSkipped} duplicates skipped)` : "";
-      setDuplicateCount(res.duplicatesSkipped);
-      setNotification({
-        type: res.warning ? "warning" : "success",
-        message: res.warning
-          ? `Imported ${res.count} positions${dupNote}. Note: ${res.warning}`
-          : `Successfully imported ${res.count} positions${dupNote}!`,
+      // Create import record
+      const { data: importRecord } = await createImportRecord(user.id, {
+        filename:        file.name,
+        broker:          parseResult.broker ?? null,
+        platform:        "MetaTrader 5",
+        import_status:   "processing",
+        total_rows:      parseResult.trades.length,
+        imported_rows:   0,
+        skipped_rows:    0,
+        duplicate_rows:  0,
+        failed_rows:     0,
+        uploaded_at:     new Date().toISOString(),
+        account_id:      null,
+        notes:           null,
+        error_log:       null,
+        completed_at:    null,
       });
-      setTimeout(() => router.push("/"), 800);
-    } else {
+
+      // Map NormalizedTrade → NewCloudTrade
+      const cloudTrades: NewCloudTrade[] = parseResult.trades.map(t => ({
+        ticket:        t.ticket,
+        symbol:        t.symbol,
+        side:          (t.direction === "LONG" ? "BUY" : "SELL") as "BUY" | "SELL",
+        volume:        t.volume,
+        open_price:    t.openPrice,
+        close_price:   t.closePrice,
+        stop_loss:     t.stopLoss ?? null,
+        take_profit:   t.takeProfit ?? null,
+        open_time:     t.openTime,
+        close_time:    t.closeTime,
+        duration_seconds: t.holdDurationMs ? Math.round(t.holdDurationMs / 1000) : null,
+        profit:        t.profit,
+        commission:    t.commission,
+        swap:          t.swap,
+        taxes:         0,
+        risk_amount:   null,
+        reward_amount: null,
+        risk_percent:  null,
+        rr_ratio:      t.rr,
+        pips:          null,
+        outcome:       t.status as "WIN" | "LOSS" | "BREAKEVEN",
+        mfe:           null,
+        mae:           null,
+        strategy:      null,
+        setup:         null,
+        market_condition: null,
+        session:       null,
+        notes:         t.comment ?? null,
+        emotions:      null,
+        lessons:       null,
+        mistakes:      null,
+        confidence_rating: null,
+        screenshot_url: null,
+        chart_url:     null,
+        source:        "csv_import",
+        import_id:     importRecord?.id ?? null,
+        imported_at:   new Date().toISOString(),
+        account_id:    null,
+      }));
+
+      const { inserted, errors } = await bulkInsertTrades(user.id, cloudTrades);
+
+      clearInterval(interval);
+      setImportProgress(100);
+
+      // Update import record with final stats
+      if (importRecord) {
+        await updateImportRecord(importRecord.id, user.id, {
+          import_status: errors.length > 0 && inserted === 0 ? "failed" :
+                         errors.length > 0 ? "partial" : "success",
+          imported_rows:   inserted,
+          failed_rows:     parseResult.trades.length - inserted,
+          error_log:       errors.length > 0 ? errors : null,
+          completed_at:    new Date().toISOString(),
+        });
+      }
+
+      setDuplicateCount(0);
+      setNotification({
+        type: errors.length > 0 ? "warning" : "success",
+        message: errors.length > 0
+          ? `Imported ${inserted} of ${parseResult.trades.length} positions. ${errors.length} errors.`
+          : `Successfully imported ${inserted} positions to cloud journal!`,
+      });
+      setTimeout(() => router.push("/journal"), 800);
+    } catch (err: unknown) {
+      clearInterval(interval);
       setIsImporting(false);
       setImportProgress(0);
-      setNotification({ type: "error", message: res.warning || "Import failed." });
+      setNotification({
+        type: "error",
+        message: err instanceof Error ? err.message : "Import failed — please try again.",
+      });
     }
   };
+
 
   const resetUpload = () => {
     setFile(null); setFileText(""); setParseResult(null);
@@ -135,25 +217,25 @@ export const CsvUploader: React.FC = () => {
 
       {/* Notifications */}
       <AnimatePresence>
-        {(notification || warningMessage) && (
+        {notification && (
           <motion.div
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             className={`p-4 rounded-xl border text-xs font-mono flex items-center justify-between ${
-              notification?.type === "success"
+              notification.type === "success"
                 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-                : notification?.type === "warning" || warningMessage
+                : notification.type === "warning"
                 ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
                 : "bg-rose-500/10 border-rose-500/30 text-rose-300"
             }`}
           >
             <div className="flex items-center gap-2">
-              {notification?.type === "success"
+              {notification.type === "success"
                 ? <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                : notification?.type === "warning" || warningMessage
+                : notification.type === "warning"
                 ? <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
                 : <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
               }
-              <span>{notification?.message || warningMessage}</span>
+              <span>{notification.message}</span>
             </div>
             <button onClick={() => setNotification(null)} className="p-1 hover:text-white flex-shrink-0">
               <X className="w-4 h-4" />
@@ -309,13 +391,13 @@ export const CsvUploader: React.FC = () => {
           <div className="flex items-center justify-between pt-2">
             <button
               onClick={() => {
-                if (confirm("This will delete ALL journals and trade data. Continue?")) {
-                  clearAll();
+                if (confirm("Cancel this upload and reset?")) {
+                  resetUpload();
                 }
               }}
               className="text-xs font-mono text-rose-400 hover:underline flex items-center gap-1"
             >
-              <Trash2 className="w-3.5 h-3.5" /> Clear all data
+              <Trash2 className="w-3.5 h-3.5" /> Cancel upload
             </button>
             <div className="flex gap-3">
               <button

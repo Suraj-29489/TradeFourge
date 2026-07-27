@@ -4,15 +4,17 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useJournalStore } from "@/lib/store/useJournalStore";
-import { useJournalMetrics } from "@/hooks/useJournalMetrics";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { createClient } from "@/lib/supabase/client";
 import { fetchUserProfile, calculateProfileCompletion, type UserProfile } from "@/lib/supabase/profile";
+import { fetchTradingAccounts } from "@/lib/supabase/accounts";
+import { fetchTradeStats, type CloudTradeStats } from "@/lib/supabase/trades";
+import { fetchLatestImport } from "@/lib/supabase/csv-imports";
+import { StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
+import type { CsvImport, TradingAccount } from "@/types/database";
 import {
   DollarSign,
-  TrendingUp,
-  TrendingDown,
   Percent,
   Zap,
   Target,
@@ -20,16 +22,18 @@ import {
   ShieldCheck,
   Activity,
   Layers,
-  Flame,
-  Upload,
-  Play,
-  FileSpreadsheet,
   CheckCircle2,
   XCircle,
   MinusCircle,
   Globe,
   Clock,
   User,
+  Wallet,
+  Upload,
+  History,
+  TrendingUp,
+  TrendingDown,
+  ArrowRight,
 } from "lucide-react";
 
 // Lazy-load heavy charts — only renders after hydration
@@ -40,88 +44,49 @@ const DashboardCharts = dynamic(
 
 export default function DashboardPage() {
   const init = useJournalStore((state) => state.init);
-  const loadDemoJournal = useJournalStore((state) => state.loadDemoJournal);
-  const accountType = useJournalStore((state) => state.accountType);
-  const accountBalance = useJournalStore((state) => state.accountBalance);
-  const journals = useJournalStore((state) => state.journals);
-  const selectedJournalIds = useJournalStore((state) => state.selectedJournalIds);
-
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-
-  const { trades, stats } = useJournalMetrics();
-  const { format, formatSigned, currency } = useCurrencyFormatter();
+  const { format: fmtCurrency, formatSigned } = useCurrencyFormatter();
   const supabase = createClient();
 
+  const [profile, setProfile]             = useState<UserProfile | null>(null);
+  const [accounts, setAccounts]           = useState<TradingAccount[]>([]);
+  const [tradeStats, setTradeStats]       = useState<CloudTradeStats | null>(null);
+  const [latestImport, setLatestImport]   = useState<CsvImport | null>(null);
+  const [cloudLoading, setCloudLoading]   = useState(true);
+
   useEffect(() => {
-    init();
-    async function loadProfile() {
+    init(); // Initialize ephemeral UI state from localStorage
+    async function loadCloudData() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const prof = await fetchUserProfile(user.id);
-          if (prof) setProfile(prof);
-        }
+        if (!user) return;
+
+        const [prof, accs, stats, imp] = await Promise.all([
+          fetchUserProfile(user.id),
+          fetchTradingAccounts(user.id),
+          fetchTradeStats(user.id),
+          fetchLatestImport(user.id),
+        ]);
+
+        if (prof)  setProfile(prof);
+        if (accs.data)  setAccounts(accs.data);
+        if (stats.data) setTradeStats(stats.data);
+        if (imp.data)   setLatestImport(imp.data);
       } catch (err) {
-        console.error("Failed to load user profile:", err);
+        console.error("Dashboard cloud load failed:", err);
+      } finally {
+        setCloudLoading(false);
       }
     }
-    loadProfile();
+    loadCloudData();
   }, [init]);
 
-  // Balance display — never estimate
-  const balanceDisplay = accountBalance !== null
-    ? format(accountBalance)
-    : "Balance unavailable";
-
-  const balanceIsKnown = accountBalance !== null;
   const completionPct = calculateProfileCompletion(profile);
-
-  if (journals.length === 0 || selectedJournalIds.length === 0 || trades.length === 0) {
-    return (
-      <div className="max-w-3xl mx-auto my-12 p-8 md:p-12 rounded-3xl glass-card border border-dark-border text-center space-y-6">
-        <div className="w-20 h-20 mx-auto rounded-3xl bg-purple-600/20 border border-purple-500/30 text-purple-400 flex items-center justify-center shadow-glow">
-          <FileSpreadsheet className="w-10 h-10" />
-        </div>
-
-        <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-            No TradeFourge Journal Imported
-          </h1>
-          <p className="text-sm text-gray-400 max-w-md mx-auto mt-2">
-            Import your Exness MT4 / MT5 position CSV file to unlock real-time financial analytics, equity curves, calendar heatmaps, and AI insights.
-          </p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-          <Link
-            href="/upload"
-            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all"
-          >
-            <Upload className="w-4 h-4" />
-            <span>Upload Trading CSV</span>
-          </Link>
-
-          <button
-            onClick={() => loadDemoJournal()}
-            className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-dark-card hover:bg-dark-hover border border-dark-border text-gray-200 font-bold text-sm flex items-center justify-center gap-2 transition-all"
-          >
-            <Play className="w-4 h-4 text-emerald-400" />
-            <span>Load Demo Journal</span>
-          </button>
-        </div>
-
-        <div className="pt-6 border-t border-dark-border grid grid-cols-3 gap-4 text-xs font-mono text-gray-400">
-          <div>✓ Client-Side Storage</div>
-          <div>✓ Multi-Currency</div>
-          <div>✓ PDF / Excel Export</div>
-        </div>
-      </div>
-    );
-  }
+  const defaultAccount = accounts.find((a) => a.is_default);
+  const hasCloudData = tradeStats && tradeStats.totalTrades > 0;
 
   return (
     <div className="space-y-6">
-      {/* SaaS Live Welcome Banner */}
+      {/* ── Welcome Banner ─────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-[#111726] to-[#182238] border border-white/10 shadow-2xl">
         <div className="flex items-center gap-4">
           <Link href="/profile" className="relative group shrink-0">
@@ -147,188 +112,241 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 font-mono mt-1">
               <span className="flex items-center gap-1">
-                <Globe className="w-3.5 h-3.5 text-indigo-400" /> {profile?.country || "United States"}
+                <Globe className="w-3.5 h-3.5 text-indigo-400" /> {profile?.country || "—"}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-emerald-400" /> {profile?.timezone || "UTC"}
               </span>
               <span>•</span>
-              <span>{currency} Currency</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-600/20 text-purple-400 border border-purple-500/30 uppercase">
+                Cloud Journal v3
+              </span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <Link href="/profile" className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 flex items-center gap-2 transition-all">
+          <Link
+            href="/profile"
+            className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 flex items-center gap-2 transition-all"
+          >
             <User className="w-3.5 h-3.5 text-purple-400" />
-            <span>Profile {completionPct}%</span>
+            Profile {completionPct}%
           </Link>
-
           <div className="px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-400 flex items-center gap-2 font-bold">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>{accountType} Terminal</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Cloud Active</span>
           </div>
         </div>
       </div>
 
-      {/* Primary Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard
-          title="Daily P&L"
-          value={formatSigned(stats.dailyPnL)}
-          icon={DollarSign}
-          variant={stats.dailyPnL >= 0 ? "profit" : "loss"}
-          trend={stats.dailyPnL >= 0 ? "up" : "down"}
-          trendValue="Today"
-        />
+      {/* ── Cloud Overview Strip ────────────────────────────────────────────── */}
+      {cloudLoading ? (
+        <StatGridSkeleton count={4} />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Accounts */}
+          <div className="p-5 rounded-2xl glass-card border border-dark-border flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-purple-600/20 border border-purple-500/20 flex items-center justify-center shrink-0">
+              <Wallet className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <p className="text-xs font-mono text-gray-400">Trading Accounts</p>
+              <p className="text-2xl font-extrabold text-white font-mono">{accounts.length}</p>
+              {defaultAccount && (
+                <p className="text-[10px] text-gray-500 font-mono truncate max-w-[120px]">
+                  Default: {defaultAccount.account_name}
+                </p>
+              )}
+            </div>
+          </div>
 
-        <StatCard
-          title="Weekly P&L"
-          value={formatSigned(stats.weeklyPnL)}
-          icon={TrendingUp}
-          variant={stats.weeklyPnL >= 0 ? "profit" : "loss"}
-          trend={stats.weeklyPnL >= 0 ? "up" : "down"}
-          trendValue="This Week"
-        />
+          {/* Total Trades */}
+          <div className="p-5 rounded-2xl glass-card border border-dark-border flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center shrink-0">
+              <Layers className="w-5 h-5 text-indigo-400" />
+            </div>
+            <div>
+              <p className="text-xs font-mono text-gray-400">Cloud Trades</p>
+              <p className="text-2xl font-extrabold text-white font-mono">
+                {tradeStats?.totalTrades.toLocaleString() ?? "0"}
+              </p>
+              {tradeStats && tradeStats.totalTrades > 0 && (
+                <p className="text-[10px] text-emerald-400 font-mono">
+                  {tradeStats.winRate.toFixed(1)}% win rate
+                </p>
+              )}
+            </div>
+          </div>
 
-        <StatCard
-          title="Monthly P&L"
-          value={formatSigned(stats.monthlyPnL)}
-          icon={Activity}
-          variant={stats.monthlyPnL >= 0 ? "profit" : "loss"}
-          trend={stats.monthlyPnL >= 0 ? "up" : "down"}
-          trendValue="This Month"
-        />
+          {/* Cloud P&L */}
+          <div className="p-5 rounded-2xl glass-card border border-dark-border flex items-center gap-4">
+            <div
+              className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                (tradeStats?.totalNetProfit ?? 0) >= 0
+                  ? "bg-emerald-500/20 border border-emerald-500/20"
+                  : "bg-rose-500/20 border border-rose-500/20"
+              }`}
+            >
+              {(tradeStats?.totalNetProfit ?? 0) >= 0 ? (
+                <TrendingUp className="w-5 h-5 text-emerald-400" />
+              ) : (
+                <TrendingDown className="w-5 h-5 text-rose-400" />
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-mono text-gray-400">Net Profit</p>
+              <p
+                className={`text-2xl font-extrabold font-mono ${
+                  (tradeStats?.totalNetProfit ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                }`}
+              >
+                {tradeStats
+                  ? `${tradeStats.totalNetProfit >= 0 ? "+" : ""}${fmtCurrency(tradeStats.totalNetProfit)}`
+                  : "$0.00"}
+              </p>
+              <p className="text-[10px] text-gray-500 font-mono">All time</p>
+            </div>
+          </div>
 
-        <StatCard
-          title="Net Profit"
-          value={formatSigned(stats.netProfit)}
-          icon={Zap}
-          variant={stats.netProfit >= 0 ? "profit" : "loss"}
-          trend={stats.netProfit >= 0 ? "up" : "down"}
-          trendValue="All Time"
-        />
+          {/* Latest Import */}
+          <div className="p-5 rounded-2xl glass-card border border-dark-border flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-sky-600/20 border border-sky-500/20 flex items-center justify-center shrink-0">
+              <History className="w-5 h-5 text-sky-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-mono text-gray-400">Latest Import</p>
+              {latestImport ? (
+                <>
+                  <p className="text-sm font-bold text-white font-mono truncate">
+                    {latestImport.broker ?? "Unknown broker"}
+                  </p>
+                  <p className="text-[10px] text-gray-500 font-mono">
+                    {latestImport.imported_rows} trades
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm font-mono text-gray-500">No imports yet</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
-        <StatCard
-          title="Account Balance"
-          value={balanceDisplay}
-          icon={ShieldCheck}
-          variant={balanceIsKnown ? "brand" : "default"}
-          subtitle={balanceIsKnown ? "From CSV equity" : "CSV has no equity column"}
-        />
+      {/* ── Empty Cloud State ──────────────────────────────────────────────── */}
+      {!cloudLoading && !hasCloudData && (
+        <div className="p-8 rounded-3xl glass-card border border-dark-border text-center space-y-6">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-purple-600/10 border border-purple-500/20 text-purple-400 flex items-center justify-center">
+            <Upload className="w-10 h-10" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-extrabold text-white tracking-tight">
+              Your Cloud Journal is Empty
+            </h2>
+            <p className="text-sm text-gray-400 max-w-md mx-auto mt-2">
+              Import your first CSV from your broker to see live analytics, equity curves, and performance metrics.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/upload"
+              className="px-6 py-3 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-glow flex items-center gap-2 transition-all"
+            >
+              <Upload className="w-4 h-4" />
+              Upload CSV
+            </Link>
+            <Link
+              href="/accounts"
+              className="px-6 py-3 rounded-2xl bg-dark-card hover:bg-dark-hover border border-dark-border text-gray-200 font-bold text-sm flex items-center gap-2 transition-all"
+            >
+              <Wallet className="w-4 h-4 text-purple-400" />
+              Manage Accounts
+            </Link>
+          </div>
+          <div className="pt-4 border-t border-dark-border grid grid-cols-3 gap-4 text-xs font-mono text-gray-400">
+            <div>✓ Cloud Storage</div>
+            <div>✓ Multi-Account</div>
+            <div>✓ Real-Time Sync</div>
+          </div>
+        </div>
+      )}
 
-        <StatCard
-          title="Win Rate"
-          value={`${stats.winRate}%`}
-          icon={Percent}
-          variant={stats.winRate >= 50 ? "profit" : "loss"}
-          trend={stats.winRate >= 50 ? "up" : "down"}
-          trendValue={`${stats.winningTrades}W / ${stats.losingTrades}L`}
-        />
-      </div>
+      {/* ── Live Trade Stats (only shown if cloud data exists) ─────────────── */}
+      {!cloudLoading && hasCloudData && tradeStats && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <StatCard
+              title="Win Rate"
+              value={`${tradeStats.winRate.toFixed(1)}%`}
+              icon={Percent}
+              variant={tradeStats.winRate >= 50 ? "profit" : "loss"}
+              trend={tradeStats.winRate >= 50 ? "up" : "down"}
+              trendValue={`${tradeStats.winningTrades}W / ${tradeStats.losingTrades}L`}
+            />
+            <StatCard
+              title="Net Profit"
+              value={formatSigned(tradeStats.totalNetProfit)}
+              icon={Zap}
+              variant={tradeStats.totalNetProfit >= 0 ? "profit" : "loss"}
+              trend={tradeStats.totalNetProfit >= 0 ? "up" : "down"}
+              trendValue="All Time"
+            />
+            <StatCard
+              title="Total Trades"
+              value={tradeStats.totalTrades}
+              icon={Layers}
+              variant="default"
+              subtitle="Cloud journal"
+            />
+            <StatCard
+              title="Winning Trades"
+              value={tradeStats.winningTrades}
+              icon={CheckCircle2}
+              variant="profit"
+            />
+            <StatCard
+              title="Losing Trades"
+              value={tradeStats.losingTrades}
+              icon={XCircle}
+              variant="loss"
+            />
+            <StatCard
+              title="Breakeven"
+              value={tradeStats.breakevenTrades}
+              icon={MinusCircle}
+              variant="default"
+            />
+          </div>
 
-      {/* Secondary Metrics Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <StatCard
-          title="Profit Factor"
-          value={stats.profitFactor}
-          icon={Target}
-          variant="default"
-          subtitle="Gross W / L Ratio"
-        />
+          {/* Quick Links */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { href: "/journal",  icon: Layers,   label: "Open Trade Journal",    desc: `${tradeStats.totalTrades} trades in cloud`, color: "text-purple-400" },
+              { href: "/accounts", icon: Wallet,   label: "Trading Accounts",      desc: `${accounts.length} account${accounts.length !== 1 ? "s" : ""} connected`, color: "text-indigo-400" },
+              { href: "/upload",   icon: Upload,   label: "Upload New CSV",         desc: "Import from your broker", color: "text-sky-400" },
+            ].map(({ href, icon: Icon, label, desc, color }) => (
+              <Link
+                key={href}
+                href={href}
+                className="p-4 rounded-2xl glass-card border border-dark-border hover:border-white/20 transition-all flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3">
+                  <Icon className={`w-5 h-5 ${color}`} />
+                  <div>
+                    <p className="text-sm font-bold text-white font-mono">{label}</p>
+                    <p className="text-xs text-gray-400">{desc}</p>
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
 
-        <StatCard
-          title="Average RR"
-          value={stats.averageRR !== null ? `${stats.averageRR} R` : "N/A"}
-          icon={Award}
-          variant="brand"
-          subtitle="Risk vs Reward"
-        />
-
-        <StatCard
-          title="Average Win"
-          value={format(stats.averageWin)}
-          icon={CheckCircle2}
-          variant="profit"
-        />
-
-        <StatCard
-          title="Average Loss"
-          value={format(stats.averageLoss)}
-          icon={XCircle}
-          variant="loss"
-        />
-
-        <StatCard
-          title="Largest Win"
-          value={format(stats.largestWin)}
-          icon={TrendingUp}
-          variant="profit"
-        />
-
-        <StatCard
-          title="Largest Loss"
-          value={format(stats.largestLoss)}
-          icon={TrendingDown}
-          variant="loss"
-        />
-
-        <StatCard
-          title="Current Streak"
-          value={
-            stats.currentStreak.type === "NONE"
-              ? "0"
-              : `${stats.currentStreak.count} ${stats.currentStreak.type}`
-          }
-          icon={Flame}
-          variant={
-            stats.currentStreak.type === "WIN"
-              ? "profit"
-              : stats.currentStreak.type === "LOSS"
-              ? "loss"
-              : "default"
-          }
-        />
-
-        <StatCard
-          title="Best Streak"
-          value={`${stats.bestStreak} Wins`}
-          icon={Flame}
-          variant="profit"
-        />
-
-        <StatCard
-          title="Total Trades"
-          value={stats.totalTrades}
-          icon={Layers}
-          variant="default"
-        />
-
-        <StatCard
-          title="Winning Trades"
-          value={stats.winningTrades}
-          icon={CheckCircle2}
-          variant="profit"
-        />
-
-        <StatCard
-          title="Losing Trades"
-          value={stats.losingTrades}
-          icon={XCircle}
-          variant="loss"
-        />
-
-        <StatCard
-          title="Breakeven Trades"
-          value={stats.breakevenCount}
-          icon={MinusCircle}
-          variant="default"
-        />
-      </div>
-
-      {/* Main Charts Dashboard — lazy loaded */}
-      <DashboardCharts />
+      {/* ── Charts (lazy loaded) — only shown with data ─────────────────── */}
+      {!cloudLoading && hasCloudData && <DashboardCharts />}
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback } from "react";
 import { useJournalStore } from "@/lib/store/useJournalStore";
-import { useJournalMetrics } from "@/hooks/useJournalMetrics";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { SUPPORTED_CURRENCIES, CURRENCY_LABELS, DisplayCurrency } from "@/lib/config/currency";
 import {
@@ -12,19 +11,12 @@ import {
   Moon,
   Sun,
   Download,
-  RotateCcw,
   Check,
   ShieldAlert,
   BarChart2,
-  TrendingUp,
-  TrendingDown,
-  Percent,
-  Target,
-  Clock,
-  Zap,
   Database,
 } from "lucide-react";
-import { format } from "date-fns";
+
 
 function StatRow({ label, value, valueClass = "text-gray-100 font-bold" }: { label: string; value: string; valueClass?: string }) {
   return (
@@ -39,17 +31,13 @@ export const SettingsView: React.FC = () => {
   const setDisplayCurrency = useJournalStore(s => s.setDisplayCurrency);
   const settings           = useJournalStore(s => s.settings);
   const updateSettings     = useJournalStore(s => s.updateSettings);
-  const clearAll           = useJournalStore(s => s.clearAll);
   const theme              = useJournalStore(s => s.theme);
   const setTheme           = useJournalStore(s => s.setTheme);
-  const journals           = useJournalStore(s => s.journals);
-  const selectedJournalIds = useJournalStore(s => s.selectedJournalIds);
-  const accountBalance     = useJournalStore(s => s.accountBalance);
-  const accountType        = useJournalStore(s => s.accountType);
-  const broker             = useJournalStore(s => s.broker);
 
-  const { stats, filteredTrades, dateRange, activeJournals } = useJournalMetrics();
+  // Phase 3.0: stats are fetched directly from Supabase now
+  // Local metrics hook returns defaults (empty) — Phase 3.1 will wire cloud analytics
   const { format: formatCurrency, currency } = useCurrencyFormatter();
+
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -69,16 +57,10 @@ export const SettingsView: React.FC = () => {
   }, [updateSettings, triggerSaveFeedback]);
 
   const exportJSON = useCallback(() => {
-    const data = { journals, exportDate: new Date().toISOString() };
-    const url = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `tradefourge_journals_backup_${Date.now()}.json`;
-    document.body.appendChild(a); a.click(); a.remove();
-  }, [journals]);
+    // Phase 3.0: export now handled by the cloud trades service (Phase 3.1)
+    alert("Cloud export coming in Phase 3.1. Use Import History to review your uploads.");
+  }, []);
 
-  const totalTrades = journals.reduce((acc, j) => acc + j.tradeCount, 0);
-  const activeTrades = filteredTrades.length;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -94,7 +76,7 @@ export const SettingsView: React.FC = () => {
             )}
           </h2>
           <p className="text-xs text-gray-400 mt-1">
-            {journals.length} journal{journals.length !== 1 ? "s" : ""} imported · {selectedJournalIds.length} active · {totalTrades} total trades
+            Cloud Journal v3.0 · Supabase Storage · Settings are saved locally
           </p>
         </div>
         <div className="p-3 rounded-xl bg-dark-card border border-dark-border text-brand-400">
@@ -103,61 +85,29 @@ export const SettingsView: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Account Summary — real stats */}
+        {/* Cloud storage info panel (replaces old local-stats panel) */}
         <div className="p-5 rounded-2xl glass-card border border-dark-border space-y-3 md:col-span-2">
           <div className="flex items-center gap-3 pb-3 border-b border-dark-border">
             <div className="p-2.5 rounded-xl bg-brand-600/20 text-brand-400 border border-brand-500/30">
               <BarChart2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">Account Summary</h3>
-              <p className="text-xs text-gray-400">Live statistics from active journals</p>
+              <h3 className="text-sm font-bold text-white">Cloud Storage Info</h3>
+              <p className="text-xs text-gray-400">Phase 3.0 — Persistent data is now in Supabase. Detailed analytics coming in Phase 3.1.</p>
             </div>
           </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Column 1 */}
-            <div className="space-y-0">
-              <StatRow
-                label="Current Balance"
-                value={accountBalance !== null ? formatCurrency(accountBalance) : "Unavailable"}
-                valueClass={accountBalance !== null ? "text-emerald-400 font-bold" : "text-gray-500"}
-              />
-              <StatRow label="Net Profit" value={formatCurrency(stats.netProfit)} valueClass={stats.netProfit >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"} />
-              <StatRow label="Gross Profit" value={formatCurrency(stats.grossProfit)} valueClass="text-emerald-400 font-bold" />
-              <StatRow label="Gross Loss" value={formatCurrency(stats.grossLoss)} valueClass="text-rose-400 font-bold" />
-              <StatRow label="Total Commission" value={formatCurrency(stats.totalCommission)} valueClass="text-gray-300 font-bold" />
-              <StatRow label="Total Swap" value={formatCurrency(stats.totalSwap)} valueClass="text-gray-300 font-bold" />
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 p-4 rounded-xl bg-dark-card border border-dark-border text-xs font-mono">
+              <p className="text-gray-400 mb-1">Storage Layer</p>
+              <p className="text-white font-bold">Supabase PostgreSQL</p>
             </div>
-            {/* Column 2 */}
-            <div className="space-y-0">
-              <StatRow label="Win Rate" value={`${stats.winRate}%`} valueClass={stats.winRate >= 50 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"} />
-              <StatRow label="Win / Loss" value={`${stats.winningTrades}W / ${stats.losingTrades}L`} />
-              <StatRow label="Breakeven" value={`${stats.breakevenCount}`} />
-              <StatRow label="Total Trades" value={`${stats.totalTrades}`} />
-              <StatRow label="Active Trades" value={`${activeTrades}`} />
-              <StatRow label="Expectancy" value={formatCurrency(stats.expectancy)} valueClass={stats.expectancy >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"} />
+            <div className="flex-1 p-4 rounded-xl bg-dark-card border border-dark-border text-xs font-mono">
+              <p className="text-gray-400 mb-1">RLS Protection</p>
+              <p className="text-emerald-400 font-bold">Enabled · Row-Level Security</p>
             </div>
-            {/* Column 3 */}
-            <div className="space-y-0">
-              <StatRow label="Profit Factor" value={stats.totalTrades > 0 ? `${stats.profitFactor}` : "—"} valueClass={stats.profitFactor >= 1.5 ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"} />
-              <StatRow label="Average RR" value={stats.averageRR !== null ? `${stats.averageRR}R` : "N/A"} valueClass="text-brand-300 font-bold" />
-              <StatRow label="Avg Win" value={formatCurrency(stats.averageWin)} valueClass="text-emerald-400 font-bold" />
-              <StatRow label="Avg Loss" value={formatCurrency(stats.averageLoss)} valueClass="text-rose-400 font-bold" />
-              <StatRow label="Largest Win" value={formatCurrency(stats.largestWin)} valueClass="text-emerald-400 font-bold" />
-              <StatRow label="Largest Loss" value={formatCurrency(stats.largestLoss)} valueClass="text-rose-400 font-bold" />
-            </div>
-            {/* Column 4 */}
-            <div className="space-y-0">
-              <StatRow label="Broker" value={broker} />
-              <StatRow label="Account Type" value={accountType} />
-              <StatRow label="Display Currency" value={currency} />
-              <StatRow label="Journals" value={`${journals.length}`} />
-              <StatRow
-                label="Date Range"
-                value={dateRange ? `${format(dateRange.from, "dd MMM yy")} → ${format(dateRange.to, "dd MMM yy")}` : "—"}
-              />
-              <StatRow label="Avg Hold Time" value={stats.averageHoldTime} />
+            <div className="flex-1 p-4 rounded-xl bg-dark-card border border-dark-border text-xs font-mono">
+              <p className="text-gray-400 mb-1">Display Currency</p>
+              <p className="text-white font-bold">{currency}</p>
             </div>
           </div>
         </div>
@@ -271,21 +221,22 @@ export const SettingsView: React.FC = () => {
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">Export Backup</h3>
-              <p className="text-xs text-gray-400">Download complete journal dataset as JSON</p>
+              <p className="text-xs text-gray-400">Download your cloud trade data as JSON — coming in Phase 3.1</p>
             </div>
           </div>
 
           <button
             onClick={exportJSON}
-            className="w-full py-2.5 rounded-xl bg-dark-card hover:bg-dark-hover border border-dark-border text-white text-xs font-mono font-bold flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-2.5 rounded-xl bg-dark-card hover:bg-dark-hover border border-dark-border text-gray-400 text-xs font-mono font-bold flex items-center justify-center gap-2 transition-colors opacity-60 cursor-not-allowed"
+            disabled
           >
             <Database className="w-4 h-4 text-brand-400" />
-            Export {journals.length} Journal{journals.length !== 1 ? "s" : ""} ({totalTrades} trades) — JSON
+            Cloud Export — Available in Phase 3.1
           </button>
         </div>
       </div>
 
-      {/* Danger Zone */}
+      {/* Danger Zone — Cloud data management info */}
       <div className="p-5 rounded-2xl glass-card border border-rose-500/30 space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30">
@@ -293,22 +244,13 @@ export const SettingsView: React.FC = () => {
           </div>
           <div>
             <h3 className="text-sm font-bold text-white">Danger Zone</h3>
-            <p className="text-xs text-gray-400">Permanently clear all journals and trade data from IndexedDB</p>
+            <p className="text-xs text-gray-400">Permanently delete cloud data — managed in Supabase Dashboard</p>
           </div>
         </div>
 
-        <button
-          onClick={async () => {
-            if (confirm(`Permanently delete ALL ${journals.length} journals and ${totalTrades} trades? This cannot be undone.`)) {
-              await clearAll();
-              alert("All journal data cleared.");
-            }
-          }}
-          className="py-2.5 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-mono font-bold flex items-center gap-2 transition-colors"
-        >
-          <RotateCcw className="w-4 h-4" />
-          Clear All Journal Data
-        </button>
+        <p className="text-xs font-mono text-gray-500 p-3 rounded-xl bg-dark-card border border-dark-border">
+          ⚠ Cloud data deletion is managed directly in your Supabase Dashboard for safety. Trade data is protected by Row-Level Security and cannot be bulk-deleted through the app. This prevents accidental data loss.
+        </p>
       </div>
     </div>
   );

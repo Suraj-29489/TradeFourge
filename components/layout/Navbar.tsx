@@ -4,11 +4,12 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useJournalStore } from "@/lib/store/useJournalStore";
-import { useJournalMetrics } from "@/hooks/useJournalMetrics";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { ExportToolbar } from "@/components/export/ExportToolbar";
-import { Upload, Wallet, Moon, Sun, ShieldCheck, Menu, LogOut, User } from "lucide-react";
+import { Upload, Moon, Sun, Menu, LogOut, User, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { fetchDefaultAccount } from "@/lib/supabase/accounts";
+import type { TradingAccount } from "@/types/database";
 
 interface NavbarProps {
   onOpenMobileNav?: () => void;
@@ -16,32 +17,29 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
   const router = useRouter();
-  const init           = useJournalStore(s => s.init);
-  const accountType    = useJournalStore(s => s.accountType);
-  const accountBalance = useJournalStore(s => s.accountBalance);
-  const theme          = useJournalStore(s => s.theme);
-  const setTheme       = useJournalStore(s => s.setTheme);
-  const journals       = useJournalStore(s => s.journals);
+  const init     = useJournalStore(s => s.init);
+  const theme    = useJournalStore(s => s.theme);
+  const setTheme = useJournalStore(s => s.setTheme);
 
-  const { stats } = useJournalMetrics();
-  const { format, formatSigned } = useCurrencyFormatter();
-
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const { format } = useCurrencyFormatter();
+  const [userEmail, setUserEmail]             = useState<string | null>(null);
+  const [defaultAccount, setDefaultAccount]   = useState<TradingAccount | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
     init();
-    
-    // Fetch logged in Supabase user profile
-    async function fetchUser() {
+
+    async function fetchNavbarData() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.email) {
           setUserEmail(user.email);
+          const { data: acc } = await fetchDefaultAccount(user.id);
+          if (acc) setDefaultAccount(acc);
         }
       } catch {}
     }
-    fetchUser();
+    fetchNavbarData();
   }, [init]);
 
   const handleLogout = async () => {
@@ -52,16 +50,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
     router.refresh();
   };
 
-  const accountName = journals.length > 0
-    ? journals.find(j => j.lastKnownBalance === accountBalance)?.accountName ?? journals[0].accountName
-    : "No Journal";
-
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-3 sm:px-6 backdrop-blur-md border-b"
             style={{ backgroundColor: "var(--glass-bg)", borderColor: "var(--glass-border)" }}>
       {/* Left: Mobile Menu Toggle + Account Info */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Mobile Hamburger Button (<768px) */}
+        {/* Mobile Hamburger */}
         <button
           onClick={onOpenMobileNav}
           className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-dark-hover transition-colors md:hidden"
@@ -70,31 +64,33 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Account Name */}
+        {/* Default Account Chip */}
         <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs sm:text-sm hover:border-brand-500/40 transition-colors">
           <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-400 flex-shrink-0" />
-          <span className="text-gray-200 font-medium max-w-[100px] sm:max-w-[140px] truncate">{accountName}</span>
+          <span className="text-gray-200 font-medium max-w-[100px] sm:max-w-[160px] truncate font-mono">
+            {defaultAccount?.account_name ?? "No Account"}
+          </span>
         </div>
 
         {/* Account Type Badge */}
-        <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 font-mono text-xs font-semibold">
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>{accountType}</span>
-        </div>
+        {defaultAccount && (
+          <div className="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-400 font-mono text-xs font-semibold">
+            {defaultAccount.account_type}
+          </div>
+        )}
 
-        {/* Balance (Medium & Up) */}
-        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs font-mono">
-          <span className="text-gray-400">Balance:</span>
-          <span className="font-bold text-white">
-            {accountBalance !== null ? format(accountBalance) : "N/A"}
-          </span>
-          <span className={`font-semibold ml-1 ${stats.netProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
-            ({formatSigned(stats.netProfit)})
-          </span>
-        </div>
+        {/* Balance (large screens) */}
+        {defaultAccount && (
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs font-mono">
+            <span className="text-gray-400">Balance:</span>
+            <span className="font-bold text-white">
+              {defaultAccount.currency} {defaultAccount.current_balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Right: Actions & Profile Logout */}
+      {/* Right: Actions */}
       <div className="flex items-center gap-1.5 sm:gap-2">
         <ExportToolbar />
 
@@ -106,7 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
           <span className="hidden sm:inline">Upload CSV</span>
         </Link>
 
-        {/* User Email Chip (if logged in) */}
+        {/* User email chip */}
         {userEmail && (
           <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300">
             <User className="w-3.5 h-3.5 text-purple-400" />
@@ -126,7 +122,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
           }
         </button>
 
-        {/* Logout Button */}
+        {/* Logout */}
         <button
           onClick={handleLogout}
           className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 hover:text-rose-300 text-xs font-mono font-medium transition-all"

@@ -38,8 +38,10 @@ const TABS: { key: Tab; label: string }[] = [
 
 export const DashboardCharts: React.FC = () => {
   const theme = useJournalStore(s => s.theme);
+  // Phase 3.0: called with no args — returns empty trades until cloud analytics (Phase 3.1)
   const { filteredTrades, stats } = useJournalMetrics();
   const { format: formatCurrency, currency } = useCurrencyFormatter();
+
 
   const [activeTab, setActiveTab] = useState<Tab>("equity");
 

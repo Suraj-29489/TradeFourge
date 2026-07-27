@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useJournalMetrics } from "@/hooks/useJournalMetrics";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { generateProfessionalPdf } from "@/lib/engine/pdf-generator";
@@ -11,8 +10,10 @@ import { FileText, FileSpreadsheet, Download } from "lucide-react";
 
 export const ExportToolbar: React.FC = () => {
   const { currency } = useCurrencyFormatter();
-  const selectedAccount = useJournalStore((state) => state.selectedAccount);
+  // Phase 3.0: filteredTrades will be empty until Phase 3.1 wires cloud trades to export engine
   const { filteredTrades, stats } = useJournalMetrics();
+  const selectedAccount = "Cloud Journal"; // Phase 3.1 will pass selected account name
+
 
   const handlePdfExport = () => {
     generateProfessionalPdf(filteredTrades, stats, currency, selectedAccount);
