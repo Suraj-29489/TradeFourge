@@ -1,23 +1,14 @@
 "use client";
 // components/trades/CloudTradesTable.tsx
-// Cloud-backed trades table that reads from Supabase.
-// Replaces the old Zustand/IndexedDB-coupled TradesTable for the /journal route.
+// Advanced Cloud-backed Trade Explorer Table with Bulk Selection, Column Toggles, 
+// Indicator Badges, and Rich Filters.
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { format, parseISO } from "date-fns";
 import {
-  Search,
-  TrendingUp,
-  TrendingDown,
-  Eye,
-  Trash2,
-  SlidersHorizontal,
-  ArrowUpDown,
-  RotateCcw,
-  CheckCheck,
-  X,
-  RefreshCw,
+  Search, TrendingUp, TrendingDown, Eye, Trash2, SlidersHorizontal,
+  CheckCheck, X, RotateCcw, FileText, Camera, Tag as TagIcon, Download, Check
 } from "lucide-react";
 import { useJournalStore, ColumnVisibility, DEFAULT_COLUMN_VISIBILITY } from "@/lib/store/useJournalStore";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
@@ -25,8 +16,6 @@ import { OutcomeBadge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import { TableSkeleton } from "@/components/ui/LoadingSkeleton";
 import type { CloudTradeWithRelations, CloudTradeFilters, PaginatedResult } from "@/types/database";
-
-// ─── Column config ─────────────────────────────────────────────────────────────
 
 const COLUMN_LABELS: Record<keyof ColumnVisibility, string> = {
   date:       "Date",
@@ -45,8 +34,6 @@ const COLUMN_LABELS: Record<keyof ColumnVisibility, string> = {
   duration:   "Duration",
   account:    "Account",
 };
-
-// ─── Column Dropdown ─────────────────────────────────────────────────────────
 
 function ColumnDropdown({
   visibility,
@@ -88,7 +75,7 @@ function ColumnDropdown({
         <div className="flex gap-1.5">
           <button
             onClick={() => onChange(Object.fromEntries(Object.keys(visibility).map((k) => [k, true])) as Partial<ColumnVisibility>)}
-            className="text-brand-400 hover:text-brand-300"
+            className="text-purple-400 hover:text-purple-300"
             title="Show all"
           >
             <CheckCheck className="w-3.5 h-3.5" />
@@ -115,7 +102,7 @@ function ColumnDropdown({
             type="checkbox"
             checked={visibility[key]}
             onChange={(e) => onChange({ [key]: e.target.checked } as Partial<ColumnVisibility>)}
-            className="rounded accent-brand-500"
+            className="rounded accent-purple-600"
           />
           {COLUMN_LABELS[key]}
         </label>
@@ -124,8 +111,6 @@ function ColumnDropdown({
     document.body
   );
 }
-
-// ─── Main Table ───────────────────────────────────────────────────────────────
 
 interface CloudTradesTableProps {
   result: PaginatedResult<CloudTradeWithRelations> | null;
@@ -157,8 +142,11 @@ export function CloudTradesTable({
   const setColumnVisibility = useJournalStore((s) => s.setColumnVisibility);
 
   const [showColMenu, setShowColMenu] = useState(false);
-  const [colBtnRect, setColBtnRect]   = useState<DOMRect | null>(null);
+  const [colBtnRect, setColBtnRect] = useState<DOMRect | null>(null);
   const colBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Bulk Selection State
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const openColMenu = () => {
     if (colBtnRef.current) setColBtnRect(colBtnRef.current.getBoundingClientRect());
@@ -167,6 +155,60 @@ export function CloudTradesTable({
 
   const trades = result?.data ?? [];
   const cv = columnVisibility;
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(trades.map((t) => t.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds([...selectedIds, id]);
+    } else {
+      setSelectedIds(selectedIds.filter((item) => item !== id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Delete ${selectedIds.length} selected trades permanently?`)) {
+      for (const id of selectedIds) {
+        await onDeleteTrade(id);
+      }
+      setSelectedIds([]);
+    }
+  };
+
+  const handleBulkExport = () => {
+    if (selectedIds.length === 0) return;
+    const selectedTrades = trades.filter((t) => selectedIds.includes(t.id));
+    const headers = ["Ticket", "Symbol", "Side", "Volume", "Open Time", "Close Time", "Open Price", "Close Price", "Net PnL", "RR", "Session"];
+    const rows = selectedTrades.map((t) => [
+      t.ticket || t.id.slice(0, 8),
+      t.symbol,
+      t.side,
+      t.volume,
+      t.open_time,
+      t.close_time,
+      t.open_price,
+      t.close_price,
+      t.net_profit,
+      t.rr_ratio || 0,
+      t.session || "N/A",
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `tradefourge_bulk_export_${selectedIds.length}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const formatDuration = (secs: number | null): string => {
     if (!secs) return "—";
@@ -179,7 +221,7 @@ export function CloudTradesTable({
   return (
     <div className="space-y-4">
       {/* Controls Bar */}
-      <div className="p-3 sm:p-4 rounded-2xl glass-card border border-dark-border flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+      <div className="p-3 sm:p-4 rounded-2xl bg-[#111726] border border-white/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-2xl">
         {/* Search */}
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -188,7 +230,7 @@ export function CloudTradesTable({
             placeholder="Search symbol, ticket, notes..."
             value={filters.search}
             onChange={(e) => onFiltersChange({ search: e.target.value })}
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-dark-card border border-dark-border text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-brand-500 transition-colors font-mono"
+            className="w-full pl-9 pr-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 transition-colors font-mono"
           />
         </div>
 
@@ -198,7 +240,7 @@ export function CloudTradesTable({
           <select
             value={filters.side}
             onChange={(e) => onFiltersChange({ side: e.target.value as CloudTradeFilters["side"] })}
-            className="px-2.5 py-2 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300 focus:outline-none focus:border-brand-500"
+            className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500"
           >
             <option value="ALL">All Sides</option>
             <option value="BUY">Buy</option>
@@ -211,7 +253,7 @@ export function CloudTradesTable({
           <select
             value={filters.outcome}
             onChange={(e) => onFiltersChange({ outcome: e.target.value as CloudTradeFilters["outcome"] })}
-            className="px-2.5 py-2 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300 focus:outline-none focus:border-brand-500"
+            className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500"
           >
             <option value="ALL">All Outcomes</option>
             <option value="WIN">Win</option>
@@ -224,7 +266,7 @@ export function CloudTradesTable({
           <select
             value={filters.dateRange}
             onChange={(e) => onFiltersChange({ dateRange: e.target.value as CloudTradeFilters["dateRange"] })}
-            className="px-2.5 py-2 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300 focus:outline-none focus:border-brand-500"
+            className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500"
           >
             <option value="ALL">All Time</option>
             <option value="7D">Last 7 Days</option>
@@ -239,7 +281,7 @@ export function CloudTradesTable({
             <select
               value={filters.accountId}
               onChange={(e) => onFiltersChange({ accountId: e.target.value })}
-              className="px-2.5 py-2 rounded-xl bg-dark-card border border-dark-border text-xs font-mono text-gray-300 focus:outline-none focus:border-brand-500"
+              className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500"
             >
               <option value="ALL">All Accounts</option>
               {accounts.map((a) => (
@@ -248,219 +290,282 @@ export function CloudTradesTable({
             </select>
           )}
 
-          {/* Column toggle */}
+          {/* Columns Button */}
           <button
             ref={colBtnRef}
             onClick={openColMenu}
-            className="hidden md:flex p-2 rounded-xl bg-dark-card border border-dark-border hover:bg-dark-hover text-gray-300 items-center gap-1.5 text-xs font-mono transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 transition-colors"
           >
-            <SlidersHorizontal className="w-4 h-4" />
-            Columns
-          </button>
-
-          {/* Refresh */}
-          <button
-            onClick={onRefresh}
-            disabled={loading}
-            className="p-2 rounded-xl bg-dark-card border border-dark-border hover:bg-dark-hover text-gray-300 transition-colors"
-            title="Refresh"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-purple-400" />
+            <span>Columns</span>
           </button>
         </div>
-
-        {showColMenu && colBtnRect && (
-          <ColumnDropdown
-            visibility={cv}
-            onChange={setColumnVisibility}
-            onClose={() => setShowColMenu(false)}
-            anchorRect={colBtnRect}
-          />
-        )}
       </div>
 
-      {/* Mobile Cards */}
-      <div className="space-y-3 md:hidden">
-        {loading ? (
-          <TableSkeleton rows={5} cols={4} />
-        ) : trades.length === 0 ? (
-          <div className="p-8 text-center text-xs font-mono text-gray-400 glass-card rounded-2xl border border-dark-border">
-            No trades match the current filters
+      {/* Floating Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <div className="p-3 rounded-2xl bg-purple-900/30 border border-purple-500/40 flex items-center justify-between gap-3 text-xs font-mono shadow-2xl">
+          <div className="flex items-center gap-2 text-purple-300 font-bold">
+            <CheckCheck className="w-4 h-4 text-purple-400" />
+            <span>{selectedIds.length} trade(s) selected</span>
           </div>
-        ) : (
-          trades.map((t) => {
-            const isWin = t.outcome === "WIN";
-            const isLoss = t.outcome === "LOSS";
-            const closeDate = t.close_time ? parseISO(t.close_time) : null;
 
-            return (
-              <div
-                key={t.id}
-                onClick={() => onViewTrade(t)}
-                className="p-4 rounded-2xl glass-card border border-dark-border hover:border-brand-500/40 cursor-pointer transition-all space-y-3"
-              >
-                <div className="flex items-center justify-between text-xs font-mono text-gray-400 border-b border-dark-border pb-2">
-                  <span className="font-bold text-gray-300">{t.symbol}</span>
-                  <span>{closeDate ? format(closeDate, "yyyy-MM-dd HH:mm") : "—"}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border font-mono ${
-                        t.side === "BUY" || t.side === "LONG"
-                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                          : "bg-rose-500/10 text-rose-500 border-rose-500/30"
-                      }`}
-                    >
-                      {t.side === "BUY" || t.side === "LONG" ? (
-                        <TrendingUp className="w-3 h-3" />
-                      ) : (
-                        <TrendingDown className="w-3 h-3" />
-                      )}
-                      {t.side}
-                    </span>
-                    {t.ticket && (
-                      <span className="text-[10px] text-gray-500 font-mono">#{t.ticket}</span>
-                    )}
-                  </div>
-                  <span
-                    className={`text-base font-bold font-mono ${
-                      isWin ? "text-emerald-500" : isLoss ? "text-rose-500" : "text-gray-400"
-                    }`}
-                  >
-                    {t.net_profit >= 0 ? "+" : ""}
-                    {fmtCurrency(t.net_profit)}
-                  </span>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleBulkExport}
+              className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold flex items-center gap-1 transition-all"
+            >
+              <Download className="w-3.5 h-3.5" /> Export Selected
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold flex items-center gap-1 transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Bulk Delete
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="px-2.5 py-1.5 rounded-xl bg-white/10 text-gray-300 hover:text-white"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
-      {/* Desktop Table */}
-      <div className="rounded-2xl glass-card border border-dark-border overflow-hidden hidden md:block">
-        {loading ? (
-          <TableSkeleton rows={10} cols={7} />
-        ) : (
+      {/* Column Dropdown Portal */}
+      {showColMenu && colBtnRect && (
+        <ColumnDropdown
+          visibility={columnVisibility}
+          onChange={(cols) => setColumnVisibility(cols)}
+          onClose={() => setShowColMenu(false)}
+          anchorRect={colBtnRect}
+        />
+      )}
+
+      {/* Main Table */}
+      {loading ? (
+        <TableSkeleton rows={10} cols={8} />
+      ) : (
+        <div className="rounded-2xl bg-[#111726] border border-white/10 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
-            <table className="w-full text-left font-mono text-xs">
-              <thead className="bg-dark-card text-gray-400 border-b border-dark-border sticky top-0 z-10">
-                <tr>
-                  {cv.date       && <th className="py-3 px-4"><div className="flex items-center gap-1"><span>Date</span><ArrowUpDown className="w-3 h-3 text-gray-500" /></div></th>}
-                  {cv.time       && <th className="py-3 px-4">Time</th>}
-                  {cv.ticket     && <th className="py-3 px-4">Ticket</th>}
-                  {cv.symbol     && <th className="py-3 px-4"><div className="flex items-center gap-1"><span>Symbol</span><ArrowUpDown className="w-3 h-3 text-gray-500" /></div></th>}
-                  {cv.side       && <th className="py-3 px-4">Side</th>}
-                  {cv.volume     && <th className="py-3 px-4">Lot</th>}
-                  {cv.open_price && <th className="py-3 px-4">Entry</th>}
-                  {cv.close_price&& <th className="py-3 px-4">Exit</th>}
-                  {cv.net_profit && <th className="py-3 px-4"><div className="flex items-center gap-1"><span>Net PnL</span><ArrowUpDown className="w-3 h-3 text-gray-500" /></div></th>}
-                  {cv.commission && <th className="py-3 px-4">Comm.</th>}
-                  {cv.swap       && <th className="py-3 px-4">Swap</th>}
-                  {cv.rr_ratio   && <th className="py-3 px-4">R:R</th>}
-                  {cv.outcome    && <th className="py-3 px-4">Outcome</th>}
-                  {cv.duration   && <th className="py-3 px-4">Duration</th>}
-                  {cv.account    && <th className="py-3 px-4">Account</th>}
-                  <th className="py-3 px-4 text-right">Actions</th>
+            <table className="w-full text-left border-collapse text-xs font-mono">
+              <thead>
+                <tr className="border-b border-white/10 text-gray-400 uppercase text-[10px] bg-white/5">
+                  <th className="py-3 px-3 w-8">
+                    <input
+                      type="checkbox"
+                      checked={trades.length > 0 && selectedIds.length === trades.length}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      className="rounded accent-purple-600"
+                    />
+                  </th>
+                  {cv.date       && <th className="py-3 px-3">Date</th>}
+                  {cv.ticket     && <th className="py-3 px-3">Ticket</th>}
+                  {cv.symbol     && <th className="py-3 px-3">Symbol</th>}
+                  {cv.side       && <th className="py-3 px-3">Side</th>}
+                  {cv.volume     && <th className="py-3 px-3">Lots</th>}
+                  {cv.open_price && <th className="py-3 px-3">Entry</th>}
+                  {cv.close_price&& <th className="py-3 px-3">Exit</th>}
+                  {cv.net_profit && <th className="py-3 px-3">Net PnL</th>}
+                  {cv.commission && <th className="py-3 px-3">Comm.</th>}
+                  {cv.swap       && <th className="py-3 px-3">Swap</th>}
+                  {cv.rr_ratio   && <th className="py-3 px-3">R:R</th>}
+                  {cv.outcome    && <th className="py-3 px-3">Outcome</th>}
+                  {cv.duration   && <th className="py-3 px-3">Duration</th>}
+                  {cv.account    && <th className="py-3 px-3">Account</th>}
+                  <th className="py-3 px-3">Indicators</th>
+                  <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dark-border text-gray-300">
-                {trades.length === 0 ? (
-                  <tr>
-                    <td colSpan={16} className="py-12 text-center text-gray-400 text-xs font-mono">
-                      No trades match the current filters
-                    </td>
-                  </tr>
-                ) : (
-                  trades.map((t) => {
-                    const isWin  = t.outcome === "WIN";
-                    const isLoss = t.outcome === "LOSS";
-                    const closeDate = t.close_time ? parseISO(t.close_time) : null;
-                    const isBuy = t.side === "BUY" || t.side === "LONG";
+              <tbody className="divide-y divide-white/5">
+                {trades.map((t) => {
+                  const isBuy = t.side === "BUY" || t.side === "LONG";
+                  const dateStr = t.close_time || t.open_time || t.created_at;
+                  const formattedDate = dateStr ? format(parseISO(dateStr), "yyyy-MM-dd HH:mm") : "—";
+                  const isSelected = selectedIds.includes(t.id);
+                  const hasNotes = !!(t.notes || t.emotions || t.lessons);
+                  const hasImages = (t.images || []).length > 0;
+                  const hasTags = (t.tags || []).length > 0;
 
-                    return (
-                      <tr
-                        key={t.id}
-                        className="hover:bg-dark-hover/40 transition-colors cursor-pointer"
-                        onClick={() => onViewTrade(t)}
-                      >
-                        {cv.date        && <td className="py-3 px-4 text-gray-400">{closeDate ? format(closeDate, "yyyy-MM-dd") : "—"}</td>}
-                        {cv.time        && <td className="py-3 px-4 text-gray-400">{closeDate ? format(closeDate, "HH:mm") : "—"}</td>}
-                        {cv.ticket      && <td className="py-3 px-4 text-gray-500">{t.ticket ?? "—"}</td>}
-                        {cv.symbol      && <td className="py-3 px-4 font-bold text-white">{t.symbol}</td>}
-                        {cv.side        && (
-                          <td className="py-3 px-4">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 w-fit border ${
-                                isBuy
-                                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
-                                  : "bg-rose-500/10 text-rose-500 border-rose-500/30"
-                              }`}
-                            >
-                              {isBuy ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                              {t.side}
-                            </span>
-                          </td>
-                        )}
-                        {cv.volume      && <td className="py-3 px-4">{t.volume}</td>}
-                        {cv.open_price  && <td className="py-3 px-4">{t.open_price ?? "—"}</td>}
-                        {cv.close_price && <td className="py-3 px-4">{t.close_price ?? "—"}</td>}
-                        {cv.net_profit  && (
-                          <td className={`py-3 px-4 font-bold ${isWin ? "text-emerald-500" : isLoss ? "text-rose-500" : "text-gray-300"}`}>
+                  return (
+                    <tr
+                      key={t.id}
+                      className={`hover:bg-white/5 transition-colors group ${isSelected ? "bg-purple-600/10" : ""}`}
+                    >
+                      <td className="py-3 px-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => handleSelectOne(t.id, e.target.checked)}
+                          className="rounded accent-purple-600"
+                        />
+                      </td>
+
+                      {cv.date && (
+                        <td className="py-3 px-3 text-gray-300 whitespace-nowrap">
+                          {formattedDate}
+                        </td>
+                      )}
+
+                      {cv.ticket && (
+                        <td className="py-3 px-3 text-gray-400 font-mono text-[11px]">
+                          #{t.ticket || t.id.slice(0, 8)}
+                        </td>
+                      )}
+
+                      {cv.symbol && (
+                        <td className="py-3 px-3">
+                          <button
+                            onClick={() => onFiltersChange({ search: t.symbol })}
+                            className="font-extrabold text-white hover:text-purple-400 transition-colors"
+                          >
+                            {t.symbol}
+                          </button>
+                        </td>
+                      )}
+
+                      {cv.side && (
+                        <td className="py-3 px-3">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase inline-flex items-center gap-1 ${
+                              isBuy
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                            }`}
+                          >
+                            {isBuy ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                            {t.side}
+                          </span>
+                        </td>
+                      )}
+
+                      {cv.volume && (
+                        <td className="py-3 px-3 text-gray-300 font-mono">
+                          {t.volume}
+                        </td>
+                      )}
+
+                      {cv.open_price && (
+                        <td className="py-3 px-3 text-gray-300 font-mono">
+                          {t.open_price ?? "—"}
+                        </td>
+                      )}
+
+                      {cv.close_price && (
+                        <td className="py-3 px-3 text-gray-300 font-mono">
+                          {t.close_price ?? "—"}
+                        </td>
+                      )}
+
+                      {cv.net_profit && (
+                        <td className="py-3 px-3 font-mono font-extrabold">
+                          <span className={t.net_profit >= 0 ? "text-emerald-400" : "text-rose-400"}>
                             {t.net_profit >= 0 ? "+" : ""}
                             {fmtCurrency(t.net_profit)}
-                          </td>
-                        )}
-                        {cv.commission  && <td className="py-3 px-4 text-gray-400">{fmtCurrency(t.commission)}</td>}
-                        {cv.swap        && <td className="py-3 px-4 text-gray-400">{fmtCurrency(t.swap)}</td>}
-                        {cv.rr_ratio    && <td className="py-3 px-4 text-brand-400">{t.rr_ratio !== null ? `${t.rr_ratio}R` : "—"}</td>}
-                        {cv.outcome     && <td className="py-3 px-4"><OutcomeBadge outcome={t.outcome ?? null} /></td>}
-                        {cv.duration    && <td className="py-3 px-4 text-gray-400">{formatDuration(t.duration_seconds)}</td>}
-                        {cv.account     && <td className="py-3 px-4 text-gray-400">{t.account?.account_name ?? "—"}</td>}
-                        <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => onViewTrade(t)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-dark-card transition-colors"
-                              title="View details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (confirm(`Delete trade ${t.ticket ?? t.id}?`)) {
-                                  onDeleteTrade(t.id);
-                                }
-                              }}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-dark-card transition-colors"
-                              title="Delete trade"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                          </span>
                         </td>
-                      </tr>
-                    );
-                  })
-                )}
+                      )}
+
+                      {cv.commission && (
+                        <td className="py-3 px-3 text-gray-400 font-mono">
+                          {t.commission ? fmtCurrency(t.commission) : "—"}
+                        </td>
+                      )}
+
+                      {cv.swap && (
+                        <td className="py-3 px-3 text-gray-400 font-mono">
+                          {t.swap ? fmtCurrency(t.swap) : "—"}
+                        </td>
+                      )}
+
+                      {cv.rr_ratio && (
+                        <td className="py-3 px-3 font-mono text-purple-400 font-bold">
+                          {t.rr_ratio !== null ? `${t.rr_ratio}R` : "—"}
+                        </td>
+                      )}
+
+                      {cv.outcome && (
+                        <td className="py-3 px-3">
+                          <OutcomeBadge outcome={t.outcome} />
+                        </td>
+                      )}
+
+                      {cv.duration && (
+                        <td className="py-3 px-3 text-gray-400 font-mono whitespace-nowrap">
+                          {formatDuration(t.duration_seconds)}
+                        </td>
+                      )}
+
+                      {cv.account && (
+                        <td className="py-3 px-3 text-gray-400 truncate max-w-[100px]">
+                          {t.account?.account_name ?? "Default"}
+                        </td>
+                      )}
+
+                      {/* Indicators Column */}
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-1.5">
+                          {hasNotes && (
+                            <span className="p-1 rounded bg-purple-500/20 text-purple-300" title="Has journal notes">
+                              <FileText className="w-3 h-3" />
+                            </span>
+                          )}
+                          {hasImages && (
+                            <span className="p-1 rounded bg-emerald-500/20 text-emerald-300" title="Has chart images">
+                              <Camera className="w-3 h-3" />
+                            </span>
+                          )}
+                          {hasTags && (
+                            <span className="p-1 rounded bg-indigo-500/20 text-indigo-300" title="Has custom tags">
+                              <TagIcon className="w-3 h-3" />
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3 px-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => onViewTrade(t)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                            title="Inspect Trade"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => onDeleteTrade(t.id)}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                            title="Delete trade"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        )}
 
-        {/* Pagination */}
-        {result && (
-          <Pagination
-            page={result.page}
-            totalPages={result.totalPages}
-            total={result.total}
-            pageSize={result.pageSize}
-            onPageChange={onPageChange}
-            onPageSizeChange={onPageSizeChange}
-          />
-        )}
-      </div>
+          {/* Pagination */}
+          {result && (
+            <div className="p-4 border-t border-white/10">
+              <Pagination
+                page={result.page}
+                pageSize={result.pageSize}
+                total={result.total}
+                totalPages={result.totalPages}
+                onPageChange={onPageChange}
+                onPageSizeChange={onPageSizeChange}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
