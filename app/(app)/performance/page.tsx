@@ -1,14 +1,14 @@
 "use client";
 // app/(app)/performance/page.tsx
-// Dedicated Performance Diagnostics Lab Workspace.
+// Dedicated Institutional Performance Lab Workstation.
 
 import React from "react";
-import { StatisticsView } from "@/components/statistics/StatisticsView";
+import { PerformanceLabView } from "@/components/performance/PerformanceLabView";
 
 export default function PerformancePage() {
   return (
     <div className="space-y-6">
-      <StatisticsView />
+      <PerformanceLabView />
     </div>
   );
 }
