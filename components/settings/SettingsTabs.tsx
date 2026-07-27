@@ -33,6 +33,16 @@ export const SettingsTabs: React.FC = () => {
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
+  // Dev-only debug panel state (never visible in production)
+  const isDev = process.env.NODE_ENV === "development";
+  const [debugInfo, setDebugInfo] = useState<{
+    userId: string | null;
+    payload: object | null;
+    response: string | null;
+    elapsed: string | null;
+    timestamp: string | null;
+  } | null>(null);
+
   // Preference state
   const [defaultAccount, setDefaultAccount] = useState("main");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -89,6 +99,7 @@ export const SettingsTabs: React.FC = () => {
     setSaving(true);
     setErrorToast(null);
     setSuccessToast(null);
+    setDebugInfo(null);
 
     const updates: Partial<UserPreferences> = {
       default_account: defaultAccount,
@@ -103,16 +114,34 @@ export const SettingsTabs: React.FC = () => {
       risk_display_mode: riskDisplayMode,
     };
 
-    const ok = await savePreferenceUpdates(updates);
-    setDisplayCurrency(defaultTradeCurrency as any);
+    const t0 = performance.now();
+    const result = await savePreferenceUpdates(updates);
+    const elapsed = `${(performance.now() - t0).toFixed(0)}ms`;
 
+    setDisplayCurrency(defaultTradeCurrency as any);
     setSaving(false);
-    if (!ok) {
-      setErrorToast("Cloud database update encountered an error. Please verify your connection.");
-      setTimeout(() => setErrorToast(null), 5000);
+
+    // Always capture debug info in development
+    if (isDev) {
+      setDebugInfo({
+        userId,
+        payload: updates,
+        response: result.success ? "success" : (result.error || "unknown error"),
+        elapsed,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (!result.success) {
+      // Display the REAL Supabase error, not a generic message
+      const errorMsg = result.error
+        ? `Save failed: ${result.error}`
+        : "Save failed: Unknown database error. Check the developer console for details.";
+      setErrorToast(errorMsg);
+      setTimeout(() => setErrorToast(null), 8000);
     } else {
-      setSuccessToast("Settings saved and synchronized successfully to Supabase cloud!");
-      setTimeout(() => setSuccessToast(null), 5000);
+      setSuccessToast("✓ Settings saved and synchronized to Supabase cloud.");
+      setTimeout(() => setSuccessToast(null), 4000);
     }
   };
 
@@ -191,9 +220,29 @@ export const SettingsTabs: React.FC = () => {
         </div>
       )}
       {errorToast && (
-        <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center gap-2 font-bold">
-          <AlertTriangle className="w-4 h-4" />
+        <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-start gap-2 font-bold">
+          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>{errorToast}</span>
+        </div>
+      )}
+
+      {/* DEV-ONLY Debug Panel — never appears in production */}
+      {isDev && debugInfo && (
+        <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 font-mono text-[10px] space-y-1">
+          <div className="font-bold text-yellow-400 text-xs flex items-center gap-1.5 mb-2">
+            <span>🛠 Developer Debug Panel</span>
+            <span className="px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 text-[9px]">DEV ONLY</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+            <span className="text-gray-400">User ID:</span><span className="text-white truncate">{debugInfo.userId || "null"}</span>
+            <span className="text-gray-400">Response:</span><span className={`truncate ${debugInfo.response === "success" ? "text-emerald-400" : "text-rose-400"}`}>{debugInfo.response}</span>
+            <span className="text-gray-400">Elapsed:</span><span className="text-white">{debugInfo.elapsed}</span>
+            <span className="text-gray-400">Timestamp:</span><span className="text-white">{debugInfo.timestamp}</span>
+          </div>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-gray-400 hover:text-white">Payload Sent →</summary>
+            <pre className="mt-1 text-[9px] text-gray-300 overflow-x-auto whitespace-pre-wrap">{JSON.stringify(debugInfo.payload, null, 2)}</pre>
+          </details>
         </div>
       )}
 

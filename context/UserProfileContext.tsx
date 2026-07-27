@@ -34,7 +34,7 @@ interface UserProfileContextType {
   refreshProfile: () => Promise<void>;
   refreshAccounts: () => Promise<void>;
   saveProfileUpdates: (updates: Partial<UserProfile>) => Promise<boolean>;
-  savePreferenceUpdates: (updates: Partial<UserPreferences>) => Promise<boolean>;
+  savePreferenceUpdates: (updates: Partial<UserPreferences>) => Promise<{ success: boolean; error: string | null }>;
   switchDefaultAccount: (accountId: string) => Promise<boolean>;
   addNewAccount: (payload: NewTradingAccount) => Promise<TradingAccount | null>;
 }
@@ -49,7 +49,7 @@ const UserProfileContext = createContext<UserProfileContextType>({
   refreshProfile: async () => {},
   refreshAccounts: async () => {},
   saveProfileUpdates: async () => false,
-  savePreferenceUpdates: async () => false,
+  savePreferenceUpdates: async () => ({ success: false, error: null }),
   switchDefaultAccount: async () => false,
   addNewAccount: async () => null,
 });
@@ -203,18 +203,20 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return false;
   };
 
-  const savePreferenceUpdates = async (updates: Partial<UserPreferences>): Promise<boolean> => {
+  const savePreferenceUpdates = async (updates: Partial<UserPreferences>): Promise<{ success: boolean; error: string | null }> => {
     let targetUserId = profile?.id;
     if (!targetUserId) {
       const { data: { user } } = await supabase.auth.getUser();
       targetUserId = user?.id;
     }
-    if (!targetUserId) return false;
+    if (!targetUserId) return { success: false, error: "User session not found. Please log in again." };
 
+    devLog(`Saving preferences for user: ${targetUserId}`, "info");
     const { data, error } = await updateUserPreferences(targetUserId, updates);
     if (error) {
-      console.error("[Persistence] savePreferenceUpdates error:", error);
-      return false;
+      devLog(`Preferences save failed: ${error}`, "error");
+      console.error("[Persistence] savePreferenceUpdates Supabase error:", error);
+      return { success: false, error };
     }
     if (data) {
       setPreferences(data);
@@ -223,7 +225,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const store = useJournalStore.getState();
     if (updates.default_chart_theme) store.setTheme(updates.default_chart_theme as any);
     if (updates.default_trade_currency) store.setDisplayCurrency(updates.default_trade_currency as any);
-    return true;
+    return { success: true, error: null };
   };
 
   const switchDefaultAccount = async (accountId: string): Promise<boolean> => {
