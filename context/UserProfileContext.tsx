@@ -69,29 +69,13 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         const def = data.find((a) => a.is_default) || data[0];
         setDefaultAccount(def);
       } else {
-        // Create default account if none exists
-        const defaultPayload: Omit<NewTradingAccount, "user_id"> = {
-          account_name: "Default Trading Account",
-          broker: "Generic Broker",
-          platform: "MetaTrader 5",
-          account_number: "10001",
-          account_type: "Live",
-          currency: "USD",
-          leverage: "100",
-          starting_balance: 10000.0,
-          current_balance: 10000.0,
-          is_default: true,
-          is_active: true,
-          notes: "",
-        };
-        const { data: newAcc } = await createTradingAccount(userId, defaultPayload);
-        if (newAcc) {
-          setAccounts([newAcc]);
-          setDefaultAccount(newAcc);
-        }
+        setAccounts([]);
+        setDefaultAccount(null);
       }
     } catch (err) {
       console.error("Failed to load trading accounts:", err);
+      setAccounts([]);
+      setDefaultAccount(null);
     }
   }, []);
 

@@ -16,7 +16,7 @@ import { fetchLatestImport } from "@/lib/supabase/csv-imports";
 import { calculateCloudAnalytics, CompleteAnalyticsSummary } from "@/lib/engine/cloud-analytics-engine";
 import { AddTradeModal } from "@/components/trades/AddTradeModal";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
-import { TableSkeleton } from "@/components/ui/LoadingSkeleton";
+import { TableSkeleton, StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
 import type { CloudTradeWithRelations, CsvImport } from "@/types/database";
 import {
   Wallet, TrendingUp, TrendingDown, Zap, Target, Award, Clock, Globe, User,
@@ -88,6 +88,16 @@ export default function DashboardPage() {
   }, [trades]);
 
   const recentTrades = useMemo(() => trades.slice(0, 5), [trades]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6 font-mono text-xs">
+        <div className="h-24 rounded-2xl glass-card border border-dark-border animate-pulse" />
+        <StatGridSkeleton count={8} />
+        <div className="h-72 rounded-2xl glass-card border border-dark-border animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5 text-xs font-mono">

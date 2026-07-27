@@ -214,7 +214,20 @@ export const StatisticsView: React.FC = () => {
         </div>
       </div>
 
-      {/* TAB 1: OVERVIEW & CLASSIFICATION */}
+      {/* Empty State Banner if 0 trades */}
+      {trades.length === 0 ? (
+        <div className="p-8 rounded-2xl glass-card border border-dark-border text-center space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-purple-600/20 border border-purple-500/30 text-purple-400 flex items-center justify-center mx-auto">
+            <BarChart2 className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-white">No Trading Data Available</h3>
+          <p className="text-gray-400 text-xs max-w-md mx-auto">
+            Upload your first CSV trade file or log manual trades to populate institutional statistics and diagnostic reports.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* TAB 1: OVERVIEW & CLASSIFICATION */}
       {activeTab === "overview" && (
         <div className="space-y-5">
           {/* Trader Classification Banner */}
@@ -471,6 +484,8 @@ export const StatisticsView: React.FC = () => {
             Tick-by-tick market replay for reviewing execution timing and psychological entry points will be enabled in Phase 4.
           </p>
         </div>
+      )}
+        </>
       )}
     </div>
   );
