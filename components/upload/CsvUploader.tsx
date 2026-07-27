@@ -112,6 +112,7 @@ export const CsvUploader: React.FC = () => {
 
       // Map NormalizedTrade → NewCloudTrade
       const cloudTrades: NewCloudTrade[] = parseResult.trades.map(t => ({
+        account_id:    null,
         ticket:        t.ticket,
         symbol:        t.symbol,
         side:          (t.direction === "LONG" ? "BUY" : "SELL") as "BUY" | "SELL",
@@ -126,30 +127,18 @@ export const CsvUploader: React.FC = () => {
         profit:        t.profit,
         commission:    t.commission,
         swap:          t.swap,
-        taxes:         0,
+        net_profit:    t.profit + t.commission + t.swap,
         risk_amount:   null,
-        reward_amount: null,
-        risk_percent:  null,
         rr_ratio:      t.rr,
-        pips:          null,
         outcome:       t.status as "WIN" | "LOSS" | "BREAKEVEN",
-        mfe:           null,
-        mae:           null,
-        strategy:      null,
-        setup:         null,
-        market_condition: null,
+        source:        "csv_import",
         session:       null,
+        strategy:      null,
         notes:         t.comment ?? null,
         emotions:      null,
         lessons:       null,
         mistakes:      null,
-        confidence_rating: null,
-        screenshot_url: null,
-        chart_url:     null,
-        source:        "csv_import",
-        import_id:     importRecord?.id ?? null,
-        imported_at:   new Date().toISOString(),
-        account_id:    null,
+        magic_number:  null,
       }));
 
       const { inserted, errors } = await bulkInsertTrades(user.id, cloudTrades);

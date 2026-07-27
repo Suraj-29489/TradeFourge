@@ -71,82 +71,29 @@ export interface CloudTrade {
   profit: number;
   commission: number;
   swap: number;
-  taxes: number;
-  net_profit: number; // computed column
-
-  // Risk
-  risk_amount: number | null;
-  reward_amount: number | null;
-  risk_percent: number | null;
+  net_profit: number;
   rr_ratio: number | null;
+  risk_amount: number | null;
 
-  // Performance
-  pips: number | null;
-  outcome: TradeOutcome | null;
-  mfe: number | null;
-  mae: number | null;
-
-  // Journal
-  strategy: string | null;
-  setup: string | null;
-  market_condition: string | null;
+  // Metadata
+  outcome: TradeOutcome;
+  source: TradeSource;
   session: TradeSession | null;
+  strategy: string | null;
   notes: string | null;
   emotions: string | null;
   lessons: string | null;
   mistakes: string | null;
-  confidence_rating: number | null;
+  magic_number: number | null;
 
-  // Media
-  screenshot_url: string | null;
-  chart_url: string | null;
-
-  // Import metadata
-  source: TradeSource;
-  import_id: string | null;
-  imported_at: string | null;
-
-  // Timestamps
   created_at: string;
   updated_at: string;
 }
 
-// CloudTrade with joined relations (tags, images, account name)
-export interface CloudTradeWithRelations extends CloudTrade {
-  account?: Pick<TradingAccount, 'id' | 'account_name' | 'broker' | 'currency'> | null;
-  tags?: TradeTag[];
-  images?: TradeImage[];
-}
-
-export type NewCloudTrade = Omit<
-  CloudTrade,
-  'id' | 'user_id' | 'net_profit' | 'created_at' | 'updated_at'
->;
+export type NewCloudTrade = Omit<CloudTrade, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 export type UpdateCloudTrade = Partial<NewCloudTrade>;
 
-// ─── Trade Filters ────────────────────────────────────────────────────────────
-
-export interface CloudTradeFilters {
-  search: string;
-  symbol: string;
-  side: TradeSide | 'ALL';
-  outcome: TradeOutcome | 'ALL';
-  dateRange: 'ALL' | '7D' | '30D' | '90D' | 'THIS_MONTH' | 'THIS_YEAR';
-  accountId: string | 'ALL';
-  source: TradeSource | 'ALL';
-}
-
-export const DEFAULT_CLOUD_FILTERS: CloudTradeFilters = {
-  search: '',
-  symbol: '',
-  side: 'ALL',
-  outcome: 'ALL',
-  dateRange: 'ALL',
-  accountId: 'ALL',
-  source: 'ALL',
-};
-
-// ─── Trade Tags ───────────────────────────────────────────────────────────────
+// ─── Trade Relations ─────────────────────────────────────────────────────────
 
 export interface TradeTag {
   id: string;
@@ -156,52 +103,65 @@ export interface TradeTag {
   created_at: string;
 }
 
-export type NewTradeTag = Pick<TradeTag, 'name' | 'color'>;
+export type NewTradeTag = Omit<TradeTag, 'id' | 'user_id' | 'created_at'>;
 
-// ─── Trade Images ─────────────────────────────────────────────────────────────
-
-export type TradeImageType = 'entry' | 'exit' | 'chart' | 'analysis' | 'screenshot' | 'other';
+export type TradeImageType = 'chart' | 'setup' | 'exit' | 'screenshot' | 'other';
 
 export interface TradeImage {
   id: string;
-  user_id: string;
   trade_id: string;
-  image_type: TradeImageType;
+  user_id: string;
   storage_path: string;
   public_url: string;
   caption: string | null;
-  file_size: number | null;
-  width: number | null;
-  height: number | null;
+  image_type: TradeImageType;
   created_at: string;
-}
-
-// ─── Trade Checklists ─────────────────────────────────────────────────────────
-
-export interface TradeChecklist {
-  id: string;
-  user_id: string;
-  name: string;
-  description: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface TradeChecklistItem {
   id: string;
-  checklist_id: string;
+  user_id: string;
   text: string;
-  sort_order: number;
-  created_at: string;
+  is_default: boolean;
 }
 
-export interface TradeChecklistCompletion {
+export interface CloudTradeWithRelations extends CloudTrade {
+  account?: TradingAccount | null;
+  tags?: TradeTag[];
+  images?: TradeImage[];
+}
+
+export interface TradeChecklistState {
   id: string;
   trade_id: string;
   checklist_item_id: string;
   is_checked: boolean;
   created_at: string;
+}
+
+export type TradeChecklist = TradeChecklistItem;
+export type TradeChecklistCompletion = TradeChecklistState;
+
+// ─── TradeFourge AI Coach (Future Architecture) ─────────────────────────────
+
+export interface AICoachReview {
+  id: string;
+  user_id: string;
+  date: string;
+  discipline_score: number;
+  consistency_score: number;
+  risk_score: number;
+  confidence_score: number;
+  overall_rating: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
+  summary: string;
+  behavior_analysis: string;
+  emotional_detection: string[];
+  rule_violations: string[];
+  strengths: string[];
+  weaknesses: string[];
+  recommendations: string[];
+  ai_version: string;
+  generated_at: string;
 }
 
 // ─── CSV Imports ──────────────────────────────────────────────────────────────
@@ -246,3 +206,30 @@ export interface ServiceResult<T> {
   data: T | null;
   error: string | null;
 }
+
+// ─── Cloud Trade Filters ──────────────────────────────────────────────────────
+
+export interface CloudTradeFilters {
+  search: string;
+  side: TradeSide | 'ALL';
+  outcome: TradeOutcome | 'ALL';
+  source: TradeSource | 'ALL';
+  session: TradeSession | 'ALL';
+  accountId: string | 'ALL';
+  dateRange: '7D' | '30D' | '90D' | 'THIS_MONTH' | 'THIS_YEAR' | 'ALL';
+  startDate?: string;
+  endDate?: string;
+  symbol?: string;
+  tagId?: string;
+  strategy?: string;
+}
+
+export const DEFAULT_CLOUD_FILTERS: CloudTradeFilters = {
+  search: '',
+  side: 'ALL',
+  outcome: 'ALL',
+  source: 'ALL',
+  session: 'ALL',
+  accountId: 'ALL',
+  dateRange: 'ALL',
+};

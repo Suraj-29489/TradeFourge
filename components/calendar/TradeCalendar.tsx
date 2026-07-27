@@ -719,7 +719,7 @@ export const TradeCalendar: React.FC = () => {
                 </div>
 
                 <textarea
-                  rows={5}
+                  rows={4}
                   value={reflectionNotes}
                   onChange={(e) => setReflectionNotes(e.target.value)}
                   placeholder="How was your mindset today? Did you follow your trading plan? Lessons learned..."
@@ -735,6 +735,51 @@ export const TradeCalendar: React.FC = () => {
                     {savingReflection ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     <span>Save Daily Reflection</span>
                   </button>
+                </div>
+              </div>
+
+              {/* ── PART D: TradeFourge AI Coach (Future Architecture Preview) ──── */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-900/30 via-indigo-900/20 to-black border border-purple-500/30 space-y-3 shadow-2xl relative overflow-hidden">
+                <div className="flex items-center justify-between border-b border-purple-500/20 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span className="font-extrabold text-white text-xs">🧠 TradeFourge AI Coach</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-purple-600/30 text-purple-300 border border-purple-500/40 text-[9px] font-bold uppercase tracking-wider">
+                    Future AI Mentor
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-gray-300 leading-relaxed font-sans">
+                  Your personal AI trading mentor. After every trading day, TradeFourge AI Coach will analyze your trading behavior, identify recurring mistakes, measure discipline, evaluate consistency, and provide personalized coaching.
+                </p>
+
+                {/* Simulated AI Scores & Metrics Preview */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-center">
+                    <span className="text-[9px] text-gray-400 block uppercase">DISCIPLINE</span>
+                    <span className="text-xs font-bold text-emerald-400">91 / 100</span>
+                  </div>
+
+                  <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-center">
+                    <span className="text-[9px] text-gray-400 block uppercase">CONSISTENCY</span>
+                    <span className="text-xs font-bold text-purple-300">87 / 100</span>
+                  </div>
+
+                  <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-center">
+                    <span className="text-[9px] text-gray-400 block uppercase">RISK RATING</span>
+                    <span className="text-xs font-bold text-indigo-300">Excellent</span>
+                  </div>
+
+                  <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-center">
+                    <span className="text-[9px] text-gray-400 block uppercase">OVERALL</span>
+                    <span className="text-xs font-bold text-amber-400">Grade A</span>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-purple-600/10 border border-purple-500/20 text-[10px] text-purple-300 space-y-1">
+                  <span className="font-bold block text-white">Next Focus Recommendation:</span>
+                  <p className="text-gray-300">Limit daily execution to 3 high-confluence trades during London session to prevent overtrading.</p>
                 </div>
               </div>
 
