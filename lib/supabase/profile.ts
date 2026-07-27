@@ -55,7 +55,7 @@ export interface UserStatistics {
   updated_at?: string;
 }
 
-const DEFAULT_PROFILE = (userId: string): UserProfile => ({
+export const DEFAULT_PROFILE = (userId: string): UserProfile => ({
   id: userId,
   full_name: "Trader",
   username: `trader_${userId.slice(0, 4)}`,
@@ -70,7 +70,7 @@ const DEFAULT_PROFILE = (userId: string): UserProfile => ({
   risk_preference: "Moderate (1-2% / trade)",
 });
 
-const DEFAULT_PREFERENCES = (userId: string): UserPreferences => ({
+export const DEFAULT_PREFERENCES = (userId: string): UserPreferences => ({
   user_id: userId,
   dashboard_layout: "standard",
   default_account: "main",

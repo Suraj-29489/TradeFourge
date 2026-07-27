@@ -1,7 +1,7 @@
 "use client";
 // context/UserProfileContext.tsx
 // Single source of truth React Context for user profile, preferences, and trading accounts.
-// Synchronizes avatar, full_name, username, country, timezone, currency, and default trading account globally.
+// Features TradeFourge v3.2.6.1 Persistence Guard & Self-Healing Layer.
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +11,8 @@ import {
   fetchUserPreferences,
   updateUserPreferences,
   calculateProfileCompletion,
+  DEFAULT_PROFILE,
+  DEFAULT_PREFERENCES,
   type UserProfile,
   type UserPreferences,
 } from "@/lib/supabase/profile";
@@ -52,6 +54,17 @@ const UserProfileContext = createContext<UserProfileContextType>({
   addNewAccount: async () => null,
 });
 
+// Structured Dev-only Logger
+const isDev = process.env.NODE_ENV === "development";
+const devLog = (msg: string, type: "info" | "success" | "warn" | "error" = "info") => {
+  if (!isDev) return;
+  const prefix = "[Persistence]";
+  if (type === "success") console.log(`%c${prefix} ✓ ${msg}`, "color: #10B981; font-weight: bold;");
+  else if (type === "warn") console.warn(`%c${prefix} ⚠ ${msg}`, "color: #F59E0B; font-weight: bold;");
+  else if (type === "error") console.error(`%c${prefix} ❌ ${msg}`, "color: #EF4444; font-weight: bold;");
+  else console.log(`%c${prefix} ${msg}`, "color: #8B5CF6; font-weight: bold;");
+};
+
 export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
@@ -61,6 +74,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const supabase = createClient();
 
+  // ── Self-Healing Trading Accounts Integrity Check ────────────────────────
   const loadAccounts = useCallback(async (userId: string) => {
     try {
       const { data } = await fetchTradingAccounts(userId);
@@ -68,40 +82,88 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setAccounts(data);
         const def = data.find((a) => a.is_default) || data[0];
         setDefaultAccount(def);
+        devLog(`Trading Account Loaded: "${def.account_name}"`, "success");
       } else {
-        setAccounts([]);
-        setDefaultAccount(null);
+        // Self-Healing: Missing trading account -> Automatically create main trading account
+        devLog("Missing Trading Account → Creating Default Main Trading Account...", "warn");
+        const { data: newAcc } = await createTradingAccount(userId, {
+          account_name: "Main Trading Account",
+          broker: "Standard Broker",
+          platform: "Other",
+          account_number: null,
+          account_type: "Live",
+          currency: "USD",
+          leverage: null,
+          starting_balance: 10000,
+          current_balance: 10000,
+          is_default: true,
+          is_active: true,
+          notes: null,
+        });
+
+        if (newAcc) {
+          setAccounts([newAcc]);
+          setDefaultAccount(newAcc);
+          devLog("Trading Account Self-Healing Complete", "success");
+        } else {
+          setAccounts([]);
+          setDefaultAccount(null);
+        }
       }
     } catch (err) {
-      console.error("Failed to load trading accounts:", err);
+      console.error("[Persistence] Failed to load trading accounts:", err);
       setAccounts([]);
       setDefaultAccount(null);
     }
   }, []);
 
+  // ── Self-Healing Integrity Check Execution ─────────────────────────────────
   const loadCloudProfile = useCallback(async () => {
+    devLog("Loading Profile & Cloud Persistence Layer...", "info");
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const userProf = await fetchUserProfile(user.id);
+        // 1. Self-Healing Profile Check
+        let userProf = await fetchUserProfile(user.id);
+        if (!userProf || !userProf.id) {
+          devLog("Missing Profile → Creating Default Profile...", "warn");
+          const defaultProfData = DEFAULT_PROFILE(user.id);
+          const { data: healedProf } = await updateUserProfile(user.id, defaultProfData);
+          userProf = healedProf || defaultProfData;
+          devLog("Profile Self-Healing Complete", "success");
+        } else {
+          devLog("Profile Loaded", "success");
+        }
         setProfile(userProf);
 
-        const userPrefs = await fetchUserPreferences(user.id);
-        if (userPrefs) {
-          setPreferences(userPrefs);
-          const store = useJournalStore.getState();
-          if (userPrefs.default_chart_theme === "dark" || userPrefs.default_chart_theme === "light") {
-            store.setTheme(userPrefs.default_chart_theme as any);
-          }
-          if (userPrefs.default_trade_currency) {
-            store.setDisplayCurrency(userPrefs.default_trade_currency as any);
-          }
+        // 2. Self-Healing Preferences Check
+        let userPrefs = await fetchUserPreferences(user.id);
+        if (!userPrefs) {
+          devLog("Missing Preferences → Initializing Cloud Preferences...", "warn");
+          const defaultPrefsData = DEFAULT_PREFERENCES(user.id);
+          const { data: healedPrefs } = await updateUserPreferences(user.id, defaultPrefsData);
+          userPrefs = healedPrefs || defaultPrefsData;
+          devLog("Preferences Self-Healing Complete", "success");
+        } else {
+          devLog("Preferences Loaded", "success");
+        }
+        setPreferences(userPrefs);
+
+        // Synchronize Theme & Currency to Store
+        const store = useJournalStore.getState();
+        if (userPrefs.default_chart_theme === "dark" || userPrefs.default_chart_theme === "light") {
+          store.setTheme(userPrefs.default_chart_theme as any);
+        }
+        if (userPrefs.default_trade_currency) {
+          store.setDisplayCurrency(userPrefs.default_trade_currency as any);
         }
 
+        // 3. Self-Healing Account Integrity Check
         await loadAccounts(user.id);
+        devLog("Complete — Persistence Guard Active", "success");
       }
     } catch (err) {
-      console.error("UserProfileProvider load failed:", err);
+      console.error("[Persistence] UserProfileProvider load failed:", err);
     } finally {
       setLoading(false);
     }
@@ -130,11 +192,12 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (!profile) return false;
     const { data, error } = await updateUserProfile(profile.id, updates);
     if (error) {
-      console.error("saveProfileUpdates error:", error);
+      console.error("[Persistence] saveProfileUpdates error:", error);
       return false;
     }
     if (data) {
       setProfile(data);
+      devLog("Profile Updated & Synchronized", "success");
       return true;
     }
     return false;
@@ -150,11 +213,12 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     const { data, error } = await updateUserPreferences(targetUserId, updates);
     if (error) {
-      console.error("savePreferenceUpdates error:", error);
+      console.error("[Persistence] savePreferenceUpdates error:", error);
       return false;
     }
     if (data) {
       setPreferences(data);
+      devLog("Preferences Updated & Synchronized", "success");
     }
     const store = useJournalStore.getState();
     if (updates.default_chart_theme) store.setTheme(updates.default_chart_theme as any);
@@ -167,6 +231,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const { data } = await updateTradingAccount(accountId, profile.id, { is_default: true });
     if (data) {
       await loadAccounts(profile.id);
+      devLog("Default Account Switched", "success");
       return true;
     }
     return false;
@@ -177,12 +242,13 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const { data } = await createTradingAccount(profile.id, payload);
     if (data) {
       await loadAccounts(profile.id);
+      devLog(`New Account Added: "${data.account_name}"`, "success");
       return data;
     }
     return null;
   };
 
-  const completionPct = calculateProfileCompletion(profile);
+  const completionPct = profile ? calculateProfileCompletion(profile) : 20;
 
   return (
     <UserProfileContext.Provider
@@ -194,7 +260,9 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         loading,
         completionPct,
         refreshProfile: loadCloudProfile,
-        refreshAccounts: async () => { if (profile) await loadAccounts(profile.id); },
+        refreshAccounts: async () => {
+          if (profile) await loadAccounts(profile.id);
+        },
         saveProfileUpdates,
         savePreferenceUpdates,
         switchDefaultAccount,

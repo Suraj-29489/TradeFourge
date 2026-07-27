@@ -3,6 +3,7 @@
 import React from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { UserProfileProvider } from "@/context/UserProfileContext";
+import { PersistenceErrorBoundary } from "@/components/common/PersistenceErrorBoundary";
 
 export default function AuthenticatedAppLayout({
   children,
@@ -10,8 +11,10 @@ export default function AuthenticatedAppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <UserProfileProvider>
-      <AppLayout>{children}</AppLayout>
-    </UserProfileProvider>
+    <PersistenceErrorBoundary>
+      <UserProfileProvider>
+        <AppLayout>{children}</AppLayout>
+      </UserProfileProvider>
+    </PersistenceErrorBoundary>
   );
 }
