@@ -22,7 +22,7 @@ export const SettingsTabs: React.FC = () => {
     "general" | "profile" | "notifications" | "trading" | "privacy" | "danger"
   >("general");
 
-  const { profile, preferences, refreshProfile } = useUserProfile();
+  const { profile, preferences, refreshProfile, savePreferenceUpdates } = useUserProfile();
   const theme = useJournalStore(s => s.theme);
   const setTheme = useJournalStore(s => s.setTheme);
   const setDisplayCurrency = useJournalStore(s => s.setDisplayCurrency);
@@ -100,15 +100,15 @@ export const SettingsTabs: React.FC = () => {
       risk_display_mode: riskDisplayMode,
     };
 
-    const { error } = await updateUserPreferences(userId, updates);
+    const ok = await savePreferenceUpdates(updates);
     setDisplayCurrency(defaultTradeCurrency as any);
 
     setSaving(false);
-    if (error) {
-      setSuccessToast("Settings saved locally!");
-      setTimeout(() => setSuccessToast(null), 4000);
+    if (!ok) {
+      setErrorToast("Failed to save settings to cloud.");
+      setTimeout(() => setErrorToast(null), 4000);
     } else {
-      setSuccessToast("SaaS preferences saved and synchronized!");
+      setSuccessToast("Settings saved and synchronized successfully!");
       setTimeout(() => setSuccessToast(null), 4000);
     }
   };

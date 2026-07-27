@@ -74,18 +74,19 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ trades: initia
   const tooltipStyle: React.CSSProperties = isLight
     ? {
         backgroundColor: "#FFFFFF",
-        borderColor: "#E5E7EB",
+        borderColor: "#CBD5E1",
         borderRadius: "12px",
-        color: "#111827",
+        color: "#0F172A",
         fontSize: "12px",
-        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.15)",
       }
     : {
-        backgroundColor: "#0F1420",
-        borderColor: "#1F293D",
+        backgroundColor: "#0B0F19",
+        borderColor: "#1E293B",
         borderRadius: "12px",
         color: "#FFFFFF",
         fontSize: "12px",
+        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.5)",
       };
 
   const winLossPieData = useMemo(() => [

@@ -296,14 +296,15 @@ export async function fetchUserPreferences(userId: string): Promise<UserPreferen
       .single();
 
     if (!error && data) {
-      const merged = { ...DEFAULT_PREFERENCES(userId), ...cached, ...data };
-      setLocalPreferences(userId, merged);
-      return merged;
+      const cloudPrefs = { ...DEFAULT_PREFERENCES(userId), ...data };
+      setLocalPreferences(userId, cloudPrefs);
+      return cloudPrefs;
     }
-  } catch {}
+  } catch (err) {
+    console.error("fetchUserPreferences cloud error:", err);
+  }
 
   const fallback = cached || DEFAULT_PREFERENCES(userId);
-  setLocalPreferences(userId, fallback);
   return fallback;
 }
 

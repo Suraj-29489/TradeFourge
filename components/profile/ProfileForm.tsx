@@ -171,8 +171,9 @@ export function ProfileForm() {
     if (error) {
       setErrorToast(error);
     } else if (url) {
-      setProfile({ ...profile, avatar_url: url });
-      setSuccessToast("Profile photo updated successfully!");
+      setProfile((prev) => prev ? { ...prev, avatar_url: url } : null);
+      await refreshProfile();
+      setSuccessToast("Profile photo uploaded and synchronized successfully!");
       setTimeout(() => setSuccessToast(null), 4000);
     }
   };
@@ -193,6 +194,7 @@ export function ProfileForm() {
     const updates: Partial<UserProfile> = {
       full_name: fullName.trim(),
       username: username.trim().toLowerCase(),
+      avatar_url: profile.avatar_url,
       bio: bio.trim(),
       country,
       timezone,
