@@ -402,21 +402,29 @@ export async function updateUserPreferences(
     supabaseError = err?.message || "An unexpected error occurred during preferences save.";
   }
 
-  if (supabaseError && !savedData) {
+  if (savedData) {
+    const finalPrefs: UserPreferences = {
+      ...DEFAULT_PREFERENCES(userId),
+      ...savedData,
+    };
+    setLocalPreferences(userId, finalPrefs);
+    return { data: finalPrefs, error: null };
+  }
+
+  if (supabaseError) {
     const cached = getLocalPreferences(userId) || DEFAULT_PREFERENCES(userId);
     return { data: cached, error: supabaseError };
   }
 
-  // Post-save Verification Query
+  // Post-save Verification Query fallback
   try {
-    const { data: verifiedData, error: verifyErr } = await supabase
+    const { data: verifiedData } = await supabase
       .from("user_preferences")
       .select("*")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
 
-    if (!verifyErr && verifiedData) {
-      console.log("Post-save preferences verification SUCCESS:", verifiedData);
+    if (verifiedData) {
       const cloudPrefs: UserPreferences = {
         ...DEFAULT_PREFERENCES(userId),
         ...verifiedData,
@@ -430,7 +438,7 @@ export async function updateUserPreferences(
 
   const finalPrefs: UserPreferences = {
     ...DEFAULT_PREFERENCES(userId),
-    ...(savedData || payload),
+    ...payload,
   };
   setLocalPreferences(userId, finalPrefs);
   return { data: finalPrefs, error: null };

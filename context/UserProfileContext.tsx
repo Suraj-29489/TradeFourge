@@ -141,8 +141,14 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const savePreferenceUpdates = async (updates: Partial<UserPreferences>): Promise<boolean> => {
-    if (!profile) return false;
-    const { data, error } = await updateUserPreferences(profile.id, updates);
+    let targetUserId = profile?.id;
+    if (!targetUserId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      targetUserId = user?.id;
+    }
+    if (!targetUserId) return false;
+
+    const { data, error } = await updateUserPreferences(targetUserId, updates);
     if (error) {
       console.error("savePreferenceUpdates error:", error);
       return false;
