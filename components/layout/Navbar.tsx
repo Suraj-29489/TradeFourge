@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useUserProfile } from "@/context/UserProfileContext";
-import { Moon, Sun, Menu, LogOut, Wallet, ChevronDown, Plus, Check, User } from "lucide-react";
+import { Moon, Sun, Menu, LogOut, Wallet, ChevronDown, Plus, Check, User, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface NavbarProps {
@@ -209,30 +209,41 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
           {/* User Account Dropdown */}
           {userDropdownOpen && (
             <div className="absolute right-0 mt-2 w-64 p-3 rounded-2xl dropdown-menu z-50 space-y-2 shadow-2xl">
-              {/* User Email Header */}
+              {/* User Identity Header */}
               <div className="px-2 py-1.5 border-b border-dark-border space-y-0.5">
-                <p className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">Signed in as</p>
-                <p className="text-xs font-bold text-white font-mono truncate">{userEmail || "user@tradefourge.com"}</p>
+                <p className="text-xs font-bold text-white font-mono truncate">{profile?.full_name || "Trader"}</p>
+                <p className="text-[10px] text-gray-400 font-mono truncate">{userEmail || "user@tradefourge.com"}</p>
               </div>
 
-              {/* Trader Profile Link */}
-              <Link
-                href="/profile"
-                onClick={() => setUserDropdownOpen(false)}
-                className="flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-dark-hover transition-colors"
-              >
-                <User className="w-4 h-4 text-purple-400" />
-                <span>Trader Profile</span>
-              </Link>
+              {/* Navigation Links */}
+              <div className="space-y-0.5">
+                <Link
+                  href="/profile"
+                  onClick={() => setUserDropdownOpen(false)}
+                  className="flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-dark-hover transition-colors font-mono"
+                >
+                  <User className="w-4 h-4 text-purple-400" />
+                  <span>Profile</span>
+                </Link>
+
+                <Link
+                  href="/settings"
+                  onClick={() => setUserDropdownOpen(false)}
+                  className="flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-xs text-gray-300 hover:text-white hover:bg-dark-hover transition-colors font-mono"
+                >
+                  <Settings className="w-4 h-4 text-indigo-400" />
+                  <span>Settings</span>
+                </Link>
+              </div>
 
               {/* Log Out Action */}
               <div className="pt-1 border-t border-dark-border">
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
+                  className="flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors font-mono"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Log Out</span>
+                  <span>Logout</span>
                 </button>
               </div>
             </div>

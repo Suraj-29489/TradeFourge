@@ -81,11 +81,15 @@
   [data-theme="light"] .text-gray-400 { color: #64748B !important; }
   [data-theme="light"] .text-gray-500 { color: #64748B !important; }
 
-  [data-theme="light"] .bg-[#111726],
-  [data-theme="light"] .bg-[#131622],
-  [data-theme="light"] .bg-[#0B0D13],
-  [data-theme="light"] .bg-[#0F1523],
-  [data-theme="light"] .bg-[#080B11],
+  [data-theme="light"] .bg-\[\#111726\],
+  [data-theme="light"] .bg-\[\#131622\],
+  [data-theme="light"] .bg-\[\#0B0D13\],
+  [data-theme="light"] .bg-\[\#0F1523\],
+  [data-theme="light"] .bg-\[\#080B11\],
+  [data-theme="light"] .bg-\[\#0B0F17\],
+  [data-theme="light"] .bg-\[\#0B0F19\],
+  [data-theme="light"] .bg-\[\#182238\],
+  [data-theme="light"] .bg-\[\#111726\]\/95,
   [data-theme="light"] .bg-dark-bg,
   [data-theme="light"] .bg-dark-card {
     background-color: #FFFFFF !important;
