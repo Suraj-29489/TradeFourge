@@ -269,9 +269,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
       className="relative z-30 hidden md:flex flex-col h-screen bg-dark-bg border-r border-dark-border select-none shrink-0 overflow-hidden"
     >
-      {/* Brand */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-dark-border shrink-0">
-        <Link href="/" className="flex items-center gap-3 overflow-hidden min-w-0">
+      {/* Brand & Logo Collapse Toggle */}
+      <div className="flex items-center justify-between h-16 px-3 border-b border-dark-border shrink-0">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="flex items-center gap-3 overflow-hidden min-w-0 w-full hover:opacity-90 transition-opacity text-left"
+          title={collapsed ? "Click logo to expand sidebar" : "Click logo to collapse sidebar"}
+        >
           <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 shadow-glow shrink-0">
             <Zap className="w-5 h-5 text-white" />
           </div>
@@ -295,14 +299,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
               </motion.div>
             )}
           </AnimatePresence>
-        </Link>
-
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors flex items-center justify-center shrink-0"
-          title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
       </div>
 

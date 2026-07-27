@@ -147,31 +147,99 @@ export async function updateImportRecord(
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
 
+export interface DeleteImportResult {
+  success: boolean;
+  status: "NOT_FOUND" | "FILE_MISSING_DB_REMOVED" | "DELETED_SUCCESS";
+  message: string;
+  error: string | null;
+}
+
 export async function deleteImportRecord(
   id: string,
   userId: string,
   deleteTrades = false
-): Promise<ServiceResult<boolean>> {
+): Promise<DeleteImportResult> {
   const supabase = createClient();
   try {
-    if (deleteTrades) {
-      await supabase
-        .from('trades')
-        .delete()
-        .eq('import_id', id)
-        .eq('user_id', userId);
+    // 1. Check if import record exists
+    const { data: existing } = await supabase
+      .from('csv_imports')
+      .select('id, storage_path')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!existing) {
+      return {
+        success: true,
+        status: "NOT_FOUND",
+        message: "Nothing to delete. This import has already been removed.",
+        error: null,
+      };
     }
 
-    const { error } = await supabase
+    // 2. Delete associated trades if requested
+    if (deleteTrades) {
+      try {
+        await supabase
+          .from('trades')
+          .delete()
+          .eq('import_id', id)
+          .eq('user_id', userId);
+      } catch {}
+    }
+
+    // 3. Try deleting storage file if path exists
+    let storageFileMissing = false;
+    if (existing.storage_path) {
+      try {
+        const { error: storageErr } = await supabase.storage
+          .from('csv-imports')
+          .remove([existing.storage_path]);
+        if (storageErr) storageFileMissing = true;
+      } catch {
+        storageFileMissing = true;
+      }
+    }
+
+    // 4. Delete database record
+    const { error: dbErr } = await supabase
       .from('csv_imports')
       .delete()
       .eq('id', id)
       .eq('user_id', userId);
 
-    if (error) return { data: null, error: error.message };
-    return { data: true, error: null };
+    if (dbErr) {
+      return {
+        success: false,
+        status: "NOT_FOUND",
+        message: "Failed to delete database record.",
+        error: dbErr.message,
+      };
+    }
+
+    if (storageFileMissing) {
+      return {
+        success: true,
+        status: "FILE_MISSING_DB_REMOVED",
+        message: "Import record removed successfully. Associated file was already missing.",
+        error: null,
+      };
+    }
+
+    return {
+      success: true,
+      status: "DELETED_SUCCESS",
+      message: "Import deleted successfully.",
+      error: null,
+    };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to delete import record';
-    return { data: null, error: message };
+    return {
+      success: false,
+      status: "NOT_FOUND",
+      message: "Deletion failed.",
+      error: message,
+    };
   }
 }

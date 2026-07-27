@@ -1,7 +1,7 @@
 "use client";
 // context/UserProfileContext.tsx
-// Single source of truth React Context for user profile and preferences.
-// Synchronizes avatar, full_name, username, country, timezone, currency, and settings globally across all components.
+// Single source of truth React Context for user profile, preferences, and trading accounts.
+// Synchronizes avatar, full_name, username, country, timezone, currency, and default trading account globally.
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -14,73 +14,114 @@ import {
   type UserProfile,
   type UserPreferences,
 } from "@/lib/supabase/profile";
+import {
+  fetchTradingAccounts,
+  updateTradingAccount,
+  createTradingAccount,
+} from "@/lib/supabase/accounts";
 import { useJournalStore } from "@/lib/store/useJournalStore";
+import type { TradingAccount, NewTradingAccount } from "@/types/database";
 
 interface UserProfileContextType {
   profile: UserProfile | null;
   preferences: UserPreferences | null;
+  accounts: TradingAccount[];
+  defaultAccount: TradingAccount | null;
   loading: boolean;
   completionPct: number;
   refreshProfile: () => Promise<void>;
+  refreshAccounts: () => Promise<void>;
   saveProfileUpdates: (updates: Partial<UserProfile>) => Promise<boolean>;
   savePreferenceUpdates: (updates: Partial<UserPreferences>) => Promise<boolean>;
+  switchDefaultAccount: (accountId: string) => Promise<boolean>;
+  addNewAccount: (payload: NewTradingAccount) => Promise<TradingAccount | null>;
 }
 
 const UserProfileContext = createContext<UserProfileContextType>({
   profile: null,
   preferences: null,
+  accounts: [],
+  defaultAccount: null,
   loading: true,
   completionPct: 20,
   refreshProfile: async () => {},
+  refreshAccounts: async () => {},
   saveProfileUpdates: async () => false,
   savePreferenceUpdates: async () => false,
+  switchDefaultAccount: async () => false,
+  addNewAccount: async () => null,
 });
 
 export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [accounts, setAccounts] = useState<TradingAccount[]>([]);
+  const [defaultAccount, setDefaultAccount] = useState<TradingAccount | null>(null);
   const [loading, setLoading] = useState(true);
 
   const supabase = createClient();
+
+  const loadAccounts = useCallback(async (userId: string) => {
+    try {
+      const { data } = await fetchTradingAccounts(userId);
+      if (data && data.length > 0) {
+        setAccounts(data);
+        const def = data.find((a) => a.is_default) || data[0];
+        setDefaultAccount(def);
+      } else {
+        // Create default account if none exists
+        const defaultPayload: Omit<NewTradingAccount, "user_id"> = {
+          account_name: "Default Trading Account",
+          broker: "Generic Broker",
+          platform: "MetaTrader 5",
+          account_number: "10001",
+          account_type: "Live",
+          currency: "USD",
+          leverage: "100",
+          starting_balance: 10000.0,
+          current_balance: 10000.0,
+          is_default: true,
+          is_active: true,
+          notes: "",
+        };
+        const { data: newAcc } = await createTradingAccount(userId, defaultPayload);
+        if (newAcc) {
+          setAccounts([newAcc]);
+          setDefaultAccount(newAcc);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load trading accounts:", err);
+    }
+  }, []);
 
   const loadCloudProfile = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const userProf = await fetchUserProfile(user.id);
-        const initialProf: UserProfile = userProf || {
-          id: user.id,
-          full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Trader",
-          username: user.email?.split("@")[0].toLowerCase() || "trader",
-          avatar_url: user.user_metadata?.avatar_url || "",
-          bio: "",
-          country: "United States",
-          timezone: "UTC",
-          preferred_currency: "USD",
-          preferred_language: "en",
-          trading_experience: "Intermediate (1-3 Years)",
-        };
-        setProfile(initialProf);
+        setProfile(userProf);
 
         const userPrefs = await fetchUserPreferences(user.id);
         if (userPrefs) {
           setPreferences(userPrefs);
-          // Sync UI store theme & currency if loaded
           const store = useJournalStore.getState();
-          if (userPrefs.default_chart_theme === "dark" || userPrefs.default_chart_theme === "light" || userPrefs.default_chart_theme === "midnight" || userPrefs.default_chart_theme === "cyberpunk") {
+          if (userPrefs.default_chart_theme === "dark" || userPrefs.default_chart_theme === "light") {
             store.setTheme(userPrefs.default_chart_theme as any);
           }
           if (userPrefs.default_trade_currency) {
             store.setDisplayCurrency(userPrefs.default_trade_currency as any);
           }
         }
+
+        await loadAccounts(user.id);
       }
     } catch (err) {
       console.error("UserProfileProvider load failed:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadAccounts]);
 
   useEffect(() => {
     loadCloudProfile();
@@ -88,12 +129,9 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const saveProfileUpdates = async (updates: Partial<UserProfile>): Promise<boolean> => {
     if (!profile) return false;
-    const { data, error } = await updateUserProfile(profile.id, updates);
+    const { data } = await updateUserProfile(profile.id, updates);
     if (data) {
       setProfile(data);
-      return true;
-    } else if (!error) {
-      setProfile({ ...profile, ...updates });
       return true;
     }
     return false;
@@ -104,19 +142,31 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const { data } = await updateUserPreferences(profile.id, updates);
     if (data) {
       setPreferences(data);
-    } else {
-      setPreferences(prev => prev ? { ...prev, ...updates } : null);
     }
-
-    // Sync theme and currency immediately
     const store = useJournalStore.getState();
-    if (updates.default_chart_theme) {
-      store.setTheme(updates.default_chart_theme as any);
-    }
-    if (updates.default_trade_currency) {
-      store.setDisplayCurrency(updates.default_trade_currency as any);
-    }
+    if (updates.default_chart_theme) store.setTheme(updates.default_chart_theme as any);
+    if (updates.default_trade_currency) store.setDisplayCurrency(updates.default_trade_currency as any);
     return true;
+  };
+
+  const switchDefaultAccount = async (accountId: string): Promise<boolean> => {
+    if (!profile) return false;
+    const { data } = await updateTradingAccount(accountId, profile.id, { is_default: true });
+    if (data) {
+      await loadAccounts(profile.id);
+      return true;
+    }
+    return false;
+  };
+
+  const addNewAccount = async (payload: NewTradingAccount): Promise<TradingAccount | null> => {
+    if (!profile) return null;
+    const { data } = await createTradingAccount(profile.id, payload);
+    if (data) {
+      await loadAccounts(profile.id);
+      return data;
+    }
+    return null;
   };
 
   const completionPct = calculateProfileCompletion(profile);
@@ -126,11 +176,16 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
       value={{
         profile,
         preferences,
+        accounts,
+        defaultAccount,
         loading,
         completionPct,
         refreshProfile: loadCloudProfile,
+        refreshAccounts: async () => { if (profile) await loadAccounts(profile.id); },
         saveProfileUpdates,
         savePreferenceUpdates,
+        switchDefaultAccount,
+        addNewAccount,
       }}
     >
       {children}

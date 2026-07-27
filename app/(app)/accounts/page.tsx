@@ -28,9 +28,11 @@ import { AccountFormModal } from "@/components/accounts/AccountFormModal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AccountTypeBadge } from "@/components/ui/Badge";
 import { CardListSkeleton } from "@/components/ui/LoadingSkeleton";
+import { useUserProfile } from "@/context/UserProfileContext";
 import type { TradingAccount, NewTradingAccount } from "@/types/database";
 
 export default function AccountsPage() {
+  const { refreshAccounts } = useUserProfile();
   const [accounts, setAccounts]       = useState<TradingAccount[]>([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
@@ -69,7 +71,8 @@ export default function AccountsPage() {
     const { error: err } = await createTradingAccount(userId, data);
     if (err) { setError(err); return; }
     setFormOpen(false);
-    loadAccounts(userId);
+    await loadAccounts(userId);
+    await refreshAccounts();
   };
 
   // ── Edit ──────────────────────────────────────────────────────────────────
@@ -78,7 +81,8 @@ export default function AccountsPage() {
     const { error: err } = await updateTradingAccount(editAccount.id, userId, data);
     if (err) { setError(err); return; }
     setEditAccount(null);
-    loadAccounts(userId);
+    await loadAccounts(userId);
+    await refreshAccounts();
   };
 
   // ── Set Default ───────────────────────────────────────────────────────────
@@ -87,6 +91,7 @@ export default function AccountsPage() {
     setActionLoading(id);
     await setDefaultAccount(id, userId);
     await loadAccounts(userId);
+    await refreshAccounts();
     setActionLoading(null);
   };
 
@@ -97,6 +102,7 @@ export default function AccountsPage() {
     setActionLoading(id);
     await deleteTradingAccount(id, userId);
     await loadAccounts(userId);
+    await refreshAccounts();
     setActionLoading(null);
   };
 

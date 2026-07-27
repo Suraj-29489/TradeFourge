@@ -70,17 +70,35 @@ export default function ImportHistoryPage() {
     setDeleteModalOpen(true);
   };
 
+  const [feedbackToast, setFeedbackToast] = useState<{ message: string; type: "success" | "warning" | "info" } | null>(null);
+
   const handleExecuteDelete = async () => {
     if (!userId || targetDeleteIds.length === 0) return;
     setDeleting(true);
 
     try {
+      let lastMsg = "Import deleted successfully.";
+      let lastType: "success" | "warning" | "info" = "success";
+
       for (const id of targetDeleteIds) {
-        await deleteImportRecord(id, userId, deleteTradesToo);
+        const res = await deleteImportRecord(id, userId, deleteTradesToo);
+        if (res.status === "NOT_FOUND") {
+          lastMsg = res.message;
+          lastType = "warning";
+        } else if (res.status === "FILE_MISSING_DB_REMOVED") {
+          lastMsg = res.message;
+          lastType = "info";
+        } else if (res.status === "DELETED_SUCCESS") {
+          lastMsg = res.message;
+          lastType = "success";
+        }
       }
+
       setSelectedIds([]);
       setTargetDeleteIds([]);
       setDeleteModalOpen(false);
+      setFeedbackToast({ message: lastMsg, type: lastType });
+      setTimeout(() => setFeedbackToast(null), 5000);
       await loadHistory(userId);
     } catch (err: any) {
       setError(err?.message || "Failed to delete selected import records.");
@@ -167,6 +185,18 @@ export default function ImportHistoryPage() {
               <span className={`text-xl font-extrabold ${color}`}>{value}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Feedback Notification Toast */}
+      {feedbackToast && (
+        <div className={`p-4 rounded-2xl border flex items-center gap-3 font-bold text-xs ${
+          feedbackToast.type === "success" ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400" :
+          feedbackToast.type === "warning" ? "bg-amber-500/15 border-amber-500/30 text-amber-400" :
+          "bg-purple-500/15 border-purple-500/30 text-purple-300"
+        }`}>
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{feedbackToast.message}</span>
         </div>
       )}
 
