@@ -81,7 +81,10 @@ export const SettingsTabs: React.FC = () => {
 
   const handleSavePreferences = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) return;
+    if (!userId) {
+      setErrorToast("User session not found. Please log in again.");
+      return;
+    }
 
     setSaving(true);
     setErrorToast(null);
@@ -105,11 +108,11 @@ export const SettingsTabs: React.FC = () => {
 
     setSaving(false);
     if (!ok) {
-      setErrorToast("Failed to save settings to cloud.");
-      setTimeout(() => setErrorToast(null), 4000);
+      setErrorToast("Cloud database update encountered an error. Please verify your connection.");
+      setTimeout(() => setErrorToast(null), 5000);
     } else {
-      setSuccessToast("Settings saved and synchronized successfully!");
-      setTimeout(() => setSuccessToast(null), 4000);
+      setSuccessToast("Settings saved and synchronized successfully to Supabase cloud!");
+      setTimeout(() => setSuccessToast(null), 5000);
     }
   };
 

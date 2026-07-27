@@ -308,8 +308,10 @@ export async function checkUsernameAvailable(
 
 /**
  * Fetch user preferences with dual Supabase + localStorage persistence.
+ * Uses maybeSingle() to avoid PGRST116 errors on missing rows.
  */
 export async function fetchUserPreferences(userId: string): Promise<UserPreferences> {
+  if (!userId) return DEFAULT_PREFERENCES("");
   const supabase = createClient();
   const cached = getLocalPreferences(userId);
 
@@ -318,12 +320,34 @@ export async function fetchUserPreferences(userId: string): Promise<UserPreferen
       .from("user_preferences")
       .select("*")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
 
     if (!error && data) {
       const cloudPrefs = { ...DEFAULT_PREFERENCES(userId), ...data };
       setLocalPreferences(userId, cloudPrefs);
       return cloudPrefs;
+    }
+
+    // If no row exists yet in Supabase, create the initial default row
+    if (!error && !data) {
+      const defaultPayload = {
+        ...DEFAULT_PREFERENCES(userId),
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data: createdData } = await supabase
+        .from("user_preferences")
+        .insert(defaultPayload)
+        .select()
+        .maybeSingle();
+
+      if (createdData) {
+        const cloudPrefs = { ...DEFAULT_PREFERENCES(userId), ...createdData };
+        setLocalPreferences(userId, cloudPrefs);
+        return cloudPrefs;
+      }
     }
   } catch (err) {
     console.error("fetchUserPreferences cloud error:", err);
@@ -335,7 +359,7 @@ export async function fetchUserPreferences(userId: string): Promise<UserPreferen
 
 /**
  * Update user preferences in Supabase Cloud and localStorage.
- * Includes field sanitization, transparent error handling, and post-save verification query.
+ * Uses a bulletproof multi-stage write pipeline (UPDATE → UPSERT → INSERT) with real error reporting.
  */
 export async function updateUserPreferences(
   userId: string,
@@ -370,36 +394,53 @@ export async function updateUserPreferences(
   let supabaseError: string | null = null;
   let savedData: any = null;
 
+  // Stage 1: Try direct UPDATE on existing user_preferences row
   try {
-    const { data: upsertData, error: upsertErr } = await supabase
+    const { data: updateData, error: updateErr } = await supabase
       .from("user_preferences")
-      .upsert(payload, { onConflict: "user_id" })
+      .update(payload)
+      .eq("user_id", userId)
       .select()
-      .single();
+      .maybeSingle();
 
-    if (!upsertErr && upsertData) {
-      savedData = upsertData;
+    if (!updateErr && updateData) {
+      savedData = updateData;
     } else {
-      if (upsertErr) {
-        console.warn("Supabase upsert preferences warning, trying update fallback:", upsertErr.message);
-      }
-      const { data: updateData, error: updateErr } = await supabase
+      // Stage 2: If no existing row (or update returned null), perform UPSERT
+      const { data: upsertData, error: upsertErr } = await supabase
         .from("user_preferences")
-        .update(payload)
-        .eq("user_id", userId)
+        .upsert(payload, { onConflict: "user_id" })
         .select()
-        .single();
+        .maybeSingle();
 
-      if (!updateErr && updateData) {
-        savedData = updateData;
-      } else if (updateErr) {
-        supabaseError = updateErr.message || "Failed to update preferences in database.";
-        console.error("Supabase update preferences error:", updateErr);
+      if (!upsertErr && upsertData) {
+        savedData = upsertData;
+      } else {
+        // Stage 3: Direct INSERT fallback
+        const { data: insertData, error: insertErr } = await supabase
+          .from("user_preferences")
+          .insert(payload)
+          .select()
+          .maybeSingle();
+
+        if (!insertErr && insertData) {
+          savedData = insertData;
+        } else {
+          supabaseError = (insertErr || upsertErr || updateErr)?.message || "Failed to persist preferences to cloud database.";
+          console.error("Supabase preferences write error:", insertErr || upsertErr || updateErr);
+        }
       }
     }
   } catch (err: any) {
     console.error("updateUserPreferences unexpected error:", err);
     supabaseError = err?.message || "An unexpected error occurred during preferences save.";
+  }
+
+  // Sync default trade currency to profiles table if updated
+  if (payload.default_trade_currency) {
+    try {
+      await supabase.from("profiles").update({ preferred_currency: payload.default_trade_currency }).eq("id", userId);
+    } catch {}
   }
 
   if (savedData) {
@@ -411,37 +452,9 @@ export async function updateUserPreferences(
     return { data: finalPrefs, error: null };
   }
 
-  if (supabaseError) {
-    const cached = getLocalPreferences(userId) || DEFAULT_PREFERENCES(userId);
-    return { data: cached, error: supabaseError };
-  }
-
-  // Post-save Verification Query fallback
-  try {
-    const { data: verifiedData } = await supabase
-      .from("user_preferences")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (verifiedData) {
-      const cloudPrefs: UserPreferences = {
-        ...DEFAULT_PREFERENCES(userId),
-        ...verifiedData,
-      };
-      setLocalPreferences(userId, cloudPrefs);
-      return { data: cloudPrefs, error: null };
-    }
-  } catch (verifyErr) {
-    console.warn("Post-save preferences verification query warning:", verifyErr);
-  }
-
-  const finalPrefs: UserPreferences = {
-    ...DEFAULT_PREFERENCES(userId),
-    ...payload,
-  };
-  setLocalPreferences(userId, finalPrefs);
-  return { data: finalPrefs, error: null };
+  // Return real error message if write failed
+  const cached = getLocalPreferences(userId) || DEFAULT_PREFERENCES(userId);
+  return { data: cached, error: supabaseError || "Unable to save preferences to cloud database." };
 }
 
 /**
