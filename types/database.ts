@@ -90,7 +90,7 @@ export interface CloudTrade {
   updated_at: string;
 }
 
-export type NewCloudTrade = Omit<CloudTrade, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+export type NewCloudTrade = Omit<CloudTrade, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'net_profit'>;
 export type UpdateCloudTrade = Partial<NewCloudTrade>;
 
 // ─── Trade Relations ─────────────────────────────────────────────────────────

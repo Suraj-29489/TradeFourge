@@ -226,9 +226,10 @@ export async function createTrade(
 ): Promise<ServiceResult<CloudTrade>> {
   const supabase = createClient();
   try {
+    const { net_profit, ...cleanPayload } = payload as Record<string, any>;
     const { data, error } = await supabase
       .from('trades')
-      .insert({ ...payload, user_id: userId })
+      .insert({ ...cleanPayload, user_id: userId })
       .select()
       .single();
 
@@ -254,10 +255,13 @@ export async function bulkInsertTrades(
   const errors: string[] = [];
 
   for (let i = 0; i < trades.length; i += BATCH_SIZE) {
-    const batch = trades.slice(i, i + BATCH_SIZE).map((t) => ({
-      ...t,
-      user_id: userId,
-    }));
+    const batch = trades.slice(i, i + BATCH_SIZE).map((t) => {
+      const { net_profit, ...cleanT } = t as Record<string, any>;
+      return {
+        ...cleanT,
+        user_id: userId,
+      };
+    });
 
     const { data, error } = await supabase
       .from('trades')
@@ -283,9 +287,10 @@ export async function updateTrade(
 ): Promise<ServiceResult<CloudTrade>> {
   const supabase = createClient();
   try {
+    const { net_profit, ...cleanUpdates } = updates as Record<string, any>;
     const { data, error } = await supabase
       .from('trades')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...cleanUpdates, updated_at: new Date().toISOString() })
       .eq('id', id)
       .eq('user_id', userId)
       .select()

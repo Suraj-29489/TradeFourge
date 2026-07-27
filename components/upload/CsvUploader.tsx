@@ -127,7 +127,6 @@ export const CsvUploader: React.FC = () => {
         profit:        t.profit,
         commission:    t.commission,
         swap:          t.swap,
-        net_profit:    t.profit + t.commission + t.swap,
         risk_amount:   null,
         rr_ratio:      t.rr,
         outcome:       t.status as "WIN" | "LOSS" | "BREAKEVEN",

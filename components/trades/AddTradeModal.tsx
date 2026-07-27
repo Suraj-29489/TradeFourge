@@ -183,7 +183,6 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
         profit: numProfit,
         commission: numComm,
         swap: numSwap,
-        net_profit: totalNet,
         risk_amount: numRisk,
         rr_ratio: calculatedRR,
         outcome,
