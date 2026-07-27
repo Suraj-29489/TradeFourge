@@ -354,7 +354,7 @@ export const PerformanceLabView: React.FC = () => {
   return (
     <div className="space-y-6 text-xs font-mono max-w-7xl mx-auto pb-16">
       {/* ── SECTION 11: Sticky Global Filter Toolbar ─────────────────────── */}
-      <div className="sticky top-16 z-30 p-3.5 rounded-2xl bg-[#111726]/95 backdrop-blur-md border border-white/10 shadow-2xl flex flex-wrap items-center justify-between gap-3">
+      <div className="sticky top-16 z-30 mb-6 p-3.5 rounded-2xl bg-[#111726]/95 backdrop-blur-md border border-white/10 shadow-2xl flex flex-wrap items-center justify-between gap-3">
         {/* Left Filter Controls */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1 text-purple-400 font-bold uppercase tracking-wider text-[11px] pr-2 border-r border-white/10">
