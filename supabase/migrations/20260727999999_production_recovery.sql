@@ -238,6 +238,14 @@ CREATE POLICY "tag_links_delete_own" ON public.trade_tag_links
     );
 
 -- ---------------------------------------------------------------------------
+-- SECTION 7.5: public.trades schema repairs
+-- Ensure magic_number exists on public.trades (MetaTrader EA tracking)
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.trades ADD COLUMN IF NOT EXISTS magic_number BIGINT DEFAULT NULL;
+CREATE INDEX IF NOT EXISTS idx_trades_magic_number ON public.trades(user_id, magic_number) WHERE magic_number IS NOT NULL;
+
+
+-- ---------------------------------------------------------------------------
 -- SECTION 8: STORAGE BUCKETS (idempotent ON CONFLICT)
 -- ---------------------------------------------------------------------------
 

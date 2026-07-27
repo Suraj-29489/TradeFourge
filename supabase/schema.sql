@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS public.trades (
     status TEXT DEFAULT 'OPEN' NOT NULL CHECK (status IN ('OPEN', 'CLOSED')),
     opened_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     closed_at TIMESTAMP WITH TIME ZONE,
+    magic_number BIGINT DEFAULT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
