@@ -128,7 +128,11 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const saveProfileUpdates = async (updates: Partial<UserProfile>): Promise<boolean> => {
     if (!profile) return false;
-    const { data } = await updateUserProfile(profile.id, updates);
+    const { data, error } = await updateUserProfile(profile.id, updates);
+    if (error) {
+      console.error("saveProfileUpdates error:", error);
+      return false;
+    }
     if (data) {
       setProfile(data);
       return true;

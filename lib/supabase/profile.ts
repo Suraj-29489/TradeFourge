@@ -167,38 +167,108 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
 }
 
 /**
- * Update user profile details in both Supabase and localStorage.
+ * Update user profile details in Supabase Cloud and localStorage.
+ * Includes explicit field sanitization, robust error logging, and immediate post-save verification.
  */
 export async function updateUserProfile(
   userId: string,
   updates: Partial<UserProfile>
 ): Promise<{ data: UserProfile; error: string | null }> {
+  if (!userId) {
+    return { data: DEFAULT_PROFILE(""), error: "User ID is required." };
+  }
+
   const supabase = createClient();
-  const current = (await fetchUserProfile(userId)) || DEFAULT_PROFILE(userId);
-  const updated: UserProfile = {
-    ...current,
-    ...updates,
+
+  // Sanitize fields to match database schema exactly
+  const payload: Record<string, any> = {
+    id: userId,
     updated_at: new Date().toISOString(),
   };
 
-  // Always persist locally first
-  setLocalProfile(userId, updated);
+  if (updates.full_name !== undefined) payload.full_name = updates.full_name.trim();
+  if (updates.username !== undefined) payload.username = updates.username.trim().toLowerCase();
+  if (updates.avatar_url !== undefined) payload.avatar_url = updates.avatar_url;
+  if (updates.bio !== undefined) payload.bio = updates.bio.trim();
+  if (updates.country !== undefined) payload.country = updates.country;
+  if (updates.timezone !== undefined) payload.timezone = updates.timezone;
+  if (updates.preferred_currency !== undefined) payload.preferred_currency = updates.preferred_currency;
+  if (updates.preferred_language !== undefined) payload.preferred_language = updates.preferred_language;
+  if (updates.trading_experience !== undefined) payload.trading_experience = updates.trading_experience;
+
+  console.log("Saving user profile payload to Supabase:", payload);
+
+  let supabaseError: string | null = null;
+  let savedData: any = null;
 
   try {
-    const { data, error } = await supabase
+    // 1. Try Upsert first
+    const { data: upsertData, error: upsertErr } = await supabase
       .from("profiles")
-      .upsert(updated, { onConflict: "id" })
+      .upsert(payload, { onConflict: "id" })
       .select()
       .single();
 
-    if (!error && data) {
-      setLocalProfile(userId, data);
-      return { data, error: null };
-    }
-  } catch {}
+    if (!upsertErr && upsertData) {
+      savedData = upsertData;
+    } else {
+      if (upsertErr) {
+        console.warn("Supabase upsert profile warning, trying update fallback:", upsertErr.message);
+      }
+      // 2. Fallback to direct UPDATE if upsert was blocked or encountered constraint
+      const { data: updateData, error: updateErr } = await supabase
+        .from("profiles")
+        .update(payload)
+        .eq("id", userId)
+        .select()
+        .single();
 
-  // Return locally persisted profile seamlessly without failing the user action
-  return { data: updated, error: null };
+      if (!updateErr && updateData) {
+        savedData = updateData;
+      } else if (updateErr) {
+        supabaseError = updateErr.message || "Failed to update profile in database.";
+        console.error("Supabase update profile error:", updateErr);
+      }
+    }
+  } catch (err: any) {
+    console.error("updateUserProfile unexpected error:", err);
+    supabaseError = err?.message || "An unexpected error occurred during save.";
+  }
+
+  if (supabaseError && !savedData) {
+    // Return error transparently so UI & Context know save failed!
+    const cached = getLocalProfile(userId) || DEFAULT_PROFILE(userId);
+    return { data: cached, error: supabaseError };
+  }
+
+  // 3. Post-save Database Verification Query
+  try {
+    const { data: verifiedData, error: verifyErr } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (!verifyErr && verifiedData) {
+      console.log("Post-save database verification SUCCESS:", verifiedData);
+      const cloudProfile: UserProfile = {
+        ...DEFAULT_PROFILE(userId),
+        ...verifiedData,
+      };
+      setLocalProfile(userId, cloudProfile);
+      return { data: cloudProfile, error: null };
+    }
+  } catch (verifyErr) {
+    console.warn("Post-save verification query warning:", verifyErr);
+  }
+
+  // Fallback if verification query was interrupted but write succeeded
+  const finalProfile: UserProfile = {
+    ...DEFAULT_PROFILE(userId),
+    ...(savedData || payload),
+  };
+  setLocalProfile(userId, finalProfile);
+  return { data: finalProfile, error: null };
 }
 
 /**
