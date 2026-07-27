@@ -144,6 +144,20 @@
     background-clip: text;
   }
 
+  .dropdown-menu {
+    background-color: #0F1420;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--dark-border);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  }
+
+  [data-theme="light"] .dropdown-menu {
+    background-color: #FFFFFF !important;
+    border-color: #E2E8F0 !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  }
+
   .theme-input {
     background: var(--input-bg);
     border-color: var(--input-border);

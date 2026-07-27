@@ -68,16 +68,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
-            className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border hover:border-purple-500/40 text-xs text-left transition-all"
+            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border hover:border-purple-500/40 text-xs text-left transition-all"
           >
             <Wallet className="w-4 h-4 text-purple-400 flex-shrink-0" />
             <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="text-white font-bold max-w-[110px] sm:max-w-[150px] truncate">
+              <div className="flex items-center gap-1">
+                <span className="text-white font-bold max-w-[80px] sm:max-w-[150px] truncate">
                   {defaultAccount?.account_name ?? "Select Account"}
                 </span>
                 {defaultAccount && (
-                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                  <span className={`px-1 py-0.2 rounded text-[9px] font-bold ${
                     defaultAccount.account_type === "Live"
                       ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
                       : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
@@ -87,17 +87,17 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
                 )}
               </div>
               {defaultAccount && (
-                <span className="text-gray-400 text-[10px]">
+                <span className="text-gray-400 text-[10px] hidden sm:inline">
                   {defaultAccount.currency} {defaultAccount.current_balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                 </span>
               )}
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-400 ml-1 shrink-0" />
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400 ml-0.5 shrink-0" />
           </button>
 
-          {/* Dropdown Menu */}
+          {/* Dropdown Menu — Solid High-Contrast Backdrop */}
           {accountDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-72 p-2 rounded-2xl glass-card border border-dark-border shadow-2xl z-50 space-y-1">
+            <div className="absolute left-0 mt-2 w-72 p-2.5 rounded-2xl dropdown-menu z-50 space-y-1">
               <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-dark-border mb-1">
                 Your Trading Accounts ({accounts.length})
               </div>

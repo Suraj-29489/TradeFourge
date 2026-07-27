@@ -125,6 +125,21 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   useEffect(() => {
     loadCloudProfile();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      if (session?.user) {
+        loadCloudProfile();
+      } else {
+        setProfile(null);
+        setPreferences(null);
+        setAccounts([]);
+        setDefaultAccount(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [loadCloudProfile]);
 
   const saveProfileUpdates = async (updates: Partial<UserProfile>): Promise<boolean> => {

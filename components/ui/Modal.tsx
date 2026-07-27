@@ -67,7 +67,7 @@ export function Modal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/85 backdrop-blur-md"
             onClick={onClose}
           />
 
@@ -79,7 +79,7 @@ export function Modal({
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
             className={cn(
-              "relative z-10 w-full bg-[#111726] border border-white/10 rounded-2xl shadow-2xl overflow-hidden",
+              "relative z-10 w-full bg-[#0F1420] border border-dark-border rounded-2xl shadow-2xl overflow-hidden",
               maxWidths[size],
               className
             )}

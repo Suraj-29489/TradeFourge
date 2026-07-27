@@ -121,11 +121,10 @@ function setLocalPreferences(userId: string, prefs: UserPreferences): void {
 
 /**
  * Fetch complete profile data for a given user ID.
- * First checks Supabase, falls back to localStorage, then default profile.
+ * Supabase Cloud is the single authoritative source of truth.
  */
 export async function fetchUserProfile(userId: string): Promise<UserProfile> {
   const supabase = createClient();
-  const cached = getLocalProfile(userId);
 
   try {
     const { data, error } = await supabase
@@ -135,15 +134,35 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
       .single();
 
     if (!error && data) {
-      const merged = { ...DEFAULT_PROFILE(userId), ...cached, ...data };
-      setLocalProfile(userId, merged);
-      return merged;
+      const cloudProfile: UserProfile = {
+        ...DEFAULT_PROFILE(userId),
+        ...data,
+      };
+      setLocalProfile(userId, cloudProfile);
+      return cloudProfile;
     }
-  } catch {}
 
-  // Fallback to cached or default profile
+    // If profile row does not exist in Supabase, try generating from Auth Metadata
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user && user.id === userId) {
+      const authProfile: UserProfile = {
+        ...DEFAULT_PROFILE(userId),
+        full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Trader",
+        username: (user.user_metadata?.username || user.email?.split("@")[0] || `trader_${userId.slice(0, 4)}`).toLowerCase(),
+        avatar_url: user.user_metadata?.avatar_url || "",
+      };
+      // Upsert authentic profile into Supabase
+      await supabase.from("profiles").upsert(authProfile, { onConflict: "id" });
+      setLocalProfile(userId, authProfile);
+      return authProfile;
+    }
+  } catch (err) {
+    console.error("fetchUserProfile cloud query failed:", err);
+  }
+
+  // Fallback only if offline / error
+  const cached = getLocalProfile(userId);
   const fallback = cached || DEFAULT_PROFILE(userId);
-  setLocalProfile(userId, fallback);
   return fallback;
 }
 
