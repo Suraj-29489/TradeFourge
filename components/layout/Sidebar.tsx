@@ -253,7 +253,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                 <LogOut className="w-4 h-4" /> Sign Out
               </button>
               <div className="text-center text-[10px] font-mono text-gray-400">
-                TradeFourge · v3.0.0
+                TradeFourge · v3.1.9
               </div>
             </div>
           </motion.aside>
@@ -341,7 +341,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
             )}
           </div>
           {!collapsed && (
-            <span className="text-[10px] text-gray-400 font-mono">v3.0.0</span>
+            <span className="text-[10px] text-gray-400 font-mono">v3.1.9</span>
           )}
         </div>
       </div>

@@ -142,7 +142,11 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const savePreferenceUpdates = async (updates: Partial<UserPreferences>): Promise<boolean> => {
     if (!profile) return false;
-    const { data } = await updateUserPreferences(profile.id, updates);
+    const { data, error } = await updateUserPreferences(profile.id, updates);
+    if (error) {
+      console.error("savePreferenceUpdates error:", error);
+      return false;
+    }
     if (data) {
       setPreferences(data);
     }

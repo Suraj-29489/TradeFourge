@@ -9,7 +9,9 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS timezone TEXT DEFAULT 'UTC',
   ADD COLUMN IF NOT EXISTS preferred_currency TEXT DEFAULT 'USD',
   ADD COLUMN IF NOT EXISTS preferred_language TEXT DEFAULT 'en',
-  ADD COLUMN IF NOT EXISTS trading_experience TEXT DEFAULT 'Intermediate';
+  ADD COLUMN IF NOT EXISTS trading_experience TEXT DEFAULT 'Intermediate',
+  ADD COLUMN IF NOT EXISTS trading_style TEXT DEFAULT 'Day Trader',
+  ADD COLUMN IF NOT EXISTS risk_preference TEXT DEFAULT 'Moderate (1-2% / trade)';
 
 -- 2. CREATE USER PREFERENCES TABLE
 CREATE TABLE IF NOT EXISTS public.user_preferences (

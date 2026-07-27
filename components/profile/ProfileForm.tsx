@@ -55,6 +55,8 @@ const LANGUAGES = [
 ];
 
 const EXPERIENCES = ["Beginner (< 1 Year)", "Intermediate (1-3 Years)", "Advanced (3-5 Years)", "Institutional / Professional (5+ Years)"];
+const TRADING_STYLES = ["Day Trader", "Swing Trader", "Scalper", "Position Trader", "Algorithmic / Quantitative"];
+const RISK_PREFERENCES = ["Conservative (0.5 - 1% / trade)", "Moderate (1 - 2% / trade)", "Aggressive (2 - 5% / trade)"];
 
 export function ProfileForm() {
   const { refreshProfile } = useUserProfile();
@@ -73,6 +75,8 @@ export function ProfileForm() {
   const [preferredCurrency, setPreferredCurrency] = useState("USD");
   const [preferredLanguage, setPreferredLanguage] = useState("en");
   const [tradingExperience, setTradingExperience] = useState("Intermediate (1-3 Years)");
+  const [tradingStyle, setTradingStyle] = useState("Day Trader");
+  const [riskPreference, setRiskPreference] = useState("Moderate (1 - 2% / trade)");
 
   // Validation & Notice State
   const [usernameChecking, setUsernameChecking] = useState(false);
@@ -102,6 +106,8 @@ export function ProfileForm() {
             preferred_currency: "USD",
             preferred_language: "en",
             trading_experience: "Intermediate (1-3 Years)",
+            trading_style: "Day Trader",
+            risk_preference: "Moderate (1 - 2% / trade)",
           };
 
           setProfile(initialProf);
@@ -113,6 +119,8 @@ export function ProfileForm() {
           setPreferredCurrency(initialProf.preferred_currency || "USD");
           setPreferredLanguage(initialProf.preferred_language || "en");
           setTradingExperience(initialProf.trading_experience || "Intermediate (1-3 Years)");
+          setTradingStyle(initialProf.trading_style || "Day Trader");
+          setRiskPreference(initialProf.risk_preference || "Moderate (1 - 2% / trade)");
         }
       } catch (err) {
         console.error(err);
@@ -134,10 +142,12 @@ export function ProfileForm() {
       timezone !== (profile.timezone || "UTC") ||
       preferredCurrency !== (profile.preferred_currency || "USD") ||
       preferredLanguage !== (profile.preferred_language || "en") ||
-      tradingExperience !== (profile.trading_experience || "Intermediate (1-3 Years)");
+      tradingExperience !== (profile.trading_experience || "Intermediate (1-3 Years)") ||
+      tradingStyle !== (profile.trading_style || "Day Trader") ||
+      riskPreference !== (profile.risk_preference || "Moderate (1 - 2% / trade)");
 
     setHasChanges(changed);
-  }, [fullName, username, bio, country, timezone, preferredCurrency, preferredLanguage, tradingExperience, profile]);
+  }, [fullName, username, bio, country, timezone, preferredCurrency, preferredLanguage, tradingExperience, tradingStyle, riskPreference, profile]);
 
   // Username Availability Debounce Check
   useEffect(() => {
@@ -201,6 +211,8 @@ export function ProfileForm() {
       preferred_currency: preferredCurrency,
       preferred_language: preferredLanguage,
       trading_experience: tradingExperience,
+      trading_style: tradingStyle,
+      risk_preference: riskPreference,
     };
 
     const { data, error } = await updateUserProfile(profile.id, updates);
@@ -228,6 +240,8 @@ export function ProfileForm() {
     setPreferredCurrency(profile.preferred_currency || "USD");
     setPreferredLanguage(profile.preferred_language || "en");
     setTradingExperience(profile.trading_experience || "Intermediate (1-3 Years)");
+    setTradingStyle(profile.trading_style || "Day Trader");
+    setRiskPreference(profile.risk_preference || "Moderate (1 - 2% / trade)");
     setHasChanges(false);
     setErrorToast(null);
   };
@@ -483,6 +497,35 @@ export function ProfileForm() {
                 <option key={exp} value={exp}>{exp}</option>
               ))}
             </select>
+          </div>
+
+          {/* Trading Style & Risk Preference Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-mono font-medium text-gray-300 block">Primary Trading Style</label>
+              <select
+                value={tradingStyle}
+                onChange={(e) => setTradingStyle(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl bg-[#0B0F17] border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+              >
+                {TRADING_STYLES.map((ts) => (
+                  <option key={ts} value={ts}>{ts}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-mono font-medium text-gray-300 block">Risk Preference / Trade</label>
+              <select
+                value={riskPreference}
+                onChange={(e) => setRiskPreference(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl bg-[#0B0F17] border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-purple-500"
+              >
+                {RISK_PREFERENCES.map((rp) => (
+                  <option key={rp} value={rp}>{rp}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>

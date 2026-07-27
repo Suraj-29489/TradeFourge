@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     preferred_currency TEXT DEFAULT 'USD',
     preferred_language TEXT DEFAULT 'en',
     trading_experience TEXT DEFAULT 'Intermediate',
+    trading_style TEXT DEFAULT 'Day Trader',
+    risk_preference TEXT DEFAULT 'Moderate (1-2% / trade)',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

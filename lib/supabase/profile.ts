@@ -15,6 +15,8 @@ export interface UserProfile {
   preferred_currency: string;
   preferred_language: string;
   trading_experience: string;
+  trading_style?: string;
+  risk_preference?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -64,6 +66,8 @@ const DEFAULT_PROFILE = (userId: string): UserProfile => ({
   preferred_currency: "USD",
   preferred_language: "en",
   trading_experience: "Intermediate (1-3 Years)",
+  trading_style: "Day Trader",
+  risk_preference: "Moderate (1-2% / trade)",
 });
 
 const DEFAULT_PREFERENCES = (userId: string): UserPreferences => ({
@@ -195,6 +199,8 @@ export async function updateUserProfile(
   if (updates.preferred_currency !== undefined) payload.preferred_currency = updates.preferred_currency;
   if (updates.preferred_language !== undefined) payload.preferred_language = updates.preferred_language;
   if (updates.trading_experience !== undefined) payload.trading_experience = updates.trading_experience;
+  if (updates.trading_style !== undefined) payload.trading_style = updates.trading_style;
+  if (updates.risk_preference !== undefined) payload.risk_preference = updates.risk_preference;
 
   console.log("Saving user profile payload to Supabase:", payload);
 
@@ -379,36 +385,106 @@ export async function fetchUserPreferences(userId: string): Promise<UserPreferen
 }
 
 /**
- * Update user preferences in both Supabase and localStorage.
+ * Update user preferences in Supabase Cloud and localStorage.
+ * Includes field sanitization, transparent error handling, and post-save verification query.
  */
 export async function updateUserPreferences(
   userId: string,
   updates: Partial<UserPreferences>
 ): Promise<{ data: UserPreferences; error: string | null }> {
+  if (!userId) {
+    return { data: DEFAULT_PREFERENCES(""), error: "User ID is required." };
+  }
+
   const supabase = createClient();
-  const current = (await fetchUserPreferences(userId)) || DEFAULT_PREFERENCES(userId);
-  const updated: UserPreferences = {
-    ...current,
-    ...updates,
+
+  const payload: Record<string, any> = {
+    user_id: userId,
     updated_at: new Date().toISOString(),
   };
 
-  setLocalPreferences(userId, updated);
+  if (updates.dashboard_layout !== undefined) payload.dashboard_layout = updates.dashboard_layout;
+  if (updates.default_account !== undefined) payload.default_account = updates.default_account;
+  if (updates.default_chart_theme !== undefined) payload.default_chart_theme = updates.default_chart_theme;
+  if (updates.notifications_enabled !== undefined) payload.notifications_enabled = updates.notifications_enabled;
+  if (updates.email_notifications !== undefined) payload.email_notifications = updates.email_notifications;
+  if (updates.marketing_emails !== undefined) payload.marketing_emails = updates.marketing_emails;
+  if (updates.default_trade_currency !== undefined) payload.default_trade_currency = updates.default_trade_currency;
+  if (updates.date_format !== undefined) payload.date_format = updates.date_format;
+  if (updates.time_format !== undefined) payload.time_format = updates.time_format;
+  if (updates.week_start !== undefined) payload.week_start = updates.week_start;
+  if (updates.risk_display_mode !== undefined) payload.risk_display_mode = updates.risk_display_mode;
+  if (updates.analytics_defaults !== undefined) payload.analytics_defaults = updates.analytics_defaults;
+
+  console.log("Saving user preferences payload to Supabase:", payload);
+
+  let supabaseError: string | null = null;
+  let savedData: any = null;
 
   try {
-    const { data, error } = await supabase
+    const { data: upsertData, error: upsertErr } = await supabase
       .from("user_preferences")
-      .upsert(updated, { onConflict: "user_id" })
+      .upsert(payload, { onConflict: "user_id" })
       .select()
       .single();
 
-    if (!error && data) {
-      setLocalPreferences(userId, data);
-      return { data, error: null };
-    }
-  } catch {}
+    if (!upsertErr && upsertData) {
+      savedData = upsertData;
+    } else {
+      if (upsertErr) {
+        console.warn("Supabase upsert preferences warning, trying update fallback:", upsertErr.message);
+      }
+      const { data: updateData, error: updateErr } = await supabase
+        .from("user_preferences")
+        .update(payload)
+        .eq("user_id", userId)
+        .select()
+        .single();
 
-  return { data: updated, error: null };
+      if (!updateErr && updateData) {
+        savedData = updateData;
+      } else if (updateErr) {
+        supabaseError = updateErr.message || "Failed to update preferences in database.";
+        console.error("Supabase update preferences error:", updateErr);
+      }
+    }
+  } catch (err: any) {
+    console.error("updateUserPreferences unexpected error:", err);
+    supabaseError = err?.message || "An unexpected error occurred during preferences save.";
+  }
+
+  if (supabaseError && !savedData) {
+    const cached = getLocalPreferences(userId) || DEFAULT_PREFERENCES(userId);
+    return { data: cached, error: supabaseError };
+  }
+
+  // Post-save Verification Query
+  try {
+    const { data: verifiedData, error: verifyErr } = await supabase
+      .from("user_preferences")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (!verifyErr && verifiedData) {
+      console.log("Post-save preferences verification SUCCESS:", verifiedData);
+      const cloudPrefs: UserPreferences = {
+        ...DEFAULT_PREFERENCES(userId),
+        ...verifiedData,
+      };
+      setLocalPreferences(userId, cloudPrefs);
+      return { data: cloudPrefs, error: null };
+    }
+  } catch (verifyErr) {
+    console.warn("Post-save preferences verification query warning:", verifyErr);
+  }
+
+  const finalPrefs: UserPreferences = {
+    ...DEFAULT_PREFERENCES(userId),
+    ...(savedData || payload),
+  };
+  setLocalPreferences(userId, finalPrefs);
+  return { data: finalPrefs, error: null };
 }
 
 /**
