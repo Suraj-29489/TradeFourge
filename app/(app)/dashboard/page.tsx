@@ -422,7 +422,7 @@ export default function DashboardPage() {
         >
           <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">WIN RATE</span>
           <span className="text-sm font-extrabold text-purple-400 block truncate">
-            {analytics.winRate}%
+            {analytics.totalTrades > 0 ? `${analytics.winRate}%` : "—"}
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
             <span>{analytics.wins}W / {analytics.losses}L</span>
@@ -444,10 +444,10 @@ export default function DashboardPage() {
         >
           <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">PROFIT FACTOR</span>
           <span className="text-sm font-extrabold text-white block truncate">
-            {analytics.profitFactor}
+            {analytics.totalTrades > 0 ? analytics.profitFactor : "—"}
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
-            <span>Exp: ${analytics.expectancy}</span>
+            <span>Exp: {analytics.totalTrades > 0 ? `$${analytics.expectancy}` : "—"}</span>
             <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-purple-400 transition-opacity" />
           </span>
 

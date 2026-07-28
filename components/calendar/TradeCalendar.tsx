@@ -706,7 +706,12 @@ export const TradeCalendar: React.FC = () => {
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-white uppercase tracking-wider text-gray-400">Executed Trades</h4>
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                  {selectedDayData.trades.map((t) => (
+                  {selectedDayData.trades.length === 0 ? (
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center text-gray-400 font-bold">
+                      No trades available.
+                    </div>
+                  ) : (
+                    selectedDayData.trades.map((t) => (
                     <div
                       key={t.id}
                       onClick={() => {
@@ -732,10 +737,7 @@ export const TradeCalendar: React.FC = () => {
                         {formatSigned(t.net_profit)}
                       </span>
                     </div>
-                  ))}
-                  {selectedDayData.trades.length === 0 && (
-                    <div className="p-4 text-center text-gray-500 italic">No trades recorded on this date.</div>
-                  )}
+                  )))}
                 </div>
               </div>
 
