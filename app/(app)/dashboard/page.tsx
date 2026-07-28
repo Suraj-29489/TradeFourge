@@ -13,6 +13,7 @@ import { useUserProfile } from "@/context/UserProfileContext";
 import { createClient } from "@/lib/supabase/client";
 import { fetchTrades } from "@/lib/supabase/trades";
 import { fetchLatestImport } from "@/lib/supabase/csv-imports";
+import { useAppEventListener } from "@/lib/events/event-bus";
 import { calculateCloudAnalytics, CompleteAnalyticsSummary } from "@/lib/engine/cloud-analytics-engine";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
 import { StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -72,6 +73,11 @@ export default function DashboardPage() {
     init();
     loadDashboardData();
   }, [init]);
+
+  useAppEventListener(
+    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted"],
+    loadDashboardData
+  );
 
   // Analytics Engine Calculation
   const analytics: CompleteAnalyticsSummary = useMemo(() => {

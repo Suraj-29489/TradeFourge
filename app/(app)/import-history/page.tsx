@@ -10,7 +10,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { fetchImportHistory, deleteImportRecord } from "@/lib/supabase/csv-imports";
+import { fetchImportHistory, deleteImportRecord, deleteAllImports } from "@/lib/supabase/csv-imports";
+import { useAppEventListener } from "@/lib/events/event-bus";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ImportStatusBadge } from "@/components/ui/Badge";
 import { TableSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -51,6 +52,10 @@ export default function ImportHistoryPage() {
     })();
   }, [loadHistory]);
 
+  useAppEventListener(["tradefourge:import-created", "tradefourge:import-deleted"], () => {
+    if (userId) loadHistory(userId);
+  });
+
   const toggleSelectAll = () => {
     if (selectedIds.length === imports.length) {
       setSelectedIds([]);
@@ -73,37 +78,38 @@ export default function ImportHistoryPage() {
   const [feedbackToast, setFeedbackToast] = useState<{ message: string; type: "success" | "warning" | "info" } | null>(null);
 
   const handleExecuteDelete = async () => {
-    if (!userId || targetDeleteIds.length === 0) return;
+    if (!userId || targetDeleteIds.length === 0) {
+      setFeedbackToast({ message: "Nothing to delete.", type: "warning" });
+      setTimeout(() => setFeedbackToast(null), 4000);
+      return;
+    }
     setDeleting(true);
 
+    const isAll = targetDeleteIds.length === imports.length;
+    const idsToRemove = [...targetDeleteIds];
+
+    // Optimistic UI Removal
+    setImports((prev) => prev.filter((item) => !idsToRemove.includes(item.id)));
+    setSelectedIds([]);
+    setTargetDeleteIds([]);
+    setDeleteModalOpen(false);
+
     try {
-      let lastMsg = "Import deleted successfully.";
-      let lastType: "success" | "warning" | "info" = "success";
-
-      for (const id of targetDeleteIds) {
-        const res = await deleteImportRecord(id, userId, deleteTradesToo);
-        if (res.status === "NOT_FOUND") {
-          lastMsg = res.message;
-          lastType = "warning";
-        } else if (res.status === "FILE_MISSING_DB_REMOVED") {
-          lastMsg = res.message;
-          lastType = "info";
-        } else if (res.status === "DELETED_SUCCESS") {
-          lastMsg = res.message;
-          lastType = "success";
+      if (isAll) {
+        const res = await deleteAllImports(userId);
+        setFeedbackToast({ message: res.message, type: res.success ? "success" : "warning" });
+      } else {
+        for (const id of idsToRemove) {
+          await deleteImportRecord(id, userId, deleteTradesToo);
         }
+        setFeedbackToast({ message: "Import deleted.", type: "success" });
       }
-
-      setSelectedIds([]);
-      setTargetDeleteIds([]);
-      setDeleteModalOpen(false);
-      setFeedbackToast({ message: lastMsg, type: lastType });
-      setTimeout(() => setFeedbackToast(null), 5000);
-      await loadHistory(userId);
-    } catch (err: any) {
-      setError(err?.message || "Failed to delete selected import records.");
+    } catch {
+      setFeedbackToast({ message: "Failed to delete.", type: "warning" });
+      if (userId) await loadHistory(userId);
     } finally {
       setDeleting(false);
+      setTimeout(() => setFeedbackToast(null), 4000);
     }
   };
 

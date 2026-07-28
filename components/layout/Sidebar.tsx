@@ -287,11 +287,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                 exit={{ opacity: 0, x: -10 }}
                 className="flex flex-col whitespace-nowrap overflow-hidden"
               >
-                <span className="text-sm font-extrabold tracking-tight text-white flex items-center gap-1.5 font-mono">
+                <span className="text-sm font-extrabold tracking-tight text-white font-mono">
                   TRADE<span className="text-purple-400">FOURGE</span>
-                  <span className="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-purple-600/30 text-purple-400 border border-purple-500/30">
-                    v3
-                  </span>
                 </span>
                 <span className="text-[10px] text-gray-400 tracking-wider font-mono">
                   CLOUD JOURNAL

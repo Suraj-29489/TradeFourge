@@ -8,6 +8,7 @@ import { TableProperties, Upload, Plus } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { fetchTrades, deleteTrade } from "@/lib/supabase/trades";
+import { useAppEventListener } from "@/lib/events/event-bus";
 import { fetchTradingAccounts } from "@/lib/supabase/accounts";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { CloudTradesTable } from "@/components/trades/CloudTradesTable";
@@ -59,20 +60,26 @@ export default function JournalPage() {
     setLoading(false);
   }, [userId, filters, page, pageSize]);
 
-  useEffect(() => {
-    loadTrades();
-  }, [loadTrades]);
-
-  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleFiltersChange = (partial: Partial<CloudTradeFilters>) => {
     setFilters((prev) => ({ ...prev, ...partial }));
-    setPage(1); // Reset to page 1 on filter change
+    setPage(1);
   };
+
+  useAppEventListener(
+    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted"],
+    loadTrades
+  );
 
   const handleDeleteTrade = async (id: string) => {
     if (!userId) return;
+    if (result?.data) {
+      setResult({
+        ...result,
+        data: result.data.filter((t) => t.id !== id),
+        total: Math.max(0, result.total - 1),
+      });
+    }
     await deleteTrade(id, userId);
-    loadTrades();
   };
 
   // No trades AND no filters applied → true empty state

@@ -112,48 +112,23 @@ export default function AccountsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-[#111726] to-[#182238] border border-white/10 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl glass-card border border-dark-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-mono">
         <div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2 font-mono">
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">
             Trading Accounts
-            <span className="text-xs px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30">
-              CLOUD
-            </span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            Manage your broker accounts and track balances
+            Manage your connected trading accounts
           </p>
         </div>
         <button
           onClick={() => { setEditAccount(null); setFormOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm font-mono shadow-glow transition-all shrink-0"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-glow transition-all shrink-0"
         >
           <Plus className="w-4 h-4" />
           Add Account
         </button>
       </div>
-
-      {/* Summary Strip */}
-      {accounts.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 rounded-2xl glass-card border border-dark-border">
-            <p className="text-xs font-mono text-gray-400 mb-1">Total Accounts</p>
-            <p className="text-2xl font-extrabold text-white font-mono">{accounts.length}</p>
-          </div>
-          <div className="p-4 rounded-2xl glass-card border border-dark-border">
-            <p className="text-xs font-mono text-gray-400 mb-1">Combined Balance</p>
-            <p className="text-2xl font-extrabold text-white font-mono">
-              ${totalBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-          <div className="p-4 rounded-2xl glass-card border border-dark-border">
-            <p className="text-xs font-mono text-gray-400 mb-1">Default Account</p>
-            <p className="text-base font-bold text-purple-400 font-mono truncate">
-              {defaultAccount?.account_name ?? "None set"}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Error Banner */}
       {error && (

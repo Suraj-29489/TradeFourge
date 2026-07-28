@@ -1,7 +1,8 @@
 // lib/supabase/csv-imports.ts
-// Service for tracking CSV import history in the csv_imports table.
+// Service for tracking CSV import history in the csv_imports table with domain events.
 
 import { createClient } from './client';
+import { emitAppEvent } from '@/lib/events/event-bus';
 import type { CsvImport, NewCsvImport, UpdateCsvImport, ServiceResult } from '@/types/database';
 
 // ─── Fetch ────────────────────────────────────────────────────────────────────
@@ -48,9 +49,6 @@ export async function fetchImportById(
   }
 }
 
-/**
- * Fetch the most recent import (for dashboard widget).
- */
 export async function fetchLatestImport(
   userId: string
 ): Promise<ServiceResult<CsvImport>> {
@@ -76,10 +74,6 @@ export async function fetchLatestImport(
 
 // ─── Create ───────────────────────────────────────────────────────────────────
 
-/**
- * Create a new import record (called at start of import process).
- * Returns the record ID to be used for subsequent updates.
- */
 export async function createImportRecord(
   userId: string,
   payload: Omit<NewCsvImport, 'import_status'> & { import_status?: NewCsvImport['import_status'] }
@@ -97,6 +91,7 @@ export async function createImportRecord(
       .single();
 
     if (error) return { data: null, error: error.message };
+    emitAppEvent("tradefourge:import-created", { importId: data.id });
     return { data, error: null };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to create import record';
@@ -106,9 +101,6 @@ export async function createImportRecord(
 
 // ─── Update ───────────────────────────────────────────────────────────────────
 
-/**
- * Update an import record with final stats (called after import completes).
- */
 export async function updateImportRecord(
   id: string,
   userId: string,
@@ -121,7 +113,6 @@ export async function updateImportRecord(
       updated_at: new Date().toISOString(),
     };
 
-    // Mark completion time if status is terminal
     if (
       updates.import_status &&
       ['success', 'partial', 'failed'].includes(updates.import_status)
@@ -145,7 +136,7 @@ export async function updateImportRecord(
   }
 }
 
-// ─── Delete ───────────────────────────────────────────────────────────────────
+// ─── Delete Operations ────────────────────────────────────────────────────────
 
 export interface DeleteImportResult {
   success: boolean;
@@ -157,11 +148,10 @@ export interface DeleteImportResult {
 export async function deleteImportRecord(
   id: string,
   userId: string,
-  deleteTrades = false
+  deleteTrades = true
 ): Promise<DeleteImportResult> {
   const supabase = createClient();
   try {
-    // 1. Check if import record exists
     const { data: existing } = await supabase
       .from('csv_imports')
       .select('id, storage_path')
@@ -173,12 +163,11 @@ export async function deleteImportRecord(
       return {
         success: true,
         status: "NOT_FOUND",
-        message: "Nothing to delete. This import has already been removed.",
+        message: "Nothing to delete.",
         error: null,
       };
     }
 
-    // 2. Delete associated trades if requested
     if (deleteTrades) {
       try {
         await supabase
@@ -186,23 +175,18 @@ export async function deleteImportRecord(
           .delete()
           .eq('import_id', id)
           .eq('user_id', userId);
+        emitAppEvent("tradefourge:trade-deleted", { importId: id });
       } catch {}
     }
 
-    // 3. Try deleting storage file if path exists
-    let storageFileMissing = false;
     if (existing.storage_path) {
       try {
-        const { error: storageErr } = await supabase.storage
+        await supabase.storage
           .from('csv-imports')
           .remove([existing.storage_path]);
-        if (storageErr) storageFileMissing = true;
-      } catch {
-        storageFileMissing = true;
-      }
+      } catch {}
     }
 
-    // 4. Delete database record
     const { error: dbErr } = await supabase
       .from('csv_imports')
       .delete()
@@ -213,24 +197,17 @@ export async function deleteImportRecord(
       return {
         success: false,
         status: "NOT_FOUND",
-        message: "Failed to delete database record.",
+        message: "Failed to delete.",
         error: dbErr.message,
       };
     }
 
-    if (storageFileMissing) {
-      return {
-        success: true,
-        status: "FILE_MISSING_DB_REMOVED",
-        message: "Import record removed successfully. Associated file was already missing.",
-        error: null,
-      };
-    }
+    emitAppEvent("tradefourge:import-deleted", { importId: id });
 
     return {
       success: true,
       status: "DELETED_SUCCESS",
-      message: "Import deleted successfully.",
+      message: "Import deleted.",
       error: null,
     };
   } catch (err: unknown) {
@@ -238,7 +215,69 @@ export async function deleteImportRecord(
     return {
       success: false,
       status: "NOT_FOUND",
-      message: "Deletion failed.",
+      message: "Failed to delete.",
+      error: message,
+    };
+  }
+}
+
+/**
+ * Purge all import history records and linked trades for a user.
+ */
+export async function deleteAllImports(userId: string): Promise<DeleteImportResult> {
+  const supabase = createClient();
+  try {
+    const { data: existingImports } = await supabase
+      .from('csv_imports')
+      .select('id')
+      .eq('user_id', userId);
+
+    if (!existingImports || existingImports.length === 0) {
+      return {
+        success: true,
+        status: "NOT_FOUND",
+        message: "Nothing to delete.",
+        error: null,
+      };
+    }
+
+    // 1. Purge all trades linked to imports
+    await supabase
+      .from('trades')
+      .delete()
+      .not('import_id', 'is', null)
+      .eq('user_id', userId);
+
+    // 2. Purge all import records
+    const { error: deleteErr } = await supabase
+      .from('csv_imports')
+      .delete()
+      .eq('user_id', userId);
+
+    if (deleteErr) {
+      return {
+        success: false,
+        status: "NOT_FOUND",
+        message: "Failed to delete.",
+        error: deleteErr.message,
+      };
+    }
+
+    emitAppEvent("tradefourge:import-deleted", { all: true });
+    emitAppEvent("tradefourge:trade-deleted", { all: true });
+
+    return {
+      success: true,
+      status: "DELETED_SUCCESS",
+      message: "All imports deleted.",
+      error: null,
+    };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to delete all imports';
+    return {
+      success: false,
+      status: "NOT_FOUND",
+      message: "Failed to delete.",
       error: message,
     };
   }

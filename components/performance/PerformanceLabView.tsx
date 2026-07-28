@@ -9,6 +9,7 @@ import Link from "next/link";
 import { format, parseISO, subDays } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { fetchTrades } from "@/lib/supabase/trades";
+import { useAppEventListener } from "@/lib/events/event-bus";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { calculateCloudAnalytics, CompleteAnalyticsSummary, SymbolPerformance, PeriodPerformance, SessionPerformance } from "@/lib/engine/cloud-analytics-engine";
@@ -72,6 +73,11 @@ export const PerformanceLabView: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useAppEventListener(
+    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted"],
+    loadData
+  );
 
   // Unique symbols list for filter select
   const availableSymbols = useMemo(() => {

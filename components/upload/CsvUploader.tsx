@@ -36,6 +36,7 @@ export const CsvUploader: React.FC = () => {
   const [importProgress, setImportProgress] = useState(0);
   const [notification, setNotification]   = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
   const [duplicateCount, setDuplicateCount] = useState(0);
+  const [importSummary, setImportSummary] = useState<{ imported: number; skippedDuplicates: number; failed: number } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -140,10 +141,12 @@ export const CsvUploader: React.FC = () => {
         magic_number:  null,
       }));
 
-      const { inserted, errors } = await bulkInsertTrades(user.id, cloudTrades);
+      const { inserted, skippedDuplicates, errors } = await bulkInsertTrades(user.id, cloudTrades);
 
       clearInterval(interval);
       setImportProgress(100);
+
+      const failedCount = Math.max(0, parseResult.trades.length - inserted - skippedDuplicates);
 
       // Update import record with final stats
       if (importRecord) {
@@ -151,20 +154,23 @@ export const CsvUploader: React.FC = () => {
           import_status: errors.length > 0 && inserted === 0 ? "failed" :
                          errors.length > 0 ? "partial" : "success",
           imported_rows:   inserted,
-          failed_rows:     parseResult.trades.length - inserted,
+          skipped_rows:    skippedDuplicates,
+          failed_rows:     failedCount,
           error_log:       errors.length > 0 ? errors : null,
           completed_at:    new Date().toISOString(),
         });
       }
 
-      setDuplicateCount(0);
+      setImportSummary({
+        imported: inserted,
+        skippedDuplicates,
+        failed: failedCount,
+      });
+
       setNotification({
         type: errors.length > 0 ? "warning" : "success",
-        message: errors.length > 0
-          ? `Imported ${inserted} of ${parseResult.trades.length} positions. ${errors.length} errors.`
-          : `Successfully imported ${inserted} positions to cloud journal!`,
+        message: `Import summary generated successfully.`,
       });
-      setTimeout(() => router.push("/journal"), 800);
     } catch (err: unknown) {
       clearInterval(interval);
       setIsImporting(false);
@@ -180,6 +186,7 @@ export const CsvUploader: React.FC = () => {
   const resetUpload = () => {
     setFile(null); setFileText(""); setParseResult(null);
     setIsImporting(false); setImportProgress(0); setNotification(null); setDuplicateCount(0);
+    setImportSummary(null);
   };
 
   return (
@@ -203,7 +210,57 @@ export const CsvUploader: React.FC = () => {
         </div>
       </div>
 
-      {/* Notifications */}
+      {/* Import Summary Breakdown Card */}
+      {importSummary && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-6 rounded-2xl glass-card border border-purple-500/30 space-y-6"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white font-mono">Import Summary</h3>
+              <p className="text-xs text-gray-400 font-mono">
+                Processing results for {file?.name || "CSV Import"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
+            <div className="p-4 rounded-xl bg-dark-card border border-emerald-500/30">
+              <span className="text-[10px] text-gray-400 uppercase block mb-1">Imported</span>
+              <span className="text-2xl font-extrabold text-emerald-400">{importSummary.imported}</span>
+            </div>
+            <div className="p-4 rounded-xl bg-dark-card border border-amber-500/30">
+              <span className="text-[10px] text-gray-400 uppercase block mb-1">Skipped Duplicates</span>
+              <span className="text-2xl font-extrabold text-amber-400">{importSummary.skippedDuplicates}</span>
+            </div>
+            <div className="p-4 rounded-xl bg-dark-card border border-rose-500/30">
+              <span className="text-[10px] text-gray-400 uppercase block mb-1">Failed</span>
+              <span className="text-2xl font-extrabold text-rose-400">{importSummary.failed}</span>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2 font-mono">
+            <button
+              onClick={resetUpload}
+              className="px-4 py-2.5 rounded-xl bg-dark-card border border-dark-border text-xs font-semibold text-gray-300 hover:text-white transition-colors"
+            >
+              Upload Another CSV
+            </button>
+            <button
+              onClick={() => router.push("/journal")}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-glow transition-all"
+            >
+              <span>View Trade Journal</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </motion.div>
+      )}
       <AnimatePresence>
         {notification && (
           <motion.div

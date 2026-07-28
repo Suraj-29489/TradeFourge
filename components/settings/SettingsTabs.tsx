@@ -16,6 +16,8 @@ import {
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useUserProfile } from "@/context/UserProfileContext";
+import { deleteAllImports } from "@/lib/supabase/csv-imports";
+import { deleteAllTrades } from "@/lib/supabase/trades";
 
 export const SettingsTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
@@ -164,18 +166,29 @@ export const SettingsTabs: React.FC = () => {
     }
   };
 
+  const [deletingData, setDeletingData] = useState(false);
+
   const handleDeleteAccountData = async () => {
     if (confirmText !== "DELETE") return;
     if (!userId) return;
+    setDeletingData(true);
 
     try {
-      await supabase.from("trades").delete().eq("user_id", userId);
-      await supabase.from("csv_imports").delete().eq("user_id", userId);
+      const resImports = await deleteAllImports(userId);
+      const resTrades = await deleteAllTrades(userId);
       setDeleteModalOpen(false);
-      setSuccessToast("All trading data deleted successfully.");
+
+      if (resImports.status === "NOT_FOUND" && (resTrades.data ?? 0) === 0) {
+        setSuccessToast("Nothing to delete.");
+      } else {
+        setSuccessToast("All imports deleted.");
+      }
       setTimeout(() => setSuccessToast(null), 4000);
     } catch {
-      alert("Failed to delete account data.");
+      setErrorToast("Failed to delete.");
+      setTimeout(() => setErrorToast(null), 4000);
+    } finally {
+      setDeletingData(false);
     }
   };
 

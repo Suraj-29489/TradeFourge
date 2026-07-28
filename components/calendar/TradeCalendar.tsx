@@ -11,6 +11,7 @@ import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { createClient } from "@/lib/supabase/client";
 import { fetchTrades, updateTrade } from "@/lib/supabase/trades";
+import { useAppEventListener } from "@/lib/events/event-bus";
 import type { CloudTradeWithRelations } from "@/types/database";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
 import {
@@ -75,6 +76,11 @@ export const TradeCalendar: React.FC = () => {
   useEffect(() => {
     loadTrades();
   }, []);
+
+  useAppEventListener(
+    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted"],
+    loadTrades
+  );
 
   // Filtered trades list
   const filteredTrades = useMemo(() => {
