@@ -226,7 +226,7 @@ export default function ImportHistoryPage() {
       ) : imports.length === 0 ? (
         <EmptyState
           icon={Upload}
-          title="No Imports Yet"
+          title="No Imports Found"
           description="Upload your MetaTrader 4, MetaTrader 5, cTrader, or TradingView CSV file to start journaling."
           action={{
             label: "Upload CSV",

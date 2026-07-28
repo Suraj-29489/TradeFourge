@@ -14,6 +14,7 @@ import { fetchTrades, updateTrade } from "@/lib/supabase/trades";
 import { useAppEventListener } from "@/lib/events/event-bus";
 import type { CloudTradeWithRelations } from "@/types/database";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
   addMonths, subMonths, isSameDay, setMonth, getYear, setYear
@@ -288,6 +289,26 @@ export const TradeCalendar: React.FC = () => {
     if (h > 0) return `${h}h ${m}m`;
     return `${m}m`;
   };
+
+  if (!loading && trades.length === 0) {
+    return (
+      <div className="space-y-6 font-mono text-xs max-w-7xl mx-auto pb-16">
+        <EmptyState
+          icon={CalendarIcon}
+          title="No trading activity."
+          description="Your trading calendar is empty. Import a CSV file or add trades manually to view daily PnL, session breakdown, and reflection notes."
+          action={{
+            label: "Import CSV",
+            href: "/upload",
+          }}
+          secondaryAction={{
+            label: "Open Journal",
+            href: "/journal",
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-xs font-mono max-w-7xl mx-auto pb-16">

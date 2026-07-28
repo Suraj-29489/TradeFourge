@@ -17,6 +17,7 @@ import { useAppEventListener } from "@/lib/events/event-bus";
 import { calculateCloudAnalytics, CompleteAnalyticsSummary } from "@/lib/engine/cloud-analytics-engine";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
 import { StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { CloudTradeWithRelations, CsvImport } from "@/types/database";
 import {
   Wallet, TrendingUp, TrendingDown, Zap, Target, Award, Clock, Globe,
@@ -328,6 +329,23 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* ── Empty State Banner ───────────────────────────────────────────── */}
+      {trades.length === 0 && (
+        <EmptyState
+          icon={Activity}
+          title="No trading data available."
+          description="Your cloud journal has no trade records. Import a CSV file or add trades manually to populate dashboard analytics, win rates, and situational metrics."
+          action={{
+            label: "Import CSV",
+            href: "/upload",
+          }}
+          secondaryAction={{
+            label: "Add Account",
+            href: "/accounts",
+          }}
+        />
+      )}
 
       {/* ── SECTION 2: 8 KPI Cards Grid (Interactive & Clickable) ──────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">

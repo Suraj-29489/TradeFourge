@@ -145,7 +145,7 @@ export default function AccountsPage() {
       ) : accounts.length === 0 ? (
         <EmptyState
           icon={Wallet}
-          title="No Accounts Yet"
+          title="No Trading Accounts"
           description="Add your first broker account to start tracking trades, balances, and performance across multiple platforms."
           action={{
             label: "Add Your First Account",

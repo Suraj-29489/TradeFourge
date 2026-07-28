@@ -84,31 +84,9 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setDefaultAccount(def);
         devLog(`Trading Account Loaded: "${def.account_name}"`, "success");
       } else {
-        // Self-Healing: Missing trading account -> Automatically create main trading account
-        devLog("Missing Trading Account → Creating Default Main Trading Account...", "warn");
-        const { data: newAcc } = await createTradingAccount(userId, {
-          account_name: "Main Trading Account",
-          broker: "Standard Broker",
-          platform: "Other",
-          account_number: null,
-          account_type: "Live",
-          currency: "USD",
-          leverage: null,
-          starting_balance: 10000,
-          current_balance: 10000,
-          is_default: true,
-          is_active: true,
-          notes: null,
-        });
-
-        if (newAcc) {
-          setAccounts([newAcc]);
-          setDefaultAccount(newAcc);
-          devLog("Trading Account Self-Healing Complete", "success");
-        } else {
-          setAccounts([]);
-          setDefaultAccount(null);
-        }
+        setAccounts([]);
+        setDefaultAccount(null);
+        devLog("No trading accounts found in live DB.", "info");
       }
     } catch (err) {
       console.error("[Persistence] Failed to load trading accounts:", err);

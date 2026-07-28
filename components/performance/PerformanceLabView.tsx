@@ -15,6 +15,7 @@ import { useJournalStore } from "@/lib/store/useJournalStore";
 import { calculateCloudAnalytics, CompleteAnalyticsSummary, SymbolPerformance, PeriodPerformance, SessionPerformance } from "@/lib/engine/cloud-analytics-engine";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
 import { TableSkeleton, StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { CloudTradeWithRelations } from "@/types/database";
 import {
   Zap, TrendingUp, TrendingDown, Target, Award, Clock, Layers, ShieldCheck,
@@ -347,12 +348,22 @@ export const PerformanceLabView: React.FC = () => {
         boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.5)",
       };
 
-  if (loading) {
+  if (!loading && trades.length === 0) {
     return (
-      <div className="space-y-6 font-mono text-xs max-w-7xl mx-auto">
-        <div className="h-16 rounded-2xl glass-card border border-dark-border animate-pulse" />
-        <StatGridSkeleton count={8} />
-        <div className="h-96 rounded-2xl glass-card border border-dark-border animate-pulse" />
+      <div className="space-y-6 font-mono text-xs max-w-7xl mx-auto pb-16">
+        <EmptyState
+          icon={BarChart2}
+          title="Import trades to generate analytics."
+          description="Performance Lab requires trade records to calculate equity curves, win/loss ratios, Sharpe ratio, drawdowns, and institutional performance metrics."
+          action={{
+            label: "Import CSV",
+            href: "/upload",
+          }}
+          secondaryAction={{
+            label: "Open Journal",
+            href: "/journal",
+          }}
+        />
       </div>
     );
   }
