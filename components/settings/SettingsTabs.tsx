@@ -175,17 +175,31 @@ export const SettingsTabs: React.FC = () => {
 
     try {
       const resImports = await deleteAllImports(userId);
+      if (!resImports.success) {
+        setErrorToast(resImports.error || resImports.message);
+        setTimeout(() => setErrorToast(null), 4000);
+        return;
+      }
+
       const resTrades = await deleteAllTrades(userId);
+      if (resTrades.error) {
+        setErrorToast(resTrades.error);
+        setTimeout(() => setErrorToast(null), 4000);
+        return;
+      }
+
       setDeleteModalOpen(false);
+      setConfirmText("");
 
       if (resImports.status === "NOT_FOUND" && (resTrades.data ?? 0) === 0) {
         setSuccessToast("Nothing to delete.");
       } else {
-        setSuccessToast("All imports deleted.");
+        setSuccessToast("All trading history deleted successfully.");
       }
       setTimeout(() => setSuccessToast(null), 4000);
-    } catch {
-      setErrorToast("Failed to delete.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete.";
+      setErrorToast(msg);
       setTimeout(() => setErrorToast(null), 4000);
     } finally {
       setDeletingData(false);

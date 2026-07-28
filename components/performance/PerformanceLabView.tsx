@@ -76,7 +76,7 @@ export const PerformanceLabView: React.FC = () => {
   }, []);
 
   useAppEventListener(
-    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted"],
+    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted", "tradefourge:data-changed"],
     loadData
   );
 

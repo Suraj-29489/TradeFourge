@@ -66,7 +66,7 @@ export default function JournalPage() {
   };
 
   useAppEventListener(
-    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted"],
+    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted", "tradefourge:data-changed"],
     loadTrades
   );
 
@@ -74,15 +74,9 @@ export default function JournalPage() {
     if (!userId) return;
     const { data: success, error: delErr } = await deleteTrade(id, userId);
     if (success) {
-      if (result?.data) {
-        setResult({
-          ...result,
-          data: result.data.filter((t) => t.id !== id),
-          total: Math.max(0, result.total - 1),
-        });
-      }
+      await loadTrades();
     } else {
-      console.error("[TradeFourge Dev Log] Delete trade failed:", delErr);
+      alert(`Delete trade failed: ${delErr || "Database deletion failed"}`);
     }
   };
 

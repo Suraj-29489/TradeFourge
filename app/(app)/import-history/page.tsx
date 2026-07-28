@@ -53,7 +53,7 @@ export default function ImportHistoryPage() {
   }, [loadHistory]);
 
   useAppEventListener(
-    ["tradefourge:import-created", "tradefourge:import-deleted", "tradefourge:trade-created", "tradefourge:trade-deleted"],
+    ["tradefourge:import-created", "tradefourge:import-deleted", "tradefourge:trade-created", "tradefourge:trade-deleted", "tradefourge:data-changed"],
     () => {
       if (userId) loadHistory(userId);
     }
@@ -91,31 +91,37 @@ export default function ImportHistoryPage() {
     const isAll = targetDeleteIds.length === imports.length;
     const idsToRemove = [...targetDeleteIds];
 
-    // Optimistic UI Removal
-    setImports((prev) => prev.filter((item) => !idsToRemove.includes(item.id)));
-    setSelectedIds([]);
-    setTargetDeleteIds([]);
-    setDeleteModalOpen(false);
-
     try {
       if (isAll) {
         const res = await deleteAllImports(userId);
-        setFeedbackToast({ message: res.message, type: res.success ? "success" : "warning" });
+        if (!res.success) {
+          setFeedbackToast({ message: res.error || res.message, type: "warning" });
+          return;
+        }
+        setFeedbackToast({ message: res.message, type: "success" });
       } else {
         let lastResult: DeleteImportResult | null = null;
         for (const id of idsToRemove) {
           lastResult = await deleteImportRecord(id, userId, deleteTradesToo);
+          if (lastResult && !lastResult.success) {
+            setFeedbackToast({ message: lastResult.error || lastResult.message, type: "warning" });
+            break;
+          }
         }
-        if (lastResult && !lastResult.success) {
-          setFeedbackToast({ message: lastResult.message, type: "warning" });
-          if (userId) await loadHistory(userId);
-        } else {
-          setFeedbackToast({ message: lastResult?.message || "Import deleted.", type: "success" });
+        if (lastResult && lastResult.success) {
+          setFeedbackToast({ message: lastResult.message || "Import deleted.", type: "success" });
         }
       }
-    } catch {
-      setFeedbackToast({ message: "Failed to delete.", type: "warning" });
-      if (userId) await loadHistory(userId);
+
+      // Refresh history from live database only after successful DB deletion
+      await loadHistory(userId);
+      setSelectedIds([]);
+      setTargetDeleteIds([]);
+      setDeleteModalOpen(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete.";
+      setFeedbackToast({ message: msg, type: "warning" });
+      await loadHistory(userId);
     } finally {
       setDeleting(false);
       setTimeout(() => setFeedbackToast(null), 4000);

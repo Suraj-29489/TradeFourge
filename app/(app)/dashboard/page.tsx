@@ -83,7 +83,7 @@ export default function DashboardPage() {
   }, [init]);
 
   useAppEventListener(
-    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted"],
+    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted", "tradefourge:data-changed"],
     () => {
       setTrades([]);
       loadDashboardData();

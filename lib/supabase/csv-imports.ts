@@ -129,8 +129,20 @@ export async function deleteImportRecord(
 ): Promise<DeleteImportResult> {
   const supabase = createClient();
   try {
+    // 0. Query rows before
+    const { count: tradesBefore } = await supabase
+      .from('trades')
+      .select('id', { count: 'exact', head: true })
+      .eq('import_id', id)
+      .eq('user_id', userId);
+
+    const { count: importsBefore } = await supabase
+      .from('csv_imports')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
     if (process.env.NODE_ENV !== "production") {
-      console.log(`[TradeFourge Dev Log] Delete Import Request — Target Import ID: ${id}, User ID: ${userId}`);
+      console.log(`[TradeFourge Dev Log] Delete Import Request — Target Import ID: ${id}, User ID: ${userId}, Import Trades Before: ${tradesBefore ?? 0}, Imports Before: ${importsBefore ?? 0}`);
     }
 
     // 1. Verify import record exists
@@ -167,9 +179,14 @@ export async function deleteImportRecord(
         if (process.env.NODE_ENV !== "production") {
           console.error(`[TradeFourge Dev Log] Delete Import Trades Failed — Error: ${tradeDelErr.message}`);
         }
-      } else {
-        deletedTradesCount = deletedTradeRows?.length ?? 0;
+        return {
+          success: false,
+          status: "NOT_FOUND",
+          message: "Failed to delete import trades.",
+          error: tradeDelErr.message,
+        };
       }
+      deletedTradesCount = deletedTradeRows?.length ?? 0;
 
       // Verify no trades remain for this import ID
       const { count: remainingImportTrades } = await supabase
@@ -178,9 +195,11 @@ export async function deleteImportRecord(
         .eq('import_id', id)
         .eq('user_id', userId);
 
-      if (remainingImportTrades && remainingImportTrades > 0) {
+      const tradesAfter = remainingImportTrades ?? 0;
+
+      if (tradesAfter > 0) {
         if (process.env.NODE_ENV !== "production") {
-          console.error(`[TradeFourge Dev Log] Delete Import Trades Verification Failed — ${remainingImportTrades} trades still exist for import ${id}`);
+          console.error(`[TradeFourge Dev Log] Delete Import Trades Verification Failed — ${tradesAfter} trades still exist for import ${id}`);
         }
         return {
           success: false,
@@ -188,6 +207,10 @@ export async function deleteImportRecord(
           message: "Delete failed. Trades for import still exist in database.",
           error: "Verification failed",
         };
+      }
+
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[TradeFourge Dev Log] Delete Import Trades Complete — Trades before: ${tradesBefore ?? 0} ↓ Deleted: ${deletedTradesCount} ↓ Remaining: ${tradesAfter}`);
       }
     }
 
@@ -215,7 +238,7 @@ export async function deleteImportRecord(
       return {
         success: false,
         status: "NOT_FOUND",
-        message: "Failed to delete.",
+        message: "Failed to delete import record.",
         error: dbErr?.message || "0 rows deleted",
       };
     }
@@ -239,12 +262,18 @@ export async function deleteImportRecord(
       };
     }
 
+    const { count: importsAfter } = await supabase
+      .from('csv_imports')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
     if (process.env.NODE_ENV !== "production") {
-      console.log(`[TradeFourge Dev Log] Delete Import Success — Import ID: ${id}, Deleted Trades: ${deletedTradesCount}, Import DB Record Removed`);
+      console.log(`[TradeFourge Dev Log] Delete Import Record Complete — Imports before: ${importsBefore ?? 0} ↓ Deleted: 1 ↓ Remaining: ${importsAfter ?? 0}`);
     }
 
     emitAppEvent("tradefourge:trade-deleted", { importId: id, count: deletedTradesCount });
     emitAppEvent("tradefourge:import-deleted", { importId: id });
+    emitAppEvent("tradefourge:data-changed", { importId: id, action: "deleteImportRecord" });
 
     return {
       success: true,
@@ -269,25 +298,19 @@ export async function deleteImportRecord(
 export async function deleteAllImports(userId: string): Promise<DeleteImportResult> {
   const supabase = createClient();
   try {
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[TradeFourge Dev Log] Delete All Imports Request — User ID: ${userId}`);
-    }
-
-    const { data: existingImports } = await supabase
-      .from('csv_imports')
-      .select('id')
+    // 0. Query rows before
+    const { count: tradesBefore } = await supabase
+      .from('trades')
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
 
-    if (!existingImports || existingImports.length === 0) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn(`[TradeFourge Dev Log] Delete All Imports Warning — No imports found for user.`);
-      }
-      return {
-        success: true,
-        status: "NOT_FOUND",
-        message: "Nothing to delete.",
-        error: null,
-      };
+    const { count: importsBefore } = await supabase
+      .from('csv_imports')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[TradeFourge Dev Log] Delete All Imports Request — User: ${userId}, Trades Before: ${tradesBefore ?? 0}, Imports Before: ${importsBefore ?? 0}`);
     }
 
     // 1. Purge all trades for user with .select('id')
@@ -297,8 +320,16 @@ export async function deleteAllImports(userId: string): Promise<DeleteImportResu
       .eq('user_id', userId)
       .select('id');
 
-    if (tradeErr && process.env.NODE_ENV !== "production") {
-      console.error(`[TradeFourge Dev Log] Delete All Imports - Trades Delete Error: ${tradeErr.message}`);
+    if (tradeErr) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[TradeFourge Dev Log] Delete All Imports - Trades Delete Error: ${tradeErr.message}`);
+      }
+      return {
+        success: false,
+        status: "NOT_FOUND",
+        message: "Failed to purge trades.",
+        error: tradeErr.message,
+      };
     }
 
     const deletedTradesCount = deletedTradeRows?.length ?? 0;
@@ -317,7 +348,7 @@ export async function deleteAllImports(userId: string): Promise<DeleteImportResu
       return {
         success: false,
         status: "NOT_FOUND",
-        message: "Failed to delete.",
+        message: "Failed to delete import records.",
         error: deleteErr.message,
       };
     }
@@ -335,29 +366,33 @@ export async function deleteAllImports(userId: string): Promise<DeleteImportResu
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
 
-    if ((remainingImports && remainingImports > 0) || (remainingTrades && remainingTrades > 0)) {
+    const importsAfter = remainingImports ?? 0;
+    const tradesAfter  = remainingTrades ?? 0;
+
+    if (importsAfter > 0 || tradesAfter > 0) {
       if (process.env.NODE_ENV !== "production") {
-        console.error(`[TradeFourge Dev Log] Delete All Imports Verification Failed — Imports remaining: ${remainingImports ?? 0}, Trades remaining: ${remainingTrades ?? 0}`);
+        console.error(`[TradeFourge Dev Log] Delete All Imports Verification Failed — Imports remaining: ${importsAfter}, Trades remaining: ${tradesAfter}`);
       }
       return {
         success: false,
         status: "NOT_FOUND",
-        message: "Delete failed. Records still exist in database.",
+        message: `Delete failed. ${tradesAfter} trades and ${importsAfter} imports remain in database.`,
         error: "Verification failed",
       };
     }
 
     if (process.env.NODE_ENV !== "production") {
-      console.log(`[TradeFourge Dev Log] Delete All Imports Success — Deleted Imports: ${deletedImportsCount}, Deleted Trades: ${deletedTradesCount}, Remaining Imports: 0`);
+      console.log(`[TradeFourge Dev Log] Delete All Imports Complete — Trades: ${tradesBefore ?? 0} ↓ ${deletedTradesCount} ↓ 0 | Imports: ${importsBefore ?? 0} ↓ ${deletedImportsCount} ↓ 0`);
     }
 
     emitAppEvent("tradefourge:import-deleted", { all: true });
     emitAppEvent("tradefourge:trade-deleted", { all: true });
+    emitAppEvent("tradefourge:data-changed", { all: true, action: "deleteAllImports" });
 
     return {
       success: true,
       status: "DELETED_SUCCESS",
-      message: "All imports deleted.",
+      message: "All imports and trades deleted.",
       error: null,
     };
   } catch (err: unknown) {
