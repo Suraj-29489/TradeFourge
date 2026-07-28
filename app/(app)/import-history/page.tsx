@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { fetchImportHistory, deleteImportRecord, deleteAllImports } from "@/lib/supabase/csv-imports";
+import { fetchImportHistory, deleteImportRecord, deleteAllImports, type DeleteImportResult } from "@/lib/supabase/csv-imports";
 import { useAppEventListener } from "@/lib/events/event-bus";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ImportStatusBadge } from "@/components/ui/Badge";
@@ -36,7 +36,7 @@ export default function ImportHistoryPage() {
   const loadHistory = useCallback(async (uid: string) => {
     setLoading(true);
     setError(null);
-    const { data, error: err } = await fetchImportHistory(uid, 100);
+    const { data, error: err } = await fetchImportHistory(uid);
     if (err) setError(err);
     else setImports(data ?? []);
     setLoading(false);
@@ -99,10 +99,16 @@ export default function ImportHistoryPage() {
         const res = await deleteAllImports(userId);
         setFeedbackToast({ message: res.message, type: res.success ? "success" : "warning" });
       } else {
+        let lastResult: DeleteImportResult | null = null;
         for (const id of idsToRemove) {
-          await deleteImportRecord(id, userId, deleteTradesToo);
+          lastResult = await deleteImportRecord(id, userId, deleteTradesToo);
         }
-        setFeedbackToast({ message: "Import deleted.", type: "success" });
+        if (lastResult && !lastResult.success) {
+          setFeedbackToast({ message: lastResult.message, type: "warning" });
+          if (userId) await loadHistory(userId);
+        } else {
+          setFeedbackToast({ message: lastResult?.message || "Import deleted.", type: "success" });
+        }
       }
     } catch {
       setFeedbackToast({ message: "Failed to delete.", type: "warning" });

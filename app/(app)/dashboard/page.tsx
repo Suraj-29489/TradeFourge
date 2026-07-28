@@ -60,10 +60,17 @@ export default function DashboardPage() {
         fetchLatestImport(user.id),
       ]);
 
-      if (tradesRes.data?.data) setTrades(tradesRes.data.data);
-      if (impRes.data) setLatestImport(impRes.data);
+      const fetchedTrades = tradesRes.data?.data ?? [];
+      setTrades(fetchedTrades);
+      setLatestImport(impRes.data ?? null);
+
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[TradeFourge Dev Log] Dashboard refresh completed. Active trade count: ${fetchedTrades.length}`);
+      }
     } catch (err) {
       console.error("Dashboard load failed:", err);
+      setTrades([]);
+      setLatestImport(null);
     } finally {
       setLoading(false);
     }
@@ -76,7 +83,10 @@ export default function DashboardPage() {
 
   useAppEventListener(
     ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted"],
-    loadDashboardData
+    () => {
+      setTrades([]);
+      loadDashboardData();
+    }
   );
 
   // Analytics Engine Calculation

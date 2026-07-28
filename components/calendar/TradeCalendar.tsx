@@ -62,12 +62,17 @@ export const TradeCalendar: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data } = await fetchTrades(user.id, {}, 1, 10000, "close_time", false);
-        if (data?.data) {
-          setTrades(data.data);
+        const fetchedTrades = data?.data ?? [];
+        setTrades(fetchedTrades);
+        if (process.env.NODE_ENV !== "production") {
+          console.log(`[TradeFourge Dev Log] Calendar refresh completed. Active trade count: ${fetchedTrades.length}`);
         }
+      } else {
+        setTrades([]);
       }
     } catch (err) {
       console.error("Calendar load error:", err);
+      setTrades([]);
     } finally {
       setLoading(false);
     }
@@ -79,7 +84,10 @@ export const TradeCalendar: React.FC = () => {
 
   useAppEventListener(
     ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted"],
-    loadTrades
+    () => {
+      setTrades([]);
+      loadTrades();
+    }
   );
 
   // Filtered trades list

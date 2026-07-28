@@ -1,5 +1,5 @@
 // lib/supabase/trades.ts
-// CRUD service for the trades table with 3-tier duplicate detection and typed domain event emission.
+// CRUD service for the trades table with 3-tier duplicate detection, verified delete operations, and dev logging.
 
 import { createClient } from './client';
 import { emitAppEvent } from '@/lib/events/event-bus';
@@ -206,12 +206,6 @@ export async function fetchTradeStats(
 
 // ─── Deduplication Engine ──────────────────────────────────────────────────────
 
-/**
- * 3-Tier Deduplication Algorithm:
- * Priority 1: external_trade_id match
- * Priority 2: ticket + account_id match
- * Priority 3: symbol + open_time + close_time + side + volume match
- */
 export async function deduplicateTrades(
   userId: string,
   candidates: NewCloudTrade[]
@@ -309,10 +303,6 @@ export async function createTrade(
   }
 }
 
-/**
- * Bulk insert trades with 3-priority deduplication engine.
- * Returns { inserted, skippedDuplicates, errors }.
- */
 export async function bulkInsertTrades(
   userId: string,
   trades: NewCloudTrade[]
@@ -383,7 +373,7 @@ export async function updateTrade(
   }
 }
 
-// ─── Delete Operations ────────────────────────────────────────────────────────
+// ─── Verified Delete Operations ───────────────────────────────────────────────
 
 export async function deleteTrade(
   id: string,
@@ -391,32 +381,112 @@ export async function deleteTrade(
 ): Promise<ServiceResult<boolean>> {
   const supabase = createClient();
   try {
-    const { error } = await supabase
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[TradeFourge Dev Log] Delete Request — Target Trade ID: ${id}, User ID: ${userId}`);
+    }
+
+    // 1. DELETE with .select('id') to get affected rows count
+    const { data: deletedRows, error: deleteErr } = await supabase
       .from('trades')
       .delete()
       .eq('id', id)
+      .eq('user_id', userId)
+      .select('id');
+
+    if (deleteErr) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[TradeFourge Dev Log] Delete Failed — Error: ${deleteErr.message}`);
+      }
+      return { data: false, error: deleteErr.message };
+    }
+
+    const rowsAffected = deletedRows?.length ?? 0;
+
+    if (rowsAffected === 0) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`[TradeFourge Dev Log] Delete Warning — 0 rows affected. Nothing was deleted from DB.`);
+      }
+      return { data: false, error: "Nothing was deleted." };
+    }
+
+    // 2. Perform fresh verification query to confirm record is gone from PostgreSQL
+    const { data: checkRow } = await supabase
+      .from('trades')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (checkRow) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[TradeFourge Dev Log] Delete Verification Failed — Record ${id} still exists in DB after DELETE!`);
+      }
+      return { data: false, error: "Delete failed. Record still exists in database." };
+    }
+
+    // 3. Query remaining user trades count for dev log
+    const { count: remainingCount } = await supabase
+      .from('trades')
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
 
-    if (error) return { data: null, error: error.message };
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[TradeFourge Dev Log] Delete Success — Deleted ID: ${id}, Rows Affected: ${rowsAffected}, Remaining User Trades: ${remainingCount ?? 0}`);
+    }
+
     emitAppEvent("tradefourge:trade-deleted", { tradeId: id });
     return { data: true, error: null };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to delete trade';
-    return { data: null, error: message };
+    return { data: false, error: message };
   }
 }
 
 export async function deleteAllTrades(userId: string): Promise<ServiceResult<number>> {
   const supabase = createClient();
   try {
-    const { data, error } = await supabase
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[TradeFourge Dev Log] Delete All Trades Request — User ID: ${userId}`);
+    }
+
+    const { data: deletedRows, error: deleteErr } = await supabase
       .from('trades')
       .delete()
       .eq('user_id', userId)
       .select('id');
 
-    if (error) return { data: 0, error: error.message };
-    const count = data?.length ?? 0;
+    if (deleteErr) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[TradeFourge Dev Log] Delete All Trades Failed — Error: ${deleteErr.message}`);
+      }
+      return { data: 0, error: deleteErr.message };
+    }
+
+    const count = deletedRows?.length ?? 0;
+
+    if (count === 0) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`[TradeFourge Dev Log] Delete All Trades — 0 trades found to delete.`);
+      }
+      return { data: 0, error: null };
+    }
+
+    // Verification check
+    const { count: remainingCount } = await supabase
+      .from('trades')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (remainingCount && remainingCount > 0) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[TradeFourge Dev Log] Delete All Trades Verification Failed — ${remainingCount} trades remain!`);
+      }
+      return { data: 0, error: "Delete failed. Trades still exist in database." };
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[TradeFourge Dev Log] Delete All Trades Success — Deleted Rows: ${count}, Remaining Rows: 0`);
+    }
+
     emitAppEvent("tradefourge:trade-deleted", { count, all: true });
     return { data: count, error: null };
   } catch (err: unknown) {
@@ -431,15 +501,43 @@ export async function deleteTradesByImportId(
 ): Promise<ServiceResult<number>> {
   const supabase = createClient();
   try {
-    const { data, error } = await supabase
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[TradeFourge Dev Log] Delete Trades by Import ID Request — Import ID: ${importId}`);
+    }
+
+    const { data: deletedRows, error: deleteErr } = await supabase
       .from('trades')
       .delete()
       .eq('import_id', importId)
       .eq('user_id', userId)
       .select('id');
 
-    if (error) return { data: 0, error: error.message };
-    const count = data?.length ?? 0;
+    if (deleteErr) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[TradeFourge Dev Log] Delete Trades by Import ID Failed — Error: ${deleteErr.message}`);
+      }
+      return { data: 0, error: deleteErr.message };
+    }
+
+    const count = deletedRows?.length ?? 0;
+
+    const { count: remainingCount } = await supabase
+      .from('trades')
+      .select('id', { count: 'exact', head: true })
+      .eq('import_id', importId)
+      .eq('user_id', userId);
+
+    if (remainingCount && remainingCount > 0) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error(`[TradeFourge Dev Log] Delete Trades by Import ID Verification Failed — ${remainingCount} trades remain for import ${importId}`);
+      }
+      return { data: 0, error: "Delete failed. Import trades still exist in database." };
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[TradeFourge Dev Log] Delete Trades by Import ID Success — Import ID: ${importId}, Deleted Trades: ${count}, Remaining Trades for Import: 0`);
+    }
+
     emitAppEvent("tradefourge:trade-deleted", { count, importId });
     return { data: count, error: null };
   } catch (err: unknown) {

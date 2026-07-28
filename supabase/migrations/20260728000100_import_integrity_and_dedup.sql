@@ -1,6 +1,6 @@
 -- =============================================================================
--- TradeFourge — Migration 20260728000100: Import Integrity & Deduplication
--- Version: v3.2.7
+-- TradeFourge — Migration 20260728000100: Import Integrity & Deduplication & Delete RLS
+-- Version: v3.2.7.1
 -- Target: PostgreSQL / Supabase
 -- =============================================================================
 
@@ -38,6 +38,18 @@ WHERE t1.id > t2.id
       AND COALESCE(t1.close_time, t1.created_at) = COALESCE(t2.close_time, t2.created_at)
     )
   );
+
+-- 4. EXPLICIT CANONICAL DELETE RLS POLICIES FOR TRADES AND CSV_IMPORTS
+ALTER TABLE public.trades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.csv_imports ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "trades_delete_own" ON public.trades;
+DROP POLICY IF EXISTS "Users can delete own trades" ON public.trades;
+CREATE POLICY "trades_delete_own" ON public.trades FOR DELETE USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "imports_delete_own" ON public.csv_imports;
+DROP POLICY IF EXISTS "Users can delete own imports" ON public.csv_imports;
+CREATE POLICY "imports_delete_own" ON public.csv_imports FOR DELETE USING (auth.uid() = user_id);
 
 -- =============================================================================
 -- END OF MIGRATION

@@ -94,22 +94,11 @@ export const CsvUploader: React.FC = () => {
       if (!user) throw new Error("Not authenticated");
 
       // Create import record
-      const { data: importRecord } = await createImportRecord(user.id, {
-        filename:        file.name,
-        broker:          parseResult.broker ?? null,
-        platform:        "MetaTrader 5",
-        import_status:   "processing",
-        total_rows:      parseResult.trades.length,
-        imported_rows:   0,
-        skipped_rows:    0,
-        duplicate_rows:  0,
-        failed_rows:     0,
-        uploaded_at:     new Date().toISOString(),
-        account_id:      null,
-        notes:           null,
-        error_log:       null,
-        completed_at:    null,
-      });
+      const { data: importRecord } = await createImportRecord(
+        user.id,
+        file.name,
+        parseResult.trades.length
+      );
 
       // Map NormalizedTrade → NewCloudTrade
       const cloudTrades: NewCloudTrade[] = parseResult.trades.map(t => ({
