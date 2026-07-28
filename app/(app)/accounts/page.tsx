@@ -17,6 +17,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useAppEventListener } from "@/lib/events/event-bus";
 import {
   fetchTradingAccounts,
   createTradingAccount,
@@ -64,6 +65,13 @@ export default function AccountsPage() {
       }
     })();
   }, []);
+
+  useAppEventListener(
+    ["tradefourge:account-created", "tradefourge:account-updated", "tradefourge:account-deleted", "tradefourge:trade-created", "tradefourge:trade-deleted"],
+    () => {
+      if (userId) loadAccounts(userId);
+    }
+  );
 
   // ── Create ────────────────────────────────────────────────────────────────
   const handleCreate = async (data: NewTradingAccount) => {

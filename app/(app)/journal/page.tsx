@@ -66,7 +66,7 @@ export default function JournalPage() {
   };
 
   useAppEventListener(
-    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted"],
+    ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted"],
     loadTrades
   );
 

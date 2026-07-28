@@ -6,6 +6,7 @@ import { ParseValidationResult } from "@/lib/engine/types";
 import { bulkInsertTrades } from "@/lib/supabase/trades";
 import { createImportRecord, updateImportRecord } from "@/lib/supabase/csv-imports";
 import { createClient } from "@/lib/supabase/client";
+import { emitAppEvent } from "@/lib/events/event-bus";
 import type { NewCloudTrade } from "@/types/database";
 import {
   Upload,
@@ -15,247 +16,260 @@ import {
   FileSpreadsheet,
   ArrowRight,
   ShieldCheck,
-  Trash2,
+  RotateCcw,
+  ListCheck,
+  Loader2,
+  Check,
   AlertTriangle,
-  Copy,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 
+export interface QueuedFileItem {
+  id: string;
+  file: File;
+  fileText: string;
+  parseResult: ParseValidationResult | null;
+  status: "queued" | "parsing" | "importing" | "success" | "partial" | "failed";
+  progress: number;
+  summary: { imported: number; skippedDuplicates: number; failed: number } | null;
+  error: string | null;
+}
 
 export const CsvUploader: React.FC = () => {
-  // Phase 3.0: CsvUploader still parses locally.
-  // Phase 3.1 will call bulkInsertTrades() to push parsed data to Supabase.
   const router = useRouter();
 
-  const [dragActive, setDragActive]       = useState(false);
-  const [file, setFile]                   = useState<File | null>(null);
-  const [fileText, setFileText]           = useState<string>("");
-  const [parseResult, setParseResult]     = useState<ParseValidationResult | null>(null);
-  const [isImporting, setIsImporting]     = useState(false);
-  const [importProgress, setImportProgress] = useState(0);
-  const [notification, setNotification]   = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
-  const [duplicateCount, setDuplicateCount] = useState(0);
-  const [importSummary, setImportSummary] = useState<{ imported: number; skippedDuplicates: number; failed: number } | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [queuedFiles, setQueuedFiles] = useState<QueuedFileItem[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
+  const [notification, setNotification] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (selectedFile: File) => {
-    if (!selectedFile.name.toLowerCase().endsWith(".csv")) {
-      setNotification({ type: "error", message: "Invalid file format. Please select a valid CSV file." });
+  const handleFilesSelect = async (filesList: FileList | File[]) => {
+    const validFiles: File[] = [];
+    const filesArray = Array.from(filesList);
+
+    for (const f of filesArray) {
+      if (f.name.toLowerCase().endsWith(".csv")) {
+        validFiles.push(f);
+      }
+    }
+
+    if (validFiles.length === 0) {
+      setNotification({ type: "error", message: "Invalid file format. Please select valid CSV file(s)." });
       return;
     }
 
-    setFile(selectedFile);
     setNotification(null);
-    setDuplicateCount(0);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      setFileText(text);
+    const newItems: QueuedFileItem[] = [];
 
-      const res = validateAndParseCsv(text, selectedFile.name.replace(/\.[^.]+$/, ""));
-      setParseResult(res);
-
-      if (!res.success) {
-        setNotification({ type: "error", message: res.errors.join("; ") || "CSV parsing failed." });
-      } else if (res.isCentAccount) {
-        setNotification({
-          type: "warning",
-          message: `USC Cent account detected — monetary values will be normalized to USD (÷100) on import.`,
+    for (const f of validFiles) {
+      try {
+        const text = await f.text();
+        const res = validateAndParseCsv(text, f.name.replace(/\.[^.]+$/, ""));
+        newItems.push({
+          id: Math.random().toString(36).substring(2, 9),
+          file: f,
+          fileText: text,
+          parseResult: res,
+          status: res.success ? "queued" : "failed",
+          progress: 0,
+          summary: null,
+          error: res.success ? null : (res.errors.join("; ") || "CSV parsing failed"),
         });
-      } else if (!res.isMatch) {
-        setNotification({ type: "warning", message: res.warningMessage || "CSV parsing mismatch detected." });
+      } catch (err) {
+        newItems.push({
+          id: Math.random().toString(36).substring(2, 9),
+          file: f,
+          fileText: "",
+          parseResult: null,
+          status: "failed",
+          progress: 0,
+          summary: null,
+          error: "Failed to read CSV file text.",
+        });
       }
-    };
-    reader.readAsText(selectedFile);
+    }
+
+    setQueuedFiles(prev => [...prev, ...newItems]);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
-    if (e.dataTransfer.files?.[0]) handleFileSelect(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFilesSelect(e.dataTransfer.files);
+    }
   };
 
-  const handleConfirmImport = async () => {
-    if (!parseResult || !parseResult.success || !fileText || !file) return;
+  const removeFromQueue = (id: string) => {
+    setQueuedFiles(prev => prev.filter(item => item.id !== id));
+  };
+
+  const clearQueue = () => {
+    setQueuedFiles([]);
+    setNotification(null);
+    setIsImporting(false);
+  };
+
+  const retryItem = (id: string) => {
+    setQueuedFiles(prev => prev.map(item => item.id === id ? { ...item, status: "queued", error: null, progress: 0 } : item));
+  };
+
+  const handleConfirmImportAll = async () => {
+    const pendingItems = queuedFiles.filter(item => item.status === "queued" || item.status === "failed");
+    if (pendingItems.length === 0) return;
 
     setIsImporting(true);
-    setImportProgress(10);
-
-    const interval = setInterval(() => {
-      setImportProgress(prev => (prev < 85 ? prev + 15 : prev));
-    }, 120);
+    setNotification(null);
 
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Create import record
-      const { data: importRecord } = await createImportRecord(
-        user.id,
-        file.name,
-        parseResult.trades.length
-      );
+      let totalImportedAll = 0;
 
-      // Map NormalizedTrade → NewCloudTrade
-      const cloudTrades: NewCloudTrade[] = parseResult.trades.map(t => ({
-        account_id:    null,
-        ticket:        t.ticket,
-        symbol:        t.symbol,
-        side:          (t.direction === "LONG" ? "BUY" : "SELL") as "BUY" | "SELL",
-        volume:        t.volume,
-        open_price:    t.openPrice,
-        close_price:   t.closePrice,
-        stop_loss:     t.stopLoss ?? null,
-        take_profit:   t.takeProfit ?? null,
-        open_time:     t.openTime,
-        close_time:    t.closeTime,
-        duration_seconds: t.holdDurationMs ? Math.round(t.holdDurationMs / 1000) : null,
-        profit:        t.profit,
-        commission:    t.commission,
-        swap:          t.swap,
-        risk_amount:   null,
-        rr_ratio:      t.rr,
-        outcome:       t.status as "WIN" | "LOSS" | "BREAKEVEN",
-        source:        "csv_import",
-        session:       null,
-        strategy:      null,
-        notes:         t.comment ?? null,
-        emotions:      null,
-        lessons:       null,
-        mistakes:      null,
-        magic_number:  null,
-        import_id:     importRecord ? importRecord.id : null,
-      }));
+      for (const item of pendingItems) {
+        if (!item.parseResult || !item.parseResult.success) continue;
 
-      const { inserted, skippedDuplicates, errors } = await bulkInsertTrades(user.id, cloudTrades);
+        // Set status to importing
+        setQueuedFiles(prev => prev.map(q => q.id === item.id ? { ...q, status: "importing", progress: 25 } : q));
 
-      clearInterval(interval);
-      setImportProgress(100);
+        try {
+          // 1. Create import record
+          const { data: importRecord } = await createImportRecord(
+            user.id,
+            item.file.name,
+            item.parseResult.trades.length
+          );
 
-      const failedCount = Math.max(0, parseResult.trades.length - inserted - skippedDuplicates);
+          setQueuedFiles(prev => prev.map(q => q.id === item.id ? { ...q, progress: 50 } : q));
 
-      // Update import record with final stats
-      if (importRecord) {
-        await updateImportRecord(importRecord.id, user.id, {
-          import_status: errors.length > 0 && inserted === 0 ? "failed" :
-                         errors.length > 0 ? "partial" : "success",
-          imported_rows:   inserted,
-          skipped_rows:    skippedDuplicates,
-          failed_rows:     failedCount,
-          error_log:       errors.length > 0 ? errors : null,
-          completed_at:    new Date().toISOString(),
-        });
+          // 2. Map trades with import_id
+          const cloudTrades: NewCloudTrade[] = item.parseResult.trades.map(t => ({
+            account_id:    null,
+            ticket:        t.ticket,
+            symbol:        t.symbol,
+            side:          (t.direction === "LONG" ? "BUY" : "SELL") as "BUY" | "SELL",
+            volume:        t.volume,
+            open_price:    t.openPrice,
+            close_price:   t.closePrice,
+            stop_loss:     t.stopLoss ?? null,
+            take_profit:   t.takeProfit ?? null,
+            open_time:     t.openTime,
+            close_time:    t.closeTime,
+            duration_seconds: t.holdDurationMs ? Math.round(t.holdDurationMs / 1000) : null,
+            profit:        t.profit,
+            commission:    t.commission,
+            swap:          t.swap,
+            risk_amount:   null,
+            rr_ratio:      t.rr,
+            outcome:       t.status as "WIN" | "LOSS" | "BREAKEVEN",
+            source:        "csv_import",
+            session:       null,
+            strategy:      null,
+            notes:         t.comment ?? null,
+            emotions:      null,
+            lessons:       null,
+            mistakes:      null,
+            magic_number:  null,
+            import_id:     importRecord ? importRecord.id : null,
+          }));
+
+          // 3. Bulk insert trades
+          const { inserted, skippedDuplicates, errors } = await bulkInsertTrades(user.id, cloudTrades);
+
+          setQueuedFiles(prev => prev.map(q => q.id === item.id ? { ...q, progress: 80 } : q));
+
+          const failedCount = Math.max(0, item.parseResult.trades.length - inserted - skippedDuplicates);
+          const finalStatus = errors.length > 0 && inserted === 0 ? "failed" : errors.length > 0 ? "partial" : "success";
+
+          // 4. Update import record
+          if (importRecord) {
+            await updateImportRecord(importRecord.id, user.id, {
+              import_status: finalStatus,
+              imported_rows: inserted,
+              skipped_rows: skippedDuplicates,
+              failed_rows: failedCount,
+              error_log: errors.length > 0 ? errors : null,
+              completed_at: new Date().toISOString(),
+            });
+          }
+
+          totalImportedAll += inserted;
+
+          // 5. Update item status
+          setQueuedFiles(prev => prev.map(q => q.id === item.id ? {
+            ...q,
+            status: finalStatus,
+            progress: 100,
+            summary: { imported: inserted, skippedDuplicates, failed: failedCount },
+            error: errors.length > 0 ? errors.join("; ") : null,
+          } : q));
+
+        } catch (itemErr: unknown) {
+          const itemErrMsg = itemErr instanceof Error ? itemErr.message : "File import failed";
+          setQueuedFiles(prev => prev.map(q => q.id === item.id ? {
+            ...q,
+            status: "failed",
+            progress: 100,
+            error: itemErrMsg,
+          } : q));
+        }
       }
 
-      setImportSummary({
-        imported: inserted,
-        skippedDuplicates,
-        failed: failedCount,
-      });
+      // Centralized event dispatch
+      emitAppEvent("tradefourge:import-created", { count: totalImportedAll });
+      emitAppEvent("tradefourge:trade-created", { count: totalImportedAll });
 
       setNotification({
-        type: errors.length > 0 ? "warning" : "success",
-        message: `Import summary generated successfully.`,
+        type: "success",
+        message: `Queue processed successfully. Total ${totalImportedAll} trade(s) imported.`,
       });
+
     } catch (err: unknown) {
-      clearInterval(interval);
-      setIsImporting(false);
-      setImportProgress(0);
       setNotification({
         type: "error",
-        message: err instanceof Error ? err.message : "Import failed — please try again.",
+        message: err instanceof Error ? err.message : "Import queue failed — please try again.",
       });
+    } finally {
+      // 🔒 ALWAYS GUARANTEE LOADING STATE IS CLEARED ON EVERY PATH!
+      setIsImporting(false);
     }
   };
 
-
-  const resetUpload = () => {
-    setFile(null); setFileText(""); setParseResult(null);
-    setIsImporting(false); setImportProgress(0); setNotification(null); setDuplicateCount(0);
-    setImportSummary(null);
-  };
+  const pendingCount = queuedFiles.filter(item => item.status === "queued" || item.status === "failed").length;
 
   return (
-    <div className="space-y-6">
-      {/* Title Card */}
-      <div className="p-6 rounded-2xl glass-card border border-dark-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div className="space-y-6 text-xs font-mono">
+      {/* Title Header */}
+      <div className="p-6 rounded-2xl glass-card border border-dark-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-            Upload TradeFourge CSV
-            <span className="text-xs font-mono px-2 py-0.5 rounded bg-brand-600/20 text-brand-400 border border-brand-500/30">
-              v1.2
+          <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+            Upload TradeFourge CSV Workstation
+            <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30">
+              v3.2.8
             </span>
           </h2>
           <p className="text-xs text-gray-400 mt-1">
-            Each CSV creates an independent journal. Duplicate trades are auto-detected and skipped.
+            Batch process single or multiple MetaTrader 4, MetaTrader 5, cTrader & TradingView CSV files with sequential queue execution.
           </p>
         </div>
-        <div className="p-3 rounded-xl bg-dark-card border border-dark-border hidden sm:flex items-center gap-2 text-xs font-mono text-gray-300">
+        <div className="p-3 rounded-xl bg-dark-card border border-dark-border flex items-center gap-2 text-xs text-gray-300">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Duplicate Detection + USC Normalization</span>
+          <span>Multi-CSV Queue + Duplication Guard</span>
         </div>
       </div>
 
-      {/* Import Summary Breakdown Card */}
-      {importSummary && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="p-6 rounded-2xl glass-card border border-purple-500/30 space-y-6"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-white font-mono">Import Summary</h3>
-              <p className="text-xs text-gray-400 font-mono">
-                Processing results for {file?.name || "CSV Import"}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
-            <div className="p-4 rounded-xl bg-dark-card border border-emerald-500/30">
-              <span className="text-[10px] text-gray-400 uppercase block mb-1">Imported</span>
-              <span className="text-2xl font-extrabold text-emerald-400">{importSummary.imported}</span>
-            </div>
-            <div className="p-4 rounded-xl bg-dark-card border border-amber-500/30">
-              <span className="text-[10px] text-gray-400 uppercase block mb-1">Skipped Duplicates</span>
-              <span className="text-2xl font-extrabold text-amber-400">{importSummary.skippedDuplicates}</span>
-            </div>
-            <div className="p-4 rounded-xl bg-dark-card border border-rose-500/30">
-              <span className="text-[10px] text-gray-400 uppercase block mb-1">Failed</span>
-              <span className="text-2xl font-extrabold text-rose-400">{importSummary.failed}</span>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2 font-mono">
-            <button
-              onClick={resetUpload}
-              className="px-4 py-2.5 rounded-xl bg-dark-card border border-dark-border text-xs font-semibold text-gray-300 hover:text-white transition-colors"
-            >
-              Upload Another CSV
-            </button>
-            <button
-              onClick={() => router.push("/journal")}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-glow transition-all"
-            >
-              <span>View Trade Journal</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </motion.div>
-      )}
+      {/* Notification Toast */}
       <AnimatePresence>
         {notification && (
           <motion.div
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className={`p-4 rounded-xl border text-xs font-mono flex items-center justify-between ${
+            className={`p-4 rounded-xl border flex items-center justify-between ${
               notification.type === "success"
                 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
                 : notification.type === "warning"
@@ -265,14 +279,14 @@ export const CsvUploader: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               {notification.type === "success"
-                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 : notification.type === "warning"
-                ? <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                : <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                ? <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                : <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
               }
               <span>{notification.message}</span>
             </div>
-            <button onClick={() => setNotification(null)} className="p-1 hover:text-white flex-shrink-0">
+            <button onClick={() => setNotification(null)} className="p-1 hover:text-white shrink-0">
               <X className="w-4 h-4" />
             </button>
           </motion.div>
@@ -280,179 +294,171 @@ export const CsvUploader: React.FC = () => {
       </AnimatePresence>
 
       {/* Drop Zone */}
-      {!file ? (
-        <div
-          onDragOver={e => { e.preventDefault(); setDragActive(true); }}
-          onDragLeave={() => setDragActive(false)}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`p-12 md:p-16 rounded-2xl border-2 border-dashed text-center cursor-pointer transition-all duration-300 glass-card flex flex-col items-center justify-center gap-4 ${
-            dragActive
-              ? "border-brand-500 bg-brand-500/10 shadow-glow scale-[1.01]"
-              : "border-dark-border hover:border-brand-500/40 hover:bg-dark-hover/40"
-          }`}
-        >
-          <input type="file" ref={fileInputRef} accept=".csv" onChange={e => e.target.files?.[0] && handleFileSelect(e.target.files[0])} className="hidden" />
-          <div className="w-16 h-16 rounded-2xl bg-brand-600/20 border border-brand-500/30 text-brand-400 flex items-center justify-center shadow-glow">
-            <Upload className="w-8 h-8" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-white mb-1">
-              Drop your CSV file here or <span className="text-brand-400 underline">browse</span>
-            </h3>
-            <p className="text-xs text-gray-400 max-w-sm">
-              Exness MT5 / MT4 position history export. Each file creates a separate, independent journal.
-            </p>
-          </div>
-          <div className="flex items-center gap-6 text-[11px] font-mono text-gray-600">
-            <span>✓ USC Cent normalization (÷100)</span>
-            <span>✓ Duplicate detection</span>
-            <span>✓ IndexedDB storage</span>
-          </div>
+      <div
+        onDragOver={e => { e.preventDefault(); setDragActive(true); }}
+        onDragLeave={() => setDragActive(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`p-10 md:p-12 rounded-2xl border-2 border-dashed text-center cursor-pointer transition-all duration-300 glass-card flex flex-col items-center justify-center gap-4 ${
+          dragActive
+            ? "border-purple-500 bg-purple-500/10 shadow-glow scale-[1.01]"
+            : "border-dark-border hover:border-purple-500/40 hover:bg-dark-hover/40"
+        }`}
+      >
+        <input
+          type="file"
+          ref={fileInputRef}
+          multiple
+          accept=".csv"
+          onChange={e => e.target.files && handleFilesSelect(e.target.files)}
+          className="hidden"
+        />
+        <div className="w-14 h-14 rounded-2xl bg-purple-600/20 border border-purple-500/30 text-purple-400 flex items-center justify-center shadow-glow">
+          <Upload className="w-7 h-7" />
         </div>
-      ) : (
-        /* Preview & Confirmation Screen */
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="p-6 rounded-2xl glass-card border border-dark-border space-y-6">
-          {/* File header */}
-          <div className="flex items-center justify-between p-4 rounded-xl bg-dark-card border border-dark-border">
+        <div>
+          <h3 className="text-base font-bold text-white mb-1">
+            Drop CSV file(s) here or <span className="text-purple-400 underline">browse computer</span>
+          </h3>
+          <p className="text-xs text-gray-400 max-w-md">
+            Select one or multiple CSV files to queue for sequential processing. Exness, MetaTrader, cTrader, and TradingView files are supported.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] text-gray-500 pt-1">
+          <span>✓ Multi-file selection</span>
+          <span>✓ Independent import tracking</span>
+          <span>✓ Automatic duplicate skipping</span>
+        </div>
+      </div>
+
+      {/* Queue Workstation List */}
+      {queuedFiles.length > 0 && (
+        <div className="p-6 rounded-2xl glass-card border border-dark-border space-y-5 shadow-2xl">
+          <div className="flex items-center justify-between border-b border-white/10 pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                <FileSpreadsheet className="w-5 h-5" />
+              <div className="p-2 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30">
+                <ListCheck className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white font-mono">{file.name}</h4>
-                <span className="text-xs text-gray-400 font-mono">
-                  {(file.size / 1024).toFixed(1)} KB · {parseResult?.trades.length ?? 0} trades parsed
-                  {parseResult?.isCentAccount && (
-                    <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold">
-                      USC CENT ÷100
-                    </span>
-                  )}
+                <h3 className="text-base font-bold text-white">
+                  Import Queue ({queuedFiles.length} File{queuedFiles.length > 1 ? "s" : ""})
+                </h3>
+                <span className="text-[11px] text-gray-400">
+                  {pendingCount} file(s) ready for import
                 </span>
               </div>
             </div>
-            <button onClick={resetUpload} className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-dark-hover transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
 
-          {/* Parse validation summary */}
-          {parseResult && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-              <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
-                <div className="text-gray-500 mb-1">Broker</div>
-                <div className="text-white font-bold">{parseResult.broker}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
-                <div className="text-gray-500 mb-1">Account Type</div>
-                <div className="text-white font-bold">{parseResult.accountType}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
-                <div className="text-gray-500 mb-1">Trades</div>
-                <div className="text-emerald-400 font-bold">{parseResult.trades.length}</div>
-              </div>
-              <div className={`p-3 rounded-xl border ${parseResult.isMatch ? "bg-emerald-500/5 border-emerald-500/20" : "bg-amber-500/5 border-amber-500/20"}`}>
-                <div className="text-gray-500 mb-1">Audit</div>
-                <div className={`font-bold ${parseResult.isMatch ? "text-emerald-400" : "text-amber-400"}`}>
-                  {parseResult.isMatch ? "✓ Verified" : `Δ ${parseResult.delta}`}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Trade preview table */}
-          {parseResult && parseResult.trades.length > 0 && (
-            <div className="rounded-xl border border-dark-border overflow-hidden bg-dark-bg/60 max-h-52 overflow-y-auto">
-              <table className="w-full text-left font-mono text-xs">
-                <thead className="sticky top-0 bg-dark-card text-gray-400 border-b border-dark-border">
-                  <tr>
-                    <th className="py-2.5 px-3">Ticket</th>
-                    <th className="py-2.5 px-3">Symbol</th>
-                    <th className="py-2.5 px-3">Dir</th>
-                    <th className="py-2.5 px-3">Lots</th>
-                    <th className="py-2.5 px-3">Net PnL (USD)</th>
-                    <th className="py-2.5 px-3">R:R</th>
-                    <th className="py-2.5 px-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-dark-border text-gray-300">
-                  {parseResult.trades.slice(0, 10).map((t) => (
-                    <tr key={t.ticket} className="hover:bg-dark-hover/30 transition-colors">
-                      <td className="py-2 px-3 text-gray-500">{t.ticket}</td>
-                      <td className="py-2 px-3 font-bold text-white">{t.symbol}</td>
-                      <td className="py-2 px-3">{t.direction}</td>
-                      <td className="py-2 px-3">{t.volume}</td>
-                      <td className={`py-2 px-3 font-bold ${t.profit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                        ${t.profit.toFixed(2)}
-                      </td>
-                      <td className="py-2 px-3 text-brand-300">{t.rr !== null ? `${t.rr}R` : "N/A"}</td>
-                      <td className="py-2 px-3">{t.status}</td>
-                    </tr>
-                  ))}
-                  {parseResult.trades.length > 10 && (
-                    <tr>
-                      <td colSpan={7} className="py-2 px-3 text-center text-gray-600">
-                        +{parseResult.trades.length - 10} more trades…
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Duplicate detection info */}
-          {duplicateCount > 0 && (
-            <div className="flex items-center gap-2 text-xs text-amber-400 font-mono">
-              <Copy className="w-3.5 h-3.5" />
-              {duplicateCount} duplicate trades were detected and skipped
-            </div>
-          )}
-
-          {/* Progress */}
-          {isImporting && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs font-mono text-gray-300">
-                <span>Creating new journal & persisting to IndexedDB…</span>
-                <span>{importProgress}%</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-dark-card overflow-hidden">
-                <div className="h-full bg-brand-500 shadow-glow transition-all duration-150" style={{ width: `${importProgress}%` }} />
-              </div>
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex items-center justify-between pt-2">
-            <button
-              onClick={() => {
-                if (confirm("Cancel this upload and reset?")) {
-                  resetUpload();
-                }
-              }}
-              className="text-xs font-mono text-rose-400 hover:underline flex items-center gap-1"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> Cancel upload
-            </button>
-            <div className="flex gap-3">
+            <div className="flex items-center gap-2">
               <button
-                onClick={resetUpload}
+                onClick={clearQueue}
                 disabled={isImporting}
-                className="px-4 py-2.5 rounded-xl bg-dark-card border border-dark-border text-xs font-semibold text-gray-300 hover:bg-dark-hover transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-bold hover:text-white transition-all disabled:opacity-50"
               >
-                Cancel
+                Clear Queue
               </button>
               <button
-                onClick={handleConfirmImport}
-                disabled={!parseResult?.success || isImporting}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleConfirmImportAll}
+                disabled={isImporting || pendingCount === 0}
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span>{isImporting ? "Importing…" : "Import as New Journal"}</span>
-                <ArrowRight className="w-4 h-4" />
+                {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                <span>{isImporting ? "Processing Queue..." : `Import ${pendingCount} File(s)`}</span>
               </button>
             </div>
           </div>
-        </motion.div>
+
+          {/* Queue Items Breakdown */}
+          <div className="space-y-3">
+            {queuedFiles.map((item) => (
+              <div
+                key={item.id}
+                className={`p-4 rounded-xl border transition-all ${
+                  item.status === "success"
+                    ? "bg-emerald-500/5 border-emerald-500/20"
+                    : item.status === "failed"
+                    ? "bg-rose-500/5 border-rose-500/20"
+                    : item.status === "importing"
+                    ? "bg-purple-500/10 border-purple-500/40 shadow-glow"
+                    : "bg-white/5 border-white/10"
+                }`}
+              >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${
+                      item.status === "success" ? "bg-emerald-500/20 text-emerald-400" :
+                      item.status === "failed" ? "bg-rose-500/20 text-rose-400" :
+                      item.status === "importing" ? "bg-purple-600/20 text-purple-400 animate-pulse" :
+                      "bg-white/10 text-gray-300"
+                    }`}>
+                      <FileSpreadsheet className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-white">{item.file.name}</span>
+                        <span className="text-[10px] text-gray-400">({(item.file.size / 1024).toFixed(1)} KB)</span>
+                        {item.parseResult?.isCentAccount && (
+                          <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
+                            USC CENT ÷100
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-gray-400 mt-0.5">
+                        {item.parseResult?.success
+                          ? `${item.parseResult.trades.length} trades parsed • Broker: ${item.parseResult.broker}`
+                          : item.error || "Parsing failed"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status & Actions */}
+                  <div className="flex items-center gap-3 self-end md:self-auto">
+                    {item.status === "importing" && (
+                      <span className="text-purple-400 font-bold flex items-center gap-1.5">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> {item.progress}%
+                      </span>
+                    )}
+
+                    {item.status === "success" && (
+                      <span className="text-emerald-400 font-bold flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" /> Imported ({item.summary?.imported} trades)
+                      </span>
+                    )}
+
+                    {item.status === "failed" && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-rose-400 font-bold">Failed</span>
+                        <button
+                          onClick={() => retryItem(item.id)}
+                          disabled={isImporting}
+                          className="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 font-bold text-[10px] flex items-center gap-1"
+                        >
+                          <RotateCcw className="w-3 h-3" /> Retry
+                        </button>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => removeFromQueue(item.id)}
+                      disabled={isImporting}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-white/5 transition-colors disabled:opacity-50"
+                      title="Remove from queue"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Individual item progress bar */}
+                {item.status === "importing" && (
+                  <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden mt-3">
+                    <div className="h-full bg-purple-500 shadow-glow transition-all duration-200" style={{ width: `${item.progress}%` }} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

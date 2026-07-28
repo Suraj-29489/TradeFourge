@@ -52,9 +52,12 @@ export default function ImportHistoryPage() {
     })();
   }, [loadHistory]);
 
-  useAppEventListener(["tradefourge:import-created", "tradefourge:import-deleted"], () => {
-    if (userId) loadHistory(userId);
-  });
+  useAppEventListener(
+    ["tradefourge:import-created", "tradefourge:import-deleted", "tradefourge:trade-created", "tradefourge:trade-deleted"],
+    () => {
+      if (userId) loadHistory(userId);
+    }
+  );
 
   const toggleSelectAll = () => {
     if (selectedIds.length === imports.length) {
