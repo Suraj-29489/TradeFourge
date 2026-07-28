@@ -85,6 +85,7 @@ export interface CloudTrade {
   lessons: string | null;
   mistakes: string | null;
   magic_number: number | null;
+  import_id?: string | null;
 
   created_at: string;
   updated_at: string;

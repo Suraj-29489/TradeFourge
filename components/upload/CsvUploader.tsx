@@ -128,6 +128,7 @@ export const CsvUploader: React.FC = () => {
         lessons:       null,
         mistakes:      null,
         magic_number:  null,
+        import_id:     importRecord ? importRecord.id : null,
       }));
 
       const { inserted, skippedDuplicates, errors } = await bulkInsertTrades(user.id, cloudTrades);

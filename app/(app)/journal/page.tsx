@@ -72,14 +72,18 @@ export default function JournalPage() {
 
   const handleDeleteTrade = async (id: string) => {
     if (!userId) return;
-    if (result?.data) {
-      setResult({
-        ...result,
-        data: result.data.filter((t) => t.id !== id),
-        total: Math.max(0, result.total - 1),
-      });
+    const { data: success, error: delErr } = await deleteTrade(id, userId);
+    if (success) {
+      if (result?.data) {
+        setResult({
+          ...result,
+          data: result.data.filter((t) => t.id !== id),
+          total: Math.max(0, result.total - 1),
+        });
+      }
+    } else {
+      console.error("[TradeFourge Dev Log] Delete trade failed:", delErr);
     }
-    await deleteTrade(id, userId);
   };
 
   // No trades AND no filters applied → true empty state

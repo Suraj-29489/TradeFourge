@@ -170,6 +170,25 @@ export async function deleteImportRecord(
       } else {
         deletedTradesCount = deletedTradeRows?.length ?? 0;
       }
+
+      // Verify no trades remain for this import ID
+      const { count: remainingImportTrades } = await supabase
+        .from('trades')
+        .select('id', { count: 'exact', head: true })
+        .eq('import_id', id)
+        .eq('user_id', userId);
+
+      if (remainingImportTrades && remainingImportTrades > 0) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error(`[TradeFourge Dev Log] Delete Import Trades Verification Failed — ${remainingImportTrades} trades still exist for import ${id}`);
+        }
+        return {
+          success: false,
+          status: "NOT_FOUND",
+          message: "Delete failed. Trades for import still exist in database.",
+          error: "Verification failed",
+        };
+      }
     }
 
     // 3. Delete storage file if present
@@ -271,13 +290,16 @@ export async function deleteAllImports(userId: string): Promise<DeleteImportResu
       };
     }
 
-    // 1. Purge all trades linked to imports with .select('id')
-    const { data: deletedTradeRows } = await supabase
+    // 1. Purge all trades for user with .select('id')
+    const { data: deletedTradeRows, error: tradeErr } = await supabase
       .from('trades')
       .delete()
-      .not('import_id', 'is', null)
       .eq('user_id', userId)
       .select('id');
+
+    if (tradeErr && process.env.NODE_ENV !== "production") {
+      console.error(`[TradeFourge Dev Log] Delete All Imports - Trades Delete Error: ${tradeErr.message}`);
+    }
 
     const deletedTradesCount = deletedTradeRows?.length ?? 0;
 
@@ -302,20 +324,25 @@ export async function deleteAllImports(userId: string): Promise<DeleteImportResu
 
     const deletedImportsCount = deletedImportRows?.length ?? 0;
 
-    // 3. Verification Query: Confirm 0 imports remain
+    // 3. Verification Queries: Confirm 0 imports AND 0 trades remain in PostgreSQL
     const { count: remainingImports } = await supabase
       .from('csv_imports')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId);
 
-    if (remainingImports && remainingImports > 0) {
+    const { count: remainingTrades } = await supabase
+      .from('trades')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if ((remainingImports && remainingImports > 0) || (remainingTrades && remainingTrades > 0)) {
       if (process.env.NODE_ENV !== "production") {
-        console.error(`[TradeFourge Dev Log] Delete All Imports Verification Failed — ${remainingImports} imports still exist!`);
+        console.error(`[TradeFourge Dev Log] Delete All Imports Verification Failed — Imports remaining: ${remainingImports ?? 0}, Trades remaining: ${remainingTrades ?? 0}`);
       }
       return {
         success: false,
         status: "NOT_FOUND",
-        message: "Delete failed. Imports still exist in database.",
+        message: "Delete failed. Records still exist in database.",
         error: "Verification failed",
       };
     }

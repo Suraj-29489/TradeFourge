@@ -151,10 +151,14 @@ export function CloudTradeDetailDrawer({ trade, onClose, onRefresh }: CloudTrade
     if (!userId) return;
     if (confirm(`Are you sure you want to delete trade ${trade.ticket || trade.id}?`)) {
       setDeleting(true);
-      await deleteTrade(trade.id, userId);
+      const { data: success, error: delErr } = await deleteTrade(trade.id, userId);
       setDeleting(false);
-      if (onRefresh) onRefresh();
-      onClose();
+      if (success) {
+        if (onRefresh) onRefresh();
+        onClose();
+      } else {
+        alert(`Failed to delete trade: ${delErr || "Database error"}`);
+      }
     }
   };
 
