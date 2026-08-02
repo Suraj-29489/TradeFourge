@@ -1,9 +1,9 @@
 "use client";
 // context/UserProfileContext.tsx
 // Single source of truth React Context for user profile, preferences, and trading accounts.
-// Features TradeFourge v3.5.2 Account Selection & Multi-Account Architecture.
+// Features TradeFourge v3.5.3 Resilient Architecture with Zero Render Loops & Isolated Failures.
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   fetchUserProfile,
@@ -78,13 +78,16 @@ export function saveSelectedAccountsToStorage(userId: string, selectedIds: strin
   if (typeof window === "undefined") return;
   const key = getSelectionStorageKey(userId);
   try {
-    localStorage.setItem(key, JSON.stringify(selectedIds));
+    const serialized = JSON.stringify(selectedIds);
+    const existing = localStorage.getItem(key);
+    if (existing === serialized) return; // Deduplicate localStorage writes
+    localStorage.setItem(key, serialized);
   } catch (err) {
     console.error(`Failed to save selected accounts (${key}):`, err);
   }
 }
 
-// Structured Dev-only Logger
+// Dev Logger
 const isDev = process.env.NODE_ENV === "development";
 const devLog = (msg: string, type: "info" | "success" | "warn" | "error" = "info") => {
   if (!isDev) return;
@@ -102,9 +105,11 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [selectedAccountIds, setSelectedAccountIdsState] = useState<string[]>(["ALL"]);
   const [loading, setLoading] = useState(true);
 
+  const userIdRef = useRef<string | null>(null);
   const supabase = createClient();
 
-  const setSelectedAccountIds = useCallback((ids: string[], uid?: string) => {
+  // Stable setSelectedAccountIds reference with ZERO external state dependencies
+  const setSelectedAccountIds = useCallback((ids: string[], targetUid?: string) => {
     setSelectedAccountIdsState(ids);
     const store = useJournalStore.getState();
     store.setFilters((prev) => ({
@@ -113,13 +118,13 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
       accountId: ids.length === 1 ? ids[0] : "ALL",
     }));
 
-    const targetUid = uid || profile?.id;
-    if (targetUid) {
-      saveSelectedAccountsToStorage(targetUid, ids);
+    const uid = targetUid || userIdRef.current;
+    if (uid) {
+      saveSelectedAccountsToStorage(uid, ids);
     }
-  }, [profile]);
+  }, []);
 
-  // ── Trading Accounts Integrity Check & Selection Resolution ───────────────
+  // Stable loadAccounts reference
   const loadAccounts = useCallback(async (userId: string) => {
     try {
       const { data } = await fetchTradingAccounts(userId);
@@ -127,10 +132,8 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setAccounts(loaded);
 
       if (loaded.length === 1) {
-        // Automatically select the single account
         setSelectedAccountIds([loaded[0].id], userId);
       } else if (loaded.length > 1) {
-        // Restore user's previous selection from localStorage
         const saved = loadSelectedAccountsFromStorage(userId);
         if (saved && Array.isArray(saved) && saved.length > 0) {
           const validSaved = saved.includes("ALL")
@@ -138,7 +141,6 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
             : saved.filter((id) => loaded.some((a) => a.id === id));
           setSelectedAccountIds(validSaved.length > 0 ? validSaved : ["ALL"], userId);
         } else {
-          // Default selection if no previous selection: select ALL
           setSelectedAccountIds(["ALL"], userId);
         }
       } else {
@@ -152,65 +154,79 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, [setSelectedAccountIds]);
 
-  // ── Self-Healing Integrity Check Execution ─────────────────────────────────
+  // Stable loadCloudProfile reference
   const loadCloudProfile = useCallback(async () => {
     devLog("Loading Profile & Cloud Persistence Layer...", "info");
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // 1. Self-Healing Profile Check
-        let userProf = await fetchUserProfile(user.id);
-        if (!userProf || !userProf.id) {
-          devLog("Missing Profile → Creating Default Profile...", "warn");
-          const defaultProfData = DEFAULT_PROFILE(user.id);
-          const { data: healedProf } = await updateUserProfile(user.id, defaultProfData);
-          userProf = healedProf || defaultProfData;
-          devLog("Profile Self-Healing Complete", "success");
-        } else {
-          devLog("Profile Loaded", "success");
-        }
-        setProfile(userProf);
-
-        // 2. Self-Healing Preferences Check
-        let userPrefs = await fetchUserPreferences(user.id);
-        if (!userPrefs) {
-          devLog("Missing Preferences → Initializing Cloud Preferences...", "warn");
-          const defaultPrefsData = DEFAULT_PREFERENCES(user.id);
-          const { data: healedPrefs } = await updateUserPreferences(user.id, defaultPrefsData);
-          userPrefs = healedPrefs || defaultPrefsData;
-          devLog("Preferences Self-Healing Complete", "success");
-        } else {
-          devLog("Preferences Loaded", "success");
-        }
-        setPreferences(userPrefs);
-
-        // Synchronize Theme & Currency to Store
-        const store = useJournalStore.getState();
-        if (userPrefs.default_chart_theme === "dark" || userPrefs.default_chart_theme === "light") {
-          store.setTheme(userPrefs.default_chart_theme as any);
-        }
-        if (userPrefs.default_trade_currency) {
-          store.setDisplayCurrency(userPrefs.default_trade_currency as any);
-        }
-
-        // 3. Self-Healing Account Integrity Check
-        await loadAccounts(user.id);
-        devLog("Complete — Persistence Guard Active", "success");
+      if (!user) {
+        userIdRef.current = null;
+        setProfile(null);
+        setPreferences(null);
+        setAccounts([]);
+        setSelectedAccountIdsState([]);
+        return;
       }
+      userIdRef.current = user.id;
+
+      // 1. Self-Healing Profile Check
+      let userProf = await fetchUserProfile(user.id);
+      if (!userProf || !userProf.id) {
+        devLog("Missing Profile → Creating Default Profile...", "warn");
+        const defaultProfData = DEFAULT_PROFILE(user.id);
+        const { data: healedProf } = await updateUserProfile(user.id, defaultProfData);
+        userProf = healedProf || defaultProfData;
+        devLog("Profile Self-Healing Complete", "success");
+      }
+      setProfile(userProf);
+
+      // 2. Self-Healing Preferences Check
+      let userPrefs = await fetchUserPreferences(user.id);
+      if (!userPrefs) {
+        devLog("Missing Preferences → Initializing Cloud Preferences...", "warn");
+        const defaultPrefsData = DEFAULT_PREFERENCES(user.id);
+        const { data: healedPrefs } = await updateUserPreferences(user.id, defaultPrefsData);
+        userPrefs = healedPrefs || defaultPrefsData;
+        devLog("Preferences Self-Healing Complete", "success");
+      }
+      setPreferences(userPrefs);
+
+      // Synchronize Theme & Currency to Store
+      const store = useJournalStore.getState();
+      if (userPrefs?.default_chart_theme === "dark" || userPrefs?.default_chart_theme === "light") {
+        store.setTheme(userPrefs.default_chart_theme as any);
+      }
+      if (userPrefs?.default_trade_currency) {
+        store.setDisplayCurrency(userPrefs.default_trade_currency as any);
+      }
+
+      // 3. Self-Healing Account Integrity Check
+      await loadAccounts(user.id);
+      devLog("Complete — Persistence Guard Active", "success");
     } catch (err) {
       console.error("[Persistence] UserProfileProvider load failed:", err);
     } finally {
       setLoading(false);
     }
-  }, [loadAccounts]);
+  }, [supabase, loadAccounts]);
 
+  // Mount effect running ONCE with empty dependency array []
   useEffect(() => {
-    loadCloudProfile();
+    let isMounted = true;
+
+    async function init() {
+      if (isMounted) await loadCloudProfile();
+    }
+    init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+      if (!isMounted) return;
       if (session?.user) {
-        loadCloudProfile();
+        if (session.user.id !== userIdRef.current) {
+          loadCloudProfile();
+        }
       } else {
+        userIdRef.current = null;
         setProfile(null);
         setPreferences(null);
         setAccounts([]);
@@ -219,13 +235,15 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     });
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
-  }, [loadCloudProfile]);
+  }, []); // Intentional empty dependency array: runs once on mount, zero re-execution loops
 
   const saveProfileUpdates = async (updates: Partial<UserProfile>): Promise<boolean> => {
-    if (!profile) return false;
-    const { data, error } = await updateUserProfile(profile.id, updates);
+    const targetUserId = profile?.id || userIdRef.current;
+    if (!targetUserId) return false;
+    const { data, error } = await updateUserProfile(targetUserId, updates);
     if (error) {
       console.error("[Persistence] saveProfileUpdates error:", error);
       return false;
@@ -239,7 +257,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const savePreferenceUpdates = async (updates: Partial<UserPreferences>): Promise<{ success: boolean; error: string | null }> => {
-    let targetUserId = profile?.id;
+    let targetUserId = profile?.id || userIdRef.current;
     if (!targetUserId) {
       const { data: { user } } = await supabase.auth.getUser();
       targetUserId = user?.id;
@@ -264,7 +282,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const refreshAccounts = useCallback(async () => {
-    let targetUserId = profile?.id;
+    let targetUserId = profile?.id || userIdRef.current;
     if (!targetUserId) {
       const { data: { user } } = await supabase.auth.getUser();
       targetUserId = user?.id;
@@ -275,7 +293,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [profile, loadAccounts, supabase]);
 
   const addNewAccount = async (payload: NewTradingAccount): Promise<TradingAccount | null> => {
-    let targetUserId = profile?.id;
+    let targetUserId = profile?.id || userIdRef.current;
     if (!targetUserId) {
       const { data: { user } } = await supabase.auth.getUser();
       targetUserId = user?.id;
@@ -292,7 +310,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   useAppEventListener(
-    ["tradefourge:account-created", "tradefourge:account-updated", "tradefourge:account-deleted", "tradefourge:data-changed"],
+    ["tradefourge:account-created", "tradefourge:account-updated", "tradefourge:account-deleted"],
     () => {
       refreshAccounts();
     }
@@ -307,7 +325,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         preferences,
         accounts,
         selectedAccountIds,
-        setSelectedAccountIds: (ids: string[]) => setSelectedAccountIds(ids, profile?.id),
+        setSelectedAccountIds: (ids: string[]) => setSelectedAccountIds(ids, userIdRef.current || undefined),
         loading,
         completionPct,
         refreshProfile: loadCloudProfile,
