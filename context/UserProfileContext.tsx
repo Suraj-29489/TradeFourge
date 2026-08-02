@@ -22,6 +22,7 @@ import {
   createTradingAccount,
 } from "@/lib/supabase/accounts";
 import { useJournalStore } from "@/lib/store/useJournalStore";
+import { useAppEventListener } from "@/lib/events/event-bus";
 import type { TradingAccount, NewTradingAccount } from "@/types/database";
 
 interface UserProfileContextType {
@@ -217,16 +218,40 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return false;
   };
 
+  const refreshAccounts = useCallback(async () => {
+    let targetUserId = profile?.id;
+    if (!targetUserId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      targetUserId = user?.id;
+    }
+    if (targetUserId) {
+      await loadAccounts(targetUserId);
+    }
+  }, [profile, loadAccounts, supabase]);
+
   const addNewAccount = async (payload: NewTradingAccount): Promise<TradingAccount | null> => {
-    if (!profile) return null;
-    const { data } = await createTradingAccount(profile.id, payload);
+    let targetUserId = profile?.id;
+    if (!targetUserId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      targetUserId = user?.id;
+    }
+    if (!targetUserId) return null;
+    const { data, error } = await createTradingAccount(targetUserId, payload);
     if (data) {
-      await loadAccounts(profile.id);
+      await loadAccounts(targetUserId);
       devLog(`New Account Added: "${data.account_name}"`, "success");
       return data;
     }
+    if (error) console.error("addNewAccount error:", error);
     return null;
   };
+
+  useAppEventListener(
+    ["tradefourge:account-created", "tradefourge:account-updated", "tradefourge:account-deleted", "tradefourge:data-changed"],
+    () => {
+      refreshAccounts();
+    }
+  );
 
   const completionPct = profile ? calculateProfileCompletion(profile) : 20;
 
@@ -240,9 +265,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         loading,
         completionPct,
         refreshProfile: loadCloudProfile,
-        refreshAccounts: async () => {
-          if (profile) await loadAccounts(profile.id);
-        },
+        refreshAccounts,
         saveProfileUpdates,
         savePreferenceUpdates,
         switchDefaultAccount,

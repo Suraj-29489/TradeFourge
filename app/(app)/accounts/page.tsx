@@ -15,6 +15,7 @@ import {
   AlertCircle,
   TrendingUp,
   TrendingDown,
+  Lock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAppEventListener } from "@/lib/events/event-bus";
@@ -197,6 +198,10 @@ export default function AccountsPage() {
                             </span>
                           )}
                           <AccountTypeBadge type={account.account_type} />
+                          <span className="text-[10px] text-purple-300 font-mono font-bold bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 flex items-center gap-1">
+                            <Lock className="w-3 h-3 text-purple-400" />
+                            <span>{account.display_id || account.account_number || "TF-ACC-8A91KD"}</span>
+                          </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs font-mono text-gray-400">
                           <span>{account.broker}</span>
@@ -208,12 +213,6 @@ export default function AccountsPage() {
                             <>
                               <span>·</span>
                               <span>Leverage {account.leverage}</span>
-                            </>
-                          )}
-                          {account.account_number && (
-                            <>
-                              <span>·</span>
-                              <span className="text-gray-500">#{account.account_number}</span>
                             </>
                           )}
                         </div>

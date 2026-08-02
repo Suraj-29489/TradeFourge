@@ -62,13 +62,16 @@ export function Modal({
     <AnimatePresence>
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop */}
+          {/* Backdrop (Requirement 5: blur 10px + rgba(10,12,16,0.55)) */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/85 backdrop-blur-md"
-            onClick={onClose}
+            className="absolute inset-0 bg-[#0A0C10]/55 backdrop-blur-[10px]"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
           />
 
           {/* Panel */}

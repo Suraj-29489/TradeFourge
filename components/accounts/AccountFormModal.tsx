@@ -2,11 +2,13 @@
 // components/accounts/AccountFormModal.tsx
 // Create / Edit trading account form with validation.
 
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Modal } from "@/components/ui/Modal";
+import { Lock } from "lucide-react";
+import { generateDisplayAccountId } from "@/lib/supabase/frontend-store";
 import type { TradingAccount, NewTradingAccount, AccountPlatform, AccountType } from "@/types/database";
 
 const PLATFORMS: AccountPlatform[] = [
@@ -55,6 +57,12 @@ export function AccountFormModal({
   isLoading,
 }: AccountFormModalProps) {
   const isEdit = !!account;
+
+  const generatedDisplayId = useMemo(() => {
+    return generateDisplayAccountId();
+  }, [open, account]);
+
+  const activeDisplayId = account?.display_id || account?.account_number || generatedDisplayId;
 
   const {
     register,
@@ -112,13 +120,19 @@ export function AccountFormModal({
   }, [account, reset, open]);
 
   const handleFormSubmit = async (values: FormValues) => {
-    await onSubmit({
-      ...values,
-      account_number:   values.account_number || null,
-      leverage:         values.leverage || null,
-      notes:            values.notes || null,
-      is_active:        true,
-    });
+    try {
+      await onSubmit({
+        ...values,
+        display_id:       activeDisplayId,
+        account_number:   values.account_number || activeDisplayId,
+        leverage:         values.leverage || null,
+        notes:            values.notes || null,
+        is_active:        true,
+      } as any);
+      onClose();
+    } catch (err) {
+      console.error("AccountFormModal submit error:", err);
+    }
   };
 
   const inputClass =
@@ -135,6 +149,18 @@ export function AccountFormModal({
       size="lg"
     >
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+        {/* Read-Only Auto-Generated Display ID */}
+        <div>
+          <label className={labelClass}>Account Display ID (Auto-Generated & Read-Only)</label>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-purple-500/30 text-xs font-mono text-purple-300 font-bold select-none cursor-not-allowed">
+            <Lock className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+            <span>{activeDisplayId}</span>
+            <span className="ml-auto text-[9px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold uppercase tracking-wider">
+              Immutable
+            </span>
+          </div>
+        </div>
+
         {/* Row 1: Name + Broker */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>

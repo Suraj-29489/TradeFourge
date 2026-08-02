@@ -19,6 +19,7 @@ export type AccountType = 'Live' | 'Demo' | 'Prop' | 'Contest';
 export interface TradingAccount {
   id: string;
   user_id: string;
+  display_id?: string | null;
   account_name: string;
   broker: string;
   platform: AccountPlatform;

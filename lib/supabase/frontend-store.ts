@@ -608,14 +608,79 @@ export async function deleteAllFrontendImports(
   };
 }
 
+// Helper functions for user-scoped accounts in localStorage
+export function generateDisplayAccountId(): string {
+  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let random = "";
+  for (let i = 0; i < 6; i++) {
+    random += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `TF-ACC-${random}`;
+}
+
+export function getAccountStorageKey(userId: string): string {
+  const validUid = userId || "default_user";
+  return `tf_accounts_${validUid}`;
+}
+
+export function loadUserAccountsFromLocalStorage(userId: string): TradingAccount[] {
+  if (typeof window === "undefined") return [];
+  const key = getAccountStorageKey(userId);
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      // Legacy migration check from sessionStorage
+      const legacyRaw = sessionStorage.getItem(KEYS.ACCOUNTS);
+      if (legacyRaw) {
+        try {
+          const parsedLegacy = JSON.parse(legacyRaw) as TradingAccount[];
+          if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
+            const userLegacy = parsedLegacy
+              .filter((a) => !a.user_id || a.user_id === userId)
+              .map((a) => ({
+                ...a,
+                user_id: userId,
+                display_id: a.display_id || a.account_number || generateDisplayAccountId(),
+              }));
+            if (userLegacy.length > 0) {
+              localStorage.setItem(key, JSON.stringify(userLegacy));
+              return userLegacy;
+            }
+          }
+        } catch (_) {}
+      }
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((a) => ({
+        ...a,
+        display_id: a.display_id || a.account_number || generateDisplayAccountId(),
+      }));
+    }
+    return [];
+  } catch (err) {
+    console.error(`Failed to load accounts from localStorage (${key}):`, err);
+    return [];
+  }
+}
+
+export function saveUserAccountsToLocalStorage(userId: string, accounts: TradingAccount[]): void {
+  if (typeof window === "undefined") return;
+  const key = getAccountStorageKey(userId);
+  try {
+    localStorage.setItem(key, JSON.stringify(accounts));
+  } catch (err) {
+    console.error(`Failed to save accounts to localStorage (${key}):`, err);
+  }
+}
+
 // ─── TRADING ACCOUNTS SERVICE ──────────────────────────────────────────────
 
 export async function getFrontendTradingAccounts(
   userId: string
 ): Promise<ServiceResult<TradingAccount[]>> {
-  const accounts = loadSessionData<TradingAccount[]>(KEYS.ACCOUNTS, []).filter(
-    (a) => !a.user_id || a.user_id === userId
-  );
+  const accounts = loadUserAccountsFromLocalStorage(userId).filter((a) => a.is_active !== false);
   return { data: accounts, error: null };
 }
 
@@ -623,18 +688,16 @@ export async function getFrontendTradingAccountById(
   id: string,
   userId: string
 ): Promise<ServiceResult<TradingAccount>> {
-  const accounts = loadSessionData<TradingAccount[]>(KEYS.ACCOUNTS, []);
-  const acc = accounts.find((a) => a.id === id && (!a.user_id || a.user_id === userId));
+  const accounts = loadUserAccountsFromLocalStorage(userId);
+  const acc = accounts.find((a) => a.id === id);
   return { data: acc ?? null, error: acc ? null : "Account not found" };
 }
 
 export async function getFrontendDefaultAccount(
   userId: string
 ): Promise<ServiceResult<TradingAccount>> {
-  const accounts = loadSessionData<TradingAccount[]>(KEYS.ACCOUNTS, []).filter(
-    (a) => !a.user_id || a.user_id === userId
-  );
-  const def = accounts.find((a) => a.is_default && a.is_active) || accounts[0] || null;
+  const accounts = loadUserAccountsFromLocalStorage(userId).filter((a) => a.is_active !== false);
+  const def = accounts.find((a) => a.is_default) || accounts[0] || null;
   return { data: def, error: null };
 }
 
@@ -642,20 +705,24 @@ export async function createFrontendTradingAccount(
   userId: string,
   payload: NewTradingAccount
 ): Promise<ServiceResult<TradingAccount>> {
-  let accounts = loadSessionData<TradingAccount[]>(KEYS.ACCOUNTS, []);
+  let accounts = loadUserAccountsFromLocalStorage(userId);
   const now = new Date().toISOString();
 
   if (payload.is_default) {
     accounts = accounts.map((a) => ({ ...a, is_default: false }));
   }
 
+  const internalId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : generateUUID();
+  const displayId = (payload as any).display_id || generateDisplayAccountId();
+
   const newAcc: TradingAccount = {
-    id: generateUUID(),
+    id: internalId,
     user_id: userId,
+    display_id: displayId,
     account_name: payload.account_name,
     broker: payload.broker,
-    platform: payload.platform ?? "Other",
-    account_number: payload.account_number ?? null,
+    platform: payload.platform ?? "MetaTrader 5",
+    account_number: payload.account_number || displayId,
     account_type: payload.account_type ?? "Live",
     currency: payload.currency ?? "USD",
     leverage: payload.leverage ? String(payload.leverage) : "1:100",
@@ -669,7 +736,10 @@ export async function createFrontendTradingAccount(
   };
 
   accounts.unshift(newAcc);
-  saveSessionData(KEYS.ACCOUNTS, accounts);
+  saveUserAccountsToLocalStorage(userId, accounts);
+
+  emitAppEvent("tradefourge:account-created", { accountId: newAcc.id });
+  emitAppEvent("tradefourge:data-changed", { action: "createAccount", accountId: newAcc.id });
 
   return { data: newAcc, error: null };
 }
@@ -679,7 +749,7 @@ export async function updateFrontendTradingAccount(
   userId: string,
   updates: UpdateTradingAccount
 ): Promise<ServiceResult<TradingAccount>> {
-  let accounts = loadSessionData<TradingAccount[]>(KEYS.ACCOUNTS, []);
+  let accounts = loadUserAccountsFromLocalStorage(userId);
   const index = accounts.findIndex((a) => a.id === id);
 
   if (index === -1) {
@@ -697,7 +767,10 @@ export async function updateFrontendTradingAccount(
   };
 
   accounts[index] = updatedAcc;
-  saveSessionData(KEYS.ACCOUNTS, accounts);
+  saveUserAccountsToLocalStorage(userId, accounts);
+
+  emitAppEvent("tradefourge:account-updated", { accountId: id });
+  emitAppEvent("tradefourge:data-changed", { action: "updateAccount", accountId: id });
 
   return { data: updatedAcc, error: null };
 }
@@ -713,9 +786,9 @@ export async function deleteFrontendTradingAccount(
   id: string,
   userId: string
 ): Promise<ServiceResult<boolean>> {
-  let accounts = loadSessionData<TradingAccount[]>(KEYS.ACCOUNTS, []);
+  let accounts = loadUserAccountsFromLocalStorage(userId);
   accounts = accounts.filter((a) => a.id !== id);
-  saveSessionData(KEYS.ACCOUNTS, accounts);
+  saveUserAccountsToLocalStorage(userId, accounts);
 
   let trades = loadSessionData<CloudTradeWithRelations[]>(KEYS.TRADES, []);
   trades = trades.filter((t) => t.account_id !== id);
@@ -725,7 +798,9 @@ export async function deleteFrontendTradingAccount(
   imports = imports.filter((i) => i.account_id !== id);
   saveSessionData(KEYS.IMPORTS, imports);
 
+  emitAppEvent("tradefourge:account-deleted", { accountId: id });
   emitAppEvent("tradefourge:data-changed", { accountId: id, action: "deleteAccount" });
+
   return { data: true, error: null };
 }
 

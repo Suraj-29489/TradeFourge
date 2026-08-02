@@ -45,7 +45,7 @@ export interface QueuedFileItem {
 
 export const CsvUploader: React.FC = () => {
   const router = useRouter();
-  const { accounts, defaultAccount, refreshAccounts } = useUserProfile();
+  const { accounts, defaultAccount, refreshAccounts, addNewAccount } = useUserProfile();
 
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -154,11 +154,9 @@ export const CsvUploader: React.FC = () => {
   };
 
   const handleCreateAccountInModal = async (data: NewTradingAccount) => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await createTradingAccount(user.id, data);
-      await refreshAccounts();
+    const created = await addNewAccount(data);
+    if (created) {
+      setSelectedAccountId(created.id);
       setAddAccountModalOpen(false);
     }
   };
