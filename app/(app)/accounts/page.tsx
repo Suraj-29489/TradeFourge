@@ -115,7 +115,6 @@ export default function AccountsPage() {
     setActionLoading(null);
   };
 
-  const defaultAccount = accounts.find((a) => a.is_default);
   const totalBalance = accounts.reduce((sum, a) => sum + (a.current_balance ?? 0), 0);
 
   return (
@@ -192,11 +191,6 @@ export default function AccountsPage() {
                           <span className="text-base font-bold text-white font-mono">
                             {account.account_name}
                           </span>
-                          {account.is_default && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase font-mono bg-purple-600/20 text-purple-400 border border-purple-500/30">
-                              Default
-                            </span>
-                          )}
                           <AccountTypeBadge type={account.account_type} />
                           <span className="text-[10px] text-purple-300 font-mono font-bold bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 flex items-center gap-1">
                             <Lock className="w-3 h-3 text-purple-400" />
@@ -247,18 +241,6 @@ export default function AccountsPage() {
 
                       {/* Actions */}
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleSetDefault(account.id)}
-                          disabled={account.is_default || isLoading}
-                          title={account.is_default ? "Already default" : "Set as default"}
-                          className="p-2 rounded-lg text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/10 disabled:opacity-30 transition-colors"
-                        >
-                          {account.is_default ? (
-                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                          ) : (
-                            <StarOff className="w-4 h-4" />
-                          )}
-                        </button>
                         <button
                           onClick={() => { setEditAccount(account); setFormOpen(true); }}
                           title="Edit account"

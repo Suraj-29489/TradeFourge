@@ -45,7 +45,7 @@ export interface QueuedFileItem {
 
 export const CsvUploader: React.FC = () => {
   const router = useRouter();
-  const { accounts, defaultAccount, refreshAccounts, addNewAccount } = useUserProfile();
+  const { accounts, refreshAccounts, addNewAccount } = useUserProfile();
 
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -58,13 +58,12 @@ export const CsvUploader: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Set default selected account when accounts load
+  // Set initial selected account when accounts load
   useEffect(() => {
     if (accounts.length > 0 && !selectedAccountId) {
-      const def = defaultAccount?.id || accounts[0].id;
-      setSelectedAccountId(def);
+      setSelectedAccountId(accounts[0].id);
     }
-  }, [accounts, defaultAccount, selectedAccountId]);
+  }, [accounts, selectedAccountId]);
 
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId) || accounts[0] || null;
 

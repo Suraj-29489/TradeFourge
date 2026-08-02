@@ -126,17 +126,9 @@ export async function createTradingAccount(
 
   const supabase = createClient();
   try {
-    // If marking as default, clear existing defaults first
-    if (payload.is_default) {
-      await supabase
-        .from('trading_accounts')
-        .update({ is_default: false })
-        .eq('user_id', userId);
-    }
-
     const { data, error } = await supabase
       .from('trading_accounts')
-      .insert({ ...payload, user_id: userId })
+      .insert({ ...payload, user_id: userId, is_default: false })
       .select()
       .single();
 
@@ -165,14 +157,6 @@ export async function updateTradingAccount(
 
   const supabase = createClient();
   try {
-    if (updates.is_default) {
-      await supabase
-        .from('trading_accounts')
-        .update({ is_default: false })
-        .eq('user_id', userId)
-        .neq('id', id);
-    }
-
     const { data, error } = await supabase
       .from('trading_accounts')
       .update({ ...updates, updated_at: new Date().toISOString() })

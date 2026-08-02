@@ -8,9 +8,9 @@ import { useRouter } from "next/navigation";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { Moon, Sun, Menu, LogOut, Wallet, ChevronDown, Plus, Check, User, Settings } from "lucide-react";
+import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
 import { createClient } from "@/lib/supabase/client";
 import { AccountFormModal } from "@/components/accounts/AccountFormModal";
-import { createTradingAccount } from "@/lib/supabase/accounts";
 import type { NewTradingAccount } from "@/types/database";
 
 interface NavbarProps {
@@ -23,14 +23,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
   const theme    = useJournalStore(s => s.theme);
   const setTheme = useJournalStore(s => s.setTheme);
 
-  const { profile, accounts, defaultAccount, switchDefaultAccount, refreshAccounts } = useUserProfile();
-  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const { profile, accounts, selectedAccountIds, setSelectedAccountIds, addNewAccount } = useUserProfile();
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
   const [userId, setUserId] = useState<string | null>(null);
 
-  const accountRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -47,9 +45,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
     loadAuthUser();
 
     function handleClickOutside(event: MouseEvent) {
-      if (accountRef.current && !accountRef.current.contains(event.target as Node)) {
-        setAccountDropdownOpen(false);
-      }
       if (userRef.current && !userRef.current.contains(event.target as Node)) {
         setUserDropdownOpen(false);
       }
@@ -67,16 +62,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
     router.refresh();
   };
 
-  const handleSelectAccount = async (accId: string) => {
-    await switchDefaultAccount(accId);
-    setAccountDropdownOpen(false);
-  };
-
   const handleAddAccount = async (data: NewTradingAccount) => {
-    if (!userId) return;
-    await createTradingAccount(userId, data);
+    await addNewAccount(data);
     setAddModalOpen(false);
-    await refreshAccounts();
   };
 
   const displayName = profile?.username
@@ -86,7 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
   return (
     <header className="sticky top-0 z-20 h-16 backdrop-blur-md border-b bg-dark-bg/80 border-dark-border text-xs font-mono">
       <div className="max-w-7xl mx-auto w-full h-full px-3 sm:px-6 lg:px-8 flex items-center justify-between">
-        {/* Left: Mobile Hamburger + Clean Accounts Dropdown */}
+        {/* Left: Mobile Hamburger + MultiAccountFilter */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Mobile Hamburger */}
           <button
@@ -97,66 +85,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Simplified Accounts ▼ Dropdown */}
-          <div className="relative" ref={accountRef}>
-            <button
-              onClick={() => {
-                setAccountDropdownOpen(!accountDropdownOpen);
-                setUserDropdownOpen(false);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border hover:border-purple-500/40 text-xs font-mono font-bold text-gray-200 transition-all"
-            >
-              <Wallet className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-              <span>Accounts</span>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-            </button>
-
-            {/* Dropdown Menu */}
-            {accountDropdownOpen && (
-              <div className="absolute left-0 mt-2 w-64 p-2.5 rounded-2xl dropdown-menu z-50 space-y-1.5 shadow-2xl">
-                <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
-                  {accounts.map((acc) => {
-                    const isSelected = defaultAccount?.id === acc.id;
-                    return (
-                      <button
-                        key={acc.id}
-                        onClick={() => handleSelectAccount(acc.id)}
-                        className={`w-full text-left p-2.5 rounded-xl border flex items-center justify-between transition-all ${
-                          isSelected
-                            ? "bg-purple-600/15 border-purple-500/40 text-white font-bold"
-                            : "bg-dark-card border-dark-border hover:bg-dark-hover text-gray-300"
-                        }`}
-                      >
-                        <div className="space-y-0.5 min-w-0 pr-2">
-                          <div className="text-xs font-bold text-white truncate">{acc.account_name}</div>
-                          <div className="text-[10px] text-gray-400 flex items-center gap-2">
-                            <span>{acc.broker || "Generic"}</span>
-                            <span>•</span>
-                            <span className="text-purple-300 font-bold">{acc.currency}</span>
-                          </div>
-                        </div>
-                        {isSelected && <Check className="w-4 h-4 text-purple-400 shrink-0" />}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Add Account Shortcut */}
-                <div className="pt-1.5 border-t border-dark-border">
-                  <button
-                    onClick={() => {
-                      setAccountDropdownOpen(false);
-                      setAddModalOpen(true);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/30 text-purple-400 font-bold text-xs transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Account</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Multi-Account Portfolio Filter */}
+          <MultiAccountFilter
+            accounts={accounts}
+            selectedAccountIds={selectedAccountIds}
+            onChange={setSelectedAccountIds}
+          />
         </div>
 
         {/* Right: Theme Toggle + Username Dropdown */}
@@ -175,7 +109,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
             <button
               onClick={() => {
                 setUserDropdownOpen(!userDropdownOpen);
-                setAccountDropdownOpen(false);
               }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border hover:border-purple-500/40 text-xs font-mono text-gray-200 transition-all"
             >

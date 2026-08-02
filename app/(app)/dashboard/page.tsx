@@ -19,7 +19,8 @@ import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDraw
 import { StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
-import type { CloudTradeWithRelations, CsvImport } from "@/types/database";
+import { AccountFormModal } from "@/components/accounts/AccountFormModal";
+import type { CloudTradeWithRelations, CsvImport, NewTradingAccount } from "@/types/database";
 import {
   Wallet, TrendingUp, TrendingDown, Zap, Target, Award, Clock, Globe,
   Upload, History, Plus, BarChart3, LineChart, Sparkles, ArrowRight,
@@ -40,18 +41,34 @@ export default function DashboardPage() {
   const { formatSigned, currency } = useCurrencyFormatter();
   const supabase = createClient();
 
-  const { profile, defaultAccount, accounts, switchDefaultAccount } = useUserProfile();
+  const { profile, accounts, addNewAccount } = useUserProfile();
 
   const [trades, setTrades] = useState<CloudTradeWithRelations[]>([]);
   const [latestImport, setLatestImport] = useState<CsvImport | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimeRange>("30D");
 
-  // Account Switcher Dropdown
-  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  // Add Account Modal
+  const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
 
   // Selected Trade Drawer
   const [selectedTrade, setSelectedTrade] = useState<CloudTradeWithRelations | null>(null);
+
+  const totalSelectedBalance = useMemo(() => {
+    const activeIds = filters.accountIds || (filters.accountId !== "ALL" ? [filters.accountId] : []);
+    if (activeIds.includes("ALL") || activeIds.length === 0) {
+      return accounts.reduce((sum, a) => sum + (a.current_balance || 0), 0);
+    }
+    return accounts
+      .filter((a) => activeIds.includes(a.id))
+      .reduce((sum, a) => sum + (a.current_balance || 0), 0);
+  }, [accounts, filters.accountIds, filters.accountId]);
+
+  const handleCreateAccount = async (data: NewTradingAccount) => {
+    await addNewAccount(data);
+    setIsAddAccountModalOpen(false);
+    loadDashboardData();
+  };
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -138,6 +155,16 @@ export default function DashboardPage() {
     return { text: "Neutral", color: "text-gray-400", desc: "No active streak" };
   }, [trades]);
 
+  const totalSelectedStartingBalance = useMemo(() => {
+    const activeIds = filters.accountIds || (filters.accountId !== "ALL" ? [filters.accountId] : []);
+    if (activeIds.includes("ALL") || activeIds.length === 0) {
+      return accounts.reduce((sum, a) => sum + (a.starting_balance || 0), 0) || 10000;
+    }
+    return accounts
+      .filter((a) => activeIds.includes(a.id))
+      .reduce((sum, a) => sum + (a.starting_balance || 0), 0) || 10000;
+  }, [accounts, filters.accountIds, filters.accountId]);
+
   // Max Drawdown Calculation
   const drawdownInfo = useMemo(() => {
     if (analytics.equityCurve.length === 0) return { pct: 0, amount: 0 };
@@ -148,10 +175,10 @@ export default function DashboardPage() {
       const dd = peak - pt.cumulativeProfit;
       if (dd > maxDd) maxDd = dd;
     }
-    const startingBal = defaultAccount?.starting_balance || 10000;
+    const startingBal = totalSelectedStartingBalance;
     const pct = peak > 0 ? ((maxDd / (startingBal + peak)) * 100).toFixed(1) : "0.0";
     return { pct, amount: maxDd };
-  }, [analytics.equityCurve, defaultAccount]);
+  }, [analytics.equityCurve, totalSelectedStartingBalance]);
 
   // Filtered Equity Curve Data based on Time Range
   const filteredEquityCurve = useMemo(() => {
@@ -261,7 +288,7 @@ export default function DashboardPage() {
 
             <span>•</span>
             <span className="text-gray-300">
-              Balance: <strong className="text-white font-bold">{defaultAccount?.currency || "USD"} {defaultAccount?.current_balance.toLocaleString("en-US", { minimumFractionDigits: 2 }) ?? "0.00"}</strong>
+              Portfolio Balance: <strong className="text-white font-bold">${totalSelectedBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong>
             </span>
             <span>•</span>
             <span className="text-gray-300">
@@ -296,13 +323,14 @@ export default function DashboardPage() {
             <span>Performance Lab</span>
           </Link>
 
-          <Link
-            href="/accounts"
+          <button
+            type="button"
+            onClick={() => setIsAddAccountModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 font-bold transition-all active:scale-95"
           >
             <Plus className="w-4 h-4 text-emerald-400" />
             <span>Add Account</span>
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -332,7 +360,7 @@ export default function DashboardPage() {
         >
           <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">BALANCE</span>
           <span className="text-sm font-extrabold text-white block truncate">
-            {defaultAccount?.currency || "USD"} {defaultAccount?.current_balance.toLocaleString("en-US", { minimumFractionDigits: 2 }) ?? "0.00"}
+            ${totalSelectedBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
             <span>Account Equity</span>
@@ -920,6 +948,13 @@ export default function DashboardPage() {
           }}
         />
       )}
+
+      {/* Account Creation Modal */}
+      <AccountFormModal
+        open={isAddAccountModalOpen}
+        onClose={() => setIsAddAccountModalOpen(false)}
+        onSubmit={handleCreateAccount}
+      />
     </div>
   );
 }

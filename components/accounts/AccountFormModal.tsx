@@ -35,7 +35,6 @@ const schema = z.object({
   leverage:         z.string().optional(),
   starting_balance: z.number().min(0),
   current_balance:  z.number().min(0),
-  is_default:       z.boolean(),
   notes:            z.string().optional(),
 });
 
@@ -81,7 +80,6 @@ export function AccountFormModal({
       leverage:         "",
       starting_balance: 0,
       current_balance:  0,
-      is_default:       false,
       notes:            "",
     },
   });
@@ -99,7 +97,6 @@ export function AccountFormModal({
         leverage:         account.leverage ?? "",
         starting_balance: account.starting_balance,
         current_balance:  account.current_balance,
-        is_default:       account.is_default,
         notes:            account.notes ?? "",
       });
     } else {
@@ -113,7 +110,6 @@ export function AccountFormModal({
         leverage:         "",
         starting_balance: 0,
         current_balance:  0,
-        is_default:       false,
         notes:            "",
       });
     }
@@ -127,6 +123,7 @@ export function AccountFormModal({
         account_number:   values.account_number || activeDisplayId,
         leverage:         values.leverage || null,
         notes:            values.notes || null,
+        is_default:       false,
         is_active:        true,
       } as any);
       onClose();
@@ -167,7 +164,7 @@ export function AccountFormModal({
             <label className={labelClass}>Account Name *</label>
             <input
               {...register("account_name")}
-              placeholder="e.g. Exness Pro #1"
+              placeholder="e.g. Exness Live Gold"
               className={inputClass}
             />
             {errors.account_name && (
@@ -271,24 +268,6 @@ export function AccountFormModal({
             className={`${inputClass} resize-none`}
           />
         </div>
-
-        {/* Set as Default */}
-        <label className="flex items-center gap-3 cursor-pointer select-none group">
-          <div className="relative">
-            <input
-              {...register("is_default")}
-              type="checkbox"
-              className="sr-only"
-            />
-            <div className="w-4 h-4 rounded bg-dark-card border border-white/20 group-hover:border-purple-500 transition-colors flex items-center justify-center">
-              {/* We render this via CSS in the real component; here it's functional */}
-            </div>
-          </div>
-          <input {...register("is_default")} type="checkbox" className="accent-purple-500 w-4 h-4 rounded" />
-          <span className="text-xs font-mono text-gray-300">
-            Set as default account
-          </span>
-        </label>
 
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-2 border-t border-white/10">

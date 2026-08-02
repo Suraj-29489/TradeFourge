@@ -1,7 +1,7 @@
 "use client";
 // context/UserProfileContext.tsx
 // Single source of truth React Context for user profile, preferences, and trading accounts.
-// Features TradeFourge v3.2.6.1 Persistence Guard & Self-Healing Layer.
+// Features TradeFourge v3.5.2 Account Selection & Multi-Account Architecture.
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -29,14 +29,14 @@ interface UserProfileContextType {
   profile: UserProfile | null;
   preferences: UserPreferences | null;
   accounts: TradingAccount[];
-  defaultAccount: TradingAccount | null;
+  selectedAccountIds: string[];
+  setSelectedAccountIds: (ids: string[]) => void;
   loading: boolean;
   completionPct: number;
   refreshProfile: () => Promise<void>;
   refreshAccounts: () => Promise<void>;
   saveProfileUpdates: (updates: Partial<UserProfile>) => Promise<boolean>;
   savePreferenceUpdates: (updates: Partial<UserPreferences>) => Promise<{ success: boolean; error: string | null }>;
-  switchDefaultAccount: (accountId: string) => Promise<boolean>;
   addNewAccount: (payload: NewTradingAccount) => Promise<TradingAccount | null>;
 }
 
@@ -44,16 +44,45 @@ const UserProfileContext = createContext<UserProfileContextType>({
   profile: null,
   preferences: null,
   accounts: [],
-  defaultAccount: null,
+  selectedAccountIds: ["ALL"],
+  setSelectedAccountIds: () => {},
   loading: true,
   completionPct: 20,
   refreshProfile: async () => {},
   refreshAccounts: async () => {},
   saveProfileUpdates: async () => false,
   savePreferenceUpdates: async () => ({ success: false, error: null }),
-  switchDefaultAccount: async () => false,
   addNewAccount: async () => null,
 });
+
+// Helper for selection state in localStorage
+function getSelectionStorageKey(userId: string): string {
+  const validUid = userId || "default_user";
+  return `tf_selected_accounts_${validUid}`;
+}
+
+export function loadSelectedAccountsFromStorage(userId: string): string[] | null {
+  if (typeof window === "undefined") return null;
+  const key = getSelectionStorageKey(userId);
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveSelectedAccountsToStorage(userId: string, selectedIds: string[]): void {
+  if (typeof window === "undefined") return;
+  const key = getSelectionStorageKey(userId);
+  try {
+    localStorage.setItem(key, JSON.stringify(selectedIds));
+  } catch (err) {
+    console.error(`Failed to save selected accounts (${key}):`, err);
+  }
+}
 
 // Structured Dev-only Logger
 const isDev = process.env.NODE_ENV === "development";
@@ -70,31 +99,58 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
-  const [defaultAccount, setDefaultAccount] = useState<TradingAccount | null>(null);
+  const [selectedAccountIds, setSelectedAccountIdsState] = useState<string[]>(["ALL"]);
   const [loading, setLoading] = useState(true);
 
   const supabase = createClient();
 
-  // ── Self-Healing Trading Accounts Integrity Check ────────────────────────
+  const setSelectedAccountIds = useCallback((ids: string[], uid?: string) => {
+    setSelectedAccountIdsState(ids);
+    const store = useJournalStore.getState();
+    store.setFilters((prev) => ({
+      ...prev,
+      accountIds: ids,
+      accountId: ids.length === 1 ? ids[0] : "ALL",
+    }));
+
+    const targetUid = uid || profile?.id;
+    if (targetUid) {
+      saveSelectedAccountsToStorage(targetUid, ids);
+    }
+  }, [profile]);
+
+  // ── Trading Accounts Integrity Check & Selection Resolution ───────────────
   const loadAccounts = useCallback(async (userId: string) => {
     try {
       const { data } = await fetchTradingAccounts(userId);
-      if (data && data.length > 0) {
-        setAccounts(data);
-        const def = data.find((a) => a.is_default) || data[0];
-        setDefaultAccount(def);
-        devLog(`Trading Account Loaded: "${def.account_name}"`, "success");
+      const loaded = data ?? [];
+      setAccounts(loaded);
+
+      if (loaded.length === 1) {
+        // Automatically select the single account
+        setSelectedAccountIds([loaded[0].id], userId);
+      } else if (loaded.length > 1) {
+        // Restore user's previous selection from localStorage
+        const saved = loadSelectedAccountsFromStorage(userId);
+        if (saved && Array.isArray(saved) && saved.length > 0) {
+          const validSaved = saved.includes("ALL")
+            ? ["ALL"]
+            : saved.filter((id) => loaded.some((a) => a.id === id));
+          setSelectedAccountIds(validSaved.length > 0 ? validSaved : ["ALL"], userId);
+        } else {
+          // Default selection if no previous selection: select ALL
+          setSelectedAccountIds(["ALL"], userId);
+        }
       } else {
-        setAccounts([]);
-        setDefaultAccount(null);
-        devLog("No trading accounts found in live DB.", "info");
+        setSelectedAccountIds([], userId);
       }
+      devLog(`Loaded ${loaded.length} trading accounts for user ${userId}`, "success");
     } catch (err) {
       console.error("[Persistence] Failed to load trading accounts:", err);
       setAccounts([]);
-      setDefaultAccount(null);
+      setSelectedAccountIds([], userId);
     }
-  }, []);
+  }, [setSelectedAccountIds]);
 
   // ── Self-Healing Integrity Check Execution ─────────────────────────────────
   const loadCloudProfile = useCallback(async () => {
@@ -158,7 +214,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setProfile(null);
         setPreferences(null);
         setAccounts([]);
-        setDefaultAccount(null);
+        setSelectedAccountIdsState([]);
       }
     });
 
@@ -207,17 +263,6 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return { success: true, error: null };
   };
 
-  const switchDefaultAccount = async (accountId: string): Promise<boolean> => {
-    if (!profile) return false;
-    const { data } = await updateTradingAccount(accountId, profile.id, { is_default: true });
-    if (data) {
-      await loadAccounts(profile.id);
-      devLog("Default Account Switched", "success");
-      return true;
-    }
-    return false;
-  };
-
   const refreshAccounts = useCallback(async () => {
     let targetUserId = profile?.id;
     if (!targetUserId) {
@@ -261,14 +306,14 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         profile,
         preferences,
         accounts,
-        defaultAccount,
+        selectedAccountIds,
+        setSelectedAccountIds: (ids: string[]) => setSelectedAccountIds(ids, profile?.id),
         loading,
         completionPct,
         refreshProfile: loadCloudProfile,
         refreshAccounts,
         saveProfileUpdates,
         savePreferenceUpdates,
-        switchDefaultAccount,
         addNewAccount,
       }}
     >
