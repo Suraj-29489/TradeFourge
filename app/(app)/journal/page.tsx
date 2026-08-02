@@ -185,7 +185,7 @@ export default function JournalPage() {
           onDeleteTrade={handleDeleteTrade}
           onViewTrade={setActiveTrade}
           onRefresh={loadTrades}
-          accounts={accounts.map((a) => ({ id: a.id, account_name: a.account_name }))}
+          accounts={accounts}
         />
       )}
 

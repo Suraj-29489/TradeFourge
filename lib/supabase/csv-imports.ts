@@ -35,7 +35,7 @@ export async function fetchImportHistory(
   try {
     const { data, error } = await supabase
       .from('csv_imports')
-      .select('*')
+      .select('*, account:trading_accounts(id, account_name, broker, currency)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
@@ -82,10 +82,11 @@ export async function createImportRecord(
   userId: string,
   filename: string,
   totalRows: number,
-  storagePath?: string
+  storagePath?: string,
+  accountId?: string | null
 ): Promise<ServiceResult<CsvImport>> {
   if (isFrontendOnly()) {
-    return createFrontendImportRecord(userId, filename, totalRows, storagePath);
+    return createFrontendImportRecord(userId, filename, totalRows, storagePath, accountId);
   }
 
   const supabase = createClient();
@@ -94,6 +95,7 @@ export async function createImportRecord(
       .from('csv_imports')
       .insert({
         user_id: userId,
+        account_id: accountId ?? null,
         filename,
         total_rows: totalRows,
         imported_rows: 0,

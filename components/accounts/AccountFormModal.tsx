@@ -21,7 +21,7 @@ const PLATFORMS: AccountPlatform[] = [
 
 const ACCOUNT_TYPES: AccountType[] = ["Live", "Demo", "Prop", "Contest"];
 
-const CURRENCIES = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "INR", "SGD", "AED"];
+const CURRENCIES = ["USD", "USC", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "INR", "SGD", "AED"];
 
 const schema = z.object({
   account_name:     z.string().min(1, "Account name is required").max(100),
@@ -207,7 +207,9 @@ export function AccountFormModal({
             <label className={labelClass}>Currency *</label>
             <select {...register("currency")} className={inputClass}>
               {CURRENCIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c === "USC" ? "USC (US Cent)" : c}
+                </option>
               ))}
             </select>
           </div>

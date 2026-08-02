@@ -217,6 +217,7 @@ export interface CloudTradeFilters {
   source: TradeSource | 'ALL';
   session: TradeSession | 'ALL';
   accountId: string | 'ALL';
+  accountIds?: string[];
   dateRange: '7D' | '30D' | '90D' | 'THIS_MONTH' | 'THIS_YEAR' | 'ALL';
   startDate?: string;
   endDate?: string;
@@ -232,5 +233,6 @@ export const DEFAULT_CLOUD_FILTERS: CloudTradeFilters = {
   source: 'ALL',
   session: 'ALL',
   accountId: 'ALL',
+  accountIds: ['ALL'],
   dateRange: 'ALL',
 };

@@ -12,6 +12,8 @@ import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { createClient } from "@/lib/supabase/client";
 import { fetchTrades, updateTrade } from "@/lib/supabase/trades";
 import { useAppEventListener } from "@/lib/events/event-bus";
+import { useUserProfile } from "@/context/UserProfileContext";
+import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
 import type { CloudTradeWithRelations } from "@/types/database";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -57,12 +59,16 @@ export const TradeCalendar: React.FC = () => {
 
   const isLight = theme === "light";
 
+  const { accounts } = useUserProfile();
+  const filters = useJournalStore((s) => s.filters);
+  const setFilters = useJournalStore((s) => s.setFilters);
+
   const loadTrades = async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data } = await fetchTrades(user.id, {}, 1, 10000, "close_time", false);
+        const { data } = await fetchTrades(user.id, filters, 1, 10000, "close_time", false);
         const fetchedTrades = data?.data ?? [];
         setTrades(fetchedTrades);
         if (process.env.NODE_ENV !== "production") {
@@ -81,7 +87,7 @@ export const TradeCalendar: React.FC = () => {
 
   useEffect(() => {
     loadTrades();
-  }, []);
+  }, [filters]);
 
   useAppEventListener(
     ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted", "tradefourge:data-changed"],
@@ -334,6 +340,20 @@ export const TradeCalendar: React.FC = () => {
 
           {/* View Switcher & Month Navigation Controls */}
           <div className="flex flex-wrap items-center gap-2">
+            {accounts.length > 0 && (
+              <MultiAccountFilter
+                accounts={accounts}
+                selectedAccountIds={filters.accountIds || (filters.accountId !== 'ALL' ? [filters.accountId] : ['ALL'])}
+                onChange={(ids) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    accountIds: ids,
+                    accountId: ids.length === 1 ? ids[0] : 'ALL',
+                  }));
+                }}
+              />
+            )}
+
             {/* Calendar vs Timeline Mode Switcher */}
             <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 text-xs">
               <button

@@ -12,6 +12,8 @@ import { fetchTrades } from "@/lib/supabase/trades";
 import { useAppEventListener } from "@/lib/events/event-bus";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { useJournalStore } from "@/lib/store/useJournalStore";
+import { useUserProfile } from "@/context/UserProfileContext";
+import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
 import { calculateCloudAnalytics, CompleteAnalyticsSummary, SymbolPerformance, PeriodPerformance, SessionPerformance } from "@/lib/engine/cloud-analytics-engine";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
 import { TableSkeleton, StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -55,12 +57,16 @@ export const PerformanceLabView: React.FC = () => {
   const [sortField, setSortField] = useState<string>("close_time");
   const [sortAsc, setSortAsc] = useState<boolean>(false);
 
+  const { accounts } = useUserProfile();
+  const filters = useJournalStore((s) => s.filters);
+  const setFilters = useJournalStore((s) => s.setFilters);
+
   const loadData = async () => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await fetchTrades(user.id, {}, 1, 10000, "close_time", false);
+      const { data } = await fetchTrades(user.id, filters, 1, 10000, "close_time", false);
       if (data?.data) {
         setTrades(data.data);
       }
@@ -73,7 +79,7 @@ export const PerformanceLabView: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [filters]);
 
   useAppEventListener(
     ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted", "tradefourge:data-changed"],
@@ -378,6 +384,21 @@ export const PerformanceLabView: React.FC = () => {
             <Filter className="w-3.5 h-3.5" />
             <span>Filters</span>
           </div>
+
+          {/* Multi-Account Filter */}
+          {accounts.length > 0 && (
+            <MultiAccountFilter
+              accounts={accounts}
+              selectedAccountIds={filters.accountIds || (filters.accountId !== 'ALL' ? [filters.accountId] : ['ALL'])}
+              onChange={(ids) => {
+                setFilters((prev) => ({
+                  ...prev,
+                  accountIds: ids,
+                  accountId: ids.length === 1 ? ids[0] : 'ALL',
+                }));
+              }}
+            />
+          )}
 
           {/* Time Range Shortcuts */}
           <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 text-xs">

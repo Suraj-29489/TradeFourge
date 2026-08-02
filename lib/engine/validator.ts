@@ -3,7 +3,8 @@ import { normalizeCsvData } from "./normalizer";
 
 export function validateAndParseCsv(
   csvText: string,
-  accountName = "Primary Account"
+  accountName = "Primary Account",
+  accountCurrency = "USD"
 ): ParseValidationResult {
   const {
     trades,
@@ -13,7 +14,7 @@ export function validateAndParseCsv(
     normalizedProfitSum,
     lastKnownBalance,
     errors,
-  } = normalizeCsvData(csvText, accountName);
+  } = normalizeCsvData(csvText, accountName, accountCurrency);
 
   // Validate normalized sum matches (tolerance 0.05 USD)
   const roundedNormalized = parseFloat(normalizedProfitSum.toFixed(2));

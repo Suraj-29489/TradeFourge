@@ -28,10 +28,11 @@ function parseFloatOrNull(raw: string): number | null {
  */
 export function normalizeCsvData(
   csvText: string,
-  accountName = "Primary Account"
+  accountName = "Primary Account",
+  accountCurrency = "USD"
 ): {
   trades: NormalizedTrade[];
-  detectedCurrency: "USD";
+  detectedCurrency: string;
   detectedAccountType: AccountType;
   isCentAccount: boolean;
   rawProfitSum: number;
@@ -86,6 +87,7 @@ export function normalizeCsvData(
   // Cent accounts store values in USC (cents). 100 USC = 1 USD.
   // We divide all monetary values by 100 to store USD internally.
   const isCentAccount =
+    accountCurrency === "USC" ||
     detectedAccountType === "Standard Cent" ||
     textUpper.includes("CENT") ||
     textUpper.includes("USC") ||

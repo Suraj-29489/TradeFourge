@@ -18,6 +18,7 @@ import { calculateCloudAnalytics, CompleteAnalyticsSummary } from "@/lib/engine/
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
 import { StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
 import type { CloudTradeWithRelations, CsvImport } from "@/types/database";
 import {
   Wallet, TrendingUp, TrendingDown, Zap, Target, Award, Clock, Globe,
@@ -34,6 +35,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const init = useJournalStore((state) => state.init);
   const theme = useJournalStore((state) => state.theme);
+  const filters = useJournalStore((state) => state.filters);
+  const setFilters = useJournalStore((state) => state.setFilters);
   const { formatSigned, currency } = useCurrencyFormatter();
   const supabase = createClient();
 
@@ -57,7 +60,7 @@ export default function DashboardPage() {
       if (!user) return;
 
       const [tradesRes, impRes] = await Promise.all([
-        fetchTrades(user.id, {}, 1, 5000, "close_time", false),
+        fetchTrades(user.id, filters, 1, 5000, "close_time", false),
         fetchLatestImport(user.id),
       ]);
 
@@ -80,7 +83,7 @@ export default function DashboardPage() {
   useEffect(() => {
     init();
     loadDashboardData();
-  }, [init]);
+  }, [init, filters]);
 
   useAppEventListener(
     ["tradefourge:trade-created", "tradefourge:trade-updated", "tradefourge:trade-deleted", "tradefourge:import-created", "tradefourge:import-deleted", "tradefourge:data-changed"],
@@ -244,44 +247,17 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
-            {/* Quick Account Switcher */}
-            <div className="relative">
-              <button
-                onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/40 text-white font-bold transition-all active:scale-95"
-              >
-                <Wallet className="w-3.5 h-3.5 text-purple-400" />
-                <span>{defaultAccount?.account_name || "Primary Account"}</span>
-                <span className="text-[9px] px-1 py-0.2 rounded bg-purple-500/20 text-purple-300">
-                  {defaultAccount?.currency || "USD"}
-                </span>
-              </button>
-
-              {accountDropdownOpen && (
-                <div className="absolute left-0 mt-2 w-64 p-2 rounded-2xl dropdown-menu z-50 space-y-1 shadow-2xl">
-                  <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-dark-border">
-                    Select Account ({accounts.length})
-                  </div>
-                  {accounts.map((acc) => (
-                    <button
-                      key={acc.id}
-                      onClick={() => {
-                        switchDefaultAccount(acc.id);
-                        setAccountDropdownOpen(false);
-                      }}
-                      className={`w-full text-left p-2 rounded-xl flex items-center justify-between transition-colors ${
-                        defaultAccount?.id === acc.id
-                          ? "bg-purple-600/20 text-white font-bold"
-                          : "text-gray-300 hover:bg-white/5"
-                      }`}
-                    >
-                      <span className="truncate">{acc.account_name}</span>
-                      <span className="text-[10px] text-emerald-400 font-bold">{acc.currency} {acc.current_balance.toLocaleString()}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <MultiAccountFilter
+              accounts={accounts}
+              selectedAccountIds={filters.accountIds || (filters.accountId !== 'ALL' ? [filters.accountId] : ['ALL'])}
+              onChange={(ids) => {
+                setFilters((prev) => ({
+                  ...prev,
+                  accountIds: ids,
+                  accountId: ids.length === 1 ? ids[0] : 'ALL',
+                }));
+              }}
+            />
 
             <span>•</span>
             <span className="text-gray-300">

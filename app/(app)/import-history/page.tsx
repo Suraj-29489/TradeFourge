@@ -258,6 +258,7 @@ export default function ImportHistoryPage() {
                     </button>
                   </th>
                   <th className="py-3 px-4">File Name</th>
+                  <th className="py-3 px-4">Account & Currency</th>
                   <th className="py-3 px-4">Broker / Platform</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Imported / Total</th>
@@ -266,10 +267,13 @@ export default function ImportHistoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-border text-gray-300">
-                {imports.map((rec) => {
+                {imports.map((rec: any) => {
                   const isSelected = selectedIds.includes(rec.id);
                   const isExpanded = expandedId === rec.id;
                   const hasErrors = rec.error_log && (rec.error_log as any[]).length > 0;
+                  const accName = rec.account?.account_name || "Primary Account";
+                  const accCurr = rec.account?.currency || "USD";
+                  const broker = rec.account?.broker || rec.broker || "Exness";
 
                   return (
                     <React.Fragment key={rec.id}>
@@ -283,11 +287,19 @@ export default function ImportHistoryPage() {
                             )}
                           </button>
                         </td>
-                        <td className="py-3 px-4 font-bold text-white max-w-[200px] truncate">
+                        <td className="py-3 px-4 font-bold text-white max-w-[180px] truncate">
                           {rec.filename}
                         </td>
+                        <td className="py-3 px-4 font-bold text-white">
+                          <div className="flex items-center gap-1.5">
+                            <span>{accName}</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                              {accCurr}
+                            </span>
+                          </div>
+                        </td>
                         <td className="py-3 px-4 text-gray-300">
-                          {rec.broker || "Generic"} / {rec.platform || "CSV"}
+                          {broker} / {rec.platform || "Standard"}
                         </td>
                         <td className="py-3 px-4">
                           <ImportStatusBadge status={rec.import_status} />

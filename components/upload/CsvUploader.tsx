@@ -1,13 +1,18 @@
 "use client";
+// components/upload/CsvUploader.tsx
+// Production Account-First CSV Import Pipeline with Account Selection & Blocking Overlay
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { validateAndParseCsv } from "@/lib/engine/validator";
 import { ParseValidationResult } from "@/lib/engine/types";
 import { bulkInsertTrades } from "@/lib/supabase/trades";
 import { createImportRecord, updateImportRecord } from "@/lib/supabase/csv-imports";
 import { createClient } from "@/lib/supabase/client";
+import { useUserProfile } from "@/context/UserProfileContext";
+import { AccountFormModal } from "@/components/accounts/AccountFormModal";
+import { createTradingAccount } from "@/lib/supabase/accounts";
 import { emitAppEvent } from "@/lib/events/event-bus";
-import type { NewCloudTrade } from "@/types/database";
+import type { NewCloudTrade, NewTradingAccount } from "@/types/database";
 import {
   Upload,
   CheckCircle2,
@@ -21,6 +26,8 @@ import {
   Loader2,
   Check,
   AlertTriangle,
+  Wallet,
+  Plus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -38,15 +45,35 @@ export interface QueuedFileItem {
 
 export const CsvUploader: React.FC = () => {
   const router = useRouter();
+  const { accounts, defaultAccount, refreshAccounts } = useUserProfile();
 
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [queuedFiles, setQueuedFiles] = useState<QueuedFileItem[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
 
+  // Account creation modal state for zero-account blocking flow
+  const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Set default selected account when accounts load
+  useEffect(() => {
+    if (accounts.length > 0 && !selectedAccountId) {
+      const def = defaultAccount?.id || accounts[0].id;
+      setSelectedAccountId(def);
+    }
+  }, [accounts, defaultAccount, selectedAccountId]);
+
+  const selectedAccount = accounts.find((a) => a.id === selectedAccountId) || accounts[0] || null;
+
   const handleFilesSelect = async (filesList: FileList | File[]) => {
+    if (!selectedAccount) {
+      setNotification({ type: "error", message: "Please select a Trading Account before importing." });
+      return;
+    }
+
     const validFiles: File[] = [];
     const filesArray = Array.from(filesList);
 
@@ -68,7 +95,11 @@ export const CsvUploader: React.FC = () => {
     for (const f of validFiles) {
       try {
         const text = await f.text();
-        const res = validateAndParseCsv(text, f.name.replace(/\.[^.]+$/, ""));
+        const res = validateAndParseCsv(
+          text,
+          selectedAccount.account_name,
+          selectedAccount.currency
+        );
         newItems.push({
           id: Math.random().toString(36).substring(2, 9),
           file: f,
@@ -99,6 +130,10 @@ export const CsvUploader: React.FC = () => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
+    if (!selectedAccount) {
+      setNotification({ type: "error", message: "Please select a Trading Account before importing." });
+      return;
+    }
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFilesSelect(e.dataTransfer.files);
     }
@@ -118,7 +153,22 @@ export const CsvUploader: React.FC = () => {
     setQueuedFiles(prev => prev.map(item => item.id === id ? { ...item, status: "queued", error: null, progress: 0 } : item));
   };
 
+  const handleCreateAccountInModal = async (data: NewTradingAccount) => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await createTradingAccount(user.id, data);
+      await refreshAccounts();
+      setAddAccountModalOpen(false);
+    }
+  };
+
   const handleConfirmImportAll = async () => {
+    if (!selectedAccount) {
+      setNotification({ type: "error", message: "Please select a Trading Account before importing." });
+      return;
+    }
+
     const pendingItems = queuedFiles.filter(item => item.status === "queued" || item.status === "failed");
     if (pendingItems.length === 0) return;
 
@@ -135,22 +185,23 @@ export const CsvUploader: React.FC = () => {
       for (const item of pendingItems) {
         if (!item.parseResult || !item.parseResult.success) continue;
 
-        // Set status to importing
         setQueuedFiles(prev => prev.map(q => q.id === item.id ? { ...q, status: "importing", progress: 25 } : q));
 
         try {
-          // 1. Create import record
+          // 1. Create import record with account_id
           const { data: importRecord } = await createImportRecord(
             user.id,
             item.file.name,
-            item.parseResult.trades.length
+            item.parseResult.trades.length,
+            undefined,
+            selectedAccount.id
           );
 
           setQueuedFiles(prev => prev.map(q => q.id === item.id ? { ...q, progress: 50 } : q));
 
-          // 2. Map trades with import_id
+          // 2. Map trades with mandatory account_id and inherited currency
           const cloudTrades: NewCloudTrade[] = item.parseResult.trades.map(t => ({
-            account_id:    null,
+            account_id:    selectedAccount.id,
             ticket:        t.ticket,
             symbol:        t.symbol,
             side:          (t.direction === "LONG" ? "BUY" : "SELL") as "BUY" | "SELL",
@@ -221,238 +272,300 @@ export const CsvUploader: React.FC = () => {
         }
       }
 
-      // Centralized event dispatch
-      emitAppEvent("tradefourge:import-created", { count: totalImportedAll });
-      emitAppEvent("tradefourge:trade-created", { count: totalImportedAll });
-
       setNotification({
         type: "success",
-        message: `Queue processed successfully. Total ${totalImportedAll} trade(s) imported.`,
+        message: `Import complete for ${selectedAccount.account_name}. ${totalImportedAll} trade(s) successfully added to cloud database.`,
       });
 
+      emitAppEvent("tradefourge:data-changed", { action: "bulkImport" });
+
     } catch (err: unknown) {
-      setNotification({
-        type: "error",
-        message: err instanceof Error ? err.message : "Import queue failed — please try again.",
-      });
+      const msg = err instanceof Error ? err.message : "Import failed";
+      setNotification({ type: "error", message: msg });
     } finally {
-      // 🔒 ALWAYS GUARANTEE LOADING STATE IS CLEARED ON EVERY PATH!
       setIsImporting(false);
     }
   };
 
-  const pendingCount = queuedFiles.filter(item => item.status === "queued" || item.status === "failed").length;
+  // ── BLOCKING CASE 1: No accounts exist ────────────────────────────────────
+  if (accounts.length === 0) {
+    return (
+      <div className="space-y-6 font-mono text-xs max-w-4xl mx-auto py-8">
+        <div className="p-8 rounded-2xl bg-[#111522] border border-amber-500/30 shadow-2xl text-center space-y-5">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+
+          <div className="space-y-1.5 max-w-md mx-auto">
+            <h2 className="text-xl font-extrabold text-white tracking-tight">Create Your First Trading Account</h2>
+            <p className="text-gray-400 text-xs leading-relaxed">
+              Every trade must belong to a Trading Account. Please create an account before importing CSV files.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => setAddAccountModalOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all active:scale-95 shadow-lg"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Account</span>
+            </button>
+
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-bold text-xs transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <AccountFormModal
+          open={addAccountModalOpen}
+          onClose={() => setAddAccountModalOpen(false)}
+          onSubmit={handleCreateAccountInModal}
+        />
+      </div>
+    );
+  }
+
+  // ── CASE 2: Accounts exist — Account-First Import Workflow ─────────────────
+  const hasQueued = queuedFiles.length > 0;
+  const isAllDone = hasQueued && queuedFiles.every(q => q.status === "success" || q.status === "partial" || q.status === "failed");
 
   return (
-    <div className="space-y-6 text-xs font-mono">
-      {/* Title Header */}
-      <div className="p-6 rounded-2xl glass-card border border-dark-border flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
-        <div>
-          <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            Upload TradeFourge CSV Workstation
-            <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30">
-              v3.2.8
-            </span>
-          </h2>
-          <p className="text-xs text-gray-400 mt-1">
-            Batch process single or multiple MetaTrader 4, MetaTrader 5, cTrader & TradingView CSV files with sequential queue execution.
-          </p>
-        </div>
-        <div className="p-3 rounded-xl bg-dark-card border border-dark-border flex items-center gap-2 text-xs text-gray-300">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Multi-CSV Queue + Duplication Guard</span>
-        </div>
-      </div>
+    <div className="space-y-6 text-xs font-mono max-w-4xl mx-auto pb-12">
+      {/* Notifications */}
+      {notification && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-4 rounded-xl border flex items-start gap-3 ${
+            notification.type === "success"
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+              : notification.type === "warning"
+              ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
+              : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+          }`}
+        >
+          {notification.type === "success" ? (
+            <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+          ) : (
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+          )}
+          <div className="flex-1 font-bold">{notification.message}</div>
+          <button onClick={() => setNotification(null)} className="text-gray-400 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </motion.div>
+      )}
 
-      {/* Notification Toast */}
-      <AnimatePresence>
-        {notification && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-            className={`p-4 rounded-xl border flex items-center justify-between ${
-              notification.type === "success"
-                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-                : notification.type === "warning"
-                ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
-                : "bg-rose-500/10 border-rose-500/30 text-rose-300"
-            }`}
+      {/* STEP 1: CHOOSE TRADING ACCOUNT */}
+      <div className="p-6 rounded-2xl bg-[#111522] border border-white/10 space-y-4 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-purple-600/20 text-purple-400 font-bold flex items-center justify-center text-xs">1</span>
+            <h2 className="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
+              <Wallet className="w-4 h-4 text-purple-400" />
+              Choose Trading Account
+            </h2>
+          </div>
+          <button
+            onClick={() => setAddAccountModalOpen(true)}
+            className="text-xs text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1"
           >
-            <div className="flex items-center gap-2">
-              {notification.type === "success"
-                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                : notification.type === "warning"
-                ? <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                : <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              }
-              <span>{notification.message}</span>
-            </div>
-            <button onClick={() => setNotification(null)} className="p-1 hover:text-white shrink-0">
-              <X className="w-4 h-4" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Plus className="w-3.5 h-3.5" /> Add New Account
+          </button>
+        </div>
 
-      {/* Drop Zone */}
-      <div
-        onDragOver={e => { e.preventDefault(); setDragActive(true); }}
-        onDragLeave={() => setDragActive(false)}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`p-10 md:p-12 rounded-2xl border-2 border-dashed text-center cursor-pointer transition-all duration-300 glass-card flex flex-col items-center justify-center gap-4 ${
-          dragActive
-            ? "border-purple-500 bg-purple-500/10 shadow-glow scale-[1.01]"
-            : "border-dark-border hover:border-purple-500/40 hover:bg-dark-hover/40"
-        }`}
-      >
-        <input
-          type="file"
-          ref={fileInputRef}
-          multiple
-          accept=".csv"
-          onChange={e => e.target.files && handleFilesSelect(e.target.files)}
-          className="hidden"
-        />
-        <div className="w-14 h-14 rounded-2xl bg-purple-600/20 border border-purple-500/30 text-purple-400 flex items-center justify-center shadow-glow">
-          <Upload className="w-7 h-7" />
-        </div>
-        <div>
-          <h3 className="text-base font-bold text-white mb-1">
-            Drop CSV file(s) here or <span className="text-purple-400 underline">browse computer</span>
-          </h3>
-          <p className="text-xs text-gray-400 max-w-md">
-            Select one or multiple CSV files to queue for sequential processing. Exness, MetaTrader, cTrader, and TradingView files are supported.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] text-gray-500 pt-1">
-          <span>✓ Multi-file selection</span>
-          <span>✓ Independent import tracking</span>
-          <span>✓ Automatic duplicate skipping</span>
+        {/* Account Selection Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {accounts.map((acc) => {
+            const isSelected = selectedAccountId === acc.id;
+            return (
+              <button
+                key={acc.id}
+                type="button"
+                onClick={() => setSelectedAccountId(acc.id)}
+                className={`p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                  isSelected
+                    ? "bg-purple-600/15 border-purple-500 text-white font-bold shadow-lg"
+                    : "bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20"
+                }`}
+              >
+                <div className="space-y-1 min-w-0 pr-2">
+                  <div className="text-xs font-bold text-white truncate">{acc.account_name}</div>
+                  <div className="text-[10px] text-gray-400 flex items-center gap-2">
+                    <span>{acc.broker || "Generic"}</span>
+                    <span>•</span>
+                    <span className="text-purple-300 font-bold px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">
+                      {acc.currency}
+                    </span>
+                  </div>
+                </div>
+                {isSelected && <Check className="w-5 h-5 text-purple-400 shrink-0" />}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Queue Workstation List */}
-      {queuedFiles.length > 0 && (
-        <div className="p-6 rounded-2xl glass-card border border-dark-border space-y-5 shadow-2xl">
-          <div className="flex items-center justify-between border-b border-white/10 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30">
-                <ListCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white">
-                  Import Queue ({queuedFiles.length} File{queuedFiles.length > 1 ? "s" : ""})
-                </h3>
-                <span className="text-[11px] text-gray-400">
-                  {pendingCount} file(s) ready for import
-                </span>
-              </div>
+      {/* STEP 2: CHOOSE CSV FILES */}
+      <div className="p-6 rounded-2xl bg-[#111522] border border-white/10 space-y-4 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-purple-600/20 text-purple-400 font-bold flex items-center justify-center text-xs">2</span>
+            <h2 className="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
+              <Upload className="w-4 h-4 text-purple-400" />
+              Select CSV Statement Files
+            </h2>
+          </div>
+          {selectedAccount && (
+            <span className="text-xs text-gray-400">
+              Importing into: <strong className="text-purple-300 font-bold">{selectedAccount.account_name} ({selectedAccount.currency})</strong>
+            </span>
+          )}
+        </div>
+
+        {/* Dropzone Area */}
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${
+            dragActive
+              ? "border-purple-500 bg-purple-500/10"
+              : "border-white/10 hover:border-purple-500/40 bg-white/5 hover:bg-white/10"
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".csv"
+            onChange={(e) => e.target.files && handleFilesSelect(e.target.files)}
+            className="hidden"
+          />
+
+          <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center mx-auto mb-3 border border-purple-500/20">
+            <Upload className="w-6 h-6" />
+          </div>
+
+          <h3 className="text-sm font-bold text-white">
+            Drag & drop MT4, MT5, cTrader, or brokerage CSV statements
+          </h3>
+          <p className="text-xs text-gray-400 mt-1">
+            Supports batch uploading multiple CSV files simultaneously · Exness, FTMO, ICMarkets, etc.
+          </p>
+
+          {selectedAccount?.currency === "USC" && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>USC Cent Account detected — monetary values automatically converted to USD (÷100)</span>
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* QUEUED FILES PREVIEW & CONFIRMATION */}
+      {hasQueued && (
+        <div className="p-6 rounded-2xl bg-[#111726] border border-white/10 space-y-4 shadow-2xl">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-purple-400" />
+              Queued Statements ({queuedFiles.length})
+            </h3>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={clearQueue}
                 disabled={isImporting}
-                className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-bold hover:text-white transition-all disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold text-xs transition-colors"
               >
                 Clear Queue
               </button>
-              <button
-                onClick={handleConfirmImportAll}
-                disabled={isImporting || pendingCount === 0}
-                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                <span>{isImporting ? "Processing Queue..." : `Import ${pendingCount} File(s)`}</span>
-              </button>
+
+              {!isAllDone && (
+                <button
+                  onClick={handleConfirmImportAll}
+                  disabled={isImporting}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-lg active:scale-95"
+                >
+                  {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  <span>Import All to {selectedAccount?.account_name}</span>
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Queue Items Breakdown */}
-          <div className="space-y-3">
+          {/* Files List */}
+          <div className="space-y-2">
             {queuedFiles.map((item) => (
               <div
                 key={item.id}
-                className={`p-4 rounded-xl border transition-all ${
-                  item.status === "success"
-                    ? "bg-emerald-500/5 border-emerald-500/20"
-                    : item.status === "failed"
-                    ? "bg-rose-500/5 border-rose-500/20"
-                    : item.status === "importing"
-                    ? "bg-purple-500/10 border-purple-500/40 shadow-glow"
-                    : "bg-white/5 border-white/10"
-                }`}
+                className="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2"
               >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      item.status === "success" ? "bg-emerald-500/20 text-emerald-400" :
-                      item.status === "failed" ? "bg-rose-500/20 text-rose-400" :
-                      item.status === "importing" ? "bg-purple-600/20 text-purple-400 animate-pulse" :
-                      "bg-white/10 text-gray-300"
-                    }`}>
-                      <FileSpreadsheet className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-white">{item.file.name}</span>
-                        <span className="text-[10px] text-gray-400">({(item.file.size / 1024).toFixed(1)} KB)</span>
-                        {item.parseResult?.isCentAccount && (
-                          <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-bold">
-                            USC CENT ÷100
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-gray-400 mt-0.5">
-                        {item.parseResult?.success
-                          ? `${item.parseResult.trades.length} trades parsed • Broker: ${item.parseResult.broker}`
-                          : item.error || "Parsing failed"}
-                      </div>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileSpreadsheet className="w-4 h-4 text-purple-400 shrink-0" />
+                    <span className="font-bold text-white truncate text-xs">{item.file.name}</span>
+                    <span className="text-[10px] text-gray-400">({(item.file.size / 1024).toFixed(1)} KB)</span>
                   </div>
 
-                  {/* Status & Actions */}
-                  <div className="flex items-center gap-3 self-end md:self-auto">
-                    {item.status === "importing" && (
-                      <span className="text-purple-400 font-bold flex items-center gap-1.5">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> {item.progress}%
-                      </span>
-                    )}
-
-                    {item.status === "success" && (
-                      <span className="text-emerald-400 font-bold flex items-center gap-1">
-                        <Check className="w-3.5 h-3.5" /> Imported ({item.summary?.imported} trades)
-                      </span>
-                    )}
-
-                    {item.status === "failed" && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-rose-400 font-bold">Failed</span>
-                        <button
-                          onClick={() => retryItem(item.id)}
-                          disabled={isImporting}
-                          className="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 font-bold text-[10px] flex items-center gap-1"
-                        >
-                          <RotateCcw className="w-3 h-3" /> Retry
-                        </button>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${
+                      item.status === "success"
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                        : item.status === "failed"
+                        ? "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                        : item.status === "importing"
+                        ? "bg-purple-500/10 border-purple-500/30 text-purple-400"
+                        : "bg-gray-500/10 border-gray-500/30 text-gray-400"
+                    }`}>
+                      {item.status}
+                    </span>
 
                     <button
                       onClick={() => removeFromQueue(item.id)}
                       disabled={isImporting}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-white/5 transition-colors disabled:opacity-50"
-                      title="Remove from queue"
+                      className="text-gray-400 hover:text-rose-400 p-1"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
 
-                {/* Individual item progress bar */}
+                {/* Progress Bar */}
                 {item.status === "importing" && (
-                  <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden mt-3">
-                    <div className="h-full bg-purple-500 shadow-glow transition-all duration-200" style={{ width: `${item.progress}%` }} />
+                  <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-purple-500 h-full transition-all duration-300" style={{ width: `${item.progress}%` }} />
+                  </div>
+                )}
+
+                {/* Summary Details */}
+                {item.summary && (
+                  <div className="text-[10px] text-gray-300 flex items-center gap-3 pt-1">
+                    <span className="text-emerald-400 font-bold">{item.summary.imported} imported</span>
+                    <span>•</span>
+                    <span className="text-amber-400">{item.summary.skippedDuplicates} duplicate skipped</span>
+                    {item.summary.failed > 0 && (
+                      <>
+                        <span>•</span>
+                        <span className="text-rose-400 font-bold">{item.summary.failed} failed</span>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Error Banner */}
+                {item.error && (
+                  <div className="text-[10px] text-rose-400 bg-rose-500/10 p-2 rounded-lg border border-rose-500/20 flex items-center justify-between">
+                    <span>{item.error}</span>
+                    <button onClick={() => retryItem(item.id)} className="underline text-rose-300 hover:text-white font-bold ml-2">
+                      Retry
+                    </button>
                   </div>
                 )}
               </div>
@@ -460,6 +573,13 @@ export const CsvUploader: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Add Account Modal */}
+      <AccountFormModal
+        open={addAccountModalOpen}
+        onClose={() => setAddAccountModalOpen(false)}
+        onSubmit={handleCreateAccountInModal}
+      />
     </div>
   );
 };

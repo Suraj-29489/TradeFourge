@@ -478,34 +478,45 @@ export async function getFrontendImportHistory(
   const imports = loadSessionData<CsvImport[]>(KEYS.IMPORTS, []).filter(
     (i) => !i.user_id || i.user_id === userId
   );
-  return { data: imports, error: null };
+  const accounts = loadSessionData<TradingAccount[]>(KEYS.ACCOUNTS, []);
+
+  const enriched = imports.map((imp) => {
+    const acc = accounts.find((a) => a.id === imp.account_id);
+    return {
+      ...imp,
+      account: acc ? { id: acc.id, account_name: acc.account_name, broker: acc.broker, currency: acc.currency } : null,
+    };
+  });
+
+  return { data: enriched as CsvImport[], error: null };
 }
 
 export async function getFrontendLatestImport(
   userId: string
 ): Promise<ServiceResult<CsvImport | null>> {
-  const imports = loadSessionData<CsvImport[]>(KEYS.IMPORTS, []).filter(
-    (i) => !i.user_id || i.user_id === userId
-  );
-  return { data: imports[0] ?? null, error: null };
+  const res = await getFrontendImportHistory(userId);
+  return { data: res.data ? res.data[0] ?? null : null, error: null };
 }
 
 export async function createFrontendImportRecord(
   userId: string,
   filename: string,
   totalRows: number,
-  storagePath?: string
+  storagePath?: string,
+  accountId?: string | null
 ): Promise<ServiceResult<CsvImport>> {
   const imports = loadSessionData<CsvImport[]>(KEYS.IMPORTS, []);
+  const accounts = loadSessionData<TradingAccount[]>(KEYS.ACCOUNTS, []);
+  const selectedAcc = accounts.find((a) => a.id === accountId);
   const now = new Date().toISOString();
 
   const newImport: CsvImport = {
     id: generateUUID(),
     user_id: userId,
-    account_id: null,
+    account_id: accountId ?? null,
     filename,
-    broker: null,
-    platform: null,
+    broker: selectedAcc?.broker ?? null,
+    platform: selectedAcc?.platform ?? null,
     total_rows: totalRows,
     imported_rows: 0,
     failed_rows: 0,
@@ -705,6 +716,16 @@ export async function deleteFrontendTradingAccount(
   let accounts = loadSessionData<TradingAccount[]>(KEYS.ACCOUNTS, []);
   accounts = accounts.filter((a) => a.id !== id);
   saveSessionData(KEYS.ACCOUNTS, accounts);
+
+  let trades = loadSessionData<CloudTradeWithRelations[]>(KEYS.TRADES, []);
+  trades = trades.filter((t) => t.account_id !== id);
+  saveSessionData(KEYS.TRADES, trades);
+
+  let imports = loadSessionData<CsvImport[]>(KEYS.IMPORTS, []);
+  imports = imports.filter((i) => i.account_id !== id);
+  saveSessionData(KEYS.IMPORTS, imports);
+
+  emitAppEvent("tradefourge:data-changed", { accountId: id, action: "deleteAccount" });
   return { data: true, error: null };
 }
 

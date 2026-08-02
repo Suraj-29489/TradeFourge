@@ -15,7 +15,8 @@ import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { OutcomeBadge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import { TableSkeleton } from "@/components/ui/LoadingSkeleton";
-import type { CloudTradeWithRelations, CloudTradeFilters, PaginatedResult } from "@/types/database";
+import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
+import type { CloudTradeWithRelations, CloudTradeFilters, PaginatedResult, TradingAccount } from "@/types/database";
 
 const COLUMN_LABELS: Record<keyof ColumnVisibility, string> = {
   date:       "Date",
@@ -122,7 +123,7 @@ interface CloudTradesTableProps {
   onDeleteTrade: (id: string) => void;
   onViewTrade: (trade: CloudTradeWithRelations) => void;
   onRefresh: () => void;
-  accounts: { id: string; account_name: string }[];
+  accounts: TradingAccount[];
 }
 
 export function CloudTradesTable({
@@ -278,16 +279,16 @@ export function CloudTradesTable({
 
           {/* Account filter */}
           {accounts.length > 0 && (
-            <select
-              value={filters.accountId}
-              onChange={(e) => onFiltersChange({ accountId: e.target.value })}
-              className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500"
-            >
-              <option value="ALL">All Accounts</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.account_name}</option>
-              ))}
-            </select>
+            <MultiAccountFilter
+              accounts={accounts}
+              selectedAccountIds={filters.accountIds || (filters.accountId !== 'ALL' ? [filters.accountId] : ['ALL'])}
+              onChange={(ids) => {
+                onFiltersChange({
+                  accountIds: ids,
+                  accountId: ids.length === 1 ? ids[0] : 'ALL',
+                });
+              }}
+            />
           )}
 
           {/* Columns Button */}
