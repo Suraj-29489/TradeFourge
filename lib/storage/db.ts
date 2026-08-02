@@ -109,6 +109,10 @@ export async function clearAllStorage(): Promise<void> {
     await del(IDB_KEYS.SELECTED_IDS);
     await del(IDB_KEYS.SETTINGS_V3);
     Object.values(IDB_KEYS).forEach(k => localStorage.removeItem(k));
+    Object.values(LS_KEYS).forEach(k => localStorage.removeItem(k));
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.clear();
+    }
   } catch {
     console.error("Error clearing storage");
   }

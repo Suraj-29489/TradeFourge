@@ -74,6 +74,16 @@ const KEYS = {
   IMAGES: "tf_frontend_images",
 };
 
+export function clearFrontendStore(): void {
+  if (typeof window === "undefined") return;
+  Object.values(KEYS).forEach((k) => {
+    try {
+      sessionStorage.removeItem(k);
+      localStorage.removeItem(k);
+    } catch {}
+  });
+}
+
 // ─── TRADES SERVICE ─────────────────────────────────────────────────────────
 
 export async function getFrontendTrades(
