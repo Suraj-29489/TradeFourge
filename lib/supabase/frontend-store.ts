@@ -441,7 +441,10 @@ export async function deleteAllFrontendTrades(
   const trades = loadSessionData<CloudTradeWithRelations[]>(KEYS.TRADES, []);
   const count = trades.length;
 
-  saveSessionData(KEYS.TRADES, []);
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem(KEYS.TRADES);
+    localStorage.removeItem(KEYS.TRADES);
+  }
 
   emitAppEvent("tradefourge:trade-deleted", { count, all: true });
   emitAppEvent("tradefourge:data-changed", { all: true, action: "deleteAllTrades" });
@@ -581,8 +584,7 @@ export async function deleteFrontendImportRecord(
 export async function deleteAllFrontendImports(
   userId: string
 ): Promise<DeleteImportResult> {
-  saveSessionData(KEYS.IMPORTS, []);
-  await deleteAllFrontendTrades(userId);
+  clearFrontendStore();
 
   emitAppEvent("tradefourge:import-deleted", { all: true });
   emitAppEvent("tradefourge:data-changed", { all: true, action: "deleteAllImports" });
