@@ -2,11 +2,21 @@
 // Tag management service for trade_tags and trade_tag_links tables.
 
 import { createClient } from './client';
+import { isFrontendOnly } from '@/lib/config/frontend-only';
+import {
+  getFrontendTradeTags,
+  createFrontendTag,
+  deleteFrontendTag,
+} from './frontend-store';
 import type { TradeTag, NewTradeTag, ServiceResult } from '@/types/database';
 
 // ─── Fetch ────────────────────────────────────────────────────────────────────
 
 export async function fetchUserTags(userId: string): Promise<ServiceResult<TradeTag[]>> {
+  if (isFrontendOnly()) {
+    return getFrontendTradeTags(userId);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -29,6 +39,10 @@ export async function createTag(
   userId: string,
   payload: NewTradeTag
 ): Promise<ServiceResult<TradeTag>> {
+  if (isFrontendOnly()) {
+    return createFrontendTag(userId, payload);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -51,6 +65,10 @@ export async function deleteTag(
   id: string,
   userId: string
 ): Promise<ServiceResult<boolean>> {
+  if (isFrontendOnly()) {
+    return deleteFrontendTag(id, userId);
+  }
+
   const supabase = createClient();
   try {
     const { error } = await supabase
@@ -73,6 +91,10 @@ export async function addTagToTrade(
   tradeId: string,
   tagId: string
 ): Promise<ServiceResult<boolean>> {
+  if (isFrontendOnly()) {
+    return { data: true, error: null };
+  }
+
   const supabase = createClient();
   try {
     const { error } = await supabase
@@ -94,6 +116,10 @@ export async function removeTagFromTrade(
   tradeId: string,
   tagId: string
 ): Promise<ServiceResult<boolean>> {
+  if (isFrontendOnly()) {
+    return { data: true, error: null };
+  }
+
   const supabase = createClient();
   try {
     const { error } = await supabase
@@ -117,6 +143,10 @@ export async function setTradeTagIds(
   tradeId: string,
   tagIds: string[]
 ): Promise<ServiceResult<boolean>> {
+  if (isFrontendOnly()) {
+    return { data: true, error: null };
+  }
+
   const supabase = createClient();
   try {
     // Delete all existing links

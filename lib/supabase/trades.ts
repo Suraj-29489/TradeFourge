@@ -3,6 +3,19 @@
 
 import { createClient } from './client';
 import { emitAppEvent } from '@/lib/events/event-bus';
+import { isFrontendOnly } from '@/lib/config/frontend-only';
+import {
+  getFrontendTrades,
+  getFrontendTradeById,
+  getFrontendTradeStats,
+  deduplicateFrontendTrades,
+  createFrontendTrade,
+  bulkInsertFrontendTrades,
+  updateFrontendTrade,
+  deleteFrontendTrade,
+  deleteAllFrontendTrades,
+  deleteFrontendTradesByImportId,
+} from './frontend-store';
 import type {
   CloudTrade,
   CloudTradeWithRelations,
@@ -46,6 +59,10 @@ export async function fetchTrades(
   sortBy: keyof CloudTrade = 'close_time',
   sortAsc = false
 ): Promise<ServiceResult<PaginatedResult<CloudTradeWithRelations>>> {
+  if (isFrontendOnly()) {
+    return getFrontendTrades(userId, filters, page, pageSize, sortBy, sortAsc);
+  }
+
   const supabase = createClient();
   try {
     let query = supabase
@@ -129,6 +146,10 @@ export async function fetchTradeById(
   id: string,
   userId: string
 ): Promise<ServiceResult<CloudTradeWithRelations>> {
+  if (isFrontendOnly()) {
+    return getFrontendTradeById(id, userId);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -177,6 +198,10 @@ export interface CloudTradeStats {
 export async function fetchTradeStats(
   userId: string
 ): Promise<ServiceResult<CloudTradeStats>> {
+  if (isFrontendOnly()) {
+    return getFrontendTradeStats(userId);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -210,6 +235,10 @@ export async function deduplicateTrades(
   userId: string,
   candidates: NewCloudTrade[]
 ): Promise<{ uniqueTrades: NewCloudTrade[]; skippedDuplicates: number }> {
+  if (isFrontendOnly()) {
+    return deduplicateFrontendTrades(userId, candidates);
+  }
+
   if (!candidates || candidates.length === 0) {
     return { uniqueTrades: [], skippedDuplicates: 0 };
   }
@@ -280,6 +309,10 @@ export async function createTrade(
   userId: string,
   payload: NewCloudTrade
 ): Promise<ServiceResult<CloudTrade>> {
+  if (isFrontendOnly()) {
+    return createFrontendTrade(userId, payload);
+  }
+
   const supabase = createClient();
   try {
     const { uniqueTrades } = await deduplicateTrades(userId, [payload]);
@@ -307,6 +340,10 @@ export async function bulkInsertTrades(
   userId: string,
   trades: NewCloudTrade[]
 ): Promise<{ inserted: number; skippedDuplicates: number; errors: string[] }> {
+  if (isFrontendOnly()) {
+    return bulkInsertFrontendTrades(userId, trades);
+  }
+
   const { uniqueTrades, skippedDuplicates } = await deduplicateTrades(userId, trades);
 
   if (uniqueTrades.length === 0) {
@@ -353,6 +390,10 @@ export async function updateTrade(
   userId: string,
   updates: UpdateCloudTrade
 ): Promise<ServiceResult<CloudTrade>> {
+  if (isFrontendOnly()) {
+    return updateFrontendTrade(id, userId, updates);
+  }
+
   const supabase = createClient();
   try {
     const { net_profit, ...cleanUpdates } = updates as Record<string, any>;
@@ -379,6 +420,10 @@ export async function deleteTrade(
   id: string,
   userId: string
 ): Promise<ServiceResult<boolean>> {
+  if (isFrontendOnly()) {
+    return deleteFrontendTrade(id, userId);
+  }
+
   const supabase = createClient();
   try {
     // 0. Query rows before
@@ -449,6 +494,10 @@ export async function deleteTrade(
 }
 
 export async function deleteAllTrades(userId: string): Promise<ServiceResult<number>> {
+  if (isFrontendOnly()) {
+    return deleteAllFrontendTrades(userId);
+  }
+
   const supabase = createClient();
   try {
     // 0. Query rows before
@@ -508,6 +557,10 @@ export async function deleteTradesByImportId(
   importId: string,
   userId: string
 ): Promise<ServiceResult<number>> {
+  if (isFrontendOnly()) {
+    return deleteFrontendTradesByImportId(importId, userId);
+  }
+
   const supabase = createClient();
   try {
     // 0. Query rows before

@@ -4,6 +4,16 @@
 // Never trust client-provided user_id — always use auth.uid() from RLS.
 
 import { createClient } from './client';
+import { isFrontendOnly } from '@/lib/config/frontend-only';
+import {
+  getFrontendTradingAccounts,
+  getFrontendTradingAccountById,
+  getFrontendDefaultAccount,
+  createFrontendTradingAccount,
+  updateFrontendTradingAccount,
+  setFrontendDefaultAccount,
+  deleteFrontendTradingAccount,
+} from './frontend-store';
 import type {
   TradingAccount,
   NewTradingAccount,
@@ -20,6 +30,10 @@ import type {
 export async function fetchTradingAccounts(
   userId: string
 ): Promise<ServiceResult<TradingAccount[]>> {
+  if (isFrontendOnly()) {
+    return getFrontendTradingAccounts(userId);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -45,6 +59,10 @@ export async function fetchTradingAccountById(
   id: string,
   userId: string
 ): Promise<ServiceResult<TradingAccount>> {
+  if (isFrontendOnly()) {
+    return getFrontendTradingAccountById(id, userId);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -68,6 +86,10 @@ export async function fetchTradingAccountById(
 export async function fetchDefaultAccount(
   userId: string
 ): Promise<ServiceResult<TradingAccount>> {
+  if (isFrontendOnly()) {
+    return getFrontendDefaultAccount(userId);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -98,6 +120,10 @@ export async function createTradingAccount(
   userId: string,
   payload: NewTradingAccount
 ): Promise<ServiceResult<TradingAccount>> {
+  if (isFrontendOnly()) {
+    return createFrontendTradingAccount(userId, payload);
+  }
+
   const supabase = createClient();
   try {
     // If marking as default, clear existing defaults first
@@ -133,6 +159,10 @@ export async function updateTradingAccount(
   userId: string,
   updates: UpdateTradingAccount
 ): Promise<ServiceResult<TradingAccount>> {
+  if (isFrontendOnly()) {
+    return updateFrontendTradingAccount(id, userId, updates);
+  }
+
   const supabase = createClient();
   try {
     if (updates.is_default) {
@@ -166,6 +196,10 @@ export async function setDefaultAccount(
   id: string,
   userId: string
 ): Promise<ServiceResult<TradingAccount>> {
+  if (isFrontendOnly()) {
+    return setFrontendDefaultAccount(id, userId);
+  }
+
   const supabase = createClient();
   try {
     // Clear all defaults
@@ -201,6 +235,10 @@ export async function deleteTradingAccount(
   id: string,
   userId: string
 ): Promise<ServiceResult<boolean>> {
+  if (isFrontendOnly()) {
+    return deleteFrontendTradingAccount(id, userId);
+  }
+
   const supabase = createClient();
   try {
     const { error } = await supabase

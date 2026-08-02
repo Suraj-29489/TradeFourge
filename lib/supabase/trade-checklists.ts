@@ -2,6 +2,10 @@
 // Checklist template management and per-trade completion tracking.
 
 import { createClient } from './client';
+import { isFrontendOnly } from '@/lib/config/frontend-only';
+import {
+  getFrontendChecklists,
+} from './frontend-store';
 import type {
   TradeChecklist,
   TradeChecklistItem,
@@ -12,6 +16,10 @@ import type {
 // ─── Checklists ───────────────────────────────────────────────────────────────
 
 export async function fetchChecklists(userId: string): Promise<ServiceResult<TradeChecklist[]>> {
+  if (isFrontendOnly()) {
+    return getFrontendChecklists(userId);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -34,6 +42,18 @@ export async function createChecklist(
   name: string,
   description?: string
 ): Promise<ServiceResult<TradeChecklist>> {
+  if (isFrontendOnly()) {
+    return {
+      data: {
+        id: Math.random().toString(36).slice(2),
+        user_id: userId,
+        text: name,
+        is_default: false,
+      },
+      error: null,
+    };
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -54,6 +74,10 @@ export async function deleteChecklist(
   id: string,
   userId: string
 ): Promise<ServiceResult<boolean>> {
+  if (isFrontendOnly()) {
+    return { data: true, error: null };
+  }
+
   const supabase = createClient();
   try {
     const { error } = await supabase
@@ -75,6 +99,10 @@ export async function deleteChecklist(
 export async function fetchChecklistItems(
   checklistId: string
 ): Promise<ServiceResult<TradeChecklistItem[]>> {
+  if (isFrontendOnly()) {
+    return { data: [], error: null };
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -96,6 +124,18 @@ export async function addChecklistItem(
   text: string,
   sortOrder = 0
 ): Promise<ServiceResult<TradeChecklistItem>> {
+  if (isFrontendOnly()) {
+    return {
+      data: {
+        id: Math.random().toString(36).slice(2),
+        user_id: checklistId,
+        text,
+        is_default: false,
+      },
+      error: null,
+    };
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -113,6 +153,10 @@ export async function addChecklistItem(
 }
 
 export async function deleteChecklistItem(id: string): Promise<ServiceResult<boolean>> {
+  if (isFrontendOnly()) {
+    return { data: true, error: null };
+  }
+
   const supabase = createClient();
   try {
     const { error } = await supabase
@@ -133,6 +177,10 @@ export async function deleteChecklistItem(id: string): Promise<ServiceResult<boo
 export async function fetchTradeChecklistCompletions(
   tradeId: string
 ): Promise<ServiceResult<TradeChecklistCompletion[]>> {
+  if (isFrontendOnly()) {
+    return { data: [], error: null };
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -155,6 +203,10 @@ export async function saveTradeChecklistCompletions(
   tradeId: string,
   completions: { checklist_item_id: string; is_checked: boolean }[]
 ): Promise<ServiceResult<boolean>> {
+  if (isFrontendOnly()) {
+    return { data: true, error: null };
+  }
+
   const supabase = createClient();
   try {
     const rows = completions.map((c) => ({

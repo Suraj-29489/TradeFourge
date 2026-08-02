@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/Modal";
 import { createTrade } from "@/lib/supabase/trades";
 import { fetchTradingAccounts } from "@/lib/supabase/accounts";
 import { createClient } from "@/lib/supabase/client";
+import { isFrontendOnly } from "@/lib/config/frontend-only";
 import type { NewCloudTrade, TradingAccount, TradeSide, TradeSession } from "@/types/database";
 import {
   TrendingUp, TrendingDown, DollarSign, Clock, FileText, Camera, Tag,
@@ -119,17 +120,21 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
 
       // Upload screenshot if selected
       if (screenshotFile) {
-        const fileExt = screenshotFile.name.split('.').pop();
-        const filePath = `${userId}/${Date.now()}.${fileExt}`;
-        const { error: uploadErr } = await supabase.storage
-          .from('trade-screenshots')
-          .upload(filePath, screenshotFile, { upsert: true });
-
-        if (!uploadErr) {
-          const { data: pubData } = supabase.storage
+        if (isFrontendOnly()) {
+          uploadedScreenshotUrl = URL.createObjectURL(screenshotFile);
+        } else {
+          const fileExt = screenshotFile.name.split('.').pop();
+          const filePath = `${userId}/${Date.now()}.${fileExt}`;
+          const { error: uploadErr } = await supabase.storage
             .from('trade-screenshots')
-            .getPublicUrl(filePath);
-          uploadedScreenshotUrl = pubData.publicUrl;
+            .upload(filePath, screenshotFile, { upsert: true });
+
+          if (!uploadErr) {
+            const { data: pubData } = supabase.storage
+              .from('trade-screenshots')
+              .getPublicUrl(filePath);
+            uploadedScreenshotUrl = pubData.publicUrl;
+          }
         }
       }
 

@@ -3,6 +3,15 @@
 
 import { createClient } from './client';
 import { emitAppEvent } from '@/lib/events/event-bus';
+import { isFrontendOnly } from '@/lib/config/frontend-only';
+import {
+  getFrontendImportHistory,
+  getFrontendLatestImport,
+  createFrontendImportRecord,
+  updateFrontendImportRecord,
+  deleteFrontendImportRecord,
+  deleteAllFrontendImports,
+} from './frontend-store';
 import type { CsvImport, ServiceResult } from '@/types/database';
 
 export interface DeleteImportResult {
@@ -18,6 +27,10 @@ export interface DeleteImportResult {
 export async function fetchImportHistory(
   userId: string
 ): Promise<ServiceResult<CsvImport[]>> {
+  if (isFrontendOnly()) {
+    return getFrontendImportHistory(userId);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -40,6 +53,10 @@ export async function fetchImportHistory(
 export async function fetchLatestImport(
   userId: string
 ): Promise<ServiceResult<CsvImport | null>> {
+  if (isFrontendOnly()) {
+    return getFrontendLatestImport(userId);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -67,6 +84,10 @@ export async function createImportRecord(
   totalRows: number,
   storagePath?: string
 ): Promise<ServiceResult<CsvImport>> {
+  if (isFrontendOnly()) {
+    return createFrontendImportRecord(userId, filename, totalRows, storagePath);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -101,6 +122,10 @@ export async function updateImportRecord(
   userId: string,
   updates: Partial<CsvImport>
 ): Promise<ServiceResult<CsvImport>> {
+  if (isFrontendOnly()) {
+    return updateFrontendImportRecord(id, userId, updates);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -127,6 +152,10 @@ export async function deleteImportRecord(
   userId: string,
   deleteTrades = true
 ): Promise<DeleteImportResult> {
+  if (isFrontendOnly()) {
+    return deleteFrontendImportRecord(id, userId, deleteTrades);
+  }
+
   const supabase = createClient();
   try {
     // 0. Query rows before
@@ -296,6 +325,10 @@ export async function deleteImportRecord(
  * Delete all import records for user with cascading trade deletion, verification, and dev logging.
  */
 export async function deleteAllImports(userId: string): Promise<DeleteImportResult> {
+  if (isFrontendOnly()) {
+    return deleteAllFrontendImports(userId);
+  }
+
   const supabase = createClient();
   try {
     // 0. Query rows before

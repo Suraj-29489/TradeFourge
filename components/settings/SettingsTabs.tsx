@@ -17,7 +17,7 @@ import { ProfileForm } from "@/components/profile/ProfileForm";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { deleteAllImports } from "@/lib/supabase/csv-imports";
-import { deleteAllTrades } from "@/lib/supabase/trades";
+import { deleteAllTrades, fetchTrades } from "@/lib/supabase/trades";
 
 export const SettingsTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
@@ -150,9 +150,9 @@ export const SettingsTabs: React.FC = () => {
   const handleDownloadData = async () => {
     if (!userId) return;
     try {
-      const { data: userProf } = await supabase.from("profiles").select("*").eq("id", userId).single();
-      const { data: trades } = await supabase.from("trades").select("*").eq("user_id", userId);
-      const exportObject = { profile: userProf || profile, trades: trades || [], exportedAt: new Date().toISOString() };
+      const tradesRes = await fetchTrades(userId, {}, 1, 10000, "close_time", false);
+      const trades = tradesRes.data?.data || [];
+      const exportObject = { profile: profile, trades: trades, exportedAt: new Date().toISOString() };
 
       const blob = new Blob([JSON.stringify(exportObject, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);

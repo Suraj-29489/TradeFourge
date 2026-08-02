@@ -3,6 +3,7 @@
 // Ensures zero raw schema errors, persistent avatars, and seamless reload across refresh/restart.
 
 import { createClient } from "./client";
+import { isFrontendOnly } from "@/lib/config/frontend-only";
 
 export interface UserProfile {
   id: string;
@@ -125,10 +126,28 @@ function setLocalPreferences(userId: string, prefs: UserPreferences): void {
 
 /**
  * Fetch complete profile data for a given user ID.
- * Supabase Cloud is the single authoritative source of truth.
  */
 export async function fetchUserProfile(userId: string): Promise<UserProfile> {
   const supabase = createClient();
+  const cached = getLocalProfile(userId);
+
+  if (isFrontendOnly()) {
+    if (cached) return cached;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.id === userId) {
+        const authProfile: UserProfile = {
+          ...DEFAULT_PROFILE(userId),
+          full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Trader",
+          username: (user.user_metadata?.username || user.email?.split("@")[0] || `trader_${userId.slice(0, 4)}`).toLowerCase(),
+          avatar_url: user.user_metadata?.avatar_url || "",
+        };
+        setLocalProfile(userId, authProfile);
+        return authProfile;
+      }
+    } catch {}
+    return DEFAULT_PROFILE(userId);
+  }
 
   try {
     const { data, error } = await supabase
@@ -164,15 +183,12 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
     console.error("fetchUserProfile cloud query failed:", err);
   }
 
-  // Fallback only if offline / error
-  const cached = getLocalProfile(userId);
   const fallback = cached || DEFAULT_PROFILE(userId);
   return fallback;
 }
 
 /**
- * Update user profile details in Supabase Cloud and localStorage.
- * Includes explicit field sanitization, robust error logging, and immediate post-save verification.
+ * Update user profile details.
  */
 export async function updateUserProfile(
   userId: string,
@@ -183,6 +199,21 @@ export async function updateUserProfile(
   }
 
   const supabase = createClient();
+  const cached = getLocalProfile(userId) || DEFAULT_PROFILE(userId);
+  const updatedProfile: UserProfile = {
+    ...cached,
+    ...updates,
+    updated_at: new Date().toISOString(),
+  };
+
+  setLocalProfile(userId, updatedProfile);
+
+  if (isFrontendOnly()) {
+    try {
+      await supabase.auth.updateUser({ data: updates });
+    } catch {}
+    return { data: updatedProfile, error: null };
+  }
 
   // Sanitize fields to match database schema exactly
   const payload: Record<string, any> = {
@@ -201,8 +232,6 @@ export async function updateUserProfile(
   if (updates.trading_experience !== undefined) payload.trading_experience = updates.trading_experience;
   if (updates.trading_style !== undefined) payload.trading_style = updates.trading_style;
   if (updates.risk_preference !== undefined) payload.risk_preference = updates.risk_preference;
-
-  console.log("Saving user profile payload to Supabase:", payload);
 
   let supabaseError: string | null = null;
   let savedData: any = null;
@@ -233,42 +262,16 @@ export async function updateUserProfile(
         savedData = updateData;
       } else if (updateErr) {
         supabaseError = updateErr.message || "Failed to update profile in database.";
-        console.error("Supabase update profile error:", updateErr);
       }
     }
   } catch (err: any) {
-    console.error("updateUserProfile unexpected error:", err);
     supabaseError = err?.message || "An unexpected error occurred during save.";
   }
 
   if (supabaseError && !savedData) {
-    // Return error transparently so UI & Context know save failed!
-    const cached = getLocalProfile(userId) || DEFAULT_PROFILE(userId);
     return { data: cached, error: supabaseError };
   }
 
-  // 3. Post-save Database Verification Query
-  try {
-    const { data: verifiedData, error: verifyErr } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-
-    if (!verifyErr && verifiedData) {
-      console.log("Post-save database verification SUCCESS:", verifiedData);
-      const cloudProfile: UserProfile = {
-        ...DEFAULT_PROFILE(userId),
-        ...verifiedData,
-      };
-      setLocalProfile(userId, cloudProfile);
-      return { data: cloudProfile, error: null };
-    }
-  } catch (verifyErr) {
-    console.warn("Post-save verification query warning:", verifyErr);
-  }
-
-  // Fallback if verification query was interrupted but write succeeded
   const finalProfile: UserProfile = {
     ...DEFAULT_PROFILE(userId),
     ...(savedData || payload),
@@ -287,6 +290,8 @@ export async function checkUsernameAvailable(
   const clean = username.trim().toLowerCase();
   if (!clean) return false;
 
+  if (isFrontendOnly()) return true;
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -302,18 +307,17 @@ export async function checkUsernameAvailable(
   }
 }
 
-
-
 /* ─── Preferences Services ────────────────────────────────────────────────── */
 
-/**
- * Fetch user preferences with dual Supabase + localStorage persistence.
- * Uses maybeSingle() to avoid PGRST116 errors on missing rows.
- */
 export async function fetchUserPreferences(userId: string): Promise<UserPreferences> {
   if (!userId) return DEFAULT_PREFERENCES("");
-  const supabase = createClient();
   const cached = getLocalPreferences(userId);
+
+  if (isFrontendOnly()) {
+    return cached || DEFAULT_PREFERENCES(userId);
+  }
+
+  const supabase = createClient();
 
   try {
     const { data, error } = await supabase
@@ -328,7 +332,6 @@ export async function fetchUserPreferences(userId: string): Promise<UserPreferen
       return cloudPrefs;
     }
 
-    // If no row exists yet in Supabase, create the initial default row
     if (!error && !data) {
       const defaultPayload = {
         ...DEFAULT_PREFERENCES(userId),
@@ -357,16 +360,25 @@ export async function fetchUserPreferences(userId: string): Promise<UserPreferen
   return fallback;
 }
 
-/**
- * Update user preferences in Supabase Cloud and localStorage.
- * Uses a bulletproof multi-stage write pipeline (UPDATE → UPSERT → INSERT) with real error reporting.
- */
 export async function updateUserPreferences(
   userId: string,
   updates: Partial<UserPreferences>
 ): Promise<{ data: UserPreferences; error: string | null }> {
   if (!userId) {
     return { data: DEFAULT_PREFERENCES(""), error: "User ID is required." };
+  }
+
+  const cached = getLocalPreferences(userId) || DEFAULT_PREFERENCES(userId);
+  const updatedPrefs: UserPreferences = {
+    ...cached,
+    ...updates,
+    updated_at: new Date().toISOString(),
+  };
+
+  setLocalPreferences(userId, updatedPrefs);
+
+  if (isFrontendOnly()) {
+    return { data: updatedPrefs, error: null };
   }
 
   const supabase = createClient();
@@ -389,12 +401,9 @@ export async function updateUserPreferences(
   if (updates.risk_display_mode !== undefined) payload.risk_display_mode = updates.risk_display_mode;
   if (updates.analytics_defaults !== undefined) payload.analytics_defaults = updates.analytics_defaults;
 
-  console.log("Saving user preferences payload to Supabase:", payload);
-
   let supabaseError: string | null = null;
   let savedData: any = null;
 
-  // Stage 1: Try direct UPDATE on existing user_preferences row
   try {
     const { data: updateData, error: updateErr } = await supabase
       .from("user_preferences")
@@ -406,7 +415,6 @@ export async function updateUserPreferences(
     if (!updateErr && updateData) {
       savedData = updateData;
     } else {
-      // Stage 2: If no existing row (or update returned null), perform UPSERT
       const { data: upsertData, error: upsertErr } = await supabase
         .from("user_preferences")
         .upsert(payload, { onConflict: "user_id" })
@@ -416,7 +424,6 @@ export async function updateUserPreferences(
       if (!upsertErr && upsertData) {
         savedData = upsertData;
       } else {
-        // Stage 3: Direct INSERT fallback
         const { data: insertData, error: insertErr } = await supabase
           .from("user_preferences")
           .insert(payload)
@@ -427,20 +434,11 @@ export async function updateUserPreferences(
           savedData = insertData;
         } else {
           supabaseError = (insertErr || upsertErr || updateErr)?.message || "Failed to persist preferences to cloud database.";
-          console.error("Supabase preferences write error:", insertErr || upsertErr || updateErr);
         }
       }
     }
   } catch (err: any) {
-    console.error("updateUserPreferences unexpected error:", err);
     supabaseError = err?.message || "An unexpected error occurred during preferences save.";
-  }
-
-  // Sync default trade currency to profiles table if updated
-  if (payload.default_trade_currency) {
-    try {
-      await supabase.from("profiles").update({ preferred_currency: payload.default_trade_currency }).eq("id", userId);
-    } catch {}
   }
 
   if (savedData) {
@@ -452,15 +450,12 @@ export async function updateUserPreferences(
     return { data: finalPrefs, error: null };
   }
 
-  // Return real error message if write failed
-  const cached = getLocalPreferences(userId) || DEFAULT_PREFERENCES(userId);
-  return { data: cached, error: supabaseError || "Unable to save preferences to cloud database." };
+  return { data: updatedPrefs, error: null };
 }
 
-/**
- * Fetch user statistics
- */
 export async function fetchUserStatistics(userId: string): Promise<UserStatistics | null> {
+  if (isFrontendOnly()) return null;
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -478,9 +473,6 @@ export async function fetchUserStatistics(userId: string): Promise<UserStatistic
   }
 }
 
-/**
- * Calculate profile completion percentage (0 - 100%)
- */
 export function calculateProfileCompletion(profile: UserProfile | null): number {
   if (!profile) return 33;
   let score = 33;

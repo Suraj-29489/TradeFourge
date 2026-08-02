@@ -2,6 +2,12 @@
 // Image management for trade_images table + Supabase Storage.
 
 import { createClient } from './client';
+import { isFrontendOnly } from '@/lib/config/frontend-only';
+import {
+  getFrontendTradeImages,
+  uploadFrontendTradeImage,
+  deleteFrontendTradeImage,
+} from './frontend-store';
 import type { TradeImage, TradeImageType, ServiceResult } from '@/types/database';
 
 const BUCKET = 'trade-screenshots';
@@ -11,6 +17,10 @@ const BUCKET = 'trade-screenshots';
 export async function fetchTradeImages(
   tradeId: string
 ): Promise<ServiceResult<TradeImage[]>> {
+  if (isFrontendOnly()) {
+    return getFrontendTradeImages(tradeId);
+  }
+
   const supabase = createClient();
   try {
     const { data, error } = await supabase
@@ -39,6 +49,10 @@ export async function uploadTradeImage(
   imageType: TradeImageType = 'screenshot',
   caption?: string
 ): Promise<ServiceResult<TradeImage>> {
+  if (isFrontendOnly()) {
+    return uploadFrontendTradeImage(tradeId, userId, file, imageType, caption);
+  }
+
   const supabase = createClient();
 
   // Validate
@@ -97,6 +111,10 @@ export async function deleteTradeImage(
   id: string,
   userId: string
 ): Promise<ServiceResult<boolean>> {
+  if (isFrontendOnly()) {
+    return deleteFrontendTradeImage(id, userId);
+  }
+
   const supabase = createClient();
   try {
     // Get storage path first
