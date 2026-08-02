@@ -1,7 +1,6 @@
 "use client";
 // app/(app)/journal/page.tsx
-// Cloud-backed Trade Journal — replaces the previous Zustand/IndexedDB version.
-// All trade data comes exclusively from Supabase.
+// Institutional Trade Journal Workstation
 
 import React, { useEffect, useState, useCallback } from "react";
 import { TableProperties, Upload, Plus } from "lucide-react";
@@ -24,7 +23,13 @@ import type {
 
 export default function JournalPage() {
   const [userId, setUserId]           = useState<string | null>(null);
-  const [result, setResult]           = useState<PaginatedResult<CloudTradeWithRelations> | null>(null);
+  const [result, setResult]           = useState<PaginatedResult<CloudTradeWithRelations>>({
+    data: [],
+    total: 0,
+    page: 1,
+    pageSize: 25,
+    totalPages: 0,
+  });
   const [accounts, setAccounts]       = useState<TradingAccount[]>([]);
   const [loading, setLoading]         = useState(true);
   const [activeTrade, setActiveTrade] = useState<CloudTradeWithRelations | null>(null);
@@ -39,26 +44,43 @@ export default function JournalPage() {
 
   const supabase = createClient();
 
-  // ── Load user & accounts once ────────────────────────────────────────────
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-        const { data } = await fetchTradingAccounts(user.id);
-        if (data) setAccounts(data);
-      }
-    })();
-  }, []);
-
-  // ── Load trades whenever deps change ─────────────────────────────────────
+  // ── Load trades deterministically ──────────────────────────────────────────
   const loadTrades = useCallback(async () => {
-    if (!userId) return;
     setLoading(true);
-    const { data } = await fetchTrades(userId, filters, page, pageSize, "close_time", false);
-    setResult(data);
-    setLoading(false);
+    try {
+      let uid = userId;
+      if (!uid) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          uid = user.id;
+          setUserId(user.id);
+          const { data: accs } = await fetchTradingAccounts(user.id);
+          if (accs) setAccounts(accs);
+        }
+      }
+
+      if (!uid) {
+        setResult({ data: [], total: 0, page: 1, pageSize: 25, totalPages: 0 });
+        return;
+      }
+
+      const { data } = await fetchTrades(uid, filters, page, pageSize, "close_time", false);
+      if (data) {
+        setResult(data);
+      } else {
+        setResult({ data: [], total: 0, page: 1, pageSize: 25, totalPages: 0 });
+      }
+    } catch (err) {
+      console.error("Failed to load trades:", err);
+      setResult({ data: [], total: 0, page: 1, pageSize: 25, totalPages: 0 });
+    } finally {
+      setLoading(false);
+    }
   }, [userId, filters, page, pageSize]);
+
+  useEffect(() => {
+    loadTrades();
+  }, [loadTrades]);
 
   const handleFiltersChange = (partial: Partial<CloudTradeFilters>) => {
     setFilters((prev) => ({ ...prev, ...partial }));
@@ -71,19 +93,24 @@ export default function JournalPage() {
   );
 
   const handleDeleteTrade = async (id: string) => {
-    if (!userId) return;
-    const { data: success, error: delErr } = await deleteTrade(id, userId);
+    let uid = userId;
+    if (!uid) {
+      const { data: { user } } = await supabase.auth.getUser();
+      uid = user?.id || null;
+    }
+    if (!uid) return;
+
+    const { data: success, error: delErr } = await deleteTrade(id, uid);
     if (success) {
       await loadTrades();
     } else {
-      alert(`Delete trade failed: ${delErr || "Database deletion failed"}`);
+      alert(`Delete trade failed: ${delErr || "Deletion failed"}`);
     }
   };
 
   // No trades AND no filters applied → true empty state
   const isCompletelyEmpty =
     !loading &&
-    result !== null &&
     result.total === 0 &&
     filters.search === "" &&
     filters.side === "ALL" &&
@@ -92,24 +119,24 @@ export default function JournalPage() {
     filters.accountId === "ALL";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-xs font-mono">
       {/* Header */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-[#111726] to-[#182238] border border-white/10 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-[#111522] border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-400">
+          <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
             <TableProperties className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2 font-mono">
               Trade Journal
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30">
-                CLOUD
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 uppercase">
+                Institutional
               </span>
             </h1>
             <p className="text-xs text-gray-400 mt-0.5">
-              {result
-                ? `${result.total.toLocaleString()} trade${result.total !== 1 ? "s" : ""} in cloud · Supabase`
-                : "Loading from cloud..."}
+              {loading
+                ? "Loading trade records..."
+                : `${result.total.toLocaleString()} trade${result.total !== 1 ? "s" : ""} recorded`}
             </p>
           </div>
         </div>
@@ -117,14 +144,14 @@ export default function JournalPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/upload"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-dark-card hover:bg-dark-hover border border-dark-border text-gray-200 font-bold text-sm font-mono transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-dark-card hover:bg-dark-hover border border-dark-border text-gray-200 font-bold text-xs font-mono transition-all"
           >
             <Upload className="w-4 h-4" />
             Import CSV
           </Link>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm font-mono shadow-glow transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs font-mono transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" />
             Add Trade
@@ -132,12 +159,12 @@ export default function JournalPage() {
         </div>
       </div>
 
-      {/* Empty State */}
+      {/* Content vs Empty State */}
       {isCompletelyEmpty ? (
         <EmptyState
           icon={TableProperties}
           title="No Trades Yet"
-          description="Your cloud journal is empty. Import a CSV from your broker to populate your trade history, or add trades manually."
+          description="Your trade journal is empty. Import a CSV statement from your broker to populate your trade history, or add trades manually."
           action={{
             label: "Import CSV",
             href: "/upload",

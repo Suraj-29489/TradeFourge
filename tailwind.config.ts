@@ -25,17 +25,16 @@ const config: Config = {
         },
         profit: {
           DEFAULT: "#10B981",
-          glow: "rgba(16, 185, 129, 0.15)",
-          border: "rgba(16, 185, 129, 0.3)",
+          glow: "rgba(16, 185, 129, 0.1)",
+          border: "rgba(16, 185, 129, 0.2)",
           text: "#34D399",
         },
         loss: {
           DEFAULT: "#EF4444",
-          glow: "rgba(239, 68, 68, 0.15)",
-          border: "rgba(239, 68, 68, 0.3)",
+          glow: "rgba(239, 68, 68, 0.1)",
+          border: "rgba(239, 68, 68, 0.2)",
           text: "#F87171",
         },
-        // Theme-aware colors — driven by CSS variables in globals.css
         dark: {
           bg: "rgb(var(--dark-bg) / <alpha-value>)",
           card: "rgb(var(--dark-card) / <alpha-value>)",
@@ -49,9 +48,9 @@ const config: Config = {
         mono: ["var(--font-jetbrains)", "monospace"],
       },
       boxShadow: {
-        glow: "0 0 25px -5px rgba(124, 58, 237, 0.3)",
-        "profit-glow": "0 0 25px -5px rgba(16, 185, 129, 0.25)",
-        "loss-glow": "0 0 25px -5px rgba(239, 68, 68, 0.25)",
+        glow: "0 4px 12px -2px rgba(0, 0, 0, 0.3)",
+        "profit-glow": "0 4px 12px -2px rgba(0, 0, 0, 0.3)",
+        "loss-glow": "0 4px 12px -2px rgba(0, 0, 0, 0.3)",
         card: "0 10px 30px -10px rgba(0, 0, 0, 0.5)",
       },
     },

@@ -101,14 +101,14 @@ function NavLink({
         className={cn(
           "flex items-center gap-3 px-3 py-2 rounded-xl font-mono text-xs font-medium transition-all duration-200 group",
           isActive
-            ? "bg-purple-600/20 text-white border border-purple-500/30 shadow-glow font-bold"
+            ? "bg-purple-500/10 text-white border border-purple-500/20 font-bold"
             : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
         )}
         title={collapsed ? item.name : undefined}
       >
         <Icon
           className={cn(
-            "w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110",
+            "w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-105",
             isActive ? "text-purple-400" : "text-gray-400 group-hover:text-gray-200"
           )}
         />
@@ -128,7 +128,7 @@ function NavLink({
         {isActive && (
           <motion.div
             layoutId="sidebar-active-indicator"
-            className="absolute right-2 w-1.5 h-4 rounded-full bg-purple-500 shadow-glow"
+            className="absolute right-2 w-1.5 h-4 rounded-full bg-purple-500/80"
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           />
         )}
@@ -291,7 +291,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                   TRADE<span className="text-purple-400">FOURGE</span>
                 </span>
                 <span className="text-[10px] text-gray-400 tracking-wider font-mono">
-                  CLOUD JOURNAL
+                  WORKSPACE
                 </span>
               </motion.div>
             )}

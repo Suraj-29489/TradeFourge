@@ -67,7 +67,12 @@ export function normalizeCsvData(
   // ── Detect account type ────────────────────────────────────────────────────
   let detectedAccountType: AccountType = "Pro";
   const textUpper = csvText.toUpperCase();
-  if (textUpper.includes("CENT") || textUpper.includes("STANDARD CENT")) {
+  if (
+    textUpper.includes("CENT") ||
+    textUpper.includes("USC") ||
+    textUpper.includes("US CENT") ||
+    textUpper.includes("CENTS")
+  ) {
     detectedAccountType = "Standard Cent";
   } else if (textUpper.includes("STANDARD")) {
     detectedAccountType = "Standard";
@@ -82,7 +87,10 @@ export function normalizeCsvData(
   // We divide all monetary values by 100 to store USD internally.
   const isCentAccount =
     detectedAccountType === "Standard Cent" ||
-    textUpper.includes("CENT");
+    textUpper.includes("CENT") ||
+    textUpper.includes("USC") ||
+    textUpper.includes("US CENT") ||
+    textUpper.includes("CENTS");
 
   const normFactor = isCentAccount ? 100 : 1;
 

@@ -290,15 +290,15 @@ export const SettingsTabs: React.FC = () => {
           <div className="p-4 rounded-xl bg-dark-card border border-dark-border flex items-center justify-between">
             <div>
               <span className="font-bold text-white block">Application Theme Mode</span>
-              <span className="text-gray-400 text-[11px]">Toggle between Dark Mode and Pristine Light Mode.</span>
+              <span className="text-gray-400 text-[11px]">Dark Mode is currently the active institutional theme.</span>
             </div>
             <button
               type="button"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="px-4 py-2 rounded-xl bg-purple-600/20 border border-purple-500/40 text-purple-300 font-bold flex items-center gap-2 hover:bg-purple-600/30 transition-all"
+              onClick={() => alert("Light Mode Coming Soon")}
+              className="px-4 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold flex items-center gap-2 hover:bg-purple-500/20 transition-all"
             >
-              {theme === "dark" ? <Moon className="w-4 h-4 text-purple-400" /> : <Sun className="w-4 h-4 text-amber-400" />}
-              <span>{theme === "dark" ? "Dark Mode Active" : "Light Mode Active"}</span>
+              <Moon className="w-4 h-4 text-purple-400" />
+              <span>Dark Mode Only</span>
             </button>
           </div>
 

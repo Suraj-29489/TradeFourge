@@ -298,7 +298,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2 flex-wrap shrink-0">
           <Link
             href="/upload"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-glow active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all active:scale-95"
           >
             <Upload className="w-4 h-4" />
             <span>Import CSV</span>
@@ -541,7 +541,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-center gap-3 pt-2">
             <Link
               href="/upload"
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-glow transition-all active:scale-95"
+              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all active:scale-95"
             >
               Upload CSV Statement
             </Link>

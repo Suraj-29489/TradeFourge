@@ -163,14 +163,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
         <div className="flex items-center gap-2">
           {/* Theme Toggle */}
           <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => alert("Light Mode Coming Soon")}
             className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-dark-card border border-dark-border text-gray-400 hover:text-purple-400 hover:border-purple-500/40 transition-all"
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title="Light Mode Coming Soon"
           >
-            {theme === "dark"
-              ? <Moon className="w-4 h-4 text-purple-400" />
-              : <Sun className="w-4 h-4 text-amber-400" />
-            }
+            <Moon className="w-4 h-4 text-purple-400" />
           </button>
 
           {/* Username Dropdown Container */}

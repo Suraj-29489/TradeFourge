@@ -47,14 +47,20 @@ export const StatisticsView: React.FC = () => {
 
   const loadData = async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await fetchTrades(user.id, {}, 1, 10000, "close_time", false);
-      if (data?.data) {
-        setTrades(data.data);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await fetchTrades(user.id, {}, 1, 10000, "close_time", false);
+        setTrades(data?.data ?? []);
+      } else {
+        setTrades([]);
       }
+    } catch (err) {
+      console.error("Failed to load statistics:", err);
+      setTrades([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
