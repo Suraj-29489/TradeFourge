@@ -12,9 +12,12 @@ export type AccountPlatform =
   | 'DXTrade'
   | 'TradeLocker'
   | 'Exness Terminal'
+  | 'Match Trader'
   | 'Other';
 
 export type AccountType = 'Live' | 'Demo' | 'Prop' | 'Contest';
+export type LiveConnectionStatus = 'Connected' | 'Syncing' | 'Offline' | 'Error' | 'Reconnecting';
+export type SyncIntervalSetting = '1m' | '5m' | '15m' | '1h' | 'manual';
 
 export interface TradingAccount {
   id: string;
@@ -33,12 +36,60 @@ export interface TradingAccount {
   is_default: boolean;
   is_active: boolean;
   notes: string | null;
+  is_live_synced?: boolean;
+  live_status?: LiveConnectionStatus;
+  last_synced_at?: string | null;
+  sync_interval?: SyncIntervalSetting;
   created_at: string;
   updated_at: string;
 }
 
 export type NewTradingAccount = Omit<TradingAccount, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 export type UpdateTradingAccount = Partial<NewTradingAccount>;
+
+// ─── Live Sync Engine Models ──────────────────────────────────────────────────
+
+export interface LiveBrokerCredential {
+  id: string;
+  user_id: string;
+  account_id: string;
+  broker_id: string;
+  broker_name: string;
+  platform: AccountPlatform;
+  server: string;
+  login_number: string;
+  encrypted_auth_ref: string;
+  sync_interval: SyncIntervalSetting;
+  status: LiveConnectionStatus;
+  last_sync_time: string | null;
+  last_error: string | null;
+  auto_currency_detected: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SyncCheckpoint {
+  account_id: string;
+  last_sync_time: string;
+  last_trade_id: string | null;
+  last_ticket: string | null;
+  last_position_id: string | null;
+}
+
+export interface SyncLogEntry {
+  id: string;
+  user_id: string;
+  account_id: string;
+  account_name: string;
+  broker: string;
+  timestamp: string;
+  trades_imported: number;
+  trades_updated: number;
+  trades_skipped: number;
+  duration_ms: number;
+  status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
+  error_message?: string | null;
+}
 
 // ─── Trades ──────────────────────────────────────────────────────────────────
 

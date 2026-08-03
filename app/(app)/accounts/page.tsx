@@ -1,14 +1,12 @@
 "use client";
 // app/(app)/accounts/page.tsx
-// Cloud-backed Trading Accounts Manager.
+// Cloud-backed Trading Accounts Manager with Live Broker Sync Engine.
 
 import React, { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
   Wallet,
-  Star,
-  StarOff,
   Pencil,
   Trash2,
   RefreshCw,
@@ -16,6 +14,7 @@ import {
   TrendingUp,
   TrendingDown,
   Lock,
+  Zap,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAppEventListener } from "@/lib/events/event-bus";
@@ -24,13 +23,16 @@ import {
   createTradingAccount,
   updateTradingAccount,
   deleteTradingAccount,
-  setDefaultAccount,
 } from "@/lib/supabase/accounts";
 import { AccountFormModal } from "@/components/accounts/AccountFormModal";
+import { ConnectLiveBrokerModal } from "@/components/accounts/ConnectLiveBrokerModal";
+import { LiveStatusBadge } from "@/components/accounts/LiveStatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AccountTypeBadge } from "@/components/ui/Badge";
 import { CardListSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useUserProfile } from "@/context/UserProfileContext";
+import { SyncManager } from "@/lib/live-sync/sync-manager";
+import { SyncScheduler } from "@/lib/live-sync/scheduler";
 import type { TradingAccount, NewTradingAccount } from "@/types/database";
 import { getCurrencySymbol, getCurrencyShortLabel } from "@/lib/config/currencies";
 
@@ -40,8 +42,10 @@ export default function AccountsPage() {
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState<string | null>(null);
   const [formOpen, setFormOpen]       = useState(false);
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [editAccount, setEditAccount] = useState<TradingAccount | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [manualSyncingId, setManualSyncingId] = useState<string | null>(null);
   const [userId, setUserId]           = useState<string | null>(null);
   const supabase = createClient();
 
@@ -64,6 +68,7 @@ export default function AccountsPage() {
       if (user) {
         setUserId(user.id);
         loadAccounts(user.id);
+        SyncScheduler.startScheduler(user.id);
       }
     })();
   }, []);
@@ -74,6 +79,25 @@ export default function AccountsPage() {
       if (userId) loadAccounts(userId);
     }
   );
+
+  // ── Manual Sync Action ─────────────────────────────────────────────────────
+  const handleManualSync = async (accountId: string) => {
+    if (!userId) return;
+    setManualSyncingId(accountId);
+    try {
+      const result = await SyncManager.syncAccount(userId, accountId);
+      if (!result.success) {
+        setError(result.error || "Manual sync failed.");
+      } else {
+        await loadAccounts(userId);
+        await refreshAccounts();
+      }
+    } catch (err: any) {
+      setError(err?.message || "Sync execution error.");
+    } finally {
+      setManualSyncingId(null);
+    }
+  };
 
   // ── Create ────────────────────────────────────────────────────────────────
   const handleCreate = async (data: NewTradingAccount) => {
@@ -95,16 +119,6 @@ export default function AccountsPage() {
     await refreshAccounts();
   };
 
-  // ── Set Default ───────────────────────────────────────────────────────────
-  const handleSetDefault = async (id: string) => {
-    if (!userId) return;
-    setActionLoading(id);
-    await setDefaultAccount(id, userId);
-    await loadAccounts(userId);
-    await refreshAccounts();
-    setActionLoading(null);
-  };
-
   // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = async (id: string, name: string) => {
     if (!userId) return;
@@ -116,27 +130,35 @@ export default function AccountsPage() {
     setActionLoading(null);
   };
 
-  const totalBalance = accounts.reduce((sum, a) => sum + (a.current_balance ?? 0), 0);
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-mono">
       {/* Header */}
       <div className="p-6 rounded-2xl glass-card border border-dark-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-mono">
         <div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">
-            Trading Accounts
+          <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
+            <span>Trading Accounts</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            Manage your connected trading accounts
+            Manage your connected trading accounts or link live broker sync
           </p>
         </div>
-        <button
-          onClick={() => { setEditAccount(null); setFormOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-glow transition-all shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Add Account
-        </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setConnectModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-sm shadow-glow transition-all shrink-0"
+          >
+            <Zap className="w-4 h-4" />
+            <span>Connect Live Broker</span>
+          </button>
+
+          <button
+            onClick={() => { setEditAccount(null); setFormOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold text-sm transition-all shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Account</span>
+          </button>
+        </div>
       </div>
 
       {/* Error Banner */}
@@ -155,10 +177,10 @@ export default function AccountsPage() {
         <EmptyState
           icon={Wallet}
           title="No Trading Accounts"
-          description="Add your first broker account to start tracking trades, balances, and performance across multiple platforms."
+          description="Connect a live broker or add your first account to start tracking trades, balances, and performance across multiple platforms."
           action={{
-            label: "Add Your First Account",
-            onClick: () => { setEditAccount(null); setFormOpen(true); },
+            label: "Connect Live Broker",
+            onClick: () => setConnectModalOpen(true),
           }}
         />
       ) : (
@@ -171,6 +193,7 @@ export default function AccountsPage() {
                 : 0;
               const isPositive = pnl >= 0;
               const isLoading = actionLoading === account.id;
+              const isSyncing = manualSyncingId === account.id;
 
               return (
                 <motion.div
@@ -178,7 +201,7 @@ export default function AccountsPage() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className="p-5 rounded-2xl glass-card border border-dark-border hover:border-white/20 transition-all"
+                  className="p-5 rounded-2xl glass-card border border-dark-border hover:border-white/20 transition-all space-y-3"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     {/* Left */}
@@ -193,6 +216,12 @@ export default function AccountsPage() {
                             {account.account_name}
                           </span>
                           <AccountTypeBadge type={account.account_type} />
+                          {account.is_live_synced && (
+                            <LiveStatusBadge
+                              status={isSyncing ? "Syncing" : (account.live_status || "Connected")}
+                              lastSyncedAt={account.last_synced_at}
+                            />
+                          )}
                           <span className="text-[10px] text-purple-300 font-mono font-bold bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 flex items-center gap-1">
                             <Lock className="w-3 h-3 text-purple-400" />
                             <span>{account.display_id || account.account_number || "TF-ACC-8A91KD"}</span>
@@ -242,6 +271,16 @@ export default function AccountsPage() {
 
                       {/* Actions */}
                       <div className="flex items-center gap-1">
+                        {account.is_live_synced && (
+                          <button
+                            onClick={() => handleManualSync(account.id)}
+                            disabled={isSyncing}
+                            title="Sync trades now from live broker"
+                            className="p-2 rounded-lg text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 transition-colors disabled:opacity-50"
+                          >
+                            <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin text-purple-400" : ""}`} />
+                          </button>
+                        )}
                         <button
                           onClick={() => { setEditAccount(account); setFormOpen(true); }}
                           title="Edit account"
@@ -278,13 +317,27 @@ export default function AccountsPage() {
         </div>
       )}
 
-      {/* Create / Edit Modal */}
+      {/* Account Create/Edit Form Modal */}
       <AccountFormModal
-        open={formOpen}
+        open={formOpen || !!editAccount}
         onClose={() => { setFormOpen(false); setEditAccount(null); }}
         onSubmit={editAccount ? handleEdit : handleCreate}
         account={editAccount}
       />
+
+      {/* Connect Live Broker Multi-Step Wizard Modal */}
+      {userId && (
+        <ConnectLiveBrokerModal
+          open={connectModalOpen}
+          onClose={() => setConnectModalOpen(false)}
+          userId={userId}
+          existingAccounts={accounts}
+          onAccountLinked={async () => {
+            await loadAccounts(userId);
+            await refreshAccounts();
+          }}
+        />
+      )}
     </div>
   );
 }

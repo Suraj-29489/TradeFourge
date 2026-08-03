@@ -11,6 +11,7 @@ import {
   Wallet,
   Upload,
   History,
+  Activity,
   CalendarDays,
   User,
   Settings,
@@ -52,6 +53,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { name: "Trade Journal",    href: "/journal",         icon: TableProperties },
       { name: "Trading Accounts", href: "/accounts",        icon: Wallet },
+      { name: "Sync History",     href: "/sync-history",    icon: Activity },
       { name: "Upload CSV",       href: "/upload",          icon: Upload },
       { name: "Import History",   href: "/import-history",  icon: History },
       { name: "Calendar",         href: "/calendar",        icon: CalendarDays },

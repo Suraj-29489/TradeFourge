@@ -21,17 +21,16 @@ const PLATFORMS: AccountPlatform[] = [
   "DXTrade",
   "TradeLocker",
   "Exness Terminal",
+  "Match Trader",
   "Other",
 ];
 
 const ACCOUNT_TYPES: AccountType[] = ["Live", "Demo", "Prop", "Contest"];
 
-
-
 const schema = z.object({
   account_name:     z.string().min(1, "Account name is required").max(100),
   broker:           z.string().min(1, "Broker is required").max(100),
-  platform:         z.enum(["MetaTrader 4", "MetaTrader 5", "cTrader", "DXTrade", "TradeLocker", "Exness Terminal", "Other"]),
+  platform:         z.enum(["MetaTrader 4", "MetaTrader 5", "cTrader", "DXTrade", "TradeLocker", "Exness Terminal", "Match Trader", "Other"]),
   account_number:   z.string().optional(),
   account_type:     z.enum(["Live", "Demo", "Prop", "Contest"]),
   currency:         z.string().min(1),
