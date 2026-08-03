@@ -134,9 +134,13 @@ export interface CloudTrade {
   session: TradeSession | null;
   strategy: string | null;
   notes: string | null;
+  thesis?: string | null;
+  entry_reasoning?: string | null;
+  exit_reasoning?: string | null;
   emotions: string | null;
   lessons: string | null;
   mistakes: string | null;
+  playbook_id?: string | null;
   magic_number: number | null;
   import_id?: string | null;
 
@@ -290,3 +294,85 @@ export const DEFAULT_CLOUD_FILTERS: CloudTradeFilters = {
   accountIds: ['ALL'],
   dateRange: 'ALL',
 };
+
+// ─── Trader Toolkit Models (v4.2 Major Release) ───────────────────────────────
+
+export type CommonMistakeType =
+  | 'FOMO'
+  | 'Revenge Trading'
+  | 'Early Exit'
+  | 'Late Entry'
+  | 'Over Risk'
+  | 'News Trade'
+  | 'Rule Violation';
+
+export interface PlaybookItem {
+  id: string;
+  user_id: string;
+  strategy_name: string;
+  market: string;
+  timeframe: string;
+  entry_rules: string[];
+  exit_rules: string[];
+  risk_rules: string[];
+  checklist: string[];
+  notes?: string | null;
+  win_rate?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type GoalCategory =
+  | 'win_rate'
+  | 'profit_target'
+  | 'target_rr'
+  | 'max_daily_loss'
+  | 'trade_count'
+  | 'discipline';
+
+export interface TraderGoal {
+  id: string;
+  user_id: string;
+  title: string;
+  category: GoalCategory;
+  target_value: number;
+  current_value: number;
+  unit: string;
+  status: 'active' | 'achieved' | 'failed';
+  deadline?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WeeklyReview {
+  id: string;
+  user_id: string;
+  week_label: string;
+  year: number;
+  weekly_pnl: number;
+  win_rate: number;
+  total_trades: number;
+  best_trade_id?: string | null;
+  worst_trade_id?: string | null;
+  mistakes_summary: string[];
+  improvements: string[];
+  goals_achieved: string[];
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface MonthlyReview {
+  id: string;
+  user_id: string;
+  month_label: string;
+  year: number;
+  monthly_pnl: number;
+  win_rate: number;
+  total_trades: number;
+  best_strategy?: string | null;
+  weakest_strategy?: string | null;
+  top_mistakes: string[];
+  goals_summary: string[];
+  reflection?: string | null;
+  created_at: string;
+}

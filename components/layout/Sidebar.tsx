@@ -24,6 +24,8 @@ import {
   Zap,
   X,
   LogOut,
+  BookOpen,
+  Target,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { createClient } from "@/lib/supabase/client";
@@ -46,6 +48,14 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { name: "Dashboard",        href: "/dashboard",       icon: LayoutDashboard },
       { name: "Performance Lab",  href: "/performance",     icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Toolkit",
+    items: [
+      { name: "Playbook Library", href: "/playbook",        icon: BookOpen },
+      { name: "Goals & Discipline", href: "/goals",          icon: Target },
+      { name: "Weekly & Monthly Reviews", href: "/reviews", icon: CalendarDays },
     ],
   },
   {

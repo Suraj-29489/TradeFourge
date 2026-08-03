@@ -371,40 +371,75 @@ export function CloudTradeDetailDrawer({ trade, onClose, onRefresh }: CloudTrade
               </div>
             )}
 
-            {/* Tab 2: Journal & Psychology */}
+            {/* Tab 2: Journal & Psychology Workspace */}
             {activeTab === "notes" && (
-              <div className="space-y-3">
+              <div className="space-y-4">
+                {/* Quick Mistake Tagger */}
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+                  <span className="text-[11px] font-bold text-amber-300 block">TAG EXECUTION MISTAKES</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["FOMO", "Revenge Trading", "Early Exit", "Late Entry", "Over Risk", "News Trade", "Rule Violation"].map((mTag) => {
+                      const isSelected = mistakes.split(",").map((s) => s.trim()).includes(mTag);
+                      return (
+                        <button
+                          key={mTag}
+                          type="button"
+                          onClick={() => {
+                            const current = mistakes.split(",").map((s) => s.trim()).filter(Boolean);
+                            let updated: string[];
+                            if (isSelected) {
+                              updated = current.filter((item) => item !== mTag);
+                            } else {
+                              updated = [...current, mTag];
+                            }
+                            setMistakes(updated.join(", "));
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                            isSelected
+                              ? "bg-amber-500 text-black shadow-glow font-extrabold"
+                              : "bg-black/40 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20"
+                          }`}
+                        >
+                          {isSelected ? `✓ ${mTag}` : `+ ${mTag}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div>
-                  <label className="text-gray-400 block mb-1">Execution Notes (Markdown Supported)</label>
+                  <label className="text-gray-400 block mb-1">Trade Thesis & Setup Confluences</label>
                   <textarea
-                    rows={4}
+                    rows={2}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Why did you take this trade? Strategy confluences, entry setup..."
-                    className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-gray-400 block mb-1">Emotions & Psychology</label>
-                  <input
-                    type="text"
-                    value={emotions}
-                    onChange={(e) => setEmotions(e.target.value)}
-                    placeholder="e.g. Patient, Calm, FOMO, Hesitant..."
+                    placeholder="HTF bias, liquidity sweep, Market Structure Shift, Fair Value Gap..."
                     className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-purple-500"
                   />
                 </div>
 
-                <div>
-                  <label className="text-gray-400 block mb-1">Lessons Learned</label>
-                  <input
-                    type="text"
-                    value={lessons}
-                    onChange={(e) => setLessons(e.target.value)}
-                    placeholder="What can be improved next time?"
-                    className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-purple-500"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-gray-400 block mb-1">Entry Reasoning</label>
+                    <input
+                      type="text"
+                      value={emotions}
+                      onChange={(e) => setEmotions(e.target.value)}
+                      placeholder="Why did you enter at this specific level?"
+                      className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-gray-400 block mb-1">Exit Reasoning & Lessons</label>
+                    <input
+                      type="text"
+                      value={lessons}
+                      onChange={(e) => setLessons(e.target.value)}
+                      placeholder="Why did you exit? Target hit or rule violation?"
+                      className="w-full p-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-purple-500"
+                    />
+                  </div>
                 </div>
 
                 <div className="flex justify-end pt-2">

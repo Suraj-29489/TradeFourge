@@ -17,6 +17,7 @@ import { useAppEventListener } from "@/lib/events/event-bus";
 import { calculateCloudAnalytics, CompleteAnalyticsSummary } from "@/lib/engine/cloud-analytics-engine";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
 import { MixedCurrencyBanner } from "@/components/ui/MixedCurrencyBanner";
+import { TopMistakesWidget } from "@/components/dashboard/TopMistakesWidget";
 import { StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
@@ -835,6 +836,9 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+
+          {/* Top Mistakes & Behavioral Audit Widget */}
+          <TopMistakesWidget trades={trades} />
 
           {/* ── SECTION 5: Recent Activity (Latest Trades & Imports) ────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
