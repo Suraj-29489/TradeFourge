@@ -189,6 +189,7 @@ export interface CsvImport {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  account?: { id?: string; account_name: string; currency: string; broker?: string; platform?: string } | null;
 }
 
 export type NewCsvImport = Omit<CsvImport, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
