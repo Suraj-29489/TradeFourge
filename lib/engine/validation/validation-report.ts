@@ -6,7 +6,7 @@ import { validateCsvColumns } from "./column-validator";
 import { detectBrokerFormat } from "./broker-detector";
 import { validateCsvDataRows } from "./data-validator";
 import { analyzeInFileDuplicates } from "./fingerprint";
-import type { NormalizedTrade } from "../types";
+import type { NormalizedTrade, AccountCurrency } from "../types";
 
 export interface ValidationReport {
   totalRows: number;

@@ -1,7 +1,7 @@
 export type Direction = "LONG" | "SHORT";
 export type TradeStatus = "WIN" | "LOSS" | "BREAKEVEN";
 
-export type AccountCurrency = "USD" | "USC" | "INR";
+export type AccountCurrency = "USD" | "USC" | "EUR" | "INR";
 export type AccountType = "Standard" | "Standard Cent" | "Raw" | "Pro" | "Demo";
 
 export interface Trade {

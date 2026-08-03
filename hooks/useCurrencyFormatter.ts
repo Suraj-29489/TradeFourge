@@ -4,9 +4,10 @@ import { formatCurrency, convertFromUSD, getCurrencySymbol, DisplayCurrency } fr
 
 /**
  * Hook that returns currency-aware formatting utilities.
- * Reads displayCurrency from Zustand (ephemeral UI preference).
- * Values from Supabase are stored in the account's native currency;
- * this hook converts for display purposes only.
+ * Values from storage are displayed exactly as stored from CSV.
+ * Currency only determines the symbol/label shown in the UI.
+ *
+ * NO numeric conversion. NO division. NO multiplication for USC.
  */
 export function useCurrencyFormatter() {
   const displayCurrency = useJournalStore((state) => state.displayCurrency);
@@ -16,19 +17,19 @@ export function useCurrencyFormatter() {
       currency: displayCurrency,
       symbol: getCurrencySymbol(displayCurrency),
 
-      /** Format an internal USD value for display */
-      format: (usdValue: number) => formatCurrency(usdValue, displayCurrency),
+      /** Format a stored value for display — no numeric conversion */
+      format: (value: number) => formatCurrency(value, displayCurrency),
 
-      /** Convert without formatting (returns raw number) */
-      convert: (usdValue: number) => convertFromUSD(usdValue, displayCurrency),
+      /** Return stored value unchanged (no arithmetic) */
+      convert: (value: number) => convertFromUSD(value, displayCurrency),
 
       /** Format with mandatory sign prefix */
-      formatSigned: (usdValue: number): string => {
-        const str = formatCurrency(Math.abs(usdValue), displayCurrency);
-        return usdValue >= 0 ? `+${str}` : `-${str}`;
+      formatSigned: (value: number): string => {
+        const absStr = formatCurrency(Math.abs(value), displayCurrency);
+        return value >= 0 ? `+${absStr}` : `-${absStr}`;
       },
 
-      /** Format a value that is ALREADY in display currency (no conversion) */
+      /** Format a value already in display format (no conversion) */
       formatDisplay: (displayValue: number): string => {
         const absVal = Math.abs(displayValue);
         const sign = displayValue < 0 ? "-" : "";
@@ -43,6 +44,7 @@ export function useCurrencyFormatter() {
       currencyLabel: (currency: DisplayCurrency): string => {
         if (currency === "USD") return "USD ($)";
         if (currency === "USC") return "USC (¢)";
+        if (currency === "EUR") return "EUR (€)";
         if (currency === "INR") return "INR (₹)";
         return "USD ($)";
       },

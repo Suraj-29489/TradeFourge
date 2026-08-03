@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import { NormalizedTrade, Direction, TradeStatus, AccountType } from "./types";
+import { NormalizedTrade, Direction, TradeStatus, AccountType, AccountCurrency } from "./types";
 
 /**
  * Phase 6 Symbol Canonicalization Engine
@@ -137,8 +137,48 @@ function parseFloatOrNull(raw: string): number | null {
 }
 
 /**
- * Phase 6 Data Normalization Engine
- * Standardizes every imported trade into one internal structure prior to storage.
+ * Build a strict header index from a CSV row object.
+ * Returns a canonical-to-actual-key mapping (case-insensitive, underscore/space stripped).
+ *
+ * Matching priority (highest wins):
+ * 1. Exact cleaned match: "profit" === "profit"
+ * 2. No substring / partial matching — this is what caused take_profit -> profit collisions.
+ */
+function buildHeaderIndex(row: Record<string, string>): Record<string, string> {
+  const idx: Record<string, string> = {};
+  for (const k of Object.keys(row)) {
+    const cleaned = k.toLowerCase().replace(/[^a-z0-9]/g, "");
+    idx[cleaned] = k;
+  }
+  return idx;
+}
+
+/**
+ * Strict column resolver.
+ * Accepts an ordered priority list of exact canonical names.
+ * Returns the FIRST alias that matches EXACTLY a cleaned column header.
+ * NO substring matching. NO partial matching.
+ */
+function resolveColumn(
+  headerIndex: Record<string, string>,
+  row: Record<string, string>,
+  exactAliases: string[]
+): string {
+  for (const alias of exactAliases) {
+    if (headerIndex[alias] !== undefined) {
+      return (row[headerIndex[alias]] ?? "").trim();
+    }
+  }
+  return "";
+}
+
+/**
+ * TradeFourge v3.8.1 — Audit-Passed Data Normalization Engine
+ *
+ * The CSV is the source of truth.
+ * No currency conversion. No division. No multiplication.
+ * Every monetary value (profit, commission, swap, balance, equity) is read exactly as-is.
+ * Account currency only determines the displayed currency label — never a numeric conversion factor.
  */
 export function normalizeCsvData(
   csvText: string,
@@ -169,7 +209,7 @@ export function normalizeCsvData(
   if (!parsed.data || parsed.data.length === 0) {
     return {
       trades: [],
-      detectedCurrency: "USD",
+      detectedCurrency: accountCurrency,
       detectedAccountType: "Standard",
       isCentAccount: false,
       rawProfitSum: 0,
@@ -179,45 +219,42 @@ export function normalizeCsvData(
     };
   }
 
-  // Account Type & Currency determination (Selected Trading Account is the Single Source of Truth)
-  let detectedAccountType: AccountType = accountCurrency === "USC" ? "Standard Cent" : "Standard";
+  // Trading Account is the Single Source of Truth for currency.
+  // USC label does NOT trigger any numeric conversion.
   const isCentAccount = accountCurrency === "USC";
-
-  // CSV values are imported as-is. Display division (/100) is controlled by Trading Account currency.
-  const normFactor = 1;
+  const detectedAccountType: AccountType = isCentAccount ? "Standard Cent" : "Standard";
   const seenTickets = new Set<string>();
 
+  // Build strict header index from first data row
+  const headerIndex = buildHeaderIndex(parsed.data[0]);
+
   parsed.data.forEach((row, index) => {
-    // Dynamic Header Access (Supporting flexible column mapping)
-    const findValue = (aliases: string[]): string => {
-      for (const [k, v] of Object.entries(row)) {
-        const cleanK = k.toLowerCase().replace(/[^a-z0-9]/g, "");
-        if (aliases.some((alias) => cleanK === alias || cleanK.includes(alias) || alias.includes(cleanK))) {
-          return (v ?? "").trim();
-        }
-      }
-      return "";
-    };
+    // ─── Strict Column Resolution (Exact Match Only — No Substring) ────────────
+    // CRITICAL: Every alias list is ordered from most-specific to least-specific.
+    // "profit" MUST NOT match "takeprofit" or "netprofit" — exact only.
 
-    const ticketRaw      = findValue(["ticket", "order", "position", "deal", "id"]);
-    const openTimeRaw    = findValue(["opentime", "openingtime", "timeopen", "dateopen", "opened", "time"]);
-    const closeTimeRaw   = findValue(["closetime", "closingtime", "timeclose", "dateclose", "closed", "time"]);
-    const typeRaw        = findValue(["type", "side", "direction", "action", "cmd"]);
-    const lotsRaw        = findValue(["volume", "lots", "size", "amount", "quantity"]);
-    const symbolRaw      = findValue(["symbol", "item", "pair", "instrument", "asset"]);
-    const openPriceRaw   = findValue(["openprice", "openingprice", "entryprice"]);
-    const closePriceRaw  = findValue(["closeprice", "closingprice", "exitprice"]);
-    const stopLossRaw    = findValue(["sl", "stoploss", "s/l"]);
-    const takeProfitRaw  = findValue(["tp", "takeprofit", "t/p"]);
-    const commissionRaw  = findValue(["commission", "comm", "fee", "fees"]);
-    const swapRaw        = findValue(["swap", "rollover", "interest"]);
-    const profitRaw      = findValue(["profit", "pnl", "netprofit", "gain"]);
-    const equityRaw      = findValue(["equity", "balance"]);
+    const ticketRaw     = resolveColumn(headerIndex, row, ["ticket", "order", "deal", "position", "id"]);
+    const openTimeRaw   = resolveColumn(headerIndex, row, ["openingtimeutc", "opentime", "timeopen", "dateopen", "opened"]);
+    const closeTimeRaw  = resolveColumn(headerIndex, row, ["closingtimeutc", "closetime", "timeclose", "dateclose", "closed"]);
+    const typeRaw       = resolveColumn(headerIndex, row, ["type", "side", "direction", "action", "cmd"]);
+    const lotsRaw       = resolveColumn(headerIndex, row, ["lots", "volume", "size", "quantity"]);
+    const symbolRaw     = resolveColumn(headerIndex, row, ["symbol", "instrument", "pair", "item", "asset"]);
+    const openPriceRaw  = resolveColumn(headerIndex, row, ["openingprice", "openprice", "entryprice"]);
+    const closePriceRaw = resolveColumn(headerIndex, row, ["closingprice", "closeprice", "exitprice"]);
+    const stopLossRaw   = resolveColumn(headerIndex, row, ["stoploss", "sl"]);
+    const takeProfitRaw = resolveColumn(headerIndex, row, ["takeprofit", "tp"]);
+    const commissionRaw = resolveColumn(headerIndex, row, ["commission", "comm", "fee"]);
+    const swapRaw       = resolveColumn(headerIndex, row, ["swap", "rollover", "interest"]);
+    // CRITICAL: "profit" must resolve to exactly the "profit" column, NOT "takeprofit", "netprofit"
+    const profitRaw     = resolveColumn(headerIndex, row, ["profit", "pnl", "gain"]);
+    // CRITICAL: "equity" must resolve to exactly the "equity" column, NOT confused with "balance"
+    const equityRaw     = resolveColumn(headerIndex, row, ["equity"]);
+    const balanceRaw    = resolveColumn(headerIndex, row, ["balance"]);
 
-    // Track last known equity (normalize to USD)
-    const equityVal = parseFloatOrNull(equityRaw);
+    // Use equity first, then fallback to balance for running balance tracking
+    const equityVal = parseFloatOrNull(equityRaw) ?? parseFloatOrNull(balanceRaw);
     if (equityVal !== null) {
-      lastKnownBalance = equityVal / normFactor;
+      lastKnownBalance = equityVal;
     }
 
     // Ticket Normalization
@@ -225,7 +262,7 @@ export function normalizeCsvData(
     if (seenTickets.has(ticket)) ticket = `${ticket}_dup${index + 1}`;
     seenTickets.add(ticket);
 
-    // Date Unification
+    // Date Normalization
     const openIso  = normalizeTimestamp(openTimeRaw);
     const closeIso = normalizeTimestamp(closeTimeRaw) || openIso;
 
@@ -248,30 +285,29 @@ export function normalizeCsvData(
     // Direction Normalization
     const direction = normalizeTradeDirection(typeRaw);
 
-    // Volume Normalization
+    // Volume
     const volume = Math.abs(parseFloat(lotsRaw)) || 0.01;
 
-    // Price Normalization
+    // Prices — stored exactly as in CSV
     const openPrice  = parseFloatOrNull(openPriceRaw);
     const closePrice = parseFloatOrNull(closePriceRaw) ?? openPrice ?? 0;
     const stopLoss   = parseFloatOrNull(stopLossRaw);
     const takeProfit = parseFloatOrNull(takeProfitRaw);
 
-    // Monetary Normalization (USC -> USD)
-    const profitRaw_ = parseFloatOrNull(profitRaw) ?? 0;
-    rawProfitSum += profitRaw_;
+    // ─── MONETARY VALUES — NO CONVERSION, NO DIVISION, NO MULTIPLICATION ──────
+    // Read exactly what the CSV says. Store exactly what the CSV says.
+    // Account currency label (USC, USD, EUR, INR) changes only the displayed symbol.
+    const profitVal     = parseFloatOrNull(profitRaw) ?? 0;
+    const commissionVal = -(Math.abs(parseFloatOrNull(commissionRaw) ?? 0));
+    const swapVal       = parseFloatOrNull(swapRaw) ?? 0;
 
-    const commission        = Math.abs(parseFloatOrNull(commissionRaw) ?? 0) / normFactor;
-    const swap              = (parseFloatOrNull(swapRaw) ?? 0) / normFactor;
-    const profit            = profitRaw_ / normFactor;
-    const balanceAfterTrade = equityVal !== null ? equityVal / normFactor : null;
-
-    normalizedProfitSum += profit;
+    rawProfitSum += profitVal;
+    normalizedProfitSum += profitVal;
 
     // Trade Status
     let status: TradeStatus = "BREAKEVEN";
-    if (profit > 0.001) status = "WIN";
-    else if (profit < -0.001) status = "LOSS";
+    if (profitVal > 0.001) status = "WIN";
+    else if (profitVal < -0.001) status = "LOSS";
 
     // Risk:Reward Ratio
     let rr: number | null = null;
@@ -292,10 +328,10 @@ export function normalizeCsvData(
       volume: parseFloat(volume.toFixed(2)),
       openPrice,
       closePrice,
-      commission:       parseFloat(commission.toFixed(2)),
-      swap:             parseFloat(swap.toFixed(2)),
-      profit:           parseFloat(profit.toFixed(2)),
-      currency:         "USD",
+      commission:       parseFloat(commissionVal.toFixed(2)),
+      swap:             parseFloat(swapVal.toFixed(2)),
+      profit:           parseFloat(profitVal.toFixed(2)),
+      currency:         accountCurrency as AccountCurrency,
       accountType:      detectedAccountType,
       accountName,
       broker:           "Exness",
@@ -304,13 +340,13 @@ export function normalizeCsvData(
       rr,
       status,
       holdDurationMs,
-      balanceAfterTrade,
+      balanceAfterTrade: equityVal,
     });
   });
 
   return {
     trades,
-    detectedCurrency: "USD",
+    detectedCurrency: accountCurrency,
     detectedAccountType,
     isCentAccount,
     rawProfitSum: parseFloat(rawProfitSum.toFixed(2)),

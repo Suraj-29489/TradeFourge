@@ -2,7 +2,7 @@
 // TradeFourge v3.7.2 — CSV Validation Engine: Step 3 & 5 (Data Validator & Warning Classification)
 
 import { validateAndParseCsv } from "@/lib/engine/validator";
-import type { NormalizedTrade } from "../types";
+import type { NormalizedTrade, AccountCurrency } from "../types";
 
 export interface RowValidationError {
   rowNumber: number;
