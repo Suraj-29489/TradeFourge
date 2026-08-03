@@ -1,119 +1,89 @@
 "use client";
 // components/ui/Modal.tsx
-// Accessible modal dialog with backdrop, escape key, and focus trap.
+// TradeFourge v3.9 — Institutional Modal Primitive (Raycast/Linear Style Dialogs)
 
-import React, { useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect } from "react";
 import { X } from "lucide-react";
-import { cn } from "@/utils/cn";
 
-interface ModalProps {
+export interface ModalProps {
   open?: boolean;
   isOpen?: boolean;
   onClose: () => void;
-  title: string;
-  description?: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
   children: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl";
-  className?: string;
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | string;
 }
 
-export function Modal({
+export const Modal: React.FC<ModalProps> = ({
   open,
   isOpen,
   onClose,
   title,
   description,
   children,
-  size = "md",
-  className,
-}: ModalProps) {
+  maxWidth = "md",
+  size,
+}) => {
   const isModalOpen = open ?? isOpen ?? false;
-  const panelRef = useRef<HTMLDivElement>(null);
 
-  // Close on Escape key
   useEffect(() => {
-    if (!isModalOpen) return;
-    const handler = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    if (isModalOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
   }, [isModalOpen, onClose]);
 
-  // Lock body scroll
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [isModalOpen]);
+  if (!isModalOpen) return null;
 
-  const maxWidths = {
+  const effectiveSize = (size as any) || maxWidth;
+
+  const maxWidthClasses: Record<string, string> = {
     sm: "max-w-sm",
-    md: "max-w-lg",
-    lg: "max-w-2xl",
-    xl: "max-w-4xl",
+    md: "max-w-md",
+    lg: "max-w-lg",
+    xl: "max-w-xl",
+    "2xl": "max-w-2xl",
   };
 
+  const chosenWidthClass = maxWidthClasses[effectiveSize] || maxWidthClasses["md"];
+
   return (
-    <AnimatePresence>
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop (Requirement 5: blur 10px + rgba(10,12,16,0.55)) */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-[#0A0C10]/55 backdrop-blur-[10px]"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-          />
-
-          {/* Panel */}
-          <motion.div
-            ref={panelRef}
-            initial={{ opacity: 0, scale: 0.96, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 8 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className={cn(
-              "relative z-10 w-full bg-[#0F1420] border border-dark-border rounded-2xl shadow-2xl overflow-hidden",
-              maxWidths[size],
-              className
-            )}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="modal-title"
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between p-5 border-b border-white/10">
-              <div>
-                <h2 id="modal-title" className="text-base font-bold text-white font-mono">
-                  {title}
-                </h2>
-                {description && (
-                  <p className="text-xs text-gray-400 mt-0.5">{description}</p>
-                )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div
+        className={`w-full ${chosenWidthClass} p-6 rounded-2xl bg-[#0F1420] border border-white/10 shadow-2xl space-y-4 font-mono text-xs text-white relative`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {title && (
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div>
+              <div className="font-extrabold text-sm text-white uppercase tracking-wide flex items-center gap-2">
+                {title}
               </div>
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors ml-4 shrink-0"
-                aria-label="Close modal"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              {description && (
+                <div className="text-[11px] text-gray-400 font-normal mt-0.5">
+                  {description}
+                </div>
+              )}
             </div>
-
-            {/* Content */}
-            <div className="p-5">{children}</div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+            <button
+              onClick={onClose}
+              className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors self-start"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        <div>{children}</div>
+      </div>
+    </div>
   );
-}
+};

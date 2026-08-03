@@ -1,104 +1,74 @@
 "use client";
 // components/ui/Badge.tsx
-// Consistent status/type badges used across accounts, imports, trades, etc.
+// TradeFourge v3.9 — Institutional Badge Primitive (Linear/Vercel Pill Aesthetics)
 
 import React from "react";
-import { cn } from "@/utils/cn";
-import type { ImportStatus, AccountType, TradeOutcome } from "@/types/database";
+import { ImportStatus } from "@/types/database";
 
-type BadgeVariant =
-  | "success"
-  | "error"
-  | "warning"
-  | "info"
-  | "neutral"
-  | "brand"
-  | "live"
-  | "demo"
-  | "prop"
-  | "win"
-  | "loss"
-  | "breakeven"
-  | "open";
-
-const VARIANT_CLASSES: Record<BadgeVariant, string> = {
-  success:   "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-  error:     "bg-rose-500/10    text-rose-400    border-rose-500/30",
-  warning:   "bg-amber-500/10   text-amber-400   border-amber-500/30",
-  info:      "bg-sky-500/10     text-sky-400     border-sky-500/30",
-  neutral:   "bg-gray-500/10    text-gray-400    border-gray-500/20",
-  brand:     "bg-purple-600/20  text-purple-400  border-purple-500/30",
-  live:      "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-  demo:      "bg-amber-500/10   text-amber-400   border-amber-500/30",
-  prop:      "bg-sky-500/10     text-sky-400     border-sky-500/30",
-  win:       "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-  loss:      "bg-rose-500/10    text-rose-400    border-rose-500/30",
-  breakeven: "bg-gray-500/10    text-gray-400    border-gray-500/20",
-  open:      "bg-sky-500/10     text-sky-400     border-sky-500/30",
-};
-
-interface BadgeProps {
-  variant?: BadgeVariant;
+export interface BadgeProps {
   children: React.ReactNode;
+  variant?: "success" | "warning" | "danger" | "info" | "neutral" | "accent";
+  size?: "sm" | "md";
   className?: string;
-  dot?: boolean;
 }
 
-export function Badge({ variant = "neutral", children, className, dot }: BadgeProps) {
+export const Badge: React.FC<BadgeProps> = ({
+  children,
+  variant = "neutral",
+  size = "md",
+  className = "",
+}) => {
+  const baseStyles = "inline-flex items-center font-mono font-bold rounded-lg border tracking-wide uppercase";
+
+  const variants = {
+    success: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+    warning: "bg-amber-500/10 border-amber-500/30 text-amber-400",
+    danger: "bg-rose-500/10 border-rose-500/30 text-rose-400",
+    info: "bg-sky-500/10 border-sky-500/30 text-sky-400",
+    neutral: "bg-white/5 border-white/10 text-gray-300",
+    accent: "bg-indigo-500/10 border-indigo-500/30 text-indigo-300",
+  };
+
+  const sizes = {
+    sm: "px-2 py-0.5 text-[9px] gap-1",
+    md: "px-2.5 py-1 text-[10px] gap-1.5",
+  };
+
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold border font-mono uppercase tracking-wide",
-        VARIANT_CLASSES[variant],
-        className
-      )}
-    >
-      {dot && (
-        <span className={cn("w-1.5 h-1.5 rounded-full", {
-          "bg-emerald-400": variant === "success" || variant === "live" || variant === "win",
-          "bg-rose-400": variant === "error" || variant === "loss",
-          "bg-amber-400": variant === "warning" || variant === "demo",
-          "bg-sky-400": variant === "info" || variant === "prop" || variant === "open",
-          "bg-gray-400": variant === "neutral" || variant === "breakeven",
-          "bg-purple-400": variant === "brand",
-        })} />
-      )}
+    <span className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}>
       {children}
     </span>
   );
-}
+};
 
-// ─── Convenience Wrappers ─────────────────────────────────────────────────────
+export const ImportStatusBadge: React.FC<{ status: ImportStatus | string }> = ({ status }) => {
+  switch (status) {
+    case "success":
+      return <Badge variant="success">✓ Success</Badge>;
+    case "partial":
+      return <Badge variant="warning">⚠ Partial</Badge>;
+    case "failed":
+      return <Badge variant="danger">⛔ Failed</Badge>;
+    case "processing":
+      return <Badge variant="accent">⚡ Processing</Badge>;
+    default:
+      return <Badge variant="neutral">⏳ {status || "Pending"}</Badge>;
+  }
+};
 
-export function ImportStatusBadge({ status }: { status: ImportStatus }) {
-  const map: Record<ImportStatus, { variant: BadgeVariant; label: string }> = {
-    success:    { variant: "success", label: "Success" },
-    partial:    { variant: "warning", label: "Partial" },
-    failed:     { variant: "error",   label: "Failed" },
-    processing: { variant: "info",    label: "Processing" },
-    pending:    { variant: "neutral", label: "Pending" },
-  };
-  const { variant, label } = map[status] ?? map.pending;
-  return <Badge variant={variant} dot>{label}</Badge>;
-}
+export const OutcomeBadge: React.FC<{ outcome: string | null; className?: string }> = ({ outcome, className }) => {
+  switch (outcome?.toUpperCase()) {
+    case "WIN":
+      return <Badge variant="success" className={className}>WIN</Badge>;
+    case "LOSS":
+      return <Badge variant="danger" className={className}>LOSS</Badge>;
+    case "BREAKEVEN":
+      return <Badge variant="warning" className={className}>BREAKEVEN</Badge>;
+    default:
+      return <Badge variant="neutral" className={className}>{outcome || "—"}</Badge>;
+  }
+};
 
-export function AccountTypeBadge({ type }: { type: AccountType }) {
-  const map: Record<AccountType, BadgeVariant> = {
-    Live:    "live",
-    Demo:    "demo",
-    Prop:    "prop",
-    Contest: "brand",
-  };
-  return <Badge variant={map[type] ?? "neutral"} dot>{type}</Badge>;
-}
-
-export function OutcomeBadge({ outcome }: { outcome: TradeOutcome | null }) {
-  if (!outcome) return <Badge variant="neutral">—</Badge>;
-  const map: Record<TradeOutcome, BadgeVariant> = {
-    WIN:       "win",
-    LOSS:      "loss",
-    BREAKEVEN: "breakeven",
-    OPEN:      "open",
-  };
-  return <Badge variant={map[outcome]} dot>{outcome}</Badge>;
-}
+export const AccountTypeBadge: React.FC<{ type: string | null; className?: string }> = ({ type, className }) => {
+  return <Badge variant="accent" className={className}>{type || "Standard"}</Badge>;
+};
