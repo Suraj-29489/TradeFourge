@@ -1,7 +1,8 @@
 export type Direction = "LONG" | "SHORT";
 export type TradeStatus = "WIN" | "LOSS" | "BREAKEVEN";
 
-export type AccountCurrency = "USD" | "USC" | "EUR" | "INR";
+/** @see CURRENCY_REGISTRY in lib/config/currencies.ts for all supported values */
+export type AccountCurrency = string;
 export type AccountType = "Standard" | "Standard Cent" | "Raw" | "Pro" | "Demo";
 export type BrokerType = "Exness" | "MetaTrader 5" | "TradeLocker" | "TradeZella" | "Generic Broker";
 

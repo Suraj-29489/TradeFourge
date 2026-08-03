@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { NormalizedTrade, EngineStats, AccountCurrency } from "./types";
+import { getCurrencySymbol } from "@/lib/config/currencies";
 import { format, parseISO } from "date-fns";
 
 export function generateProfessionalPdf(
@@ -9,6 +10,7 @@ export function generateProfessionalPdf(
   currency: AccountCurrency = "USD",
   accountName = "Primary Trading Account"
 ): void {
+  const sym = getCurrencySymbol(currency);
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -69,14 +71,14 @@ export function generateProfessionalPdf(
     startY: 78,
     head: [["Metric Category", "Calculated Value", "Metric Category", "Calculated Value"]],
     body: [
-      ["Net Realized Profit", `${currency} ${stats.netProfit.toLocaleString()}`, "Win Rate", `${stats.winRate}%`],
-      ["Gross Profit", `${currency} ${stats.grossProfit.toLocaleString()}`, "Profit Factor", `${stats.profitFactor}`],
-      ["Gross Loss", `${currency} ${stats.grossLoss.toLocaleString()}`, "Trade Expectancy", `${currency} ${stats.expectancy} / trade`],
-      ["Ending Equity Balance", `${currency} ${stats.balance.toLocaleString()}`, "Average R:R", stats.averageRR !== null ? `${stats.averageRR} R` : "N/A"],
-      ["Average Win", `${currency} ${stats.averageWin}`, "Avg Hold Time", stats.averageHoldTime],
-      ["Average Loss", `${currency} ${stats.averageLoss}`, "Best Win Streak", `${stats.bestStreak} Wins`],
-      ["Largest Single Win", `${currency} ${stats.largestWin}`, "Worst Loss Streak", `${stats.worstStreak} Losses`],
-      ["Total Commissions", `${currency} ${stats.totalCommission}`, "Total Swaps", `${currency} ${stats.totalSwap}`],
+      ["Net Realized Profit", `${sym}${stats.netProfit.toLocaleString()}`, "Win Rate", `${stats.winRate}%`],
+      ["Gross Profit", `${sym}${stats.grossProfit.toLocaleString()}`, "Profit Factor", `${stats.profitFactor}`],
+      ["Gross Loss", `${sym}${stats.grossLoss.toLocaleString()}`, "Trade Expectancy", `${sym}${stats.expectancy} / trade`],
+      ["Ending Equity Balance", `${sym}${stats.balance.toLocaleString()}`, "Average R:R", stats.averageRR !== null ? `${stats.averageRR} R` : "N/A"],
+      ["Average Win", `${sym}${stats.averageWin}`, "Avg Hold Time", stats.averageHoldTime],
+      ["Average Loss", `${sym}${stats.averageLoss}`, "Best Win Streak", `${stats.bestStreak} Wins`],
+      ["Largest Single Win", `${sym}${stats.largestWin}`, "Worst Loss Streak", `${stats.worstStreak} Losses`],
+      ["Total Commissions", `${sym}${stats.totalCommission}`, "Total Swaps", `${sym}${stats.totalSwap}`],
     ],
     theme: "grid",
     headStyles: { fillColor: [124, 58, 237], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 9 },
@@ -104,13 +106,13 @@ export function generateProfessionalPdf(
         "LONG Positions",
         `${longTrades.length}`,
         `${longTrades.length > 0 ? ((longWins / longTrades.length) * 100).toFixed(1) : 0}%`,
-        `${currency} ${longTrades.reduce((acc, t) => acc + t.profit, 0).toLocaleString()}`,
+        `${sym}${longTrades.reduce((acc, t) => acc + t.profit, 0).toLocaleString()}`,
       ],
       [
         "SHORT Positions",
         `${shortTrades.length}`,
         `${shortTrades.length > 0 ? ((shortWins / shortTrades.length) * 100).toFixed(1) : 0}%`,
-        `${currency} ${shortTrades.reduce((acc, t) => acc + t.profit, 0).toLocaleString()}`,
+        `${sym}${shortTrades.reduce((acc, t) => acc + t.profit, 0).toLocaleString()}`,
       ],
     ],
     theme: "grid",
@@ -140,7 +142,7 @@ export function generateProfessionalPdf(
     t.volume,
     t.openPrice !== null ? t.openPrice : "-",
     t.closePrice,
-    `${t.profit >= 0 ? "+" : ""}${currency} ${t.profit}`,
+    `${t.profit >= 0 ? "+" : ""}${sym}${t.profit}`,
     t.rr !== null ? `${t.rr} R` : "N/A",
     t.status,
   ]);

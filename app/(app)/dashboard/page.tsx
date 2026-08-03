@@ -16,6 +16,7 @@ import { fetchLatestImport } from "@/lib/supabase/csv-imports";
 import { useAppEventListener } from "@/lib/events/event-bus";
 import { calculateCloudAnalytics, CompleteAnalyticsSummary } from "@/lib/engine/cloud-analytics-engine";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
+import { MixedCurrencyBanner } from "@/components/ui/MixedCurrencyBanner";
 import { StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
@@ -38,7 +39,7 @@ export default function DashboardPage() {
   const theme = useJournalStore((state) => state.theme);
   const filters = useJournalStore((state) => state.filters);
   const setFilters = useJournalStore((state) => state.setFilters);
-  const { formatSigned, currency } = useCurrencyFormatter();
+  const { formatSigned, currency, symbol, mixedCurrency, format: formatCurrency } = useCurrencyFormatter();
   const supabase = createClient();
 
   const { profile, accounts, addNewAccount } = useUserProfile();
@@ -260,6 +261,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 text-xs font-mono max-w-7xl mx-auto pb-12">
+      {mixedCurrency && <MixedCurrencyBanner />}
       {/* ── SECTION 1: Welcome Header Strip ──────────────────────────────── */}
       <div className="p-5 rounded-2xl bg-[#111726] border border-white/10 flex flex-col lg:flex-row lg:items-center justify-between gap-5 shadow-2xl">
         {/* Left: Greeting + User Identity + Active Account */}
@@ -288,7 +290,7 @@ export default function DashboardPage() {
 
             <span>•</span>
             <span className="text-gray-300">
-              Portfolio Balance: <strong className="text-white font-bold">${totalSelectedBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong>
+              Portfolio Balance: <strong className="text-white font-bold">{symbol}{totalSelectedBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong>
             </span>
             <span>•</span>
             <span className="text-gray-300">
@@ -360,7 +362,7 @@ export default function DashboardPage() {
         >
           <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">BALANCE</span>
           <span className="text-sm font-extrabold text-white block truncate">
-            ${totalSelectedBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            {symbol}{totalSelectedBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
             <span>Account Equity</span>
@@ -451,7 +453,7 @@ export default function DashboardPage() {
             {analytics.totalTrades > 0 ? analytics.profitFactor : "—"}
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
-            <span>Exp: {analytics.totalTrades > 0 ? `$${analytics.expectancy}` : "—"}</span>
+            <span>Exp: {analytics.totalTrades > 0 ? `${symbol}${analytics.expectancy}` : "—"}</span>
             <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-purple-400 transition-opacity" />
           </span>
 
@@ -502,7 +504,7 @@ export default function DashboardPage() {
           {/* Hover Tooltip */}
           <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
             <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Max Equity Drawdown</p>
-            <p className="text-gray-300">Largest peak-to-trough equity contraction experienced: -${drawdownInfo.amount.toLocaleString()}.</p>
+            <p className="text-gray-300">Largest peak-to-trough equity contraction experienced: -{symbol}{drawdownInfo.amount.toLocaleString()}.</p>
             <p className="text-[10px] text-emerald-400 font-bold pt-1">Click for Performance Lab →</p>
           </div>
         </div>
@@ -648,7 +650,7 @@ export default function DashboardPage() {
                   {analytics.bestSymbol?.symbol || "N/A"}
                 </span>
                 <span className="text-[10px] text-gray-300 block font-bold flex items-center justify-between">
-                  <span>{analytics.bestSymbol ? formatSigned(analytics.bestSymbol.netProfit) : "$0.00"}</span>
+                  <span>{analytics.bestSymbol ? formatSigned(analytics.bestSymbol.netProfit) : formatCurrency(0)}</span>
                   <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 
@@ -676,7 +678,7 @@ export default function DashboardPage() {
                   {analytics.worstSymbol?.symbol || "N/A"}
                 </span>
                 <span className="text-[10px] text-gray-300 block font-bold flex items-center justify-between">
-                  <span>{analytics.worstSymbol ? formatSigned(analytics.worstSymbol.netProfit) : "$0.00"}</span>
+                  <span>{analytics.worstSymbol ? formatSigned(analytics.worstSymbol.netProfit) : formatCurrency(0)}</span>
                   <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 
@@ -698,7 +700,7 @@ export default function DashboardPage() {
                   {analytics.bestDay?.period || "N/A"}
                 </span>
                 <span className="text-[10px] text-emerald-400 block font-bold flex items-center justify-between">
-                  <span>{analytics.bestDay ? formatSigned(analytics.bestDay.netProfit) : "$0.00"}</span>
+                  <span>{analytics.bestDay ? formatSigned(analytics.bestDay.netProfit) : formatCurrency(0)}</span>
                   <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 
@@ -720,7 +722,7 @@ export default function DashboardPage() {
                   {analytics.worstDay?.period || "N/A"}
                 </span>
                 <span className="text-[10px] text-gray-400 block flex items-center justify-between">
-                  <span>{analytics.worstDay ? formatSigned(analytics.worstDay.netProfit) : "$0.00"}</span>
+                  <span>{analytics.worstDay ? formatSigned(analytics.worstDay.netProfit) : formatCurrency(0)}</span>
                   <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 

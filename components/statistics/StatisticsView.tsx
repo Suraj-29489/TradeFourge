@@ -29,7 +29,7 @@ function formatDuration(seconds: number): string {
 }
 
 export const StatisticsView: React.FC = () => {
-  const { formatSigned } = useCurrencyFormatter();
+  const { formatSigned, symbol } = useCurrencyFormatter();
   const supabase = createClient();
 
   const [trades, setTrades] = useState<CloudTradeWithRelations[]>([]);
@@ -280,7 +280,7 @@ export const StatisticsView: React.FC = () => {
 
             <div className="p-3.5 rounded-xl bg-dark-card border border-dark-border space-y-1">
               <span className="text-[10px] text-gray-400 block uppercase">EXPECTANCY</span>
-              <span className="text-base font-extrabold text-emerald-400 block">${analytics.expectancy}</span>
+              <span className="text-base font-extrabold text-emerald-400 block">{symbol}{analytics.expectancy}</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-dark-card border border-dark-border space-y-1">

@@ -352,7 +352,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
             </div>
 
             <div>
-              <label className="text-gray-400 block mb-1">Net Realized Profit ($)</label>
+              <label className="text-gray-400 block mb-1">Net Realized Profit</label>
               <input
                 type="number"
                 step="0.01"
@@ -390,7 +390,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
             </div>
 
             <div>
-              <label className="text-gray-400 block mb-1">Commission ($)</label>
+              <label className="text-gray-400 block mb-1">Commission</label>
               <input
                 type="number"
                 step="0.01"
@@ -401,7 +401,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
             </div>
 
             <div>
-              <label className="text-gray-400 block mb-1">Swap ($)</label>
+              <label className="text-gray-400 block mb-1">Swap</label>
               <input
                 type="number"
                 step="0.01"
@@ -447,7 +447,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
             </span>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-gray-400 block mb-1">Risk Amount ($)</label>
+                <label className="text-gray-400 block mb-1">Risk Amount</label>
                 <input
                   type="number"
                   step="0.01"
@@ -458,7 +458,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 />
               </div>
               <div>
-                <label className="text-gray-400 block mb-1">Reward Potential ($)</label>
+                <label className="text-gray-400 block mb-1">Reward Potential</label>
                 <input
                   type="number"
                   step="0.01"

@@ -1,54 +1,78 @@
 import { useMemo } from "react";
 import { useJournalStore } from "@/lib/store/useJournalStore";
-import { formatCurrency, convertFromUSD, getCurrencySymbol, DisplayCurrency } from "@/lib/config/currency";
+import { useAccounts } from "@/context/AccountsContext";
+import {
+  getCurrencySymbol,
+  getCurrencyShortLabel,
+  formatMoney,
+  formatMoneySigned,
+} from "@/lib/config/currencies";
 
 /**
  * Hook that returns currency-aware formatting utilities.
- * Values from storage are displayed exactly as stored from CSV.
- * Currency only determines the symbol/label shown in the UI.
  *
- * NO numeric conversion. NO division. NO multiplication for USC.
+ * Currency is derived from the SELECTED TRADING ACCOUNTS:
+ * - If all selected accounts share the same currency → use that currency.
+ * - If multiple different currencies are selected → mixedCurrency = true.
+ * - If no accounts are selected → fall back to Zustand displayCurrency setting.
+ *
+ * Values are displayed exactly as stored from CSV — NO numeric conversion.
  */
 export function useCurrencyFormatter() {
   const displayCurrency = useJournalStore((state) => state.displayCurrency);
+  const { accounts, selectedAccountIds } = useAccounts();
 
-  return useMemo(
-    () => ({
-      currency: displayCurrency,
-      symbol: getCurrencySymbol(displayCurrency),
+  return useMemo(() => {
+    // Derive the active currency from selected accounts
+    let activeCurrency = displayCurrency || "USD";
+    let mixedCurrency = false;
+
+    if (selectedAccountIds.length > 0 && !selectedAccountIds.includes("ALL")) {
+      const selectedAccounts = accounts.filter((a) =>
+        selectedAccountIds.includes(a.id)
+      );
+      if (selectedAccounts.length > 0) {
+        const currencies = new Set(selectedAccounts.map((a) => a.currency));
+        if (currencies.size === 1) {
+          activeCurrency = selectedAccounts[0].currency;
+        } else if (currencies.size > 1) {
+          mixedCurrency = true;
+          // Use first selected account's currency for display (user will see banner)
+          activeCurrency = selectedAccounts[0].currency;
+        }
+      }
+    } else if (selectedAccountIds.includes("ALL") && accounts.length > 0) {
+      const currencies = new Set(accounts.map((a) => a.currency));
+      if (currencies.size === 1) {
+        activeCurrency = accounts[0].currency;
+      } else if (currencies.size > 1) {
+        mixedCurrency = true;
+        activeCurrency = accounts[0].currency;
+      }
+    }
+
+    return {
+      currency: activeCurrency,
+      symbol: getCurrencySymbol(activeCurrency),
+      mixedCurrency,
 
       /** Format a stored value for display — no numeric conversion */
-      format: (value: number) => formatCurrency(value, displayCurrency),
+      format: (value: number) => formatMoney(value, activeCurrency),
 
       /** Return stored value unchanged (no arithmetic) */
-      convert: (value: number) => convertFromUSD(value, displayCurrency),
+      convert: (value: number) => value,
 
       /** Format with mandatory sign prefix */
-      formatSigned: (value: number): string => {
-        const absStr = formatCurrency(Math.abs(value), displayCurrency);
-        return value >= 0 ? `+${absStr}` : `-${absStr}`;
-      },
+      formatSigned: (value: number): string =>
+        formatMoneySigned(value, activeCurrency),
 
       /** Format a value already in display format (no conversion) */
-      formatDisplay: (displayValue: number): string => {
-        const absVal = Math.abs(displayValue);
-        const sign = displayValue < 0 ? "-" : "";
-        const sym = getCurrencySymbol(displayCurrency);
-        return `${sign}${sym}${absVal.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}`;
-      },
+      formatDisplay: (displayValue: number): string =>
+        formatMoney(displayValue, activeCurrency),
 
       /** Short label for axis ticks */
-      currencyLabel: (currency: DisplayCurrency): string => {
-        if (currency === "USD") return "USD ($)";
-        if (currency === "USC") return "USC (¢)";
-        if (currency === "EUR") return "EUR (€)";
-        if (currency === "INR") return "INR (₹)";
-        return "USD ($)";
-      },
-    }),
-    [displayCurrency]
-  );
+      currencyLabel: (currency: string): string =>
+        getCurrencyShortLabel(currency),
+    };
+  }, [displayCurrency, accounts, selectedAccountIds]);
 }

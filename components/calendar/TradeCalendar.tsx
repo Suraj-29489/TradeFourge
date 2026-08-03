@@ -17,6 +17,7 @@ import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
 import type { CloudTradeWithRelations } from "@/types/database";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { MixedCurrencyBanner } from '@/components/ui/MixedCurrencyBanner';
 import {
   format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
   addMonths, subMonths, isSameDay, setMonth, getYear, setYear
@@ -36,7 +37,7 @@ type MainViewMode = "calendar" | "timeline";
 export const TradeCalendar: React.FC = () => {
   const router = useRouter();
   const theme = useJournalStore((s) => s.theme);
-  const { format: formatCurrency, formatSigned } = useCurrencyFormatter();
+  const { format: formatCurrency, formatSigned, mixedCurrency } = useCurrencyFormatter();
   const supabase = createClient();
 
   const [trades, setTrades] = useState<CloudTradeWithRelations[]>([]);
@@ -318,6 +319,8 @@ export const TradeCalendar: React.FC = () => {
 
   return (
     <div className="space-y-6 text-xs font-mono max-w-7xl mx-auto pb-16">
+      {mixedCurrency && <MixedCurrencyBanner />}
+
       {/* ── SECTION 1: Month Header & Quick Statistics ─────────────────────── */}
       <div className="p-5 rounded-2xl bg-[#111726] border border-white/10 space-y-4 shadow-2xl">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/10 pb-4">

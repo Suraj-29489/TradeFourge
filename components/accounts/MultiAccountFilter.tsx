@@ -4,6 +4,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Wallet, ChevronDown, Check, Layers, Filter } from "lucide-react";
+import { getCurrencyShortLabel, getCurrencySymbol } from "@/lib/config/currencies";
 import type { TradingAccount } from "@/types/database";
 
 interface MultiAccountFilterProps {
@@ -150,13 +151,13 @@ export const MultiAccountFilter: React.FC<MultiAccountFilterProps> = ({
                       <div className="text-[10px] text-gray-400 flex items-center gap-1.5">
                         <span>{acc.broker}</span>
                         <span>•</span>
-                        <span className="text-purple-300 font-bold">{acc.currency}</span>
+                        <span className="text-purple-300 font-bold">{getCurrencyShortLabel(acc.currency)}</span>
                       </div>
                     </div>
                   </div>
-                  <span className="text-[10px] text-emerald-400 font-bold shrink-0">
-                    ${acc.current_balance.toLocaleString()}
-                  </span>
+                    <span className="text-[10px] text-emerald-400 font-bold shrink-0">
+                      {getCurrencySymbol(acc.currency)}{acc.current_balance.toLocaleString()}
+                    </span>
                 </button>
               );
             })}

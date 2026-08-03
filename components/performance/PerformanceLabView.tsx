@@ -18,6 +18,7 @@ import { calculateCloudAnalytics, CompleteAnalyticsSummary, SymbolPerformance, P
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
 import { TableSkeleton, StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { MixedCurrencyBanner } from '@/components/ui/MixedCurrencyBanner';
 import type { CloudTradeWithRelations } from "@/types/database";
 import {
   Zap, TrendingUp, TrendingDown, Target, Award, Clock, Layers, ShieldCheck,
@@ -36,7 +37,7 @@ type ChartMode = "equity" | "drawdown" | "both";
 
 export const PerformanceLabView: React.FC = () => {
   const theme = useJournalStore((state) => state.theme);
-  const { formatSigned, currency } = useCurrencyFormatter();
+  const { formatSigned, currency, symbol, mixedCurrency } = useCurrencyFormatter();
   const supabase = createClient();
 
   const [trades, setTrades] = useState<CloudTradeWithRelations[]>([]);
@@ -259,12 +260,12 @@ export const PerformanceLabView: React.FC = () => {
 
   // Distribution Data
   const pnlDistributionData = useMemo(() => {
-    let megaWins = 0; // > $500
-    let solidWins = 0; // $100 - $500
-    let smallWins = 0; // $0 - $100
-    let smallLosses = 0; // -$100 - $0
-    let solidLosses = 0; // -$500 - -$100
-    let megaLosses = 0; // < -$500
+    let megaWins = 0; // > 500
+    let solidWins = 0; // 100 - 500
+    let smallWins = 0; // 0 - 100
+    let smallLosses = 0; // -100 - 0
+    let solidLosses = 0; // -500 - -100
+    let megaLosses = 0; // < -500
 
     filteredTrades.forEach((t) => {
       const pnl = t.net_profit ?? (t.profit + t.commission + t.swap);
@@ -277,12 +278,12 @@ export const PerformanceLabView: React.FC = () => {
     });
 
     return [
-      { bin: "> $500", count: megaWins, fill: "#10B981" },
-      { bin: "$100 - $500", count: solidWins, fill: "#34D399" },
-      { bin: "$0 - $100", count: smallWins, fill: "#A7F3D0" },
-      { bin: "-$100 - $0", count: smallLosses, fill: "#FCA5A5" },
-      { bin: "-$500 - -$100", count: solidLosses, fill: "#F87171" },
-      { bin: "< -$500", count: megaLosses, fill: "#EF4444" },
+      { bin: `> ${symbol}500`, count: megaWins, fill: "#10B981" },
+      { bin: `${symbol}100 - ${symbol}500`, count: solidWins, fill: "#34D399" },
+      { bin: `${symbol}0 - ${symbol}100`, count: smallWins, fill: "#A7F3D0" },
+      { bin: `-${symbol}100 - ${symbol}0`, count: smallLosses, fill: "#FCA5A5" },
+      { bin: `-${symbol}500 - -${symbol}100`, count: solidLosses, fill: "#F87171" },
+      { bin: `< -${symbol}500`, count: megaLosses, fill: "#EF4444" },
     ];
   }, [filteredTrades]);
 
@@ -376,6 +377,8 @@ export const PerformanceLabView: React.FC = () => {
 
   return (
     <div className="space-y-6 text-xs font-mono max-w-7xl mx-auto pb-16">
+      {mixedCurrency && <MixedCurrencyBanner />}
+
       {/* ── SECTION 11: Global Filter Toolbar ─────────────────────────────── */}
       <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 shadow-xl flex flex-wrap items-center justify-between gap-3">
         {/* Left Filter Controls */}
@@ -551,7 +554,7 @@ export const PerformanceLabView: React.FC = () => {
           <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
             <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300">EXPECTANCY</span>
             <span className="text-sm font-extrabold text-emerald-400 block truncate">
-              ${analytics.expectancy}
+              {symbol}{analytics.expectancy}
             </span>
             <span className="text-[9px] text-gray-400 block">Expected / Trade</span>
 
@@ -614,7 +617,7 @@ export const PerformanceLabView: React.FC = () => {
             {/* Hover Insight Card */}
             <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
               <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Max Equity Contraction</p>
-              <p className="text-gray-300">Largest percentage drop from peak equity to lowest trough (-${institutionalMetrics.maxDrawdownAmount.toLocaleString()}).</p>
+              <p className="text-gray-300">Largest percentage drop from peak equity to lowest trough (-{symbol}{institutionalMetrics.maxDrawdownAmount.toLocaleString()}).</p>
             </div>
           </div>
 
@@ -717,8 +720,8 @@ export const PerformanceLabView: React.FC = () => {
                 <XAxis dataKey="date" stroke={axisStroke} fontSize={10} tickLine={false} />
                 <YAxis stroke={axisStroke} fontSize={10} tickLine={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Area type="monotone" dataKey="cumulativeProfit" stroke={purpleColor} strokeWidth={2} fill="url(#dualEqGrad)" name="Equity ($)" />
-                <Line type="monotone" dataKey="drawdown" stroke={roseColor} strokeWidth={2} dot={false} name="Drawdown ($)" />
+                <Area type="monotone" dataKey="cumulativeProfit" stroke={purpleColor} strokeWidth={2} fill="url(#dualEqGrad)" name={`Equity (${symbol})`} />
+                <Line type="monotone" dataKey="drawdown" stroke={roseColor} strokeWidth={2} dot={false} name={`Drawdown (${symbol})`} />
               </AreaChart>
             )}
           </ResponsiveContainer>

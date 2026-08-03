@@ -13,6 +13,7 @@ import { AccountFormModal } from "@/components/accounts/AccountFormModal";
 import { exportImportReportCsv, exportImportReportPdf, FinalImportReportData } from "@/lib/export/import-report-exporter";
 import { processInBatches, BatchProgressInfo } from "@/lib/engine/batch-processor";
 import { emitAppEvent } from "@/lib/events/event-bus";
+import { formatMoney, getCurrencyShortLabel } from "@/lib/config/currencies";
 import type { NewCloudTrade, NewTradingAccount } from "@/types/database";
 import {
   Upload,
@@ -652,7 +653,7 @@ export const CsvUploader: React.FC = () => {
 
                   <div className="flex items-center justify-between text-[10px] pt-1">
                     <span className="text-purple-300 font-bold px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">
-                      {acc.currency}
+                      {getCurrencyShortLabel(acc.currency)}
                     </span>
                     <span className="text-gray-400 font-bold">
                       ${acc.current_balance?.toLocaleString() || "0"}
@@ -692,7 +693,7 @@ export const CsvUploader: React.FC = () => {
                   <div className="text-xs font-extrabold text-white truncate flex items-center gap-2">
                     <span>{selectedAccount.account_name}</span>
                     <span className="text-gray-400 font-normal">
-                      ({selectedAccount.broker} · {selectedAccount.platform} · {selectedAccount.currency})
+                      ({selectedAccount.broker} · {selectedAccount.platform} · {getCurrencyShortLabel(selectedAccount.currency)})
                     </span>
                   </div>
                 </div>
@@ -1023,7 +1024,7 @@ export const CsvUploader: React.FC = () => {
                         <td className={`p-3 text-right font-extrabold ${
                           isWin ? "text-emerald-400" : isLoss ? "text-rose-400" : "text-gray-400"
                         }`}>
-                          ${t.profit.toFixed(2)}
+                          {formatMoney(t.profit, selectedAccount?.currency)}
                         </td>
                       </tr>
                     );

@@ -1,74 +1,68 @@
 /**
- * Currency configuration — single source of truth.
- * Values are stored and displayed exactly as imported from CSV.
- * Account currency determines ONLY the displayed currency symbol/label.
- * 
- * NO numeric conversion. NO division. NO multiplication.
+ * lib/config/currency.ts
+ * TradeFourge v3.8.2 — Backward-Compatible Currency Exports
+ *
+ * This file re-exports the central registry for backward compatibility.
+ * All new code should import directly from '@/lib/config/currencies'.
  */
 
+// Re-export everything from the central registry
+export {
+  CURRENCY_REGISTRY,
+  SUPPORTED_CURRENCY_CODES,
+  getCurrencySymbol,
+  getCurrencyLabel,
+  getCurrencyShortLabel,
+  formatMoney,
+  formatMoneySigned,
+  type CurrencyDefinition,
+} from "@/lib/config/currencies";
+
+// Re-export account-currency helpers
 export * from "@/lib/account/account-currency";
 
-export type DisplayCurrency = "USD" | "USC" | "EUR" | "INR";
+import { CURRENCY_REGISTRY, formatMoney } from "@/lib/config/currencies";
 
-/** 1 USD = 84.5 INR. Only for INR conversion display (not USC). */
-export const INR_EXCHANGE_RATE = 84.5;
+// Legacy type alias — kept for backward compatibility
+export type DisplayCurrency = string;
 
-/**
- * Returns value as-is — no currency conversion performed.
- * Account currency only determines the displayed symbol label.
- */
-export function convertFromUSD(value: number, currency: DisplayCurrency): number {
-  if (currency === "INR") return value * INR_EXCHANGE_RATE;
-  // USD, USC, EUR — all display the raw stored value
-  return value;
-}
-
-/**
- * Format a monetary value for display in the selected currency.
- * Values are always displayed exactly as stored from CSV.
- * Account currency changes the symbol only.
- */
-export function formatCurrency(value: number, currency: DisplayCurrency): string {
-  const displayValue = convertFromUSD(value, currency);
-  const absVal = Math.abs(displayValue);
-  const sign = value < 0 ? "-" : "";
-
-  if (currency === "INR") {
-    return `${sign}₹${absVal.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  }
-
-  const symbol = currency === "USC" ? "¢" : currency === "EUR" ? "€" : "$";
-  return `${sign}${symbol}${absVal.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-/** Returns just the currency symbol. */
-export function getCurrencySymbol(currency: DisplayCurrency): string {
-  if (currency === "USD") return "$";
-  if (currency === "USC") return "¢";
-  if (currency === "EUR") return "€";
-  if (currency === "INR") return "₹";
-  return "$";
-}
-
-/** Currency label shown in the settings UI. */
-export const CURRENCY_LABELS: Record<DisplayCurrency, string> = {
+/** @deprecated Use CURRENCY_REGISTRY from currencies.ts instead */
+export const CURRENCY_LABELS: Record<string, string> = {
   USD: "USD ($)",
   USC: "USC (¢)",
   EUR: "EUR (€)",
   INR: "INR (₹)",
+  GBP: "GBP (£)",
+  JPY: "JPY (¥)",
+  AUD: "AUD (A$)",
+  CAD: "CAD (C$)",
+  CHF: "CHF (CHF)",
+  SGD: "SGD (S$)",
+  AED: "AED (د.إ)",
 };
 
-export const SUPPORTED_CURRENCIES: DisplayCurrency[] = ["USD", "USC", "INR"];
+/** @deprecated Use SUPPORTED_CURRENCY_CODES from currencies.ts instead */
+export const SUPPORTED_CURRENCIES: string[] = ["USD", "USC", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "INR", "SGD", "AED"];
 
+/**
+ * @deprecated Use formatMoney from currencies.ts instead.
+ * Kept for backward compatibility — delegates to the central registry.
+ */
+export function formatCurrency(value: number, currency: string): string {
+  return formatMoney(value, currency);
+}
+
+/**
+ * @deprecated No numeric conversion performed. Values displayed as-is.
+ */
+export function convertFromUSD(value: number, _currency: string): number {
+  return value;
+}
+
+// ─── LocalStorage Persistence ────────────────────────────────────────────────
 export const CURRENCY_STORAGE_KEY = "trading_journal_display_currency";
 
-export function saveCurrencyToStorage(currency: DisplayCurrency): void {
+export function saveCurrencyToStorage(currency: string): void {
   try {
     localStorage.setItem(CURRENCY_STORAGE_KEY, currency);
   } catch {
@@ -76,10 +70,10 @@ export function saveCurrencyToStorage(currency: DisplayCurrency): void {
   }
 }
 
-export function loadCurrencyFromStorage(): DisplayCurrency {
+export function loadCurrencyFromStorage(): string {
   try {
-    const v = localStorage.getItem(CURRENCY_STORAGE_KEY) as DisplayCurrency | null;
-    if (v && (v === "USD" || v === "USC" || v === "INR")) return v;
+    const v = localStorage.getItem(CURRENCY_STORAGE_KEY);
+    if (v && CURRENCY_REGISTRY[v]) return v;
   } catch {
     // SSR — ignore
   }

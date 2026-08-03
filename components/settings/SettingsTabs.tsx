@@ -18,6 +18,7 @@ import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { deleteAllImports } from "@/lib/supabase/csv-imports";
 import { deleteAllTrades, fetchTrades } from "@/lib/supabase/trades";
+import { SUPPORTED_CURRENCY_CODES, getCurrencyLabel } from "@/lib/config/currencies";
 
 export const SettingsTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
@@ -310,8 +311,8 @@ export const SettingsTabs: React.FC = () => {
                 onChange={(e) => setDefaultTradeCurrency(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl bg-dark-card border border-dark-border text-white focus:border-purple-500"
               >
-                {["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "INR", "CHF", "AED"].map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                {SUPPORTED_CURRENCY_CODES.map((c) => (
+                  <option key={c} value={c}>{getCurrencyLabel(c)}</option>
                 ))}
               </select>
             </div>
@@ -446,7 +447,7 @@ export const SettingsTabs: React.FC = () => {
                 className="w-full px-3 py-2.5 rounded-xl bg-dark-card border border-dark-border text-white focus:border-purple-500"
               >
                 <option value="percentage">Percentage of Balance (%)</option>
-                <option value="currency">Absolute Currency Amount ($)</option>
+                <option value="currency">Absolute Currency Amount</option>
                 <option value="r_multiple">R-Multiple (R)</option>
               </select>
             </div>

@@ -32,6 +32,7 @@ import { AccountTypeBadge } from "@/components/ui/Badge";
 import { CardListSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useUserProfile } from "@/context/UserProfileContext";
 import type { TradingAccount, NewTradingAccount } from "@/types/database";
+import { getCurrencySymbol, getCurrencyShortLabel } from "@/lib/config/currencies";
 
 export default function AccountsPage() {
   const { refreshAccounts } = useUserProfile();
@@ -202,7 +203,7 @@ export default function AccountsPage() {
                           <span>·</span>
                           <span>{account.platform}</span>
                           <span>·</span>
-                          <span>{account.currency}</span>
+                          <span>{getCurrencyShortLabel(account.currency)}</span>
                           {account.leverage && (
                             <>
                               <span>·</span>
@@ -218,7 +219,7 @@ export default function AccountsPage() {
                       {/* Balance */}
                       <div className="text-right">
                         <p className="text-lg font-extrabold text-white font-mono">
-                          {account.currency}{" "}
+                          {getCurrencySymbol(account.currency)}
                           {account.current_balance.toLocaleString("en-US", {
                             minimumFractionDigits: 2,
                           })}
@@ -234,7 +235,7 @@ export default function AccountsPage() {
                             <TrendingDown className="w-3 h-3" />
                           )}
                           {isPositive ? "+" : ""}
-                          {pnl.toLocaleString("en-US", { minimumFractionDigits: 2 })} (
+                          {getCurrencySymbol(account.currency)}{pnl.toLocaleString("en-US", { minimumFractionDigits: 2 })} (
                           {pnlPct.toFixed(1)}%)
                         </p>
                       </div>

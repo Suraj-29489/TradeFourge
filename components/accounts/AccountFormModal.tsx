@@ -12,6 +12,7 @@ import { generateDisplayAccountId } from "@/lib/supabase/frontend-store";
 import { useAccounts } from "@/context/AccountsContext";
 import { generateAccountSlug, isAccountSlugUnique } from "@/lib/account/account-identity";
 import type { TradingAccount, NewTradingAccount, AccountPlatform, AccountType } from "@/types/database";
+import { SUPPORTED_CURRENCY_CODES, getCurrencyLabel } from "@/lib/config/currencies";
 
 const PLATFORMS: AccountPlatform[] = [
   "MetaTrader 5",
@@ -25,7 +26,7 @@ const PLATFORMS: AccountPlatform[] = [
 
 const ACCOUNT_TYPES: AccountType[] = ["Live", "Demo", "Prop", "Contest"];
 
-const CURRENCIES = ["USD", "USC", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "INR", "SGD", "AED"];
+
 
 const schema = z.object({
   account_name:     z.string().min(1, "Account name is required").max(100),
@@ -253,9 +254,9 @@ export function AccountFormModal({
           <div>
             <label className={labelClass}>Currency *</label>
             <select {...register("currency")} className={inputClass}>
-              {CURRENCIES.map((c) => (
+              {SUPPORTED_CURRENCY_CODES.map((c) => (
                 <option key={c} value={c}>
-                  {c === "USC" ? "USC (US Cent)" : c}
+                  {getCurrencyLabel(c)}
                 </option>
               ))}
             </select>
