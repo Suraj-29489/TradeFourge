@@ -179,34 +179,12 @@ export function normalizeCsvData(
     };
   }
 
-  // Detect Account Type
-  let detectedAccountType: AccountType = "Pro";
-  const textUpper = csvText.toUpperCase();
-  if (
-    textUpper.includes("CENT") ||
-    textUpper.includes("USC") ||
-    textUpper.includes("US CENT") ||
-    textUpper.includes("CENTS")
-  ) {
-    detectedAccountType = "Standard Cent";
-  } else if (textUpper.includes("STANDARD")) {
-    detectedAccountType = "Standard";
-  } else if (textUpper.includes("RAW") || textUpper.includes("ZERO")) {
-    detectedAccountType = "Raw";
-  } else if (textUpper.includes("DEMO")) {
-    detectedAccountType = "Demo";
-  }
+  // Account Type & Currency determination (Selected Trading Account is the Single Source of Truth)
+  let detectedAccountType: AccountType = accountCurrency === "USC" ? "Standard Cent" : "Standard";
+  const isCentAccount = accountCurrency === "USC";
 
-  // Cent Account Normalization (USC -> USD: divide by 100)
-  const isCentAccount =
-    accountCurrency === "USC" ||
-    detectedAccountType === "Standard Cent" ||
-    textUpper.includes("CENT") ||
-    textUpper.includes("USC") ||
-    textUpper.includes("US CENT") ||
-    textUpper.includes("CENTS");
-
-  const normFactor = isCentAccount ? 100 : 1;
+  // CSV values are imported as-is. Display division (/100) is controlled by Trading Account currency.
+  const normFactor = 1;
   const seenTickets = new Set<string>();
 
   parsed.data.forEach((row, index) => {

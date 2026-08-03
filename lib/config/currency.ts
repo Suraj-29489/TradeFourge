@@ -1,37 +1,37 @@
 /**
- * Currency configuration — single source of truth.
- * Internal DB and trade storage always represent normalized USD.
- * Display layer formats presentation consistently.
+ * Currency configuration & Centralized Display Utility single source of truth.
+ * Display layer delegates USC division (/100) and formatting to account-currency.ts.
  */
+
+export * from "@/lib/account/account-currency";
+import { getAccountNormalizedValue, formatAccountMoney } from "@/lib/account/account-currency";
 
 export type DisplayCurrency = "USD" | "USC" | "INR";
 
 /** 1 USD = 84.5 INR. Change only this constant to update the entire app. */
 export const INR_EXCHANGE_RATE = 84.5;
 
-/** 1 USD = 100 USC (cents). Trades are normalized to USD on import. */
-export const USC_RATE = 1;
-
 /**
- * Convert an internal USD value to the selected display currency.
- * Trades are already USD-normalized; USC displays normalized USD values.
+ * Convert an internal monetary value to the selected display currency.
+ * If currency is USC, delegates normalization (/100) to centralized display engine.
  */
 export function convertFromUSD(usdValue: number, currency: DisplayCurrency): number {
-  if (currency === "USC") return usdValue; // Already USD-normalized
+  if (currency === "USC") return getAccountNormalizedValue(usdValue, "USC");
   if (currency === "INR") return usdValue * INR_EXCHANGE_RATE;
   return usdValue;
 }
 
 /**
- * Format an internal USD value for display in the selected currency.
- * USC displays normalized USD monetary values.
+ * Format a monetary value for display in the selected currency.
  */
 export function formatCurrency(usdValue: number, currency: DisplayCurrency): string {
+  if (currency === "USC") return formatAccountMoney(usdValue, "USC");
+
   const converted = convertFromUSD(usdValue, currency);
   const absConverted = Math.abs(converted);
   const sign = usdValue < 0 ? "-" : "";
 
-  if (currency === "USD" || currency === "USC") {
+  if (currency === "USD") {
     return `${sign}$${absConverted.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
