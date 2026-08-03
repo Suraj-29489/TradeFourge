@@ -1,5 +1,5 @@
-// lib/engine/export/import-report-exporter.ts
-// TradeFourge v3.7.5 — CSV Import Engine 2.0: Report Exporter Engine (CSV & PDF)
+// lib/export/import-report-exporter.ts
+// TradeFourge CSV Import Engine 2.0: Report Exporter Engine (CSV & PDF)
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";

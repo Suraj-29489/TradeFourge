@@ -10,7 +10,7 @@ import { createImportRecord, updateImportRecord } from "@/lib/supabase/csv-impor
 import { createClient } from "@/lib/supabase/client";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { AccountFormModal } from "@/components/accounts/AccountFormModal";
-import { exportImportReportCsv, exportImportReportPdf, FinalImportReportData } from "@/lib/engine/export/import-report-exporter";
+import { exportImportReportCsv, exportImportReportPdf, FinalImportReportData } from "@/lib/export/import-report-exporter";
 import { processInBatches, BatchProgressInfo } from "@/lib/engine/batch-processor";
 import { emitAppEvent } from "@/lib/events/event-bus";
 import type { NewCloudTrade, NewTradingAccount } from "@/types/database";

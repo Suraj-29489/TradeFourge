@@ -15,7 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { fetchImportHistory, deleteImportRecord, deleteAllImports, type DeleteImportResult } from "@/lib/supabase/csv-imports";
-import { exportImportReportCsv, exportImportReportPdf, FinalImportReportData } from "@/lib/engine/export/import-report-exporter";
+import { exportImportReportCsv, exportImportReportPdf, FinalImportReportData } from "@/lib/export/import-report-exporter";
 import { useAppEventListener } from "@/lib/events/event-bus";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ImportStatusBadge } from "@/components/ui/Badge";
