@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchImportHistory, deleteImportRecord, deleteAllImports, type DeleteImportResult } from "@/lib/supabase/csv-imports";
 import { exportImportReportCsv, exportImportReportPdf, FinalImportReportData } from "@/lib/export/import-report-exporter";
 import { useAppEventListener } from "@/lib/events/event-bus";
+import { generateAccountSlug } from "@/lib/account/account-identity";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ImportStatusBadge } from "@/components/ui/Badge";
 import { TableSkeleton } from "@/components/ui/LoadingSkeleton";
@@ -81,10 +82,12 @@ export default function ImportHistoryPage() {
         return false;
       }
 
-      // 2. Search Term Filter across Account, Broker, Date, Filename
+      // 2. Search Term Filter across Account (slug lookup), Broker, Date, Filename
       if (searchTerm.trim() !== "") {
         const query = searchTerm.toLowerCase();
+        const querySlug = generateAccountSlug(searchTerm);
         const filename = (rec.filename || "").toLowerCase();
+        const accSlug = rec.account?.slug || generateAccountSlug(rec.account?.account_name || "");
         const accName = (rec.account?.account_name || "").toLowerCase();
         const broker = (rec.account?.broker || rec.broker || "").toLowerCase();
         const platform = (rec.account?.platform || rec.platform || "").toLowerCase();
@@ -93,6 +96,7 @@ export default function ImportHistoryPage() {
         return (
           filename.includes(query) ||
           accName.includes(query) ||
+          (querySlug !== "" && accSlug.includes(querySlug)) ||
           broker.includes(query) ||
           platform.includes(query) ||
           dateStr.includes(query)

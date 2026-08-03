@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Lock } from "lucide-react";
 import { generateDisplayAccountId } from "@/lib/supabase/frontend-store";
 import { useAccounts } from "@/context/AccountsContext";
+import { generateAccountSlug, isAccountSlugUnique } from "@/lib/account/account-identity";
 import type { TradingAccount, NewTradingAccount, AccountPlatform, AccountType } from "@/types/database";
 
 const PLATFORMS: AccountPlatform[] = [
@@ -119,17 +120,13 @@ export function AccountFormModal({
   }, [account, reset, open]);
 
   const handleFormSubmit = async (values: FormValues) => {
-    // Check for duplicate account name per user (ignore case & leading/trailing spaces)
-    const newNormalized = values.account_name.trim().toLowerCase();
-    const isDuplicate = accounts.some((acc) => {
-      if (account && acc.id === account.id) return false;
-      return acc.is_active !== false && acc.account_name.trim().toLowerCase() === newNormalized;
-    });
+    const slug = generateAccountSlug(values.account_name);
+    const isUnique = isAccountSlugUnique(slug, accounts, account?.id);
 
-    if (isDuplicate) {
+    if (!isUnique) {
       setError("account_name", {
         type: "manual",
-        message: "This account name already exists. Please choose a different name.",
+        message: "This account name already exists.",
       });
       return;
     }
@@ -137,6 +134,7 @@ export function AccountFormModal({
     try {
       await onSubmit({
         ...values,
+        slug,
         display_id:       activeDisplayId,
         account_number:   values.account_number || activeDisplayId,
         leverage:         values.leverage || null,
@@ -150,7 +148,7 @@ export function AccountFormModal({
       if (errMsg.includes("already exists")) {
         setError("account_name", {
           type: "manual",
-          message: "This account name already exists. Please choose a different name.",
+          message: "This account name already exists.",
         });
       } else {
         console.error("AccountFormModal submit error:", err);

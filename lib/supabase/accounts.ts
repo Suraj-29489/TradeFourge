@@ -5,6 +5,7 @@
 
 import { createClient } from './client';
 import { isFrontendOnly } from '@/lib/config/frontend-only';
+import { generateAccountSlug, isAccountSlugUnique } from '@/lib/account/account-identity';
 import {
   getFrontendTradingAccounts,
   getFrontendTradingAccountById,
@@ -114,7 +115,7 @@ export async function fetchDefaultAccount(
 
 /**
  * Create a new trading account.
- * If is_default is true, unsets all other defaults first.
+ * Automatically generates normalized slug and enforces slug uniqueness per user.
  */
 export async function createTradingAccount(
   userId: string,
@@ -126,29 +127,25 @@ export async function createTradingAccount(
 
   const supabase = createClient();
   try {
-    // Check for duplicate account name per user (ignore case & leading/trailing spaces)
+    const slug = generateAccountSlug(payload.account_name);
+
+    // Duplicate validation compares ONLY slugs per authenticated user
     const { data: existingAccounts } = await supabase
       .from('trading_accounts')
-      .select('id, account_name')
+      .select('id, account_name, slug')
       .eq('user_id', userId)
       .eq('is_active', true);
 
-    if (
-      existingAccounts &&
-      existingAccounts.some(
-        (a: { id: string; account_name: string }) =>
-          a.account_name.trim().toLowerCase() === payload.account_name.trim().toLowerCase()
-      )
-    ) {
+    if (existingAccounts && !isAccountSlugUnique(slug, existingAccounts)) {
       return {
         data: null,
-        error: "This account name already exists. Please choose a different name.",
+        error: "This account name already exists.",
       };
     }
 
     const { data, error } = await supabase
       .from('trading_accounts')
-      .insert({ ...payload, user_id: userId, is_default: false })
+      .insert({ ...payload, slug, user_id: userId, is_default: false })
       .select()
       .single();
 
@@ -164,7 +161,7 @@ export async function createTradingAccount(
 
 /**
  * Update an existing trading account.
- * Ownership is enforced by RLS + the user_id check in the query.
+ * Updates name and slug if account_name changes while keeping id and display_id unchanged.
  */
 export async function updateTradingAccount(
   id: string,
@@ -177,9 +174,29 @@ export async function updateTradingAccount(
 
   const supabase = createClient();
   try {
+    let slug: string | undefined = undefined;
+
+    if (updates.account_name) {
+      slug = generateAccountSlug(updates.account_name);
+      const { data: existingAccounts } = await supabase
+        .from('trading_accounts')
+        .select('id, account_name, slug')
+        .eq('user_id', userId)
+        .eq('is_active', true);
+
+      if (existingAccounts && !isAccountSlugUnique(slug, existingAccounts, id)) {
+        return {
+          data: null,
+          error: "This account name already exists.",
+        };
+      }
+    }
+
+    const payloadToUpdate = slug ? { ...updates, slug, updated_at: new Date().toISOString() } : { ...updates, updated_at: new Date().toISOString() };
+
     const { data, error } = await supabase
       .from('trading_accounts')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update(payloadToUpdate)
       .eq('id', id)
       .eq('user_id', userId)
       .select()

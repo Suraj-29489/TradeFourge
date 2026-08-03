@@ -70,7 +70,7 @@ export async function fetchTrades(
       .select(
         `
         *,
-        account:trading_accounts(id, account_name, broker, currency),
+        account:trading_accounts(id, account_name, slug, broker, currency),
         tags:trade_tag_links(
           tag:trade_tags(id, name, color)
         )
@@ -157,7 +157,7 @@ export async function fetchTradeById(
       .select(
         `
         *,
-        account:trading_accounts(id, account_name, broker, currency),
+        account:trading_accounts(id, account_name, slug, broker, currency),
         tags:trade_tag_links(
           tag:trade_tags(id, name, color)
         ),

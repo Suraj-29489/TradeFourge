@@ -3,6 +3,7 @@
 // Intercepts all database operations when FRONTEND_ONLY mode is enabled.
 
 import { emitAppEvent } from "@/lib/events/event-bus";
+import { generateAccountSlug, isAccountSlugUnique } from "@/lib/account/account-identity";
 import type {
   CloudTrade,
   CloudTradeWithRelations,
@@ -708,14 +709,12 @@ export async function createFrontendTradingAccount(
   let accounts = loadUserAccountsFromLocalStorage(userId);
   const activeAccounts = accounts.filter((a) => a.is_active !== false);
 
-  if (
-    activeAccounts.some(
-      (a) => a.account_name.trim().toLowerCase() === payload.account_name.trim().toLowerCase()
-    )
-  ) {
+  const slug = generateAccountSlug(payload.account_name);
+
+  if (!isAccountSlugUnique(slug, activeAccounts)) {
     return {
       data: null,
-      error: "This account name already exists. Please choose a different name.",
+      error: "This account name already exists.",
     };
   }
 
@@ -732,6 +731,7 @@ export async function createFrontendTradingAccount(
     id: internalId,
     user_id: userId,
     display_id: displayId,
+    slug: slug,
     account_name: payload.account_name,
     broker: payload.broker,
     platform: payload.platform ?? "MetaTrader 5",
@@ -769,12 +769,28 @@ export async function updateFrontendTradingAccount(
     return { data: null, error: "Account not found" };
   }
 
+  const activeAccounts = accounts.filter((a) => a.is_active !== false);
+
+  let newSlug: string | undefined = undefined;
+  if (updates.account_name) {
+    newSlug = generateAccountSlug(updates.account_name);
+    if (!isAccountSlugUnique(newSlug, activeAccounts, id)) {
+      return {
+        data: null,
+        error: "This account name already exists.",
+      };
+    }
+  }
+
   if (updates.is_default) {
     accounts = accounts.map((a) => ({ ...a, is_default: false }));
   }
 
-  const updatedAcc = {
-    ...accounts[index],
+  const now = new Date().toISOString();
+  const existing = accounts[index];
+
+  const updatedAcc: TradingAccount = {
+    ...existing,
     ...updates,
     updated_at: new Date().toISOString(),
   };

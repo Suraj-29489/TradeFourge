@@ -20,6 +20,7 @@ export interface TradingAccount {
   id: string;
   user_id: string;
   display_id?: string | null;
+  slug?: string | null;
   account_name: string;
   broker: string;
   platform: AccountPlatform;

@@ -35,7 +35,7 @@ export async function fetchImportHistory(
   try {
     const { data, error } = await supabase
       .from('csv_imports')
-      .select('*, account:trading_accounts(id, account_name, broker, currency)')
+      .select('*, account:trading_accounts(id, account_name, slug, broker, currency)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
