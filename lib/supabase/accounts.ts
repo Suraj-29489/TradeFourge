@@ -126,6 +126,26 @@ export async function createTradingAccount(
 
   const supabase = createClient();
   try {
+    // Check for duplicate account name per user (ignore case & leading/trailing spaces)
+    const { data: existingAccounts } = await supabase
+      .from('trading_accounts')
+      .select('id, account_name')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+
+    if (
+      existingAccounts &&
+      existingAccounts.some(
+        (a: { id: string; account_name: string }) =>
+          a.account_name.trim().toLowerCase() === payload.account_name.trim().toLowerCase()
+      )
+    ) {
+      return {
+        data: null,
+        error: "This account name already exists. Please choose a different name.",
+      };
+    }
+
     const { data, error } = await supabase
       .from('trading_accounts')
       .insert({ ...payload, user_id: userId, is_default: false })

@@ -121,7 +121,7 @@ export const SettingsView: React.FC = () => {
             <div>
               <h3 className="text-sm font-bold text-white">Display Currency</h3>
               <p className="text-xs text-gray-400">
-                USD: stored values · USC: ×100 · INR: ×84.5
+                USD: stored values · USC: normalized USD · INR: ×84.5
               </p>
             </div>
           </div>
@@ -142,7 +142,7 @@ export const SettingsView: React.FC = () => {
             ))}
           </div>
           <p className="text-xs text-gray-500 font-mono">
-            {currency === "USC" && "USC: displayed values are ×100 (internal USD ×100)"}
+            {currency === "USC" && "USC: all trade values normalized to USD on import"}
             {currency === "INR" && "INR: displayed values are ×84.5 (internal USD ×84.5)"}
             {currency === "USD" && "USD: values displayed as-is from internal storage"}
           </p>

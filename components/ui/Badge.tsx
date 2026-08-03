@@ -1,6 +1,6 @@
 "use client";
 // components/ui/Badge.tsx
-// TradeFourge v3.9 — Institutional Badge Primitive (Linear/Vercel Pill Aesthetics)
+// TradeFourge v3.7.8 — Institutional Badge Primitive (Blue Accent)
 
 import React from "react";
 import { ImportStatus } from "@/types/database";
@@ -26,7 +26,7 @@ export const Badge: React.FC<BadgeProps> = ({
     danger: "bg-rose-500/10 border-rose-500/30 text-rose-400",
     info: "bg-sky-500/10 border-sky-500/30 text-sky-400",
     neutral: "bg-white/5 border-white/10 text-gray-300",
-    accent: "bg-indigo-500/10 border-indigo-500/30 text-indigo-300",
+    accent: "bg-blue-500/10 border-blue-500/30 text-blue-300",
   };
 
   const sizes = {

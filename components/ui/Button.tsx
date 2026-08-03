@@ -1,6 +1,6 @@
 "use client";
 // components/ui/Button.tsx
-// TradeFourge v3.9 — Institutional SaaS Button Primitive
+// TradeFourge v3.7.8 — Institutional SaaS Button Primitive (Blue Accent)
 
 import React from "react";
 import { Loader2 } from "lucide-react";
@@ -27,11 +27,11 @@ export const Button: React.FC<ButtonProps> = ({
   const baseStyles = "inline-flex items-center justify-center font-bold font-mono transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none rounded-xl";
 
   const variants = {
-    primary: "bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 border border-indigo-500/30",
+    primary: "bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white shadow-lg shadow-blue-600/20 border border-blue-500/30",
     secondary: "bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10",
     ghost: "bg-transparent hover:bg-white/5 text-gray-300 hover:text-white",
     danger: "bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 border border-rose-500/30",
-    outline: "bg-transparent border border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10",
+    outline: "bg-transparent border border-blue-500/40 text-blue-300 hover:bg-blue-500/10",
   };
 
   const sizes = {

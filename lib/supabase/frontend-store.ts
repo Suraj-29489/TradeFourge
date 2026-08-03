@@ -706,6 +706,19 @@ export async function createFrontendTradingAccount(
   payload: NewTradingAccount
 ): Promise<ServiceResult<TradingAccount>> {
   let accounts = loadUserAccountsFromLocalStorage(userId);
+  const activeAccounts = accounts.filter((a) => a.is_active !== false);
+
+  if (
+    activeAccounts.some(
+      (a) => a.account_name.trim().toLowerCase() === payload.account_name.trim().toLowerCase()
+    )
+  ) {
+    return {
+      data: null,
+      error: "This account name already exists. Please choose a different name.",
+    };
+  }
+
   const now = new Date().toISOString();
 
   if (payload.is_default) {

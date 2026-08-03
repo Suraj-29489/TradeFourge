@@ -1,6 +1,6 @@
 "use client";
 // components/accounts/AccountFormModal.tsx
-// Create / Edit trading account form with validation.
+// TradeFourge v3.7.8 — Create / Edit Trading Account Form with Duplicate Validation & Blue Accent.
 
 import React, { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -9,6 +9,7 @@ import { z } from "zod";
 import { Modal } from "@/components/ui/Modal";
 import { Lock } from "lucide-react";
 import { generateDisplayAccountId } from "@/lib/supabase/frontend-store";
+import { useAccounts } from "@/context/AccountsContext";
 import type { TradingAccount, NewTradingAccount, AccountPlatform, AccountType } from "@/types/database";
 
 const PLATFORMS: AccountPlatform[] = [
@@ -56,6 +57,7 @@ export function AccountFormModal({
   isLoading,
 }: AccountFormModalProps) {
   const isEdit = !!account;
+  const { accounts } = useAccounts();
 
   const generatedDisplayId = useMemo(() => {
     return generateDisplayAccountId();
@@ -67,6 +69,7 @@ export function AccountFormModal({
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -116,6 +119,21 @@ export function AccountFormModal({
   }, [account, reset, open]);
 
   const handleFormSubmit = async (values: FormValues) => {
+    // Check for duplicate account name per user (ignore case & leading/trailing spaces)
+    const newNormalized = values.account_name.trim().toLowerCase();
+    const isDuplicate = accounts.some((acc) => {
+      if (account && acc.id === account.id) return false;
+      return acc.is_active !== false && acc.account_name.trim().toLowerCase() === newNormalized;
+    });
+
+    if (isDuplicate) {
+      setError("account_name", {
+        type: "manual",
+        message: "This account name already exists. Please choose a different name.",
+      });
+      return;
+    }
+
     try {
       await onSubmit({
         ...values,
@@ -127,15 +145,23 @@ export function AccountFormModal({
         is_active:        true,
       } as any);
       onClose();
-    } catch (err) {
-      console.error("AccountFormModal submit error:", err);
+    } catch (err: any) {
+      const errMsg = err?.message || "Failed to save account";
+      if (errMsg.includes("already exists")) {
+        setError("account_name", {
+          type: "manual",
+          message: "This account name already exists. Please choose a different name.",
+        });
+      } else {
+        console.error("AccountFormModal submit error:", err);
+      }
     }
   };
 
   const inputClass =
-    "w-full px-3 py-2 rounded-xl bg-[#0d1117] border border-white/10 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 transition-colors font-mono";
+    "w-full px-3 py-2 rounded-xl bg-[#0d1117] border border-white/10 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors font-mono";
   const labelClass = "block text-xs font-mono text-gray-400 mb-1.5";
-  const errorClass = "text-[10px] text-rose-400 mt-1 font-mono";
+  const errorClass = "text-[10px] text-rose-400 mt-1 font-mono font-bold";
 
   return (
     <Modal
@@ -149,10 +175,10 @@ export function AccountFormModal({
         {/* Read-Only Auto-Generated Display ID */}
         <div>
           <label className={labelClass}>Account Display ID (Auto-Generated & Read-Only)</label>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-purple-500/30 text-xs font-mono text-purple-300 font-bold select-none cursor-not-allowed">
-            <Lock className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-blue-500/30 text-xs font-mono text-blue-300 font-bold select-none cursor-not-allowed">
+            <Lock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
             <span>{activeDisplayId}</span>
-            <span className="ml-auto text-[9px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold uppercase tracking-wider">
+            <span className="ml-auto text-[9px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold uppercase tracking-wider">
               Immutable
             </span>
           </div>
@@ -281,7 +307,7 @@ export function AccountFormModal({
           <button
             type="submit"
             disabled={isSubmitting || isLoading}
-            className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-sm font-mono transition-all shadow-glow"
+            className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-sm font-mono transition-all shadow-lg shadow-blue-600/20"
           >
             {isSubmitting || isLoading
               ? isEdit ? "Saving..." : "Creating..."

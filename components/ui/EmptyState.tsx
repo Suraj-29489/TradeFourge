@@ -1,6 +1,6 @@
 "use client";
 // components/ui/EmptyState.tsx
-// TradeFourge v3.9 — Institutional Empty State Primitive (Notion/Vercel Minimal Layout)
+// TradeFourge v3.7.8 — Institutional Empty State Primitive (Blue Accent)
 
 import React from "react";
 import Link from "next/link";
@@ -31,7 +31,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   return (
     <div className="p-10 rounded-2xl bg-[#0F1420] border border-white/10 text-center space-y-4 font-mono max-w-lg mx-auto shadow-xl">
-      <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto shadow-inner">
+      <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center mx-auto shadow-inner">
         <Icon className="w-6 h-6" />
       </div>
 
@@ -46,14 +46,14 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             action.href ? (
               <Link
                 href={action.href}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-indigo-600/20"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all shadow-lg shadow-blue-600/20"
               >
                 <span>{action.label}</span>
               </Link>
             ) : (
               <button
                 onClick={action.onClick}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg shadow-indigo-600/20"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all shadow-lg shadow-blue-600/20"
               >
                 <span>{action.label}</span>
               </button>

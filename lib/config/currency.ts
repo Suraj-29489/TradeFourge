@@ -1,7 +1,7 @@
 /**
  * Currency configuration — single source of truth.
- * Internal DB always stores USD.
- * Display layer applies conversion via these helpers.
+ * Internal DB and trade storage always represent normalized USD.
+ * Display layer formats presentation consistently.
  */
 
 export type DisplayCurrency = "USD" | "USC" | "INR";
@@ -9,35 +9,30 @@ export type DisplayCurrency = "USD" | "USC" | "INR";
 /** 1 USD = 84.5 INR. Change only this constant to update the entire app. */
 export const INR_EXCHANGE_RATE = 84.5;
 
-/** 1 USD = 100 USC (cents). Display-only conversion. */
-export const USC_RATE = 100;
+/** 1 USD = 100 USC (cents). Trades are normalized to USD on import. */
+export const USC_RATE = 1;
 
 /**
  * Convert an internal USD value to the selected display currency.
- * DB is always USD; this is for presentation only.
+ * Trades are already USD-normalized; USC displays normalized USD values.
  */
 export function convertFromUSD(usdValue: number, currency: DisplayCurrency): number {
-  if (currency === "USC") return usdValue * USC_RATE;
+  if (currency === "USC") return usdValue; // Already USD-normalized
   if (currency === "INR") return usdValue * INR_EXCHANGE_RATE;
   return usdValue;
 }
 
 /**
  * Format an internal USD value for display in the selected currency.
+ * USC displays normalized USD monetary values.
  */
 export function formatCurrency(usdValue: number, currency: DisplayCurrency): string {
   const converted = convertFromUSD(usdValue, currency);
   const absConverted = Math.abs(converted);
   const sign = usdValue < 0 ? "-" : "";
 
-  if (currency === "USD") {
+  if (currency === "USD" || currency === "USC") {
     return `${sign}$${absConverted.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  }
-  if (currency === "USC") {
-    return `${sign}¢${absConverted.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
@@ -53,8 +48,7 @@ export function formatCurrency(usdValue: number, currency: DisplayCurrency): str
 
 /** Returns just the currency symbol. */
 export function getCurrencySymbol(currency: DisplayCurrency): string {
-  if (currency === "USD") return "$";
-  if (currency === "USC") return "¢";
+  if (currency === "USD" || currency === "USC") return "$";
   if (currency === "INR") return "₹";
   return "$";
 }
@@ -62,7 +56,7 @@ export function getCurrencySymbol(currency: DisplayCurrency): string {
 /** Currency label shown in the settings UI. */
 export const CURRENCY_LABELS: Record<DisplayCurrency, string> = {
   USD: "USD ($)",
-  USC: "USC (¢)",
+  USC: "USC (Cent Account)",
   INR: "INR (₹)",
 };
 

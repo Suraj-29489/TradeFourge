@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── TradeFourge v3.9 — Institutional SaaS Design System (Dark Only) ────────── */
+/* ─── TradeFourge v3.7.8 — Institutional SaaS Design System (Dark Only + Blue Accent) ─── */
 :root {
   --dark-bg:       8 11 17;        /* #080B11 Deep Obsidian */
   --dark-card:     15 20 32;       /* #0F1420 Sleek Graphite */
@@ -10,9 +10,11 @@
   --dark-subtle:   28 36 56;       /* #1C2438 Sub-surface */
   --dark-border:   rgba(255, 255, 255, 0.08);
 
-  --accent-primary: #6366F1;       /* Indigo 500 — Refined Single Accent */
-  --accent-hover:   #4F46E5;       /* Indigo 600 */
-  --accent-subtle:  rgba(99, 102, 241, 0.12);
+  --accent-primary: #3B82F6;       /* Blue 500 — Calm Institutional Blue Accent */
+  --accent-hover:   #2563EB;       /* Blue 600 */
+  --accent-pressed: #1D4ED8;       /* Blue 700 */
+  --accent-subtle:  rgba(59, 130, 246, 0.12);
+  --accent-focus:   rgba(59, 130, 246, 0.35);
 
   --body-bg: #080B11;
   --body-text: #F9FAFB;
@@ -44,7 +46,7 @@
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
   ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: #6366F1; }
+  ::-webkit-scrollbar-thumb:hover { background: #3B82F6; }
 
   /* Native Dark Select & Option Controls */
   select {
@@ -63,7 +65,7 @@
   }
 
   select:focus option:checked {
-    background-color: #6366F1 !important;
+    background-color: #3B82F6 !important;
     color: #FFFFFF !important;
   }
 }
@@ -82,13 +84,13 @@
   }
 
   .glass-card-hover:hover {
-    border-color: rgba(99, 102, 241, 0.3);
+    border-color: rgba(59, 130, 246, 0.35);
     box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
     transform: translateY(-1px);
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, #FFFFFF 0%, #C7D2FE 100%);
+    background: linear-gradient(135deg, #FFFFFF 0%, #93C5FD 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -109,7 +111,7 @@
   }
 
   .theme-input:focus {
-    border-color: rgba(99, 102, 241, 0.5);
+    border-color: rgba(59, 130, 246, 0.5);
     outline: none;
   }
 }

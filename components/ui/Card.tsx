@@ -1,6 +1,6 @@
 "use client";
 // components/ui/Card.tsx
-// TradeFourge v3.9 — Institutional SaaS Card Primitive
+// TradeFourge v3.7.8 — Institutional SaaS Card Primitive (Blue Accent)
 
 import React from "react";
 
@@ -17,7 +17,7 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={`p-6 rounded-2xl bg-[#0F1420] border border-white/10 shadow-xl ${
-        hoverEffect ? "transition-all hover:border-indigo-500/30 hover:shadow-2xl hover:-translate-y-0.5" : ""
+        hoverEffect ? "transition-all hover:border-blue-500/30 hover:shadow-2xl hover:-translate-y-0.5" : ""
       } ${className}`}
       {...props}
     >
