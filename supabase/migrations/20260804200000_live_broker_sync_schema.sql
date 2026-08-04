@@ -1,5 +1,5 @@
 -- =============================================================================
--- TradeFourge v4.0.0 — Live Broker Sync Schema Migration
+-- TradeFourge v4.0.0 — Live Broker Sync Complete Schema Migration
 -- Migration File: 20260804200000_live_broker_sync_schema.sql
 -- =============================================================================
 
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.live_broker_credentials (
     server               TEXT NOT NULL,
     encrypted_password   TEXT NOT NULL,
     status               TEXT NOT NULL DEFAULT 'Connected'
-                         CHECK (status IN ('Connected', 'Disconnected', 'Syncing', 'Authentication Failed', 'Server Offline', 'Error')),
+                         CHECK (status IN ('Connected', 'Disconnected', 'Syncing', 'Authentication Failed', 'Invalid Server', 'Server Offline', 'Error')),
     last_sync            TIMESTAMPTZ,
     auto_sync            BOOLEAN NOT NULL DEFAULT true,
     last_imported_ticket TEXT,
@@ -32,28 +32,24 @@ ON public.live_broker_credentials(user_id);
 CREATE INDEX IF NOT EXISTS idx_live_broker_credentials_account_id 
 ON public.live_broker_credentials(account_id);
 
--- RLS Policies
+-- RLS Policies for Live Broker Credentials
 ALTER TABLE public.live_broker_credentials ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-    CREATE POLICY "credentials_select_own" ON public.live_broker_credentials
-        FOR SELECT USING (auth.uid() = user_id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DROP POLICY IF EXISTS "credentials_select_own" ON public.live_broker_credentials;
+CREATE POLICY "credentials_select_own" ON public.live_broker_credentials
+    FOR SELECT USING (auth.uid() = user_id);
 
-DO $$ BEGIN
-    CREATE POLICY "credentials_insert_own" ON public.live_broker_credentials
-        FOR INSERT WITH CHECK (auth.uid() = user_id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DROP POLICY IF EXISTS "credentials_insert_own" ON public.live_broker_credentials;
+CREATE POLICY "credentials_insert_own" ON public.live_broker_credentials
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-DO $$ BEGIN
-    CREATE POLICY "credentials_update_own" ON public.live_broker_credentials
-        FOR UPDATE USING (auth.uid() = user_id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DROP POLICY IF EXISTS "credentials_update_own" ON public.live_broker_credentials;
+CREATE POLICY "credentials_update_own" ON public.live_broker_credentials
+    FOR UPDATE USING (auth.uid() = user_id);
 
-DO $$ BEGIN
-    CREATE POLICY "credentials_delete_own" ON public.live_broker_credentials
-        FOR DELETE USING (auth.uid() = user_id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DROP POLICY IF EXISTS "credentials_delete_own" ON public.live_broker_credentials;
+CREATE POLICY "credentials_delete_own" ON public.live_broker_credentials
+    FOR DELETE USING (auth.uid() = user_id);
 
 -- 2. SYNC HISTORY TABLE
 CREATE TABLE IF NOT EXISTS public.sync_history (
@@ -80,20 +76,17 @@ ON public.sync_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_sync_history_sync_time 
 ON public.sync_history(user_id, sync_time DESC);
 
--- RLS Policies
+-- RLS Policies for Sync History
 ALTER TABLE public.sync_history ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-    CREATE POLICY "sync_history_select_own" ON public.sync_history
-        FOR SELECT USING (auth.uid() = user_id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DROP POLICY IF EXISTS "sync_history_select_own" ON public.sync_history;
+CREATE POLICY "sync_history_select_own" ON public.sync_history
+    FOR SELECT USING (auth.uid() = user_id);
 
-DO $$ BEGIN
-    CREATE POLICY "sync_history_insert_own" ON public.sync_history
-        FOR INSERT WITH CHECK (auth.uid() = user_id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DROP POLICY IF EXISTS "sync_history_insert_own" ON public.sync_history;
+CREATE POLICY "sync_history_insert_own" ON public.sync_history
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-DO $$ BEGIN
-    CREATE POLICY "sync_history_delete_own" ON public.sync_history
-        FOR DELETE USING (auth.uid() = user_id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DROP POLICY IF EXISTS "sync_history_delete_own" ON public.sync_history;
+CREATE POLICY "sync_history_delete_own" ON public.sync_history
+    FOR DELETE USING (auth.uid() = user_id);

@@ -243,7 +243,7 @@ CREATE TABLE IF NOT EXISTS public.live_broker_credentials (
     server               TEXT NOT NULL,
     encrypted_password   TEXT NOT NULL,
     status               TEXT NOT NULL DEFAULT 'Connected'
-                         CHECK (status IN ('Connected', 'Disconnected', 'Syncing', 'Authentication Failed', 'Server Offline', 'Error')),
+                         CHECK (status IN ('Connected', 'Disconnected', 'Syncing', 'Authentication Failed', 'Invalid Server', 'Server Offline', 'Error')),
     last_sync            TIMESTAMPTZ,
     auto_sync            BOOLEAN NOT NULL DEFAULT true,
     last_imported_ticket TEXT,
