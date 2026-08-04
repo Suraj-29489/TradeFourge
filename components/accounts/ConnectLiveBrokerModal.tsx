@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { validateMT5Credentials } from "@/lib/live-sync/mt5-authenticator";
 import { createLiveCredential } from "@/lib/supabase/live-credentials";
+import { connectLiveAccountViaBridge } from "@/lib/live-sync/bridge-client";
 import type { AccountPlatform } from "@/types/database";
 import {
   Zap,
@@ -95,7 +96,38 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      // 1. Authenticate MT5 Investor Credential (Read-only)
+      // 1. Try Python MT5 Bridge API connection
+      const bridgeRes = await connectLiveAccountViaBridge({
+        userId,
+        broker: selectedBroker,
+        platform: selectedPlatform,
+        accountName,
+        accountNumber,
+        server: server.trim(),
+        investorPassword,
+        description,
+      });
+
+      if (bridgeRes.success) {
+        // Also sync metadata to Supabase
+        await createLiveCredential(userId, {
+          broker: selectedBroker,
+          platform: selectedPlatform,
+          account_name: accountName,
+          account_number: accountNumber,
+          server: server.trim(),
+          encrypted_password: investorPassword,
+          status: "Connected",
+          auto_sync: true,
+        });
+
+        if (onSuccess) onSuccess();
+        if (onAccountLinked) await onAccountLinked();
+        onClose();
+        return;
+      }
+
+      // 2. Fallback to client validation if Bridge is offline or responding locally
       const authRes = await validateMT5Credentials({
         broker: selectedBroker,
         platform: selectedPlatform,
@@ -110,7 +142,6 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
         return;
       }
 
-      // 2. Persist Encrypted Credential to Supabase live_broker_credentials
       const { error: dbErr } = await createLiveCredential(userId, {
         broker: selectedBroker,
         platform: selectedPlatform,
