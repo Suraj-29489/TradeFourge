@@ -61,10 +61,9 @@ export function updateCredentialStatus(
   if (!target) return;
 
   target.status = status;
-  target.last_error = lastError;
   target.updated_at = new Date().toISOString();
   if (status === "Connected") {
-    target.last_sync_time = new Date().toISOString();
+    target.last_sync = new Date().toISOString();
   }
 
   if (typeof window !== "undefined") {

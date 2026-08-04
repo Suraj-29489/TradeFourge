@@ -230,3 +230,44 @@ CREATE TRIGGER on_auth_user_created
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- 11. LIVE BROKER CREDENTIALS TABLE
+CREATE TABLE IF NOT EXISTS public.live_broker_credentials (
+    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id              UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    account_id           UUID REFERENCES public.trading_accounts(id) ON DELETE SET NULL,
+    broker               TEXT NOT NULL,
+    platform             TEXT NOT NULL DEFAULT 'MetaTrader 5',
+    account_name         TEXT NOT NULL,
+    account_number       TEXT NOT NULL,
+    server               TEXT NOT NULL,
+    encrypted_password   TEXT NOT NULL,
+    status               TEXT NOT NULL DEFAULT 'Connected'
+                         CHECK (status IN ('Connected', 'Disconnected', 'Syncing', 'Authentication Failed', 'Server Offline', 'Error')),
+    last_sync            TIMESTAMPTZ,
+    auto_sync            BOOLEAN NOT NULL DEFAULT true,
+    last_imported_ticket TEXT,
+    last_closed_time     TIMESTAMPTZ,
+    total_trades         INT NOT NULL DEFAULT 0,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 12. SYNC HISTORY TABLE
+CREATE TABLE IF NOT EXISTS public.sync_history (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id            UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    credential_id      UUID REFERENCES public.live_broker_credentials(id) ON DELETE CASCADE,
+    account_id         UUID REFERENCES public.trading_accounts(id) ON DELETE CASCADE,
+    broker             TEXT NOT NULL,
+    account_name       TEXT NOT NULL,
+    sync_time          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    trades_imported    INT NOT NULL DEFAULT 0,
+    duplicates_skipped INT NOT NULL DEFAULT 0,
+    duration_ms        INT NOT NULL DEFAULT 0,
+    status             TEXT NOT NULL CHECK (status IN ('SUCCESS', 'WARNING', 'FAILED')),
+    error_message      TEXT,
+    log_details        JSONB DEFAULT '{}'::jsonb,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+

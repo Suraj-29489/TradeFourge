@@ -57,9 +57,13 @@ export const Modal: React.FC<ModalProps> = ({
   const chosenWidthClass = maxWidthClasses[effectiveSize] || maxWidthClasses["md"];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className={`w-full ${chosenWidthClass} p-6 rounded-2xl bg-[#0F1420] border border-white/10 shadow-2xl space-y-4 font-mono text-xs text-white relative`}
+        className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity"
+        onClick={onClose}
+      />
+      <div
+        className={`relative z-10 w-full ${chosenWidthClass} p-6 rounded-2xl bg-[#0F1420] border border-white/10 shadow-2xl space-y-4 font-mono text-xs text-white`}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (

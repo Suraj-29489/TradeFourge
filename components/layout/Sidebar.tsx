@@ -71,6 +71,7 @@ const BASE_NAV_SECTIONS: NavSection[] = [
     items: [
       { name: "Trade Journal",    href: "/journal",         icon: TableProperties },
       { name: "Trading Accounts", href: "/accounts",        icon: Wallet },
+      { name: "Live Accounts",    href: "/live-accounts",   icon: Radio },
       { name: "Sync History",     href: "/sync-history",    icon: Activity },
       { name: "Upload CSV",       href: "/upload",          icon: Upload },
       { name: "Import History",   href: "/import-history",  icon: History },

@@ -16,7 +16,17 @@ export type AccountPlatform =
   | 'Other';
 
 export type AccountType = 'Live' | 'Demo' | 'Prop' | 'Contest';
-export type LiveConnectionStatus = 'Connected' | 'Syncing' | 'Offline' | 'Error' | 'Reconnecting';
+
+export type LiveConnectionStatus =
+  | 'Connected'
+  | 'Disconnected'
+  | 'Syncing'
+  | 'Authentication Failed'
+  | 'Invalid Server'
+  | 'Server Offline'
+  | 'Offline'
+  | 'Error'
+  | 'Reconnecting';
 export type SyncIntervalSetting = '1m' | '5m' | '15m' | '1h' | 'manual';
 
 export interface TradingAccount {
@@ -52,44 +62,46 @@ export type UpdateTradingAccount = Partial<NewTradingAccount>;
 export interface LiveBrokerCredential {
   id: string;
   user_id: string;
-  account_id: string;
-  broker_id: string;
-  broker_name: string;
+  account_id?: string | null;
+  broker: string;
   platform: AccountPlatform;
+  account_name: string;
+  account_number: string;
   server: string;
-  login_number: string;
-  encrypted_auth_ref: string;
-  sync_interval: SyncIntervalSetting;
+  encrypted_password: string;
   status: LiveConnectionStatus;
-  last_sync_time: string | null;
-  last_error: string | null;
-  auto_currency_detected: string | null;
+  last_sync?: string | null;
+  auto_sync: boolean;
+  last_imported_ticket?: string | null;
+  last_closed_time?: string | null;
+  total_trades: number;
   created_at: string;
   updated_at: string;
 }
 
-export interface SyncCheckpoint {
-  account_id: string;
-  last_sync_time: string;
-  last_trade_id: string | null;
-  last_ticket: string | null;
-  last_position_id: string | null;
-}
+export type NewLiveBrokerCredential = Omit<
+  LiveBrokerCredential,
+  'id' | 'user_id' | 'created_at' | 'updated_at' | 'total_trades'
+>;
 
-export interface SyncLogEntry {
+export interface SyncHistoryLog {
   id: string;
   user_id: string;
-  account_id: string;
-  account_name: string;
+  credential_id?: string | null;
+  account_id?: string | null;
   broker: string;
-  timestamp: string;
+  account_name: string;
+  sync_time: string;
   trades_imported: number;
-  trades_updated: number;
-  trades_skipped: number;
+  duplicates_skipped: number;
   duration_ms: number;
-  status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
+  status: 'SUCCESS' | 'WARNING' | 'FAILED';
   error_message?: string | null;
+  log_details?: Record<string, any>;
+  created_at: string;
 }
+
+export type SyncLogEntry = SyncHistoryLog;
 
 // ─── Trades ──────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,7 @@
-// lib/live-sync/sync-history.ts
-// TradeFourge v4.0 Sync History Service
-// Records and retrieves detailed synchronization audit logs per user and account.
+/**
+ * TradeFourge v4.0.0 — Sync History Audit Service
+ * Records and retrieves detailed synchronization audit logs.
+ */
 
 import type { SyncLogEntry } from "@/types/database";
 
@@ -21,16 +22,17 @@ export function fetchSyncHistory(userId: string): SyncLogEntry[] {
   }
 }
 
-export function recordSyncLog(userId: string, entry: Omit<SyncLogEntry, "id">): SyncLogEntry {
+export function recordSyncLog(userId: string, entry: Omit<SyncLogEntry, "id" | "created_at">): SyncLogEntry {
   const fullEntry: SyncLogEntry = {
     ...entry,
     id: `SYNC-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+    created_at: new Date().toISOString(),
   };
 
   if (typeof window !== "undefined") {
     const key = getStorageKey(userId);
     const existing = fetchSyncHistory(userId);
-    const updated = [fullEntry, ...existing].slice(0, 100); // Keep last 100 logs
+    const updated = [fullEntry, ...existing].slice(0, 100);
     try {
       localStorage.setItem(key, JSON.stringify(updated));
     } catch (err) {

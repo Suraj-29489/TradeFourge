@@ -616,7 +616,7 @@ export function CloudTradeDetailDrawer({ trade, onClose, onRefresh }: CloudTrade
 
       {/* Fullscreen Image Preview Modal */}
       {fullscreenImage && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setFullscreenImage(null)}>
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setFullscreenImage(null)}>
           <button className="absolute top-4 right-4 text-white p-2 rounded-full bg-white/10 hover:bg-white/20">
             <X className="w-6 h-6" />
           </button>

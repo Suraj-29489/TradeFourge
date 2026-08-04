@@ -1,12 +1,13 @@
-// lib/live-sync/scheduler.ts
-// TradeFourge v4.0 Background Sync Scheduler
-// Schedules automated periodic background sync execution per user account independently from UI renders.
+/**
+ * TradeFourge v4.0.0 — Background Sync Scheduler
+ * Schedules automated periodic background sync execution for live broker accounts.
+ */
 
-import { SyncManager } from "./sync-manager";
-import { fetchLiveCredentials } from "./account-linker";
+import { fetchLiveCredentials } from "@/lib/supabase/live-credentials";
+import { runManualSync } from "./sync-engine";
 
 export class SyncScheduler {
-  private static timerId: NodeJS.Timeout | null = null;
+  private static timerId: any = null;
   private static activeUserId: string | null = null;
 
   public static startScheduler(userId: string): void {
@@ -15,12 +16,10 @@ export class SyncScheduler {
     this.stopScheduler();
     this.activeUserId = userId;
 
-    // Run interval check every 30 seconds
     this.timerId = setInterval(() => {
       this.tick(userId);
-    }, 30000);
+    }, 60000);
 
-    // Initial check on startup
     this.tick(userId);
   }
 
@@ -33,22 +32,19 @@ export class SyncScheduler {
   }
 
   private static async tick(userId: string): Promise<void> {
-    const credentials = fetchLiveCredentials(userId);
+    const { data: credentials } = await fetchLiveCredentials(userId);
+    if (!credentials) return;
+
     const now = Date.now();
 
     for (const cred of credentials) {
-      if (cred.sync_interval === "manual") continue;
+      if (!cred.auto_sync) continue;
 
-      const lastSync = cred.last_sync_time ? new Date(cred.last_sync_time).getTime() : 0;
-      let intervalMs = 300000; // default 5m
-
-      if (cred.sync_interval === "1m") intervalMs = 60000;
-      else if (cred.sync_interval === "5m") intervalMs = 300000;
-      else if (cred.sync_interval === "15m") intervalMs = 900000;
-      else if (cred.sync_interval === "1h") intervalMs = 3600000;
+      const lastSync = cred.last_sync ? new Date(cred.last_sync).getTime() : 0;
+      const intervalMs = 300000; // 5 minutes default
 
       if (now - lastSync >= intervalMs) {
-        await SyncManager.syncAccount(userId, cred.account_id);
+        await runManualSync(cred);
       }
     }
   }
