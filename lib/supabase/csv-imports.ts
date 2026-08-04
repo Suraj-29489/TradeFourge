@@ -3,7 +3,7 @@
 
 import { createClient } from './client';
 import { emitAppEvent } from '@/lib/events/event-bus';
-import { isFrontendOnly } from '@/lib/config/frontend-only';
+import { isFrontendOnly, isCsvStorageLocal } from '@/lib/config/frontend-only';
 import {
   getFrontendImportHistory,
   getFrontendLatestImport,
@@ -27,7 +27,7 @@ export interface DeleteImportResult {
 export async function fetchImportHistory(
   userId: string
 ): Promise<ServiceResult<CsvImport[]>> {
-  if (isFrontendOnly()) {
+  if (isFrontendOnly() || isCsvStorageLocal()) {
     return getFrontendImportHistory(userId);
   }
 
@@ -53,7 +53,7 @@ export async function fetchImportHistory(
 export async function fetchLatestImport(
   userId: string
 ): Promise<ServiceResult<CsvImport | null>> {
-  if (isFrontendOnly()) {
+  if (isFrontendOnly() || isCsvStorageLocal()) {
     return getFrontendLatestImport(userId);
   }
 
@@ -85,7 +85,7 @@ export async function createImportRecord(
   storagePath?: string,
   accountId?: string | null
 ): Promise<ServiceResult<CsvImport>> {
-  if (isFrontendOnly()) {
+  if (isFrontendOnly() || isCsvStorageLocal()) {
     return createFrontendImportRecord(userId, filename, totalRows, storagePath, accountId);
   }
 
@@ -124,7 +124,7 @@ export async function updateImportRecord(
   userId: string,
   updates: Partial<CsvImport>
 ): Promise<ServiceResult<CsvImport>> {
-  if (isFrontendOnly()) {
+  if (isFrontendOnly() || isCsvStorageLocal()) {
     return updateFrontendImportRecord(id, userId, updates);
   }
 
@@ -154,7 +154,7 @@ export async function deleteImportRecord(
   userId: string,
   deleteTrades = true
 ): Promise<DeleteImportResult> {
-  if (isFrontendOnly()) {
+  if (isFrontendOnly() || isCsvStorageLocal()) {
     return deleteFrontendImportRecord(id, userId, deleteTrades);
   }
 
@@ -327,7 +327,7 @@ export async function deleteImportRecord(
  * Delete all import records for user with cascading trade deletion, verification, and dev logging.
  */
 export async function deleteAllImports(userId: string): Promise<DeleteImportResult> {
-  if (isFrontendOnly()) {
+  if (isFrontendOnly() || isCsvStorageLocal()) {
     return deleteAllFrontendImports(userId);
   }
 

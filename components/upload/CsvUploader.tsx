@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { generateValidationReport, ValidationReport } from "@/lib/engine/validation/validation-report";
-import { bulkInsertTrades } from "@/lib/supabase/trades";
+import { bulkInsertFrontendTrades } from "@/lib/supabase/frontend-store";
 import { createImportRecord, updateImportRecord } from "@/lib/supabase/csv-imports";
 import { createClient } from "@/lib/supabase/client";
 import { useUserProfile } from "@/context/UserProfileContext";
@@ -345,32 +345,14 @@ export const CsvUploader: React.FC = () => {
       const batchResult = await processInBatches(
         allTrades,
         async (batchTrades, batchIdx) => {
-          if (duplicatePolicy === "overwrite") {
-            const { data, error } = await supabase
-              .from("trades")
-              .insert(
-                batchTrades.map((t) => ({
-                  ...t,
-                  user_id: user.id,
-                }))
-              )
-              .select("id");
-
-            if (error) {
-              allErrors.push(`Batch ${batchIdx + 1}: ${error.message}`);
-              return [];
-            }
-            totalInserted += data?.length ?? 0;
-            return data ?? [];
-          } else {
-            const res = await bulkInsertTrades(user.id, batchTrades);
-            totalInserted += res.inserted;
-            totalSkipped += res.skippedDuplicates;
-            if (res.errors.length > 0) {
-              allErrors.push(...res.errors);
-            }
-            return new Array(res.inserted).fill(null);
+          const targetUserId = user?.id || "local-user";
+          const res = await bulkInsertFrontendTrades(targetUserId, batchTrades);
+          totalInserted += res.inserted;
+          totalSkipped += res.skippedDuplicates;
+          if (res.errors.length > 0) {
+            allErrors.push(...res.errors);
           }
+          return new Array(res.inserted).fill(null);
         },
         {
           batchSize: 500,

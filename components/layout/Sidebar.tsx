@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,9 +26,17 @@ import {
   LogOut,
   BookOpen,
   Target,
+  Users,
+  MessageSquare,
+  Megaphone,
+  Sliders,
+  Terminal,
+  Radio,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { createClient } from "@/lib/supabase/client";
+import { isOwner as checkIsOwner } from "@/lib/config/owner";
+import { useUserProfile } from "@/context/UserProfileContext";
 
 // ─── Nav Structure ────────────────────────────────────────────────────────────
 
@@ -43,7 +51,7 @@ interface NavSection {
   items: NavItem[];
 }
 
-const NAV_SECTIONS: NavSection[] = [
+const BASE_NAV_SECTIONS: NavSection[] = [
   {
     items: [
       { name: "Dashboard",        href: "/dashboard",       icon: LayoutDashboard },
@@ -82,8 +90,23 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-// Flat list for backward compatibility (external imports)
-export const NAV_ITEMS = NAV_SECTIONS.flatMap((s) => s.items);
+const OWNER_NAV_SECTION: NavSection = {
+  label: "ADMIN CONTROLS",
+  items: [
+    { name: "Admin Controls",   href: "/admin-controls",                 icon: ShieldCheck },
+    { name: "Users",            href: "/admin-controls?tab=users",            icon: Users },
+    { name: "Monitoring",       href: "/admin-controls?tab=monitoring",       icon: Activity },
+    { name: "Analytics",        href: "/admin-controls?tab=analytics",        icon: BarChart3 },
+    { name: "Billing",          href: "/admin-controls?tab=billing",          icon: CreditCard },
+    { name: "Feature Flags",    href: "/admin-controls?tab=feature-flags",    icon: Sliders },
+    { name: "Feedback",         href: "/admin-controls?tab=feedback",         icon: MessageSquare },
+    { name: "Announcements",    href: "/admin-controls?tab=announcements",    icon: Megaphone },
+    { name: "Developer Tools",  href: "/admin-controls?tab=developer-tools",  icon: Terminal },
+  ],
+};
+
+// Flat list for backward compatibility
+export const NAV_ITEMS = BASE_NAV_SECTIONS.flatMap((s) => s.items);
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -130,7 +153,7 @@ function NavLink({
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
-              className="whitespace-nowrap"
+              className="whitespace-nowrap truncate"
             >
               {item.name}
             </motion.span>
@@ -157,7 +180,7 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
   }
   return (
     <div className="px-3 pt-4 pb-1.5">
-      <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600 font-mono">
+      <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400 font-mono">
         {label}
       </span>
     </div>
@@ -168,12 +191,36 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
 
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMobile }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [isOwnerState, setIsOwnerState] = useState(false);
+  const { profile } = useUserProfile();
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
 
-  const isActive = (href: string) =>
-    pathname === href || (href === "/dashboard" && pathname === "/mission-control");
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (checkIsOwner({ role: profile?.role, email: user?.email })) {
+          setIsOwnerState(true);
+        }
+      } catch {}
+    })();
+  }, [profile]);
+
+  const isOwner = isOwnerState || checkIsOwner(profile);
+  const navSections = isOwner ? [...BASE_NAV_SECTIONS, OWNER_NAV_SECTION] : BASE_NAV_SECTIONS;
+
+  const isActive = (href: string) => {
+    if (href.includes("?")) {
+      const [baseHref, query] = href.split("?");
+      if (pathname === baseHref && typeof window !== "undefined") {
+        return window.location.search.includes(query);
+      }
+      return false;
+    }
+    return pathname === href;
+  };
 
   const handleNavClick = () => {
     if (onCloseMobile) onCloseMobile();
@@ -231,11 +278,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
 
               {/* Nav */}
               <nav className="px-3 py-4">
-                {NAV_SECTIONS.map((section, si) => (
+                {navSections.map((section, si) => (
                   <div key={si}>
                     {section.label && (
                       <div className="px-3 pt-4 pb-1.5">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600 font-mono">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400 font-mono">
                           {section.label}
                         </span>
                       </div>
@@ -265,7 +312,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                 <LogOut className="w-4 h-4" /> Sign Out
               </button>
               <div className="text-center text-[10px] font-mono text-gray-400">
-                TradeFourge · v3.1.9
+                TradeFourge · v5.1 Hybrid
               </div>
             </div>
           </motion.aside>
@@ -302,8 +349,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                 <span className="text-sm font-extrabold tracking-tight text-white font-mono">
                   TRADE<span className="text-purple-400">FOURGE</span>
                 </span>
-                <span className="text-[10px] text-gray-400 tracking-wider font-mono">
-                  WORKSPACE
+                <span className="text-[10px] text-purple-400 tracking-wider font-mono font-semibold">
+                  HYBRID ENGINE
                 </span>
               </motion.div>
             )}
@@ -312,8 +359,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
       </div>
 
       {/* Nav Sections */}
-      <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5">
-        {NAV_SECTIONS.map((section, si) => (
+      <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5 scrollbar-thin">
+        {navSections.map((section, si) => (
           <div key={si}>
             {section.label && (
               <SectionLabel label={section.label} collapsed={collapsed} />
@@ -346,11 +393,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
             </span>
             {!collapsed && (
-              <span className="text-xs font-mono font-medium text-emerald-400">ONLINE</span>
+              <span className="text-xs font-mono font-medium text-emerald-400">HYBRID HYBRID</span>
             )}
           </div>
           {!collapsed && (
-            <span className="text-[10px] text-gray-400 font-mono">v3.1.9</span>
+            <span className="text-[10px] text-gray-400 font-mono">v5.1</span>
           )}
         </div>
       </div>

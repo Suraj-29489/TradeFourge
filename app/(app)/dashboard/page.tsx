@@ -22,6 +22,7 @@ import { StatGridSkeleton } from "@/components/ui/LoadingSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
 import { AccountFormModal } from "@/components/accounts/AccountFormModal";
+import { AnnouncementBanner } from "@/components/dashboard/AnnouncementBanner";
 import type { CloudTradeWithRelations, CsvImport, NewTradingAccount } from "@/types/database";
 import {
   Wallet, TrendingUp, TrendingDown, Zap, Target, Award, Clock, Globe,
@@ -263,6 +264,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 text-xs font-mono max-w-7xl mx-auto pb-12">
       {mixedCurrency && <MixedCurrencyBanner />}
+      <AnnouncementBanner />
       {/* ── SECTION 1: Welcome Header Strip ──────────────────────────────── */}
       <div className="p-5 rounded-2xl bg-[#111726] border border-white/10 flex flex-col lg:flex-row lg:items-center justify-between gap-5 shadow-2xl">
         {/* Left: Greeting + User Identity + Active Account */}

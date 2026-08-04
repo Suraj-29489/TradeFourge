@@ -3,12 +3,10 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function MissionControlLegacyRedirect() {
+export default function FeatureFlagsRedirect() {
   const router = useRouter();
-
   useEffect(() => {
-    router.replace("/admin-controls");
+    router.replace("/admin-controls?tab=feature-flags");
   }, [router]);
-
   return null;
 }

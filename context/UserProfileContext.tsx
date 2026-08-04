@@ -19,11 +19,15 @@ import {
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useAccounts } from "@/context/AccountsContext";
 
+import { isOwner as checkIsOwner, UserRole, resolveProfileRole } from "@/lib/config/owner";
+
 interface UserProfileContextType {
   profile: UserProfile | null;
   preferences: UserPreferences | null;
   loading: boolean;
   completionPct: number;
+  isOwner: boolean;
+  role: UserRole;
   refreshProfile: () => Promise<void>;
   saveProfileUpdates: (updates: Partial<UserProfile>) => Promise<boolean>;
   savePreferenceUpdates: (updates: Partial<UserPreferences>) => Promise<{ success: boolean; error: string | null }>;
@@ -34,6 +38,8 @@ const UserProfileContext = createContext<UserProfileContextType>({
   preferences: null,
   loading: true,
   completionPct: 20,
+  isOwner: false,
+  role: "user",
   refreshProfile: async () => {},
   saveProfileUpdates: async () => false,
   savePreferenceUpdates: async () => ({ success: false, error: null }),
@@ -157,6 +163,8 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const completionPct = profile ? calculateProfileCompletion(profile) : 20;
+  const isOwnerUser = checkIsOwner(profile);
+  const effectiveRole = profile?.role || resolveProfileRole({ role: profile?.role });
 
   return (
     <UserProfileContext.Provider
@@ -165,6 +173,8 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         preferences,
         loading,
         completionPct,
+        isOwner: isOwnerUser,
+        role: effectiveRole,
         refreshProfile: loadCloudProfile,
         saveProfileUpdates,
         savePreferenceUpdates,

@@ -340,7 +340,8 @@ export async function bulkInsertTrades(
   userId: string,
   trades: NewCloudTrade[]
 ): Promise<{ inserted: number; skippedDuplicates: number; errors: string[] }> {
-  if (isFrontendOnly()) {
+  const isCsvSource = trades.some((t) => t.source === "csv_import" || t.import_id);
+  if (isFrontendOnly() || isCsvSource) {
     return bulkInsertFrontendTrades(userId, trades);
   }
 

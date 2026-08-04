@@ -23,7 +23,7 @@ const RELEASE_NOTES: ReleaseNote[] = [
       "Stripe Checkout & Customer Billing Portal integration",
       "Plan Tier Feature Gating (Free, Pro, Team)",
       "Multi-user Team Workspaces with Role Permissions (Owner, Admin, Member, Viewer)",
-      "Mission Control SaaS Operations & Telemetry Monitoring Center",
+      "Admin Controls SaaS Operations & Telemetry Monitoring Center",
     ],
     improvements: [
       "Enhanced authentication security with device session tracking",

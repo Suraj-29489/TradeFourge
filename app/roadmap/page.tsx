@@ -60,7 +60,7 @@ const ROADMAP_ITEMS: RoadmapItem[] = [
       "Stripe Checkout & Billing Portal integration",
       "Plan Tier Feature Gating (Free, Pro, Team)",
       "Multi-user Team Workspaces with Role Permissions (Owner, Admin, Member, Viewer)",
-      "Mission Control SaaS Operations & Telemetry Monitoring Center",
+      "Admin Controls SaaS Operations & Telemetry Monitoring Center",
     ],
   },
   {

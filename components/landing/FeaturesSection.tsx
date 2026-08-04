@@ -16,7 +16,7 @@ import { useMouseSpotlight } from "@/hooks/useMouseSpotlight";
 
 const FEATURES = [
   {
-    title: "Mission Control",
+    title: "Admin Controls",
     description: "Command center featuring real-time equity curves, drawdown monitoring, account balance tracking, and multi-journal switching.",
     icon: LayoutDashboard,
     badge: "Core Terminal",

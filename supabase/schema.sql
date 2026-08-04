@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     trading_experience TEXT DEFAULT 'Intermediate',
     trading_style TEXT DEFAULT 'Day Trader',
     risk_preference TEXT DEFAULT 'Moderate (1-2% / trade)',
+    role TEXT DEFAULT 'user' CHECK (role IN ('owner', 'admin', 'support', 'user')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -65,6 +66,7 @@ CREATE TABLE IF NOT EXISTS public.trading_accounts (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     broker TEXT NOT NULL,
     account_name TEXT NOT NULL,
+    slug TEXT,
     account_number TEXT,
     currency TEXT DEFAULT 'USD' NOT NULL,
     balance NUMERIC(15, 2) DEFAULT 0.00 NOT NULL,

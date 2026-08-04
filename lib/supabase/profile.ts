@@ -4,6 +4,7 @@
 
 import { createClient } from "./client";
 import { isFrontendOnly } from "@/lib/config/frontend-only";
+import { UserRole, resolveProfileRole, isOwnerEmail } from "@/lib/config/owner";
 
 export interface UserProfile {
   id: string;
@@ -18,6 +19,7 @@ export interface UserProfile {
   trading_experience: string;
   trading_style?: string;
   risk_preference?: string;
+  role?: UserRole;
   created_at?: string;
   updated_at?: string;
 }
@@ -56,7 +58,7 @@ export interface UserStatistics {
   updated_at?: string;
 }
 
-export const DEFAULT_PROFILE = (userId: string): UserProfile => ({
+export const DEFAULT_PROFILE = (userId: string, email?: string): UserProfile => ({
   id: userId,
   full_name: "Trader",
   username: `trader_${userId.slice(0, 4)}`,
@@ -69,6 +71,7 @@ export const DEFAULT_PROFILE = (userId: string): UserProfile => ({
   trading_experience: "Intermediate (1-3 Years)",
   trading_style: "Day Trader",
   risk_preference: "Moderate (1-2% / trade)",
+  role: resolveProfileRole({ email }),
 });
 
 export const DEFAULT_PREFERENCES = (userId: string): UserPreferences => ({
@@ -150,6 +153,9 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
   }
 
   try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const userEmail = user?.email ?? undefined;
+
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -157,22 +163,31 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
       .single();
 
     if (!error && data) {
+      const effectiveRole = resolveProfileRole({ role: data.role, email: userEmail });
       const cloudProfile: UserProfile = {
-        ...DEFAULT_PROFILE(userId),
+        ...DEFAULT_PROFILE(userId, userEmail),
         ...data,
+        role: effectiveRole,
       };
+
+      // Auto-assign role in database if profile.role was null or mismatched
+      if (!data.role || data.role !== effectiveRole) {
+        supabase.from("profiles").update({ role: effectiveRole }).eq("id", userId).then(() => {});
+      }
+
       setLocalProfile(userId, cloudProfile);
       return cloudProfile;
     }
 
     // If profile row does not exist in Supabase, try generating from Auth Metadata
-    const { data: { user } } = await supabase.auth.getUser();
     if (user && user.id === userId) {
+      const effectiveRole = resolveProfileRole({ email: user.email });
       const authProfile: UserProfile = {
-        ...DEFAULT_PROFILE(userId),
+        ...DEFAULT_PROFILE(userId, user.email),
         full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Trader",
         username: (user.user_metadata?.username || user.email?.split("@")[0] || `trader_${userId.slice(0, 4)}`).toLowerCase(),
         avatar_url: user.user_metadata?.avatar_url || "",
+        role: effectiveRole,
       };
       // Upsert authentic profile into Supabase
       await supabase.from("profiles").upsert(authProfile, { onConflict: "id" });

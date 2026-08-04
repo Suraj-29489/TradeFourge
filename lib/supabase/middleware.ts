@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { sanitizeSupabaseUrl } from "./config";
+import { isOwner, isOwnerEmail } from "@/lib/config/owner";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -36,6 +37,12 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  // Legacy redirect: /mission-control -> /admin-controls
+  if (pathname.startsWith("/mission-control")) {
+    const adminUrl = new URL("/admin-controls", request.url);
+    return NextResponse.redirect(adminUrl);
+  }
+
   // Always allow static files and auth callback route to execute directly
   if (pathname.startsWith("/auth/callback") || pathname.startsWith("/_next")) {
     return supabaseResponse;
@@ -52,7 +59,21 @@ export async function updateSession(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // List of protected routes requiring login
+    // Owner / Admin protected routes
+    const ownerRoutes = [
+      "/admin-controls",
+      "/users",
+      "/analytics",
+      "/monitoring",
+      "/feature-flags",
+      "/developer-tools",
+      "/announcements",
+      "/feedback",
+    ];
+
+    const isOwnerRoute = ownerRoutes.some((route) => pathname.startsWith(route));
+
+    // Protected general routes
     const protectedRoutes = [
       "/dashboard",
       "/journal",
@@ -62,8 +83,8 @@ export async function updateSession(request: NextRequest) {
       "/trades",
       "/upload",
       "/settings",
-      "/mission-control",
       "/statistics",
+      ...ownerRoutes,
     ];
 
     const isProtectedRoute = protectedRoutes.some((route) =>
@@ -80,13 +101,21 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
+    // Owner protection: non-owners accessing owner routes get redirected to /dashboard
+    if (isOwnerRoute) {
+      if (!user || !isOwner({ role: user.user_metadata?.role, email: user.email })) {
+        const dashboardUrl = new URL("/dashboard", request.url);
+        return NextResponse.redirect(dashboardUrl);
+      }
+    }
+
     // Redirect authenticated user attempting to access auth page to /dashboard
     if (user && isAuthRoute) {
       const dashboardUrl = new URL("/dashboard", request.url);
       return NextResponse.redirect(dashboardUrl);
     }
   } catch {
-    // Graceful fallback for network issues or invalid keys
+    // Graceful fallback for network issues
   }
 
   return supabaseResponse;
