@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "TradeFourge Companion",
-  "version": "1.2.0",
-  "description": "Official TradeFourge Companion Extension — Runtime Intelligence Engine",
+  "version": "3.0.0",
+  "description": "Official TradeFourge Companion Extension — Multi-Broker Adapter & Runtime Intelligence Engine",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -49,38 +49,21 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/events/eventTypes.js",
-        "src/models/BaseEvent.js",
-        "src/models/TickEvent.js",
-        "src/models/PositionEvent.js",
-        "src/models/OrderEvent.js",
-        "src/models/DealEvent.js",
-        "src/models/AccountEvent.js",
-        "src/events/dispatcher.js",
-        "src/validation/validator.js",
-        "src/parser/tickParser.js",
-        "src/parser/positionParser.js",
-        "src/parser/orderParser.js",
-        "src/parser/dealParser.js",
-        "src/parser/accountParser.js",
-        "src/parser/parserManager.js",
-        "src/intelligence/derivedEvents.js",
-        "src/intelligence/metrics/spreadTracker.js",
-        "src/intelligence/metrics/floatingPnL.js",
-        "src/intelligence/metrics/equityTracker.js",
-        "src/intelligence/metrics/drawdownTracker.js",
-        "src/intelligence/metrics/riskCalculator.js",
-        "src/intelligence/metrics/portfolioExposure.js",
-        "src/intelligence/metrics/tradeDuration.js",
-        "src/intelligence/metrics/performanceTracker.js",
-        "src/intelligence/metrics/statistics.js",
-        "src/intelligence/runtimeEngine.js",
-        "src/state/runtimeState.js",
-        "src/capture/websocketCapture.js",
-        "utils/logger.js",
-        "inject.js"
+        "content.js",
+        "src/types/protocol.js",
+        "src/logger/Logger.js",
+        "src/cache/LocalCache.js",
+        "src/eventBus/EventBus.js",
+        "src/adapters/BrokerAdapter.js",
+        "src/adapters/ExnessAdapter.js",
+        "src/adapters/AdapterManager.js",
+        "src/engines/DiscoveryEngine.js",
+        "src/engines/HistoryImportEngine.js",
+        "src/engines/LiveRuntimeMonitor.js",
+        "src/heartbeat/HeartbeatSystem.js",
+        "src/bridge/dispatcher.js"
       ],
-      "matches": ["https://*/*"]
+      "matches": ["<all_urls>"]
     }
   ],
   "permissions": [
