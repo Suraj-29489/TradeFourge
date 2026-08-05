@@ -35,6 +35,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { AccountTypeBadge } from "@/components/ui/Badge";
 import { CardListSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useUserProfile } from "@/context/UserProfileContext";
+import { useCompanion } from "@/lib/companion/provider";
 import { SyncManager } from "@/lib/live-sync/sync-manager";
 import { SyncScheduler } from "@/lib/live-sync/scheduler";
 import type { TradingAccount, NewTradingAccount } from "@/types/database";
@@ -111,12 +112,23 @@ export default function AccountsPage() {
     setActionLoading(null);
   };
 
+  const companion = useCompanion();
+
   return (
-    <div className="space-y-6 font-mono text-xs text-white">
-      {/* Top Page Header */}
-      <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+    <div className="space-y-6 font-mono text-gray-200">
+      {/* Top Header Strip */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
         <div>
-          <h1 className="text-2xl font-bold font-sans text-white tracking-tight flex items-center gap-2">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs text-gray-400 uppercase tracking-widest font-bold">PORTFOLIO</span>
+            <span className="text-gray-600">/</span>
+            <Link href="/settings/connections" className="text-xs text-blue-400 font-bold hover:underline flex items-center gap-1">
+              <span className={`w-2 h-2 rounded-full ${companion.isConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+              <span>{companion.isConnected ? `Companion Connected (${companion.version})` : "Companion Disconnected"}</span>
+            </Link>
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-white font-sans flex items-center gap-2">
+            <Wallet className="w-6 h-6 text-blue-400" />
             <span>Trading Accounts</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">

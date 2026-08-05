@@ -3,9 +3,10 @@
 // Production Settings Hub with instant persistence across Supabase and localStorage.
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Sliders, User, Bell, LineChart, Shield, AlertTriangle, Check, Save,
-  Loader2, Trash2, Download, KeyRound, Sun, Moon
+  Loader2, Trash2, Download, KeyRound, Sun, Moon, Zap
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -219,25 +220,35 @@ export const SettingsTabs: React.FC = () => {
   return (
     <div className="space-y-6 text-xs font-mono">
       {/* Settings Navigation Tabs */}
-      <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-dark-card border border-dark-border overflow-x-auto">
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          const isActive = activeTab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id as any)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                isActive
-                  ? "bg-purple-600 text-white shadow-glow"
-                  : "text-gray-400 hover:text-white hover:bg-dark-hover"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{t.label}</span>
-            </button>
-          );
-        })}
+      <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl bg-dark-card border border-dark-border overflow-x-auto">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          {TABS.map((t) => {
+            const Icon = t.icon;
+            const isActive = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id as any)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  isActive
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-400 hover:text-white hover:bg-dark-hover"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <Link
+          href="/settings/connections"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-bold transition-all whitespace-nowrap shrink-0"
+        >
+          <Zap className="w-4 h-4" />
+          <span>Connection Manager →</span>
+        </Link>
       </div>
 
       {/* Global Toasts */}

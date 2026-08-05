@@ -9,6 +9,7 @@ import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { Moon, Sun, Menu, LogOut, Wallet, ChevronDown, Plus, Check, User, Settings } from "lucide-react";
 import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
+import { useCompanion } from "@/lib/companion/provider";
 import { createClient } from "@/lib/supabase/client";
 import { AccountFormModal } from "@/components/accounts/AccountFormModal";
 import type { NewTradingAccount } from "@/types/database";
@@ -72,89 +73,136 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
     ? `@${profile.username}`
     : profile?.full_name || "Trader";
 
+  const companion = useCompanion();
+
   return (
-    <header className="sticky top-0 z-20 h-16 backdrop-blur-md border-b bg-dark-bg/80 border-dark-border text-xs font-mono">
-      <div className="max-w-7xl mx-auto w-full h-full px-3 sm:px-6 lg:px-8 flex items-center justify-between">
-        {/* Left: Mobile Hamburger + MultiAccountFilter */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Mobile Hamburger */}
+    <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 bg-[#090D14]/90 backdrop-blur-md border-b border-white/[0.08] select-none font-mono">
+      {/* Left: Mobile hamburger + Section Title */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onOpenMobileNav}
+          className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/[0.03] border border-white/[0.08] text-gray-300 hover:text-white md:hidden"
+          aria-label="Open navigation menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <div className="hidden sm:flex items-center gap-2">
+          <span className="text-sm font-extrabold tracking-tight text-white font-sans">TRADEFOURGE</span>
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wide">
+            TERMINAL v5.1
+          </span>
+        </div>
+      </div>
+
+      {/* Center: Accounts Selector Dropdown */}
+      <div className="flex items-center gap-2">
+        <MultiAccountFilter
+          accounts={accounts}
+          selectedAccountIds={selectedAccountIds}
+          onChange={setSelectedAccountIds}
+        />
+      </div>
+
+      {/* Right: Companion Status Popover + Theme Toggle + User Profile Dropdown */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Companion Live Status Popover */}
+        <div className="relative hidden sm:block font-mono">
           <button
-            onClick={onOpenMobileNav}
-            className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-dark-hover transition-colors md:hidden"
-            title="Open Navigation Menu"
+            onClick={() => setStatusPopoverOpen(!statusPopoverOpen)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-blue-500/40 text-xs font-mono transition-all text-left"
           >
-            <Menu className="w-5 h-5" />
+            <span className="relative flex h-2 w-2 shrink-0">
+              {companion.isConnected ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </>
+              ) : (
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+              )}
+            </span>
+            <span className="text-gray-200 font-medium text-[11px]">
+              {companion.isConnected ? "🟢 Companion Connected" : "🟡 Waiting for Companion..."}
+            </span>
+            <ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />
           </button>
 
-          {/* Multi-Account Portfolio Filter */}
-          <MultiAccountFilter
-            accounts={accounts}
-            selectedAccountIds={selectedAccountIds}
-            onChange={setSelectedAccountIds}
-          />
-        </div>
-
-        {/* Right: Live Status Indicator + Theme Toggle + Username Dropdown */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Live Status Popover Dropdown Container */}
-          <div className="relative hidden sm:block font-mono">
-            <button
-              onClick={() => setStatusPopoverOpen(!statusPopoverOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-emerald-500/40 text-xs font-mono transition-all text-left"
-            >
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <span className="text-gray-200 font-medium text-[11px]">Companion Connected</span>
-              <ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />
-            </button>
-
-            {statusPopoverOpen && (
-              <div className="absolute right-0 mt-2 w-72 p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-2xl z-50 space-y-3 font-mono text-xs">
-                <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
-                  <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span>🟢 Companion Connected</span>
-                  </div>
-                  <span className="text-[10px] text-gray-400">WebSocket</span>
+          {statusPopoverOpen && (
+            <div className="absolute right-0 mt-2 w-80 p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-2xl z-50 space-y-3 font-mono text-xs">
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
+                <div className="flex items-center gap-2 font-bold text-xs">
+                  <span className={`w-2 h-2 rounded-full ${companion.isConnected ? "bg-emerald-400" : "bg-amber-400"}`} />
+                  <span className={companion.isConnected ? "text-emerald-400" : "text-amber-400"}>
+                    {companion.isConnected ? "TradeFourge Companion" : "Waiting for Companion..."}
+                  </span>
                 </div>
+                <span className="text-[10px] text-gray-400">{companion.browser}</span>
+              </div>
 
-                <div className="space-y-2 text-[11px]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Extension Version:</span>
-                    <strong className="text-white">v1.2</strong>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Accounts Linked:</span>
-                    <strong className="text-blue-400">3 Connected</strong>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">History Status:</span>
-                    <strong className="text-emerald-400">Imported</strong>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Realtime Stream:</span>
-                    <strong className="text-emerald-400">Active</strong>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Last Sync:</span>
-                    <strong className="text-gray-300">2 seconds ago</strong>
-                  </div>
+              <div className="space-y-2 text-[11px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Extension Version:</span>
+                  <strong className="text-white">{companion.version}</strong>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Connected Accounts:</span>
+                  <strong className="text-blue-400">{companion.accountsCount} Linked</strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">History Status:</span>
+                  <strong className="text-emerald-400">{companion.historyStatus}</strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Realtime Stream:</span>
+                  <strong className="text-emerald-400">{companion.realtimeStatus}</strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Last Sync:</span>
+                  <strong className="text-gray-300">{companion.lastSyncTime}</strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Latency:</span>
+                  <strong className="text-gray-300">{companion.latency} ms</strong>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-white/[0.06]">
+                  <span className="text-gray-400">Connection Health:</span>
+                  <strong className={companion.health === "Excellent" ? "text-emerald-400" : "text-amber-400"}>
+                    {companion.health}
+                  </strong>
+                </div>
+              </div>
 
-                <div className="pt-2 border-t border-white/[0.08]">
+              <div className="pt-2 border-t border-white/[0.08] space-y-1.5">
+                {!companion.isConnected ? (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      onClick={() => companion.reconnect()}
+                      className="py-1.5 px-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] text-center transition-colors"
+                    >
+                      Retry Connection
+                    </button>
+                    <Link
+                      href="/connect"
+                      onClick={() => setStatusPopoverOpen(false)}
+                      className="py-1.5 px-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-gray-300 font-bold text-[10px] text-center block transition-colors"
+                    >
+                      Install Extension
+                    </Link>
+                  </div>
+                ) : (
                   <Link
-                    href="/connect"
+                    href="/settings/connections"
                     onClick={() => setStatusPopoverOpen(false)}
                     className="w-full py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-center font-bold text-[11px] text-blue-400 block transition-colors"
                   >
-                    Manage Companion Connection →
+                    Open Connection Manager →
                   </Link>
-                </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
 
           {/* Theme Toggle */}
           <button
@@ -219,7 +267,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
             )}
           </div>
         </div>
-      </div>
 
       {/* Add Account Modal */}
       <AccountFormModal

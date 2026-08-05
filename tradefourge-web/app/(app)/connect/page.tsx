@@ -29,6 +29,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { useOnboardingStore } from "@/lib/store/useOnboardingStore";
+import { useCompanion } from "@/lib/companion/provider";
 import { Checkbox } from "@/components/ui/Checkbox";
 
 interface DiscoveredAccountCard {
@@ -110,15 +111,16 @@ export default function ConnectionWizardPage() {
   const { refreshAccounts } = useUserProfile();
   const setCompletedOnboarding = useOnboardingStore((s) => s.setCompletedOnboarding);
   const updateCompanionInfo = useOnboardingStore((s) => s.updateCompanionInfo);
+  const companion = useCompanion();
 
-  // Wizard Steps: 1: Method Choice, 2: Companion Handshake, 3: Account Discovery, 4: Import Progress, 5: Completion
+  // Wizard Steps: 1: Method Choice, 2: Companion Waiting, 3: Account Discovery, 4: Import Progress, 5: Completion
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
   // Connection Method choice
   const [selectedMethod, setSelectedMethod] = useState<"companion" | "csv" | "api">("companion");
 
-  // Companion Handshake Simulation States
-  const [handshakeStep, setHandshakeStep] = useState<0 | 1 | 2 | 3 | 4>(0);
+  // Checking state for manual ping
+  const [isChecking, setIsChecking] = useState(false);
 
   // Account discovery selection list
   const [accounts, setAccounts] = useState<DiscoveredAccountCard[]>(INITIAL_DISCOVERED_ACCOUNTS);
@@ -135,22 +137,9 @@ export default function ConnectionWizardPage() {
     { title: "Realtime Connection", desc: "WebSocket streaming ready" },
   ];
 
-  // Companion setup Handshake simulation
-  const startCompanionHandshake = async () => {
+  // Open Companion Step 2 (Honest Waiting screen)
+  const startCompanionHandshake = () => {
     setWizardStep(2);
-    setHandshakeStep(0); // Checking Extension...
-
-    await new Promise((res) => setTimeout(res, 800));
-    setHandshakeStep(1); // ✓ Extension Found
-
-    await new Promise((res) => setTimeout(res, 900));
-    setHandshakeStep(2); // Connecting...
-
-    await new Promise((res) => setTimeout(res, 1000));
-    setHandshakeStep(3); // Reading Accounts...
-
-    await new Promise((res) => setTimeout(res, 900));
-    setHandshakeStep(4); // Found 4 Accounts -> Ready to continue
   };
 
   // Toggle Account selection
@@ -349,78 +338,53 @@ export default function ConnectionWizardPage() {
             </motion.div>
           )}
 
-          {/* ── STEP 2: COMPANION SETUP WIZARD (HANDSHAKE SIMULATION) ───────── */}
+          {/* ── STEP 2: COMPANION SETUP WIZARD (HONEST WAITING SCREEN) ────────── */}
           {wizardStep === 2 && (
             <motion.div
               key="step2"
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className="p-8 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-2xl space-y-8 text-center max-w-lg mx-auto"
+              className="p-8 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-2xl space-y-8 text-center max-w-lg mx-auto font-mono"
             >
-              <div className="space-y-2">
-                <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
-                  {handshakeStep < 4 ? (
-                    <Loader2 className="w-8 h-8 animate-spin" />
-                  ) : (
+              <div className="space-y-3">
+                <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto shadow-sm">
+                  {companion.isConnected ? (
                     <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                  ) : (
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
                   )}
                 </div>
-                <h2 className="text-xl font-bold text-white font-sans">Connecting Companion Extension</h2>
-                <p className="text-xs text-gray-400">
-                  Verifying browser runtime bridge and scanning trading accounts.
+                <h2 className="text-xl font-bold text-white font-sans">TradeFourge Companion</h2>
+                <p className="text-xs text-gray-400 leading-relaxed max-w-sm mx-auto">
+                  {companion.isConnected
+                    ? "Companion Extension verified! Ready to discover trading accounts."
+                    : "Waiting for Companion Extension... To continue, install and enable the TradeFourge Companion Extension. The setup wizard will automatically continue once the extension responds."}
                 </p>
               </div>
 
-              {/* Handshake Progress Log List */}
-              <div className="space-y-2 text-left bg-white/[0.02] p-4 rounded-xl border border-white/[0.06] font-mono text-xs">
-                <div className="flex items-center gap-3 text-gray-300">
-                  {handshakeStep >= 1 ? (
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0 stroke-[3]" />
-                  ) : (
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
-                  )}
-                  <span>Checking Extension...</span>
+              {/* Status Banner */}
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs text-left space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Runtime Status:</span>
+                  <span className={companion.isConnected ? "text-emerald-400 font-bold" : "text-amber-400 font-bold flex items-center gap-1.5"}>
+                    {!companion.isConnected && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    {companion.isConnected ? "🟢 Extension Connected" : "🟡 Listening for Extension..."}
+                  </span>
                 </div>
-
-                {handshakeStep >= 1 && (
-                  <div className="flex items-center gap-3 text-emerald-400 font-bold">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0 stroke-[3]" />
-                    <span>✓ Extension Found (v1.2)</span>
-                  </div>
-                )}
-
-                {handshakeStep >= 2 && (
-                  <div className="flex items-center gap-3 text-gray-300">
-                    {handshakeStep >= 3 ? (
-                      <Check className="w-4 h-4 text-emerald-400 shrink-0 stroke-[3]" />
-                    ) : (
-                      <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
-                    )}
-                    <span>Connecting WebSocket Bridge...</span>
-                  </div>
-                )}
-
-                {handshakeStep >= 3 && (
-                  <div className="flex items-center gap-3 text-gray-300">
-                    {handshakeStep >= 4 ? (
-                      <Check className="w-4 h-4 text-emerald-400 shrink-0 stroke-[3]" />
-                    ) : (
-                      <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
-                    )}
-                    <span>Reading Exness Accounts...</span>
-                  </div>
-                )}
-
-                {handshakeStep >= 4 && (
-                  <div className="flex items-center gap-3 text-blue-400 font-bold pt-1 border-t border-white/[0.08]">
-                    <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
-                    <span>Found 4 Trading Accounts</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-400">Target Browser:</span>
+                  <span className="text-gray-200 font-bold">{companion.browser}</span>
+                </div>
+                {companion.isConnected && (
+                  <div className="flex items-center justify-between pt-1 border-t border-white/[0.06]">
+                    <span className="text-gray-400">Extension Version:</span>
+                    <span className="text-blue-400 font-bold">{companion.version}</span>
                   </div>
                 )}
               </div>
 
-              {/* Handshake Navigation Footer */}
+              {/* Action Buttons */}
               <div className="flex items-center justify-between pt-2">
                 <button
                   onClick={() => setWizardStep(1)}
@@ -429,14 +393,37 @@ export default function ConnectionWizardPage() {
                   Back
                 </button>
 
-                <button
-                  onClick={() => setWizardStep(3)}
-                  disabled={handshakeStep < 4}
-                  className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm flex items-center gap-2 transition-all disabled:opacity-40"
-                >
-                  <span>Continue to Accounts</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      setIsChecking(true);
+                      await companion.checkExtension();
+                      setIsChecking(false);
+                    }}
+                    disabled={isChecking}
+                    className="px-4 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-gray-300 text-xs font-bold transition-all flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? "animate-spin" : ""}`} />
+                    <span>Check Again</span>
+                  </button>
+
+                  {companion.isConnected ? (
+                    <button
+                      onClick={() => setWizardStep(3)}
+                      className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all"
+                    >
+                      <span>Continue to Accounts</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => companion.toggleMockInstallation()}
+                      className="px-4 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 font-bold text-xs transition-all"
+                    >
+                      Simulate Extension Found
+                    </button>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}
