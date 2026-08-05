@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "TradeFourge Companion",
-  "version": "1.0.0",
-  "description": "Official TradeFourge Companion Extension — Web Terminal Bridge & Interceptor",
+  "version": "1.1.0",
+  "description": "Official TradeFourge Companion Extension — Event Pipeline & Parser Foundation",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -45,7 +45,27 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["inject.js"],
+      "resources": [
+        "src/events/eventTypes.js",
+        "src/models/BaseEvent.js",
+        "src/models/TickEvent.js",
+        "src/models/PositionEvent.js",
+        "src/models/OrderEvent.js",
+        "src/models/DealEvent.js",
+        "src/models/AccountEvent.js",
+        "src/events/dispatcher.js",
+        "src/validation/validator.js",
+        "src/parser/tickParser.js",
+        "src/parser/positionParser.js",
+        "src/parser/orderParser.js",
+        "src/parser/dealParser.js",
+        "src/parser/accountParser.js",
+        "src/parser/parserManager.js",
+        "src/state/runtimeState.js",
+        "src/capture/websocketCapture.js",
+        "utils/logger.js",
+        "inject.js"
+      ],
       "matches": ["https://*/*"]
     }
   ],

@@ -1,26 +1,38 @@
 /**
- * TradeFourge Extension — Popup UI Logic
+ * TradeFourge Extension v1.1 — Popup UI Logic
  */
 
 document.addEventListener('DOMContentLoaded', function () {
   const siteTextEl = document.getElementById('site-text');
   const siteDotEl = document.getElementById('site-dot');
-  const messageCountEl = document.getElementById('message-count');
 
-  // 1. Fetch captured message count from storage
-  function updateMessageCount() {
-    if (typeof TradeFourgeStorage !== 'undefined') {
-      TradeFourgeStorage.getMessageCount().then((count) => {
-        messageCountEl.textContent = count.toLocaleString();
-      });
-    } else if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(['tf_messages_captured'], function (result) {
-        messageCountEl.textContent = (result.tf_messages_captured || 0).toLocaleString();
+  const cntTotalEl = document.getElementById('cnt-total');
+  const cntTicksEl = document.getElementById('cnt-ticks');
+  const cntOrdersEl = document.getElementById('cnt-orders');
+  const cntDealsEl = document.getElementById('cnt-deals');
+  const cntPositionsEl = document.getElementById('cnt-positions');
+  const cntAccountsEl = document.getElementById('cnt-accounts');
+
+  function updateMetricsDisplay() {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.get([
+        'tf_messages_captured',
+        'tf_ticks_captured',
+        'tf_orders_captured',
+        'tf_deals_captured',
+        'tf_positions_captured',
+        'tf_accounts_captured'
+      ], function (result) {
+        cntTotalEl.textContent = (result.tf_messages_captured || 0).toLocaleString();
+        cntTicksEl.textContent = (result.tf_ticks_captured || 0).toLocaleString();
+        cntOrdersEl.textContent = (result.tf_orders_captured || 0).toLocaleString();
+        cntDealsEl.textContent = (result.tf_deals_captured || 0).toLocaleString();
+        cntPositionsEl.textContent = (result.tf_positions_captured || 0).toLocaleString();
+        cntAccountsEl.textContent = (result.tf_accounts_captured || 0).toLocaleString();
       });
     }
   }
 
-  // 2. Check active tab URL for supported website detection
   function checkActiveTab() {
     if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -52,14 +64,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  updateMessageCount();
+  updateMetricsDisplay();
   checkActiveTab();
 
-  // 3. Listen for dynamic storage updates while popup is open
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.onChanged) {
     chrome.storage.onChanged.addListener(function (changes, namespace) {
-      if (namespace === 'local' && changes.tf_messages_captured) {
-        messageCountEl.textContent = (changes.tf_messages_captured.newValue || 0).toLocaleString();
+      if (namespace === 'local') {
+        updateMetricsDisplay();
       }
     });
   }

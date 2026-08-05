@@ -15,7 +15,7 @@
     </div>
     <div class="title-group">
       <h1>TradeFourge Companion</h1>
-      <span class="version-tag">Version 1.0</span>
+      <span class="version-tag">Version 1.1</span>
     </div>
   </div>
 
@@ -35,15 +35,37 @@
         <span id="site-text">Checking...</span>
       </span>
     </div>
+  </div>
 
-    <div class="status-card">
-      <span class="card-label">Messages Captured</span>
-      <span class="counter-value" id="message-count">0</span>
+  <div class="metrics-grid">
+    <div class="metric-box full-width">
+      <span class="metric-label">Messages</span>
+      <span class="metric-val" id="cnt-total">0</span>
+    </div>
+    <div class="metric-box">
+      <span class="metric-label">Ticks</span>
+      <span class="metric-val" id="cnt-ticks">0</span>
+    </div>
+    <div class="metric-box">
+      <span class="metric-label">Orders</span>
+      <span class="metric-val" id="cnt-orders">0</span>
+    </div>
+    <div class="metric-box">
+      <span class="metric-label">Deals</span>
+      <span class="metric-val" id="cnt-deals">0</span>
+    </div>
+    <div class="metric-box">
+      <span class="metric-label">Positions</span>
+      <span class="metric-val" id="cnt-positions">0</span>
+    </div>
+    <div class="metric-box full-width">
+      <span class="metric-label">Account Updates</span>
+      <span class="metric-val" id="cnt-accounts">0</span>
     </div>
   </div>
 
   <div class="footer">
-    TradeFourge Interceptor v1.0 — Idle Mode
+    TradeFourge Event Pipeline v1.1 Active
   </div>
 
   <script src="utils/validator.js"></script>

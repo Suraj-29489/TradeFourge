@@ -1,20 +1,18 @@
 /**
  * TradeFourge Extension — Content Script (Isolated World)
  *
- * Checks supported website hosts (terminal.exness.*, my.exness.*),
- * injects `inject.js` into the page DOM, and relays capture stats to chrome.storage.
+ * Injects Event Pipeline modules and `inject.js` into page DOM in dependency order.
+ * Bridges state updates to extension storage for popup subscriber counters.
  */
 
 (function () {
   'use strict';
 
-  // 1. Double-injection prevention using DOM dataset attribute
   if (document.documentElement.dataset.tradefourgeInjected) {
     return;
   }
   document.documentElement.dataset.tradefourgeInjected = 'true';
 
-  // 2. Validate target website hostname
   function isSupportedWebsite(url) {
     try {
       const parsed = new URL(url);
@@ -26,35 +24,73 @@
   }
 
   if (!isSupportedWebsite(window.location.href)) {
-    // Quietly exit on unsupported pages
     return;
   }
 
-  // 3. Inject script into webpage DOM context (Main World)
-  try {
+  // Script injection sequence in strict dependency order
+  const pipelineScripts = [
+    'src/events/eventTypes.js',
+    'src/models/BaseEvent.js',
+    'src/models/TickEvent.js',
+    'src/models/PositionEvent.js',
+    'src/models/OrderEvent.js',
+    'src/models/DealEvent.js',
+    'src/models/AccountEvent.js',
+    'src/events/dispatcher.js',
+    'src/validation/validator.js',
+    'src/parser/tickParser.js',
+    'src/parser/positionParser.js',
+    'src/parser/orderParser.js',
+    'src/parser/dealParser.js',
+    'src/parser/accountParser.js',
+    'src/parser/parserManager.js',
+    'src/state/runtimeState.js',
+    'src/capture/websocketCapture.js',
+    'utils/logger.js',
+    'inject.js'
+  ];
+
+  function injectScriptsSequentially(index) {
+    if (index >= pipelineScripts.length) {
+      console.log('[TradeFourge ContentScript] All Event Pipeline modules loaded.');
+      return;
+    }
+
+    const scriptPath = pipelineScripts[index];
     const script = document.createElement('script');
-    script.src = chrome.runtime.getURL('inject.js');
+    script.src = chrome.runtime.getURL(scriptPath);
     script.onload = function () {
       this.remove();
+      injectScriptsSequentially(index + 1);
+    };
+    script.onerror = function () {
+      console.error('[TradeFourge ContentScript] Failed to load script: ' + scriptPath);
+      injectScriptsSequentially(index + 1);
     };
     (document.head || document.documentElement).appendChild(script);
-    console.log('[TradeFourge Extension] Injected page context script.');
+  }
+
+  try {
+    injectScriptsSequentially(0);
   } catch (err) {
-    console.error('[TradeFourge Extension] TradeFourge Extension failed to initialize.', err);
+    console.error('[TradeFourge ContentScript] TradeFourge Extension failed to initialize.', err);
     return;
   }
 
-  // 4. Bridge window.postMessage from inject.js to extension storage
+  // Bridge postMessage state updates from runtimeState to chrome.storage.local
   window.addEventListener('message', function (event) {
     if (event.source !== window) return;
-    if (event.data && event.data.source === 'tradefourge-injected' && event.data.type === 'WS_MESSAGE_CAPTURED') {
-      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.get(['tf_messages_captured'], function (result) {
-          const count = (result.tf_messages_captured || 0) + 1;
-          chrome.storage.local.set({
-            tf_messages_captured: count,
-            tf_last_updated: new Date().toISOString()
-          });
+    if (event.data && event.data.source === 'tradefourge-injected' && event.data.type === 'TF_STATE_UPDATE') {
+      const counts = event.data.detail ? event.data.detail.counts : null;
+      if (counts && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({
+          tf_messages_captured: counts.totalCaptured || 0,
+          tf_ticks_captured: counts.ticks || 0,
+          tf_orders_captured: counts.orders || 0,
+          tf_deals_captured: counts.deals || 0,
+          tf_positions_captured: counts.positions || 0,
+          tf_accounts_captured: counts.accountUpdates || 0,
+          tf_last_updated: new Date().toISOString()
         });
       }
     }

@@ -1,138 +1,96 @@
-# TradeFourge Companion Extension v1.0 — Foundation & WebSocket Discovery
+# TradeFourge Companion Extension v1.1 — Event Pipeline & Parser Foundation
 
 The **TradeFourge Companion Extension** is an independent Chromium extension designed as the primary real-time data bridge between broker web terminals (starting with Exness Web Terminal) and the TradeFourge platform.
 
-Phase 1 focuses on building a safe, non-intrusive foundation that intercepts and logs incoming and outgoing WebSocket traffic from Exness Web Terminal without altering packet timing, blocking data, or modifying payload content.
+Version 1.1 establishes the permanent, modular **Event Pipeline & Parser Foundation**:
+
+```
+WebSocket
+   │
+   ▼
+Capture Layer (src/capture/websocketCapture.js)
+   │
+   ▼
+Validation Layer (src/validation/validator.js)
+   │
+   ▼
+Parser Layer (src/parser/*) ──► Normalization (src/models/*)
+   │
+   ▼
+Event Dispatcher (src/events/dispatcher.js)
+   ├──► Pretty Console Logger (utils/logger.js)
+   ├──► Runtime State Manager (src/state/runtimeState.js)
+   └──► Extension Storage Bridge (content.js) ──► Popup UI (popup.js)
+```
 
 ---
 
-## 📁 Project Structure
+## 📁 Modular Directory Structure
 
 ```
 tradefourge-extension/
-├── manifest.json         # Manifest Version 3 configuration
-├── background.js        # Extension lifecycle service worker (no business logic)
-├── content.js           # Isolated content script (page injection & storage bridge)
-├── inject.js            # Page-context injected script (Main World WebSocket hook)
-├── popup.html           # Companion extension UI HTML
-├── popup.js             # Companion extension UI logic
+├── manifest.json                  # Manifest Version 3 configuration
+├── background.js                 # Extension lifecycle service worker
+├── content.js                    # Isolated content script (sequential pipeline injection)
+├── inject.js                     # Page-context WebSocket hook (no business logic)
+├── popup.html / popup.js         # Companion UI with categorized metric counters
 ├── styles/
-│   └── popup.css        # Sleek dark mode glassmorphism UI styles
-├── icons/               # Extension branding icons (16x16, 48x48, 128x128)
+│   └── popup.css                 # Dark mode UI styles
+├── icons/                        # Extension branding icons
+├── src/
+│   ├── capture/
+│   │   └── websocketCapture.js   # Capture Layer (delegates raw frames)
+│   ├── validation/
+│   │   └── validator.js          # Payload validation & JSON safety checks
+│   ├── models/
+│   │   ├── BaseEvent.js          # Base TradeFourge Event schema
+│   │   ├── TickEvent.js          # Normalized Tick model (instrument, bid, ask, spread)
+│   │   ├── PositionEvent.js      # Normalized Position model (ticket, volume, profit, action)
+│   │   ├── OrderEvent.js         # Normalized Order model (ticket, orderType, price, state)
+│   │   ├── DealEvent.js          # Normalized Deal model (dealTicket, volume, profit, swap)
+│   │   └── AccountEvent.js       # Normalized Account model (balance, equity, margin)
+│   ├── events/
+│   │   ├── eventTypes.js         # Constant event identifiers (TICK, POSITION, ORDER, etc.)
+│   │   └── dispatcher.js         # Generic Pub/Sub event dispatcher
+│   ├── parser/
+│   │   ├── tickParser.js         # Quote tick parser
+│   │   ├── positionParser.js     # Position state parser
+│   │   ├── orderParser.js        # Pending order parser
+│   │   ├── dealParser.js         # Execution deal parser
+│   │   ├── accountParser.js      # Balance & equity parser
+│   │   └── parserManager.js      # Central parser coordinator
+│   └── state/
+│       └── runtimeState.js       # In-memory account & position state manager
 ├── utils/
-│   ├── logger.js        # Unified logging utility (INFO, WARN, ERROR, DEBUG)
-│   ├── storage.js       # Chrome storage wrapper
-│   └── validator.js     # Exness domain validator
-├── services/
-│   ├── ws-interceptor.js   # WebSocket interception core
-│   └── http-interceptor.js # HTTP fetch/XHR hook template (disabled for v1)
-├── types/
-│   └── index.d.ts       # TypeScript interface definitions
-└── README.md            # Technical documentation
+│   ├── logger.js                 # Pretty structured console logger
+│   ├── storage.js                # Chrome storage wrapper
+│   └── validator.js              # Host domain validator
+└── README.md                     # Extension technical documentation
 ```
 
 ---
 
-## 🛠️ Manifest Configuration (V3)
+## ⚡ Pipeline Stages
 
-- **`manifest_version`**: `3`
-- **Permissions**: Minimal required permission (`"storage"`).
-- **Match Patterns**: Strictly activates on `https://terminal.exness.*/*` and `https://my.exness.*/*`.
-- **Web Accessible Resources**: Exposes `inject.js` so `content.js` can safely append it to the page DOM.
-
----
-
-## 💉 Injection Architecture & Flow
-
-### Why `inject.js` Exists
-Chromium extension architecture isolates content scripts inside an **Isolated World**. Content scripts can inspect DOM elements but **cannot** access or override window objects (such as `window.WebSocket`, `window.fetch`, or `window.XMLHttpRequest`) created by the web page's scripts.
-
-To intercept real-time WebSocket traffic, the hook must execute inside the **Main World** (the webpage's global `window` context). `inject.js` is dynamically injected as a script tag into the DOM at `document_start`.
-
-```
-┌───────────────────────────────────────────────────────────┐
-│                      Target Webpage                       │
-│                                                           │
-│   ┌─────────────────────┐       ┌─────────────────────┐   │
-│   │     Main World      │       │   Isolated World    │   │
-│   │     (inject.js)     │       │    (content.js)     │   │
-│   └──────────┬──────────┘       └──────────┬──────────┘   │
-│              │                             │              │
-│              │ window.postMessage          │              │
-│              └────────────────────────────►│              │
-│                                            │              │
-└────────────────────────────────────────────┼──────────────┘
-                                             │ chrome.storage
-                                             ▼
-                                  ┌────────────────────┐
-                                  │   background.js    │
-                                  │    & popup.js      │
-                                  └────────────────────┘
-```
-
-### Key Differences: `content.js` vs `inject.js`
-
-| Feature | `content.js` | `inject.js` |
-|---|---|---|
-| **Execution Environment** | Isolated World | Main World (Page Context) |
-| **`window` Access** | Extension Isolated Window | Actual Webpage `window` |
-| **DOM Access** | Full Read/Write | Full Read/Write |
-| **Native API Override** | Cannot override page `WebSocket` | Can override page `WebSocket` |
-| **Extension API Access** | Has access to `chrome.runtime`, `chrome.storage` | No access to `chrome.*` APIs |
+1. **Capture Layer**: Receives raw frame parameters (`direction`, `socketUrl`, `payload`, `timestamp`) directly from `inject.js`. Performs zero parsing or business logic.
+2. **Validation Layer**: Filters empty, binary, or malformed ping/pong frames without throwing errors.
+3. **Parser & Normalization Layer**: Specialized parsers identify event structures and normalize raw Exness payloads into consistent TradeFourge event instances (`TickEvent`, `PositionEvent`, `OrderEvent`, `DealEvent`, `AccountEvent`).
+4. **Central Event Dispatcher**: Pub/Sub dispatcher (`subscribe`, `dispatch`) routes events to all subscribers.
+5. **Pretty Console Logger**: Subscribes to dispatcher and outputs organized, color-coded event logs:
+   ```
+   [TradeFourge] Tick Event: XAUUSD (Bid: 4197.25 | Ask: 4197.47)
+   [TradeFourge] Position UPDATE: Ticket #1089421 (EURUSD LONG 0.50 lots)
+   [TradeFourge] Account Update: Account #849102 (Balance: 10000 USD)
+   ```
+6. **Runtime State Manager**: Keeps in-memory maps of open positions, pending orders, latest symbol quotes, and event counts (`totalCaptured`, `ticks`, `orders`, `deals`, `positions`, `accountUpdates`).
+7. **Popup UI Integration**: Displays categorized counters populated live via storage updates.
 
 ---
 
-## ⚡ How WebSocket Interception Works
+## 🛠️ Verification & Development
 
-1. **Initialization Guard**: Ensures single initialization per page session using `window.__TRADEFOURGE_INJECTED__` and `document.documentElement.dataset.tradefourgeInjected`.
-2. **Prototype & Constant Preservation**: Wraps `window.WebSocket` constructor while preserving prototype chains and static status codes (`CONNECTING`, `OPEN`, `CLOSING`, `CLOSED`).
-3. **Outgoing Interception**: Overrides `instance.send` to log outgoing frame data and measure byte payload size.
-4. **Incoming Interception**: Hooks both `instance.addEventListener('message', ...)` and `Object.defineProperty(instance, 'onmessage', ...)` to intercept incoming frame events.
-5. **Zero Side-Effects**: All logging and postMessage execution are wrapped in defensive `try-catch` blocks. The interceptor never alters data, blocks packets, or introduces latency.
-
----
-
-## 🖥️ Log Output Format
-
-Incoming WebSocket Message:
-```
-[TradeFourge Extension]
-
-Incoming WebSocket Message
-
-Timestamp: 2026-08-05T18:25:00.000Z
-Socket URL: wss://terminal.exness.com/ws
-Direction: INCOMING
-Payload Size: 128 bytes
-Raw Payload: <message>
-```
-
-Outgoing WebSocket Message:
-```
-[TradeFourge Extension]
-
-Outgoing WebSocket Message
-
-Timestamp: 2026-08-05T18:25:01.000Z
-Socket URL: wss://terminal.exness.com/ws
-Direction: OUTGOING
-Payload Size: 64 bytes
-Raw Payload: <message>
-```
-
----
-
-## ⚠️ Current Limitations (v1.0)
-
-- **Observation Only**: No trade parsing or database syncing in v1.
-- **Exness Only**: Domain filtering activates only on `terminal.exness.*` and `my.exness.*`.
-- **HTTP Interception Disabled**: `fetch()` and `XMLHttpRequest` hooks are implemented in template files but disabled for v1.
-
----
-
-## 🚀 Future Roadmap
-
-1. **v1.1 — Protocol Parser Engine**: Parse binary/JSON Exness WebSocket frames into structured quote and trade events.
-2. **v1.2 — Multi-Broker Adapter Layer**: Add adapter modules for TradingView, Deriv, and Binance Web Terminals.
-3. **v1.3 — Offline Event Queue & Cache**: Store intercepted trades in `IndexedDB` when offline.
-4. **v2.0 — Live Sync API Bridge**: Secure API synchronization with TradeFourge Backend via JWT authentication.
+To test the extension:
+1. Open Chromium browser at `chrome://extensions`.
+2. Click **Load unpacked** and select `tradefourge-extension/`.
+3. Open `https://terminal.exness.com` or `https://my.exness.com`.
+4. Open Developer Tools Console (`F12`) to view beautiful structured event logs.
