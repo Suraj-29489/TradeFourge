@@ -1,9 +1,49 @@
+# Dependencies
 node_modules/
+**/node_modules/
+
+# Next.js Build Outputs
 .next/
-.venv/
+**/.next/
+out/
+**/out/
+
+# Environments & Local Secrets
 .env
 .env.local
-__pycache__/
-*.pyc
-*.db
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env
+**/.env.local
 
+# Python & Virtual Environment
+.venv/
+**/.venv/
+__pycache__/
+/**/__pycache__/
+*.pyc
+
+# SQLite & Storage Databases
+*.db
+*.sqlite
+*.sqlite3
+**/bridge_storage.db
+
+# Build & Cache Outputs
+dist/
+**/dist/
+build/
+**/build/
+.turbo/
+.vercel/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+*.swo

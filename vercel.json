@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "cd tradefourge-web && npm run build",
+  "outputDirectory": "tradefourge-web/.next",
+  "installCommand": "cd tradefourge-web && npm install"
+}
