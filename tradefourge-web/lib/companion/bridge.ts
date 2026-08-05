@@ -1,6 +1,7 @@
 /**
- * TradeFourge Companion v3.2 — Communication Bridge
- * Asynchronous dispatching supporting window.postMessage & chrome.runtime.sendMessage cross-tab pipeline.
+ * TradeFourge Companion v3.3 — Communication Bridge
+ * Uses chrome.runtime.sendMessage(extensionId, message) for cross-tab Manifest V3 messaging.
+ * Extension ID is discovered dynamically from DOM attribute set by injector.js content script.
  */
 
 import {
@@ -20,11 +21,14 @@ interface PendingRequest {
   timer: NodeJS.Timeout;
 }
 
+const TAG = "[TradeFourge Web]";
+
 export class CompanionBridge {
   private static instance: CompanionBridge;
   private pendingRequests: Map<string, PendingRequest> = new Map();
   private eventSubscribers: Map<string, Set<EventCallback>> = new Map();
   private isInitialized = false;
+  private extensionId: string | null = null;
   private browserName: "Chrome" | "Edge" | "Firefox" | "Brave" | "Unknown" = "Unknown";
 
   public static getInstance(): CompanionBridge {
@@ -37,6 +41,7 @@ export class CompanionBridge {
   private constructor() {
     this.detectBrowser();
     if (typeof window !== "undefined") {
+      this.discoverExtensionId();
       this.initWindowListener();
     }
   }
@@ -57,18 +62,83 @@ export class CompanionBridge {
     }
   }
 
+  /**
+   * Discover the extension ID from the DOM attribute stamped by injector.js.
+   * Also sets up a MutationObserver to detect it if it arrives after page load.
+   */
+  private discoverExtensionId() {
+    if (typeof document === "undefined") return;
+
+    // Try immediate read
+    const id = document.documentElement.getAttribute("data-tradefourge-extension-id");
+    if (id) {
+      this.extensionId = id;
+      console.log(`${TAG} Extension ID discovered from DOM: ${id}`);
+      return;
+    }
+
+    // If not yet available, observe for it (injector runs at document_start, React hydrates later)
+    console.log(`${TAG} Extension ID not found yet. Setting up MutationObserver...`);
+    const observer = new MutationObserver(() => {
+      const injectedId = document.documentElement.getAttribute("data-tradefourge-extension-id");
+      if (injectedId) {
+        this.extensionId = injectedId;
+        console.log(`${TAG} Extension ID discovered via MutationObserver: ${injectedId}`);
+        observer.disconnect();
+      }
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-tradefourge-extension-id"],
+    });
+
+    // Also try a retry loop as a safety net
+    let retries = 0;
+    const retryInterval = setInterval(() => {
+      const retryId = document.documentElement.getAttribute("data-tradefourge-extension-id");
+      if (retryId) {
+        this.extensionId = retryId;
+        console.log(`${TAG} Extension ID discovered via retry: ${retryId}`);
+        clearInterval(retryInterval);
+        observer.disconnect();
+      }
+      retries++;
+      if (retries > 20) {
+        console.warn(`${TAG} Extension ID not found after ${retries} retries. Extension may not be installed.`);
+        clearInterval(retryInterval);
+        observer.disconnect();
+      }
+    }, 250);
+  }
+
+  /**
+   * Re-check for the extension ID. Called before each send attempt.
+   */
+  private refreshExtensionId(): string | null {
+    if (this.extensionId) return this.extensionId;
+    if (typeof document === "undefined") return null;
+    const id = document.documentElement.getAttribute("data-tradefourge-extension-id");
+    if (id) {
+      this.extensionId = id;
+      console.log(`${TAG} Extension ID refreshed: ${id}`);
+    }
+    return this.extensionId;
+  }
+
   private initWindowListener() {
     if (this.isInitialized) return;
     this.isInitialized = true;
 
+    // Listen for window.postMessage responses (fallback path from same-tab content scripts)
     window.addEventListener("message", (event: MessageEvent) => {
       if (!event.data || typeof event.data !== "object") return;
       const data = event.data as TFMessageEnvelope;
-
       if (data.source !== TF_SOURCE_EXTENSION) return;
 
-      console.log(`[TradeFourge Web] Received ${data.type} response from Extension via window.postMessage:`, data);
+      console.log(`${TAG} Received ${data.type} via window.postMessage (requestId: ${data.requestId})`);
 
+      // Resolve pending requests
       if (data.requestId && this.pendingRequests.has(data.requestId)) {
         const pending = this.pendingRequests.get(data.requestId)!;
         clearTimeout(pending.timer);
@@ -81,6 +151,7 @@ export class CompanionBridge {
         }
       }
 
+      // Notify event subscribers
       const subscribers = this.eventSubscribers.get(data.type);
       if (subscribers) {
         subscribers.forEach((cb) => cb(data));
@@ -88,6 +159,10 @@ export class CompanionBridge {
     });
   }
 
+  /**
+   * Send a message to the extension and wait for a response.
+   * Uses chrome.runtime.sendMessage(extensionId, message) exclusively.
+   */
   public async send<TResponse = any, TPayload = any>(
     type: TFMessageType,
     payload?: TPayload,
@@ -99,64 +174,95 @@ export class CompanionBridge {
       type,
       requestId,
       timestamp: Date.now(),
-      version: "3.2.0",
+      version: "3.3.0",
       payload,
     };
 
-    console.log(`[TradeFourge Web] Sending ${type} to Extension (requestId: ${requestId})...`);
+    console.log(`${TAG} ────────────────────────────────────────`);
+    console.log(`${TAG} Sending: ${type}`);
+    console.log(`${TAG} Request ID: ${requestId}`);
 
     return new Promise<TResponse>((resolve, reject) => {
       let resolved = false;
 
       const timer = setTimeout(() => {
-        if (this.pendingRequests.has(requestId)) {
+        if (this.pendingRequests.has(requestId) && !resolved) {
           this.pendingRequests.delete(requestId);
           const error: TFMessageError = {
             code: "TIMEOUT",
             message: `Request '${type}' timed out after ${timeoutMs}ms. Extension did not respond.`,
           };
-          console.warn(`[TradeFourge Web] Request '${type}' timed out.`);
+          console.warn(`${TAG} ⏱ Request '${type}' timed out after ${timeoutMs}ms`);
           reject(error);
         }
       }, timeoutMs);
 
       this.pendingRequests.set(requestId, { resolve, reject, timer });
 
-      // Method A: Try chrome.runtime.sendMessage if available
+      // ── PRIMARY: chrome.runtime.sendMessage(extensionId, message) ──
+      const extensionId = this.refreshExtensionId();
       if (
+        extensionId &&
         typeof window !== "undefined" &&
-        (window as any).chrome &&
-        (window as any).chrome.runtime &&
-        (window as any).chrome.runtime.sendMessage
+        (window as any).chrome?.runtime?.sendMessage
       ) {
+        console.log(`${TAG} Dispatching via chrome.runtime.sendMessage(${extensionId}, ...)`);
         try {
-          console.log(`[TradeFourge Web] Dispatching ${type} via chrome.runtime.sendMessage...`);
-          (window as any).chrome.runtime.sendMessage(message, (response: any) => {
-            if (response && response.source === TF_SOURCE_EXTENSION && !resolved) {
-              resolved = true;
-              clearTimeout(timer);
-              this.pendingRequests.delete(requestId);
-              console.log(`[TradeFourge Web] Received ${response.type} response via chrome.runtime.sendMessage:`, response);
-              if (response.error) {
-                reject(response.error);
-              } else {
-                resolve(response.payload ?? response);
+          (window as any).chrome.runtime.sendMessage(
+            extensionId,
+            message,
+            (response: any) => {
+              // Check for Chrome runtime errors
+              const lastError = (window as any).chrome?.runtime?.lastError;
+              if (lastError) {
+                console.error(`${TAG} chrome.runtime.lastError: ${lastError.message}`);
+                // Don't reject yet — window.postMessage fallback may succeed
+                return;
+              }
+
+              if (response && response.source === TF_SOURCE_EXTENSION && !resolved) {
+                resolved = true;
+                clearTimeout(timer);
+                this.pendingRequests.delete(requestId);
+
+                console.log(`${TAG} ✓ Received ${response.type} via chrome.runtime.sendMessage`);
+                console.log(`${TAG}   Version: ${response.version}`);
+                console.log(`${TAG}   Latency: ${Date.now() - message.timestamp}ms`);
+                if (response.payload) {
+                  console.log(`${TAG}   Payload:`, response.payload);
+                }
+                console.log(`${TAG} ────────────────────────────────────────`);
+
+                if (response.error) {
+                  reject(response.error);
+                } else {
+                  resolve(response.payload ?? response);
+                }
               }
             }
-          });
-        } catch {
-          // Fall back to window.postMessage
+          );
+        } catch (err) {
+          console.error(`${TAG} chrome.runtime.sendMessage threw:`, err);
+          // Fall through to window.postMessage
         }
-      }
-
-      // Method B: Dispatch window.postMessage
-      if (typeof window !== "undefined") {
-        console.log(`[TradeFourge Web] Dispatching ${type} via window.postMessage...`);
-        window.postMessage(message, "*");
+      } else {
+        if (!extensionId) {
+          console.warn(`${TAG} No Extension ID available. Extension may not be installed.`);
+          console.warn(`${TAG} Expected DOM attribute: data-tradefourge-extension-id`);
+          console.warn(`${TAG} chrome.runtime available: ${!!(typeof window !== "undefined" && (window as any).chrome?.runtime)}`);
+        }
+        // Fallback: window.postMessage (only works if content script is in the same tab)
+        if (typeof window !== "undefined") {
+          console.log(`${TAG} Fallback: Dispatching via window.postMessage`);
+          window.postMessage(message, "*");
+        }
       }
     });
   }
 
+  /**
+   * Subscribe to specific extension message types.
+   */
   public subscribe(type: string, callback: EventCallback): () => void {
     if (!this.eventSubscribers.has(type)) {
       this.eventSubscribers.set(type, new Set());
@@ -173,5 +279,13 @@ export class CompanionBridge {
 
   public getBrowser(): "Chrome" | "Edge" | "Firefox" | "Brave" | "Unknown" {
     return this.browserName;
+  }
+
+  public getExtensionId(): string | null {
+    return this.refreshExtensionId();
+  }
+
+  public hasChromeRuntime(): boolean {
+    return typeof window !== "undefined" && !!(window as any).chrome?.runtime?.sendMessage;
   }
 }

@@ -1,11 +1,22 @@
 /**
- * TradeFourge Companion Extension v3.2 — Background Service Worker
- * Manages Manifest V3 cross-tab messaging pipeline between TradeFourge Website and Exness Content Script.
+ * TradeFourge Companion Extension v3.3 — Background Service Worker
+ * Fully instrumented Manifest V3 cross-tab messaging pipeline.
+ *
+ * Message flow:
+ *   Website → chrome.runtime.sendMessage(extensionId, msg)
+ *     → onMessageExternal listener (this file)
+ *       → For PING: respond directly with PONG
+ *       → For DISCOVER_ACCOUNTS / IMPORT: forward to Exness content script via chrome.tabs.sendMessage
+ *         → Content script responds → background forwards response → website callback
  */
 
-console.log('[TradeFourge Background] Companion Extension Service Worker Initializing...');
+const VERSION = '3.3.0';
+const TAG = '[TradeFourge Background]';
 
-// Helper to query active Exness tabs
+console.log(`${TAG} Service Worker v${VERSION} initializing...`);
+
+// ─── Tab Discovery ──────────────────────────────────────────────────────────
+
 async function getExnessTabs() {
   if (typeof chrome === 'undefined' || !chrome.tabs) return [];
   return new Promise((resolve) => {
@@ -17,134 +28,181 @@ async function getExnessTabs() {
           'https://*.exness.me/*',
           'https://*.exness.link/*',
           'https://*.exness-trade.com/*',
+          'https://*.exness-trade.pro/*',
           'https://*.exness.cloud/*',
         ],
       },
-      (tabs) => {
-        resolve(tabs || []);
-      }
+      (tabs) => resolve(tabs || [])
     );
   });
 }
 
-// Helper to query active TradeFourge Web tabs
-async function getWebTabs() {
-  if (typeof chrome === 'undefined' || !chrome.tabs) return [];
-  return new Promise((resolve) => {
-    chrome.tabs.query(
-      {
-        url: [
-          'http://localhost/*',
-          'http://127.0.0.1/*',
-          'https://*.tradefourge.com/*',
-          'https://*.vercel.app/*',
-        ],
+// ─── Message Handler ────────────────────────────────────────────────────────
+
+async function handleMessage(message, sender, sendResponse, isExternal) {
+  const type = message?.type || 'UNKNOWN';
+  const senderOrigin = sender?.url || sender?.origin || sender?.tab?.url || 'unknown';
+  const senderType = isExternal ? 'EXTERNAL (website)' : 'INTERNAL (content script)';
+
+  console.log(`${TAG} ────────────────────────────────────────`);
+  console.log(`${TAG} Received: ${type}`);
+  console.log(`${TAG} Source: ${senderType}`);
+  console.log(`${TAG} Origin: ${senderOrigin}`);
+  console.log(`${TAG} Extension ID: ${chrome.runtime.id}`);
+  console.log(`${TAG} Request ID: ${message?.requestId || 'none'}`);
+
+  // ── PING / GET_EXTENSION_INFO ──
+  if (type === 'PING' || type === 'GET_EXTENSION_INFO') {
+    const exnessTabs = await getExnessTabs();
+    console.log(`${TAG} Found ${exnessTabs.length} active Exness tab(s)`);
+
+    const pongResponse = {
+      source: 'tradefourge-extension',
+      type: 'PONG',
+      requestId: message.requestId || `pong_${Date.now()}`,
+      timestamp: Date.now(),
+      version: VERSION,
+      payload: {
+        isInstalled: true,
+        version: VERSION,
+        browser: 'Chrome',
+        status: 'connected',
+        latency: 0,
+        exnessTabsCount: exnessTabs.length,
+        extensionId: chrome.runtime.id,
       },
-      (tabs) => {
-        resolve(tabs || []);
-      }
-    );
-  });
-}
+    };
 
-// Handler for external messages directly from TradeFourge Web Page (via externally_connectable)
-if (typeof chrome !== 'undefined' && chrome.runtime) {
-  const handleIncomingWebMessage = async (message, sender, sendResponse) => {
-    const type = message?.type || 'UNKNOWN';
-    const senderUrl = sender?.url || sender?.origin || 'Website';
-    console.log(`[TradeFourge Background] Received ${type} from Website (${senderUrl})`);
+    console.log(`${TAG} Sending PONG → Website`);
+    console.log(`${TAG} ────────────────────────────────────────`);
+    sendResponse(pongResponse);
+    return;
+  }
 
-    if (type === 'PING' || type === 'GET_EXTENSION_INFO') {
-      const exnessTabs = await getExnessTabs();
-      console.log(`[TradeFourge Background] Found ${exnessTabs.length} active Exness tab(s).`);
+  // ── DISCOVER_ACCOUNTS ──
+  if (type === 'DISCOVER_ACCOUNTS') {
+    const exnessTabs = await getExnessTabs();
+    console.log(`${TAG} DISCOVER_ACCOUNTS: Found ${exnessTabs.length} Exness tab(s)`);
 
-      const pongResponse = {
-        source: 'tradefourge-extension',
-        type: 'PONG',
-        requestId: message.requestId || `pong_${Date.now()}`,
-        timestamp: Date.now(),
-        version: '3.2.0',
-        payload: {
-          isInstalled: true,
-          version: '3.2.0',
-          browser: 'Chrome',
-          status: 'connected',
-          latency: 18,
-          exnessTabsCount: exnessTabs.length,
-        },
-      };
+    if (exnessTabs.length > 0) {
+      const targetTab = exnessTabs[0];
+      console.log(`${TAG} Forwarding DISCOVER_ACCOUNTS → Exness Content Script (Tab ID: ${targetTab.id}, URL: ${targetTab.url})`);
 
-      console.log('[TradeFourge Background] Sending PONG response to Website.');
-      sendResponse(pongResponse);
-      return true;
-    }
-
-    if (type === 'DISCOVER_ACCOUNTS' || type === 'IMPORT_SELECTED_ACCOUNTS') {
-      const exnessTabs = await getExnessTabs();
-      if (exnessTabs.length > 0) {
-        console.log(`[TradeFourge Background] Forwarding ${type} to Exness Content Script (Tab ID: ${exnessTabs[0].id})...`);
-        chrome.tabs.sendMessage(exnessTabs[0].id, message, (response) => {
-          console.log(`[TradeFourge Background] Received response from Exness Content Script for ${type}. Forwarding to Website...`);
-          sendResponse(
-            response || {
-              source: 'tradefourge-extension',
-              type: type === 'DISCOVER_ACCOUNTS' ? 'ACCOUNT_LIST' : 'IMPORT_STARTED',
-              version: '3.2.0',
-              payload: [],
-            }
-          );
-        });
-        return true;
-      } else {
-        console.log(`[TradeFourge Background] No active Exness tab found for ${type}. Responding directly with local runtime state.`);
-        const fallbackResponse = {
+      chrome.tabs.sendMessage(targetTab.id, message, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(`${TAG} Error forwarding to content script:`, chrome.runtime.lastError.message);
+          sendResponse({
+            source: 'tradefourge-extension',
+            type: 'ACCOUNT_LIST',
+            requestId: message.requestId,
+            version: VERSION,
+            payload: [],
+            error: { code: 'EXNESS_NOT_OPEN', message: chrome.runtime.lastError.message },
+          });
+          return;
+        }
+        console.log(`${TAG} Received ACCOUNT_LIST from Exness Content Script. Forwarding → Website`);
+        sendResponse(response || {
           source: 'tradefourge-extension',
-          type: type === 'DISCOVER_ACCOUNTS' ? 'ACCOUNT_LIST' : 'IMPORT_STARTED',
+          type: 'ACCOUNT_LIST',
           requestId: message.requestId,
-          version: '3.2.0',
-          payload:
-            type === 'DISCOVER_ACCOUNTS'
-              ? [
-                  {
-                    account_number: '2200009441',
-                    account_name: 'Exness Standard MT5',
-                    broker: 'Exness',
-                    platform: 'MetaTrader 5',
-                    currency: 'USC',
-                    balance: 1532.50,
-                    equity: 1532.50,
-                    server: 'Exness-MT5Real6',
-                    account_type: 'Standard',
-                    history_count: 843,
-                    status: 'Ready',
-                    is_live: true,
-                  },
-                ]
-              : { stage: 'connecting', fetchedTrades: 0, totalTrades: 4862, percentage: 0 },
-        };
-        sendResponse(fallbackResponse);
-        return true;
-      }
+          version: VERSION,
+          payload: [],
+        });
+      });
+      return;
     }
 
+    // No Exness tabs — respond with empty or demo data
+    console.log(`${TAG} No Exness tabs open. Returning empty account list.`);
+    sendResponse({
+      source: 'tradefourge-extension',
+      type: 'ACCOUNT_LIST',
+      requestId: message.requestId,
+      version: VERSION,
+      payload: [],
+    });
+    return;
+  }
+
+  // ── IMPORT_SELECTED_ACCOUNTS ──
+  if (type === 'IMPORT_SELECTED_ACCOUNTS') {
+    const exnessTabs = await getExnessTabs();
+    console.log(`${TAG} IMPORT_SELECTED_ACCOUNTS: Found ${exnessTabs.length} Exness tab(s)`);
+
+    if (exnessTabs.length > 0) {
+      const targetTab = exnessTabs[0];
+      console.log(`${TAG} Forwarding IMPORT_SELECTED_ACCOUNTS → Exness Content Script (Tab ID: ${targetTab.id})`);
+
+      chrome.tabs.sendMessage(targetTab.id, message, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error(`${TAG} Error forwarding to content script:`, chrome.runtime.lastError.message);
+          sendResponse({
+            source: 'tradefourge-extension',
+            type: 'IMPORT_STARTED',
+            requestId: message.requestId,
+            version: VERSION,
+            payload: { stage: 'error', fetchedTrades: 0, totalTrades: 0, percentage: 0 },
+            error: { code: 'IMPORT_FAILED', message: chrome.runtime.lastError.message },
+          });
+          return;
+        }
+        console.log(`${TAG} Received IMPORT response from Content Script. Forwarding → Website`);
+        sendResponse(response);
+      });
+      return;
+    }
+
+    console.log(`${TAG} No Exness tabs open. Cannot import.`);
+    sendResponse({
+      source: 'tradefourge-extension',
+      type: 'IMPORT_STARTED',
+      requestId: message.requestId,
+      version: VERSION,
+      payload: { stage: 'error', fetchedTrades: 0, totalTrades: 0, percentage: 0 },
+      error: { code: 'EXNESS_NOT_OPEN', message: 'No Exness tab is open. Please log into Exness first.' },
+    });
+    return;
+  }
+
+  // ── HEARTBEAT ──
+  if (type === 'HEARTBEAT') {
+    console.log(`${TAG} HEARTBEAT received. Responding alive.`);
     sendResponse({
       source: 'tradefourge-extension',
       type: 'PONG',
-      version: '3.2.0',
-      payload: { isInstalled: true, status: 'active' },
+      requestId: message.requestId,
+      version: VERSION,
+      payload: { status: 'alive', latency: 0 },
     });
-    return true;
-  };
+    return;
+  }
 
+  // ── DEFAULT ──
+  console.log(`${TAG} Unhandled message type: ${type}. Sending generic PONG.`);
+  sendResponse({
+    source: 'tradefourge-extension',
+    type: 'PONG',
+    requestId: message.requestId,
+    version: VERSION,
+    payload: { isInstalled: true, status: 'active' },
+  });
+}
+
+// ─── Listener Registration ──────────────────────────────────────────────────
+
+if (typeof chrome !== 'undefined' && chrome.runtime) {
+  // External messages from web pages (via externally_connectable)
   chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
-    handleIncomingWebMessage(message, sender, sendResponse);
-    return true;
+    handleMessage(message, sender, sendResponse, true);
+    return true; // Keep sendResponse channel open for async
   });
 
+  // Internal messages from content scripts
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    const type = message?.type || 'UNKNOWN';
-    console.log(`[TradeFourge Background] Received internal ${type} message from content script (${sender?.tab?.url || 'extension'}).`);
-    handleIncomingWebMessage(message, sender, sendResponse);
-    return true;
+    handleMessage(message, sender, sendResponse, false);
+    return true; // Keep sendResponse channel open for async
   });
+
+  console.log(`${TAG} Listeners registered: onMessageExternal + onMessage`);
 }

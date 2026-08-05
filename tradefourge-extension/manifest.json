@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TradeFourge Companion",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Official TradeFourge Companion Extension — Multi-Broker Adapter & Runtime Intelligence Engine",
   "icons": {
     "16": "icons/icon16.png",
@@ -25,7 +25,8 @@
       "http://localhost/*",
       "http://127.0.0.1/*",
       "https://*.tradefourge.com/*",
-      "https://*.vercel.app/*"
+      "https://*.vercel.app/*",
+      "https://tradefourge.vercel.app/*"
     ]
   },
   "content_scripts": [
@@ -34,14 +35,22 @@
         "http://localhost/*",
         "http://127.0.0.1/*",
         "https://*.tradefourge.com/*",
-        "https://terminal.exness.com/*",
-        "https://terminal.exness.org/*",
-        "https://terminal.exness.link/*",
-        "https://terminal.exness.me/*",
+        "https://*.vercel.app/*",
+        "https://tradefourge.vercel.app/*"
+      ],
+      "js": ["injector.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
         "https://my.exness.com/*",
         "https://my.exness.org/*",
         "https://my.exness.link/*",
         "https://my.exness.me/*",
+        "https://terminal.exness.com/*",
+        "https://terminal.exness.org/*",
+        "https://terminal.exness.link/*",
+        "https://terminal.exness.me/*",
         "https://*.exness.com/*",
         "https://*.exness.org/*",
         "https://*.exness.link/*",
@@ -58,7 +67,8 @@
     {
       "resources": [
         "dist/content.js",
-        "dist/background.js"
+        "dist/background.js",
+        "injector.js"
       ],
       "matches": ["<all_urls>"]
     }

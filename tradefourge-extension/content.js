@@ -1,6 +1,7 @@
 /**
- * TradeFourge Companion Extension v3.1 — Content Script Entry
- * Injects modular BridgeDispatcher, BrokerAdapter engines, and EventBus into DOM.
+ * TradeFourge Companion Extension v3.3 — Exness Content Script Entry
+ * Injected into Exness broker pages only.
+ * Initializes BridgeDispatcher, BrokerAdapter engines, and EventBus.
  */
 
 import { BridgeDispatcher } from './src/bridge/dispatcher.js';
@@ -9,20 +10,26 @@ import { Logger } from './src/logger/Logger.js';
 (function () {
   'use strict';
 
+  // Prevent double-injection
   if (document.documentElement.dataset.tradefourgeV3Injected) {
     return;
   }
   document.documentElement.dataset.tradefourgeV3Injected = 'true';
 
-  console.log('[TradeFourge Companion] Content Script Loaded');
-  Logger.success('ContentScript', 'TradeFourge Companion Extension v3.1 initializing...');
+  const TAG = '[TradeFourge Companion]';
+
+  console.log(`${TAG} Content Script Loaded (Exness Page)`);
+  console.log(`${TAG} URL: ${window.location.href}`);
+  console.log(`${TAG} Extension ID: ${chrome.runtime.id}`);
+  Logger.success('ContentScript', 'TradeFourge Companion Extension v3.3 initializing on Exness page...');
 
   try {
     BridgeDispatcher.getInstance().init();
-    console.log('[TradeFourge Companion] Bridge Initialized');
-    console.log('[TradeFourge Companion] Listening for Website Messages');
+    console.log(`${TAG} Bridge Initialized`);
+    console.log(`${TAG} Listening for Background Messages via chrome.runtime.onMessage`);
+    console.log(`${TAG} Listening for Website Messages via window.postMessage (fallback)`);
   } catch (err) {
-    console.error('[TradeFourge Companion] Failed to initialize BridgeDispatcher', err);
+    console.error(`${TAG} Failed to initialize BridgeDispatcher`, err);
     Logger.error('ContentScript', 'Failed to initialize BridgeDispatcher', err);
   }
 })();
