@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "TradeFourge Companion",
+  "version": "1.0.0",
+  "description": "Official TradeFourge Companion Extension — Web Terminal Bridge & Interceptor",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "TradeFourge Companion"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://terminal.exness.com/*",
+        "https://terminal.exness.org/*",
+        "https://terminal.exness.link/*",
+        "https://terminal.exness.me/*",
+        "https://my.exness.com/*",
+        "https://my.exness.org/*",
+        "https://my.exness.link/*",
+        "https://my.exness.me/*",
+        "https://*.exness.com/*",
+        "https://*.exness.org/*",
+        "https://*.exness.link/*",
+        "https://*.exness.me/*",
+        "https://*.exness-trade.com/*",
+        "https://*.exness-trade.pro/*",
+        "https://*.exness.cloud/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["https://*/*"]
+    }
+  ],
+  "permissions": [
+    "storage"
+  ]
+}

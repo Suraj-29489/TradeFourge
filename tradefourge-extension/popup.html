@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradeFourge Companion</title>
+  <link rel="stylesheet" href="styles/popup.css">
+</head>
+<body>
+  <div class="header">
+    <div class="header-icon">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <div class="title-group">
+      <h1>TradeFourge Companion</h1>
+      <span class="version-tag">Version 1.0</span>
+    </div>
+  </div>
+
+  <div class="status-grid">
+    <div class="status-card">
+      <span class="card-label">Status</span>
+      <span class="card-value" id="ext-status">
+        <span class="badge-dot"></span>
+        Extension Loaded
+      </span>
+    </div>
+
+    <div class="status-card">
+      <span class="card-label">Website</span>
+      <span class="card-value" id="site-status">
+        <span class="badge-dot disconnected" id="site-dot"></span>
+        <span id="site-text">Checking...</span>
+      </span>
+    </div>
+
+    <div class="status-card">
+      <span class="card-label">Messages Captured</span>
+      <span class="counter-value" id="message-count">0</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    TradeFourge Interceptor v1.0 — Idle Mode
+  </div>
+
+  <script src="utils/validator.js"></script>
+  <script src="utils/storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
