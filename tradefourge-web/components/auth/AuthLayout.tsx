@@ -71,26 +71,26 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
         </div>
 
         {/* Right Side: Auth Form Container (7 cols on lg) */}
-        <div className="lg:col-span-7 flex flex-col justify-center items-center p-6 sm:p-12 relative">
+        <div className="lg:col-span-7 flex flex-col justify-center items-center p-6 sm:p-12 relative bg-[#090D14]">
           {/* Mobile Back Link */}
           <div className="absolute top-6 left-6 lg:hidden">
-            <Link href="/" className="flex items-center gap-2 text-xs font-mono text-purple-400 hover:text-purple-300">
+            <Link href="/" className="flex items-center gap-2 text-xs font-mono text-blue-400 hover:text-blue-300">
               <Zap className="w-4 h-4" /> TRADEFOURGE
             </Link>
           </div>
 
-          <div className="w-full max-w-md space-y-8 my-auto">
-            <div className="space-y-2 text-center lg:text-left">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <div className="w-full max-w-md space-y-6 my-auto">
+            <div className="space-y-1.5 text-center lg:text-left">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-sans">
                 {title}
               </h1>
-              <p className="text-sm text-gray-400">
+              <p className="text-xs text-gray-400 font-mono">
                 {subtitle}
               </p>
             </div>
 
             {/* Main Auth Form Box */}
-            <div className="p-6 sm:p-8 rounded-3xl bg-[#111726]/80 border border-white/10 shadow-2xl backdrop-blur-xl space-y-6">
+            <div className="p-6 sm:p-8 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-xl space-y-6">
               {children}
             </div>
           </div>
@@ -99,3 +99,4 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
     </div>
   );
 };
+

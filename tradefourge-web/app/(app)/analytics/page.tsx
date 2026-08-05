@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React from "react";
+import { PerformanceLabView } from "@/components/performance/PerformanceLabView";
 
-export default function AnalyticsRedirect() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace("/admin-controls?tab=analytics");
-  }, [router]);
-  return null;
+export default function AnalyticsPage() {
+  return (
+    <div className="space-y-6">
+      <PerformanceLabView />
+    </div>
+  );
 }

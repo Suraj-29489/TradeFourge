@@ -54,39 +54,14 @@ interface NavSection {
 const BASE_NAV_SECTIONS: NavSection[] = [
   {
     items: [
-      { name: "Dashboard",        href: "/dashboard",       icon: LayoutDashboard },
-      { name: "Performance Lab",  href: "/performance",     icon: BarChart3 },
-    ],
-  },
-  {
-    label: "Toolkit",
-    items: [
-      { name: "Playbook Library", href: "/playbook",        icon: BookOpen },
-      { name: "Goals & Discipline", href: "/goals",          icon: Target },
-      { name: "Weekly & Monthly Reviews", href: "/reviews", icon: CalendarDays },
-    ],
-  },
-  {
-    label: "Journal",
-    items: [
-      { name: "Trade Journal",    href: "/journal",         icon: TableProperties },
-      { name: "Trading Accounts", href: "/accounts",        icon: Wallet },
-      { name: "Live Accounts",    href: "/live-accounts",   icon: Radio },
-      { name: "Sync History",     href: "/sync-history",    icon: Activity },
-      { name: "Upload CSV",       href: "/upload",          icon: Upload },
-      { name: "Import History",   href: "/import-history",  icon: History },
-      { name: "Calendar",         href: "/calendar",        icon: CalendarDays },
-    ],
-  },
-  {
-    label: "Account",
-    items: [
-      { name: "Trader Profile",   href: "/profile",         icon: User },
-      { name: "Settings",         href: "/settings",        icon: Settings },
-      { name: "Notifications",    href: "/notifications",   icon: Bell },
-      { name: "Billing & Plans",  href: "/billing",         icon: CreditCard },
-      { name: "API Keys",         href: "/api-keys",        icon: Key },
-      { name: "Security",         href: "/security",        icon: ShieldCheck },
+      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Accounts", href: "/accounts", icon: Wallet },
+      { name: "Journal", href: "/journal", icon: TableProperties },
+      { name: "Trades", href: "/trades", icon: Activity },
+      { name: "Calendar", href: "/calendar", icon: CalendarDays },
+      { name: "Analytics", href: "/analytics", icon: BarChart3 },
+      { name: "Reports", href: "/reports", icon: BookOpen },
+      { name: "Settings", href: "/settings", icon: Settings },
     ],
   },
 ];
@@ -94,15 +69,11 @@ const BASE_NAV_SECTIONS: NavSection[] = [
 const OWNER_NAV_SECTION: NavSection = {
   label: "ADMIN CONTROLS",
   items: [
-    { name: "Admin Controls",   href: "/admin-controls",                 icon: ShieldCheck },
-    { name: "Users",            href: "/admin-controls?tab=users",            icon: Users },
-    { name: "Monitoring",       href: "/admin-controls?tab=monitoring",       icon: Activity },
-    { name: "Analytics",        href: "/admin-controls?tab=analytics",        icon: BarChart3 },
-    { name: "Billing",          href: "/admin-controls?tab=billing",          icon: CreditCard },
-    { name: "Feature Flags",    href: "/admin-controls?tab=feature-flags",    icon: Sliders },
-    { name: "Feedback",         href: "/admin-controls?tab=feedback",         icon: MessageSquare },
-    { name: "Announcements",    href: "/admin-controls?tab=announcements",    icon: Megaphone },
-    { name: "Developer Tools",  href: "/admin-controls?tab=developer-tools",  icon: Terminal },
+    { name: "Admin Controls", href: "/admin-controls", icon: ShieldCheck },
+    { name: "Users", href: "/admin-controls?tab=users", icon: Users },
+    { name: "Monitoring", href: "/admin-controls?tab=monitoring", icon: Activity },
+    { name: "Feature Flags", href: "/admin-controls?tab=feature-flags", icon: Sliders },
+    { name: "Developer Tools", href: "/admin-controls?tab=developer-tools", icon: Terminal },
   ],
 };
 
@@ -123,29 +94,44 @@ function NavLink({
   isActive,
   collapsed,
   onClick,
+  requiresAccount,
+  hasAccounts,
+  onRequireAccount,
 }: {
   item: NavItem;
   isActive: boolean;
   collapsed: boolean;
   onClick?: () => void;
+  requiresAccount?: boolean;
+  hasAccounts?: boolean;
+  onRequireAccount?: () => void;
 }) {
   const Icon = item.icon;
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (requiresAccount && !hasAccounts && onRequireAccount) {
+      e.preventDefault();
+      onRequireAccount();
+      return;
+    }
+    if (onClick) onClick();
+  };
+
   return (
-    <Link href={item.href} onClick={onClick} className="block relative">
+    <Link href={item.href} onClick={handleClick} className="block relative">
       <div
         className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-xl font-mono text-xs font-medium transition-all duration-200 group",
+          "flex items-center gap-3 px-3 py-2 rounded-xl font-mono text-xs font-medium transition-all duration-150 group",
           isActive
-            ? "bg-purple-500/10 text-white border border-purple-500/20 font-bold"
-            : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
+            ? "bg-blue-500/10 text-white border border-blue-500/30 font-bold"
+            : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]"
         )}
         title={collapsed ? item.name : undefined}
       >
         <Icon
           className={cn(
-            "w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-105",
-            isActive ? "text-purple-400" : "text-gray-400 group-hover:text-gray-200"
+            "w-4 h-4 shrink-0 transition-transform duration-150 group-hover:scale-105",
+            isActive ? "text-blue-400" : "text-gray-400 group-hover:text-gray-200"
           )}
         />
         <AnimatePresence>
@@ -154,7 +140,7 @@ function NavLink({
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
-              className="whitespace-nowrap truncate"
+              className="whitespace-nowrap truncate font-sans text-xs"
             >
               {item.name}
             </motion.span>
@@ -164,7 +150,7 @@ function NavLink({
         {isActive && (
           <motion.div
             layoutId="sidebar-active-indicator"
-            className="absolute right-2 w-1.5 h-4 rounded-full bg-purple-500/80"
+            className="absolute right-2 w-1.5 h-4 rounded-full bg-blue-500"
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           />
         )}
@@ -193,10 +179,14 @@ function SectionLabel({ label, collapsed }: { label: string; collapsed: boolean 
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMobile }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [isOwnerState, setIsOwnerState] = useState(false);
-  const { profile } = useUserProfile();
+  const [guardrailModalOpen, setGuardrailModalOpen] = useState(false);
+  const { profile, accounts } = useUserProfile();
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
+
+  const hasAccounts = accounts && accounts.length > 0;
+  const restrictedHrefs = ["/trades", "/analytics", "/reports", "/calendar"];
 
   useEffect(() => {
     (async () => {
@@ -296,6 +286,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                           isActive={isActive(item.href)}
                           collapsed={false}
                           onClick={handleNavClick}
+                          requiresAccount={restrictedHrefs.includes(item.href)}
+                          hasAccounts={hasAccounts}
+                          onRequireAccount={() => setGuardrailModalOpen(true)}
                         />
                       ))}
                     </div>
@@ -373,6 +366,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                   item={item}
                   isActive={isActive(item.href)}
                   collapsed={collapsed}
+                  requiresAccount={restrictedHrefs.includes(item.href)}
+                  hasAccounts={hasAccounts}
+                  onRequireAccount={() => setGuardrailModalOpen(true)}
                 />
               ))}
             </div>
@@ -409,6 +405,58 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
     <>
       {MobileDrawer}
       {DesktopSidebar}
+
+      {/* Account Required Guardrail Modal */}
+      <AnimatePresence>
+        {guardrailModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-mono text-xs">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setGuardrailModalOpen(false)}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative z-10 w-full max-w-sm p-6 rounded-2xl bg-[#0F141C] border border-blue-500/40 shadow-2xl space-y-4 text-center"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center mx-auto">
+                <Wallet className="w-6 h-6" />
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-white font-sans">Account Connection Required</h3>
+                <p className="text-xs text-gray-400">
+                  You need to connect a trading account first before accessing detailed trade analytics, reports, or journal.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  onClick={() => setGuardrailModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-gray-300 font-bold transition-all text-xs"
+                >
+                  Dismiss
+                </button>
+                <button
+                  onClick={() => {
+                    setGuardrailModalOpen(false);
+                    router.push("/connect");
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all text-xs shadow-sm flex items-center justify-center gap-1.5"
+                >
+                  <span>Connect Now</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

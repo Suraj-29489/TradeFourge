@@ -266,15 +266,15 @@ export default function DashboardPage() {
       {mixedCurrency && <MixedCurrencyBanner />}
       <AnnouncementBanner />
       {/* ── SECTION 1: Welcome Header Strip ──────────────────────────────── */}
-      <div className="p-5 rounded-2xl bg-[#111726] border border-white/10 flex flex-col lg:flex-row lg:items-center justify-between gap-5 shadow-2xl">
+      <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] flex flex-col lg:flex-row lg:items-center justify-between gap-5 shadow-sm font-mono">
         {/* Left: Greeting + User Identity + Active Account */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl md:text-2xl font-extrabold text-white tracking-tight">
+            <h1 className="text-xl md:text-2xl font-bold font-sans text-white tracking-tight">
               {greeting}, {profile?.full_name || "Trader"}
             </h1>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-600/20 text-purple-300 border border-purple-500/30 uppercase">
-              Pro Terminal
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase font-mono">
+              Terminal
             </span>
           </div>
 
@@ -302,40 +302,31 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Right: Productivity Quick Actions (Top-Right Shortcuts) */}
+        {/* Right: Productivity Quick Actions */}
         <div className="flex items-center gap-2 flex-wrap shrink-0">
           <Link
-            href="/upload"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all active:scale-95"
+            href="/connect"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all text-xs"
           >
-            <Upload className="w-4 h-4" />
+            <Zap className="w-3.5 h-3.5" />
+            <span>Connect Companion</span>
+          </Link>
+
+          <Link
+            href="/upload"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-gray-200 font-bold transition-all text-xs"
+          >
+            <Upload className="w-3.5 h-3.5 text-gray-400" />
             <span>Import CSV</span>
           </Link>
 
           <Link
             href="/journal"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 font-bold transition-all active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-gray-200 font-bold transition-all text-xs"
           >
-            <TableProperties className="w-4 h-4 text-purple-400" />
-            <span>Open Journal</span>
+            <TableProperties className="w-3.5 h-3.5 text-blue-400" />
+            <span>Journal</span>
           </Link>
-
-          <Link
-            href="/performance"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 font-bold transition-all active:scale-95"
-          >
-            <BarChart3 className="w-4 h-4 text-indigo-400" />
-            <span>Performance Lab</span>
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setIsAddAccountModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 font-bold transition-all active:scale-95"
-          >
-            <Plus className="w-4 h-4 text-emerald-400" />
-            <span>Add Account</span>
-          </button>
         </div>
       </div>
 

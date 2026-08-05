@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle, CheckCircle2, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getAuthCallbackUrl, sanitizeSupabaseUrl } from "@/lib/supabase/config";
+import { useOnboardingStore } from "@/lib/store/useOnboardingStore";
 
 function LoginFormContent() {
   const router = useRouter();
@@ -61,9 +62,14 @@ function LoginFormContent() {
         setErrorMessage(error.message);
         setLoading(false);
       } else if (data.session) {
-        setSuccessMessage("Authentication successful. Opening terminal...");
+        setSuccessMessage("Authentication successful. Verification complete...");
+        const hasCompletedOnboarding = useOnboardingStore.getState().hasCompletedOnboarding;
         setTimeout(() => {
-          router.push("/dashboard");
+          if (!hasCompletedOnboarding) {
+            router.push("/connect");
+          } else {
+            router.push("/dashboard");
+          }
           router.refresh();
         }, 300);
       }
@@ -135,8 +141,8 @@ function LoginFormContent() {
       )}
 
       {/* Email Input */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-mono font-medium text-gray-300 block">
+      <div className="space-y-1.5 font-mono">
+        <label className="text-[11px] font-medium text-gray-300 block">
           Email Address
         </label>
         <div className="relative">
@@ -148,21 +154,21 @@ function LoginFormContent() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="trader@tradefourge.com"
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+            placeholder="name@company.com"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-gray-500 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all font-mono"
           />
         </div>
       </div>
 
       {/* Password Input */}
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 font-mono">
         <div className="flex items-center justify-between">
-          <label className="text-xs font-mono font-medium text-gray-300 block">
+          <label className="text-[11px] font-medium text-gray-300 block">
             Password
           </label>
           <Link
             href="/forgot-password"
-            className="text-xs font-mono text-purple-400 hover:text-purple-300 transition-colors"
+            className="text-[11px] text-blue-400 hover:text-blue-300 transition-colors"
           >
             Forgot password?
           </Link>
@@ -177,7 +183,7 @@ function LoginFormContent() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••••••"
-            className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-gray-500 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all font-mono"
           />
           <button
             type="button"
@@ -190,16 +196,16 @@ function LoginFormContent() {
       </div>
 
       {/* Remember me checkbox */}
-      <div className="flex items-center">
+      <div className="flex items-center select-none font-mono">
         <input
           type="checkbox"
           id="remember"
           checked={remember}
           onChange={(e) => setRemember(e.target.checked)}
-          className="w-4 h-4 rounded border-gray-700 bg-white/5 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-900 cursor-pointer"
+          className="w-4 h-4 rounded border-white/20 bg-white/[0.03] text-blue-600 focus:ring-blue-500/50 cursor-pointer"
         />
-        <label htmlFor="remember" className="ml-2.5 text-xs text-gray-300 cursor-pointer">
-          Remember this session for 30 days
+        <label htmlFor="remember" className="ml-2 text-xs text-gray-300 cursor-pointer">
+          Remember this session
         </label>
       </div>
 
@@ -207,13 +213,13 @@ function LoginFormContent() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+        className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold font-mono text-xs shadow-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
       >
         {loading ? (
           <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
         ) : (
           <>
-            <span>{isVerifiedNotice ? "Continue to Sign In" : "Sign In to Terminal"}</span>
+            <span>{isVerifiedNotice ? "Continue to Sign In" : "Sign In"}</span>
             <ArrowRight className="w-4 h-4" />
           </>
         )}
@@ -222,9 +228,9 @@ function LoginFormContent() {
       {/* Social Divider */}
       <div className="relative my-4 text-center">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-white/10" />
+          <div className="w-full border-t border-white/[0.08]" />
         </div>
-        <span className="relative px-3 bg-[#111726] text-[11px] font-mono text-gray-500 uppercase">
+        <span className="relative px-3 bg-[#0F141C] text-[10px] font-mono text-gray-400 uppercase tracking-wider">
           Or Continue With
         </span>
       </div>
@@ -234,7 +240,7 @@ function LoginFormContent() {
         type="button"
         onClick={handleGoogleSignIn}
         disabled={googleLoading}
-        className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 font-semibold text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+        className="w-full py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-gray-200 font-medium font-mono text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
       >
         {googleLoading ? (
           <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -264,10 +270,10 @@ function LoginFormContent() {
       </button>
 
       {/* Link to Signup */}
-      <div className="pt-2 text-center text-xs text-gray-400">
-        Don't have a TradeFourge account?{" "}
-        <Link href="/signup" className="text-purple-400 font-bold hover:underline">
-          Create Account
+      <div className="pt-2 text-center text-xs font-mono text-gray-400">
+        Don't have an account?{" "}
+        <Link href="/signup" className="text-blue-400 font-bold hover:underline">
+          Sign up
         </Link>
       </div>
     </form>

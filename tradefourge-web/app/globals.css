@@ -2,31 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── TradeFourge v3.7.8 — Institutional SaaS Design System (Dark Only + Blue Accent) ─── */
+/* ─── TradeFourge Design System — Modern SaaS (ToolsFourge / Linear / Stripe Vibe) ─── */
 :root {
-  --dark-bg:       8 11 17;        /* #080B11 Deep Obsidian */
-  --dark-card:     15 20 32;       /* #0F1420 Sleek Graphite */
-  --dark-hover:    22 28 43;       /* #161C2B Elevated Surface */
-  --dark-subtle:   28 36 56;       /* #1C2438 Sub-surface */
-  --dark-border:   rgba(255, 255, 255, 0.08);
+  --dark-bg:       9 13 20;        /* #090D14 Neutral Dark Canvas */
+  --dark-card:     15 20 28;       /* #0F141C Surface Level 1 */
+  --dark-hover:    21 28 40;       /* #151C28 Interactive Surface Hover */
+  --dark-subtle:   28 36 52;       /* #1C2434 Secondary Surface */
+  --dark-border:   rgba(255, 255, 255, 0.07);
 
-  --accent-primary: #3B82F6;       /* Blue 500 — Calm Institutional Blue Accent */
-  --accent-hover:   #2563EB;       /* Blue 600 */
-  --accent-pressed: #1D4ED8;       /* Blue 700 */
-  --accent-subtle:  rgba(59, 130, 246, 0.12);
-  --accent-focus:   rgba(59, 130, 246, 0.35);
+  --accent-primary: #3B82F6;       /* Clean SaaS Blue Accent */
+  --accent-hover:   #2563EB;       /* Deep Blue Hover */
+  --accent-pressed: #1D4ED8;
+  --accent-subtle:  rgba(59, 130, 246, 0.1);
+  --accent-focus:   rgba(59, 130, 246, 0.25);
 
-  --body-bg: #080B11;
-  --body-text: #F9FAFB;
-  --body-text-muted: #9CA3AF;
-  --scrollbar-track: #080B11;
-  --scrollbar-thumb: #1C2438;
+  --body-bg: #090D14;
+  --body-text: #F8FAFC;
+  --body-text-muted: #94A3B8;
+  --scrollbar-track: #090D14;
+  --scrollbar-thumb: #1C2434;
 
-  --glass-bg: rgba(15, 20, 32, 0.88);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --input-bg: rgba(255, 255, 255, 0.035);
+  --glass-bg: rgba(15, 20, 28, 0.95);
+  --glass-border: rgba(255, 255, 255, 0.07);
+  --input-bg: rgba(255, 255, 255, 0.03);
   --input-border: rgba(255, 255, 255, 0.08);
-  --select-bg: #0F1420;
+  --select-bg: #0F141C;
 }
 
 @layer base {
@@ -40,78 +40,73 @@
     font-family: var(--font-inter);
     overflow-x: hidden;
     letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
   }
 
-  /* Custom Institutional Scrollbar */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  /* Custom Modern Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
   ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 9999px; }
   ::-webkit-scrollbar-thumb:hover { background: #3B82F6; }
 
-  /* Native Dark Select & Option Controls */
+  /* Native Select Controls */
   select {
-    background-color: #0F1420 !important;
-    color: #F9FAFB !important;
+    background-color: #0F141C !important;
+    color: #F8FAFC !important;
     border-color: rgba(255, 255, 255, 0.08) !important;
-    border-radius: 0.75rem;
+    border-radius: 0.5rem;
     padding-left: 0.75rem;
     padding-right: 0.75rem;
   }
 
   select option {
-    background-color: #0F1420 !important;
-    color: #F9FAFB !important;
+    background-color: #0F141C !important;
+    color: #F8FAFC !important;
     padding: 0.5rem;
-  }
-
-  select:focus option:checked {
-    background-color: #3B82F6 !important;
-    color: #FFFFFF !important;
   }
 }
 
 @layer utilities {
   .glass-card {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--glass-border);
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2), 0 8px 16px -4px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
   }
 
   .glass-card-hover {
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.2s ease;
   }
 
   .glass-card-hover:hover {
-    border-color: rgba(59, 130, 246, 0.35);
-    box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
-    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.3);
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, #FFFFFF 0%, #93C5FD 100%);
+    background: linear-gradient(180deg, #FFFFFF 0%, #CBD5E1 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .dropdown-menu {
-    background-color: #0F1420;
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background-color: #0F141C;
     border: 1px solid var(--dark-border);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
   }
 
   .theme-input {
     background: var(--input-bg);
     border-color: var(--input-border);
-    transition: border-color 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
 
   .theme-input:focus {
     border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
     outline: none;
   }
 }
+
