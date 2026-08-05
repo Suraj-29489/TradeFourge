@@ -15,6 +15,7 @@ TradeFourge/
 │   ├── components/               # UI components (Trading charts, forms, modals)
 │   ├── lib/                      # Analytics engines, Supabase client, MT5 bridge
 │   ├── middleware.ts             # Auth & route protection middleware
+│   ├── vercel.json               # Vercel deployment configuration
 │   └── package.json              # Web application dependencies
 │
 ├── tradefourge-extension/        # Chromium Companion Extension (V1.0)
@@ -43,27 +44,24 @@ TradeFourge/
 
 ### Vercel Project Setup
 
-When deploying this repository to **Vercel**, configure the project settings as follows:
+When deploying this repository to **Vercel**, the project is configured to use `tradefourge-web` as the **Root Directory**:
 
 1. **Root Directory Configuration**:
    - Go to **Vercel Dashboard** → Select Project → **Settings** → **General**.
-   - Under **Root Directory**, click **Edit**.
-   - Set the Root Directory to:
+   - Under **Root Directory**, set the value to:
      ```text
      tradefourge-web
      ```
    - Save the settings.
 
-2. **Framework Preset**:
+2. **Framework Preset & Build Commands**:
    - **Framework Preset**: `Next.js`
-
-3. **Build & Development Settings** (automatically inherited from `tradefourge-web/package.json`):
-   - **Build Command**: `npm run build` (or `next build`)
-   - **Output Directory**: `.next`
    - **Install Command**: `npm install`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `.next`
+   - **Start Command**: `npm start`
 
-4. **Automated Fallback (`vercel.json`)**:
-   - The repository includes a root `vercel.json` file which instructs Vercel to build from `tradefourge-web` automatically even if the Root Directory setting is left at root (`/`).
+Since Vercel executes all commands directly from inside `tradefourge-web`, do **not** prepend `cd tradefourge-web` to your custom build commands.
 
 ### Required Environment Variables
 
@@ -91,21 +89,21 @@ DATABASE_URL=postgresql://postgres:<password>@db.<your-supabase-project>.supabas
 To run the Next.js web application locally:
 
 ```bash
-# Option A: From monorepo root
-npm run dev:web
-
-# Option B: Navigate to package directory
+# From inside tradefourge-web directory
 cd tradefourge-web
 npm install
 npm run dev
+
+# Or from monorepo root
+npm run dev:web
 ```
 
 The app will start at `http://localhost:3000`.
 
-To build and test the production production bundle:
+To test building the production bundle locally inside `tradefourge-web`:
 
 ```bash
-npm run build:web
+npm run build
 ```
 
 ---
