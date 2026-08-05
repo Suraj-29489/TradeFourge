@@ -1,6 +1,6 @@
 /**
- * TradeFourge Companion v2.0 — Production Communication Bridge
- * Manages window.postMessage & chrome.runtime.sendMessage asynchronous dispatching.
+ * TradeFourge Companion v3.2 — Communication Bridge
+ * Asynchronous dispatching supporting window.postMessage & chrome.runtime.sendMessage cross-tab pipeline.
  */
 
 import {
@@ -25,8 +25,6 @@ export class CompanionBridge {
   private pendingRequests: Map<string, PendingRequest> = new Map();
   private eventSubscribers: Map<string, Set<EventCallback>> = new Map();
   private isInitialized = false;
-  private extensionInstalled = false;
-  private extensionVersion = "";
   private browserName: "Chrome" | "Edge" | "Firefox" | "Brave" | "Unknown" = "Unknown";
 
   public static getInstance(): CompanionBridge {
@@ -64,51 +62,36 @@ export class CompanionBridge {
     this.isInitialized = true;
 
     window.addEventListener("message", (event: MessageEvent) => {
-      // Ensure origin and source check
       if (!event.data || typeof event.data !== "object") return;
       const data = event.data as TFMessageEnvelope;
 
       if (data.source !== TF_SOURCE_EXTENSION) return;
 
-      // 1. Resolve pending request promises if requestId matches
+      console.log(`[TradeFourge Web] Received ${data.type} response from Extension via window.postMessage:`, data);
+
       if (data.requestId && this.pendingRequests.has(data.requestId)) {
         const pending = this.pendingRequests.get(data.requestId)!;
         clearTimeout(pending.timer);
         this.pendingRequests.delete(data.requestId);
 
         if (data.type === TF_MESSAGE_TYPES.ERROR || data.error) {
-          pending.reject(
-            data.error || {
-              code: "UNKNOWN_ERROR",
-              message: "An unknown error occurred during extension request.",
-            }
-          );
+          pending.reject(data.error);
         } else {
           pending.resolve(data.payload);
         }
       }
 
-      // 2. Notify event subscribers
       const subscribers = this.eventSubscribers.get(data.type);
       if (subscribers) {
         subscribers.forEach((cb) => cb(data));
       }
-
-      // Broadcast wildcard subscribers
-      const wildcardSubscribers = this.eventSubscribers.get("*");
-      if (wildcardSubscribers) {
-        wildcardSubscribers.forEach((cb) => cb(data));
-      }
     });
   }
 
-  /**
-   * Dispatch a message to the extension and wait for response.
-   */
   public async send<TResponse = any, TPayload = any>(
     type: TFMessageType,
     payload?: TPayload,
-    timeoutMs: number = 8000
+    timeoutMs: number = 6000
   ): Promise<TResponse> {
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     const message: TFMessageEnvelope<TPayload> = {
@@ -116,11 +99,15 @@ export class CompanionBridge {
       type,
       requestId,
       timestamp: Date.now(),
-      version: "2.0.0",
+      version: "3.2.0",
       payload,
     };
 
+    console.log(`[TradeFourge Web] Sending ${type} to Extension (requestId: ${requestId})...`);
+
     return new Promise<TResponse>((resolve, reject) => {
+      let resolved = false;
+
       const timer = setTimeout(() => {
         if (this.pendingRequests.has(requestId)) {
           this.pendingRequests.delete(requestId);
@@ -128,18 +115,14 @@ export class CompanionBridge {
             code: "TIMEOUT",
             message: `Request '${type}' timed out after ${timeoutMs}ms. Extension did not respond.`,
           };
+          console.warn(`[TradeFourge Web] Request '${type}' timed out.`);
           reject(error);
         }
       }, timeoutMs);
 
       this.pendingRequests.set(requestId, { resolve, reject, timer });
 
-      // Method A: Post message via window
-      if (typeof window !== "undefined") {
-        window.postMessage(message, "*");
-      }
-
-      // Method B: Send message via chrome.runtime.sendMessage if extension ID is known or injected
+      // Method A: Try chrome.runtime.sendMessage if available
       if (
         typeof window !== "undefined" &&
         (window as any).chrome &&
@@ -147,10 +130,13 @@ export class CompanionBridge {
         (window as any).chrome.runtime.sendMessage
       ) {
         try {
+          console.log(`[TradeFourge Web] Dispatching ${type} via chrome.runtime.sendMessage...`);
           (window as any).chrome.runtime.sendMessage(message, (response: any) => {
-            if (response && this.pendingRequests.has(requestId)) {
+            if (response && response.source === TF_SOURCE_EXTENSION && !resolved) {
+              resolved = true;
               clearTimeout(timer);
               this.pendingRequests.delete(requestId);
+              console.log(`[TradeFourge Web] Received ${response.type} response via chrome.runtime.sendMessage:`, response);
               if (response.error) {
                 reject(response.error);
               } else {
@@ -159,22 +145,24 @@ export class CompanionBridge {
             }
           });
         } catch {
-          // Fall back to window.postMessage handler
+          // Fall back to window.postMessage
         }
+      }
+
+      // Method B: Dispatch window.postMessage
+      if (typeof window !== "undefined") {
+        console.log(`[TradeFourge Web] Dispatching ${type} via window.postMessage...`);
+        window.postMessage(message, "*");
       }
     });
   }
 
-  /**
-   * Subscribe to specific extension message types (e.g. LIVE_EVENT, IMPORT_PROGRESS)
-   */
   public subscribe(type: string, callback: EventCallback): () => void {
     if (!this.eventSubscribers.has(type)) {
       this.eventSubscribers.set(type, new Set());
     }
     this.eventSubscribers.get(type)!.add(callback);
 
-    // Unsubscribe function
     return () => {
       const subscribers = this.eventSubscribers.get(type);
       if (subscribers) {
