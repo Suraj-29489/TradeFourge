@@ -14,161 +14,54 @@ import {
   RefreshCw,
   Sparkles,
   Server,
-  FileSpreadsheet,
   Check,
   Loader2,
   ChevronRight,
-  Wallet,
-  Activity,
-  Layers,
-  ArrowLeft,
   X,
   Database,
-  SlidersHorizontal,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { useOnboardingStore } from "@/lib/store/useOnboardingStore";
 import { useCompanion } from "@/lib/companion/provider";
 import { Checkbox } from "@/components/ui/Checkbox";
 
-interface DiscoveredAccountCard {
-  id: string;
-  account_name: string;
-  account_number: string;
-  broker: string;
-  platform: string;
-  currency: string;
-  balance: string;
-  historyTrades: number;
-  server: string;
-  type: "Standard" | "Cent" | "Demo" | "Archived";
-  status: "Ready" | "Syncing" | "Pending";
-  selected: boolean;
-}
-
-const INITIAL_DISCOVERED_ACCOUNTS: DiscoveredAccountCard[] = [
-  {
-    id: "ex-mt5-std",
-    account_name: "Standard MT5",
-    account_number: "2200009441",
-    broker: "Exness",
-    platform: "MetaTrader 5",
-    currency: "USC",
-    balance: "15.32 USC",
-    historyTrades: 843,
-    server: "Exness-MT5Real6",
-    type: "Standard",
-    status: "Ready",
-    selected: true,
-  },
-  {
-    id: "ex-mt5-cent",
-    account_name: "Standard Cent",
-    account_number: "8830194002",
-    broker: "Exness",
-    platform: "MetaTrader 5",
-    currency: "USD",
-    balance: "$4,500.00",
-    historyTrades: 1240,
-    server: "Exness-MT5Cent2",
-    type: "Cent",
-    status: "Ready",
-    selected: true,
-  },
-  {
-    id: "ex-mt5-pro",
-    account_name: "Pro Scalper",
-    account_number: "7749102911",
-    broker: "Exness",
-    platform: "MetaTrader 5",
-    currency: "USD",
-    balance: "$12,450.80",
-    historyTrades: 2779,
-    server: "Exness-MT5Real",
-    type: "Standard",
-    status: "Ready",
-    selected: true,
-  },
-  {
-    id: "ex-mt5-demo",
-    account_name: "Demo Test",
-    account_number: "1928471004",
-    broker: "Exness",
-    platform: "MetaTrader 5",
-    currency: "USD",
-    balance: "$10,000.00",
-    historyTrades: 0,
-    server: "Exness-MT5Trial",
-    type: "Demo",
-    status: "Ready",
-    selected: false,
-  },
-];
-
 export default function ConnectionWizardPage() {
   const router = useRouter();
   const { refreshAccounts } = useUserProfile();
   const setCompletedOnboarding = useOnboardingStore((s) => s.setCompletedOnboarding);
-  const updateCompanionInfo = useOnboardingStore((s) => s.updateCompanionInfo);
   const companion = useCompanion();
 
-  // Wizard Steps: 1: Method Choice, 2: Companion Waiting, 3: Account Discovery, 4: Import Progress, 5: Completion
+  // Wizard Steps: 1: Method Choice, 2: Companion Detection, 3: Account Discovery, 4: Import Progress, 5: Completion
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
-  // Connection Method choice
+  // Selected method choice
   const [selectedMethod, setSelectedMethod] = useState<"companion" | "csv" | "api">("companion");
 
-  // Checking state for manual ping
+  // Checking state for manual retry
   const [isChecking, setIsChecking] = useState(false);
+  const [isDiscovering, setIsDiscovering] = useState(false);
 
-  // Account discovery selection list
-  const [accounts, setAccounts] = useState<DiscoveredAccountCard[]>(INITIAL_DISCOVERED_ACCOUNTS);
-
-  // Import Progress Index
-  const [importStageIndex, setImportStageIndex] = useState(0);
-
-  const importStages = [
-    { title: "Connecting", desc: "Establishing secure bridge protocol" },
-    { title: "Discovering Accounts", desc: "Found 4 trading accounts" },
-    { title: "Fetching History", desc: "Downloading closed positions and orders" },
-    { title: "Importing Trades", desc: "Parsing tickets and commissions" },
-    { title: "Building Analytics", desc: "Calculating win rates and equity curve" },
-    { title: "Realtime Connection", desc: "WebSocket streaming ready" },
-  ];
-
-  // Open Companion Step 2 (Honest Waiting screen)
-  const startCompanionHandshake = () => {
-    setWizardStep(2);
+  // Trigger real account discovery when entering Step 3
+  const handleProceedToDiscovery = async () => {
+    setWizardStep(3);
+    setIsDiscovering(true);
+    await companion.discoverAccounts();
+    setIsDiscovering(false);
   };
 
-  // Toggle Account selection
-  const toggleAccount = (id: string) => {
-    setAccounts((prev) =>
-      prev.map((acc) => (acc.id === id ? { ...acc, selected: !acc.selected } : acc))
-    );
-  };
-
-  const selectedCount = accounts.filter((a) => a.selected).length;
-
-  // Execute Import Sequence
-  const handleStartImportSequence = async () => {
+  // Trigger real history import when clicking Import Selected Accounts
+  const handleStartRealImport = async () => {
+    if (companion.selectedAccountIds.length === 0) return;
     setWizardStep(4);
-    setImportStageIndex(0);
-
-    for (let i = 1; i < importStages.length; i++) {
-      await new Promise((res) => setTimeout(res, 900));
-      setImportStageIndex(i);
-    }
-
-    await new Promise((res) => setTimeout(res, 700));
-    updateCompanionInfo({
-      status: "connected",
-      accountsCount: selectedCount,
-      tradesCount: 4862,
-    });
-    setWizardStep(5); // Completion Screen
+    await companion.importSelectedAccounts(companion.selectedAccountIds);
   };
+
+  // Transition to completion screen when historyStatus becomes "Imported"
+  useEffect(() => {
+    if (wizardStep === 4 && companion.historyStatus === "Imported") {
+      setWizardStep(5);
+    }
+  }, [wizardStep, companion.historyStatus]);
 
   // Finish Onboarding and enter Dashboard
   const handleFinishOnboarding = async () => {
@@ -190,7 +83,7 @@ export default function ConnectionWizardPage() {
             TRADE<span className="text-blue-400">FOURGE</span>
           </span>
           <span className="text-[10px] text-gray-400 font-mono border-l border-white/10 pl-2.5">
-            Setup Wizard
+            Setup Wizard v2.0
           </span>
         </div>
 
@@ -215,7 +108,6 @@ export default function ConnectionWizardPage() {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-8 text-center"
             >
-              {/* Header Icon + Copy */}
               <div className="space-y-3">
                 <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto shadow-sm">
                   <Database className="w-7 h-7" />
@@ -282,9 +174,7 @@ export default function ConnectionWizardPage() {
                     </div>
                   </div>
 
-                  <div className="text-xs font-medium text-gray-400">
-                    Manual Upload
-                  </div>
+                  <div className="text-xs font-medium text-gray-400">Manual Upload</div>
                 </div>
 
                 {/* OPTION 3: Broker API (DISABLED - COMING SOON) */}
@@ -306,9 +196,7 @@ export default function ConnectionWizardPage() {
                     </div>
                   </div>
 
-                  <div className="text-[10px] text-gray-500 font-bold uppercase">
-                    Disabled
-                  </div>
+                  <div className="text-[10px] text-gray-500 font-bold uppercase">Disabled</div>
                 </div>
               </div>
 
@@ -324,7 +212,8 @@ export default function ConnectionWizardPage() {
                 <button
                   onClick={() => {
                     if (selectedMethod === "companion") {
-                      startCompanionHandshake();
+                      setWizardStep(2);
+                      companion.checkExtension();
                     } else if (selectedMethod === "csv") {
                       router.push("/upload");
                     }
@@ -338,7 +227,7 @@ export default function ConnectionWizardPage() {
             </motion.div>
           )}
 
-          {/* ── STEP 2: COMPANION SETUP WIZARD (HONEST WAITING SCREEN) ────────── */}
+          {/* ── STEP 2: REAL EXTENSION DETECTION (PHASE 4) ──────────────────── */}
           {wizardStep === 2 && (
             <motion.div
               key="step2"
@@ -355,18 +244,18 @@ export default function ConnectionWizardPage() {
                     <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
                   )}
                 </div>
-                <h2 className="text-xl font-bold text-white font-sans">TradeFourge Companion</h2>
+                <h2 className="text-xl font-bold text-white font-sans">TradeFourge Companion Detection</h2>
                 <p className="text-xs text-gray-400 leading-relaxed max-w-sm mx-auto">
                   {companion.isConnected
-                    ? "Companion Extension verified! Ready to discover trading accounts."
-                    : "Waiting for Companion Extension... To continue, install and enable the TradeFourge Companion Extension. The setup wizard will automatically continue once the extension responds."}
+                    ? "TradeFourge Companion Extension detected and verified! Ready to discover trading accounts."
+                    : "Waiting for TradeFourge Companion... To continue, install and enable the TradeFourge Companion Extension."}
                 </p>
               </div>
 
-              {/* Status Banner */}
+              {/* Real Connection Status Banner */}
               <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs text-left space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Runtime Status:</span>
+                  <span className="text-gray-400">Extension Bridge:</span>
                   <span className={companion.isConnected ? "text-emerald-400 font-bold" : "text-amber-400 font-bold flex items-center gap-1.5"}>
                     {!companion.isConnected && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                     {companion.isConnected ? "🟢 Extension Connected" : "🟡 Listening for Extension..."}
@@ -384,7 +273,7 @@ export default function ConnectionWizardPage() {
                 )}
               </div>
 
-              {/* Action Buttons */}
+              {/* Detection Action Buttons */}
               <div className="flex items-center justify-between pt-2">
                 <button
                   onClick={() => setWizardStep(1)}
@@ -404,112 +293,139 @@ export default function ConnectionWizardPage() {
                     className="px-4 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-gray-300 text-xs font-bold transition-all flex items-center gap-1.5"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isChecking ? "animate-spin" : ""}`} />
-                    <span>Check Again</span>
+                    <span>Retry Detection</span>
                   </button>
 
-                  {companion.isConnected ? (
-                    <button
-                      onClick={() => setWizardStep(3)}
-                      className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all"
-                    >
-                      <span>Continue to Accounts</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => companion.toggleMockInstallation()}
-                      className="px-4 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 font-bold text-xs transition-all"
-                    >
-                      Simulate Extension Found
-                    </button>
-                  )}
+                  <button
+                    onClick={handleProceedToDiscovery}
+                    disabled={!companion.isConnected || isDiscovering}
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition-all disabled:opacity-40"
+                  >
+                    {isDiscovering ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Discover Accounts</span>}
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* ── STEP 3: ACCOUNT DISCOVERY SCREEN ─────────────────────────────── */}
+          {/* ── STEP 3: REAL ACCOUNT DISCOVERY (PHASE 5) ─────────────────────── */}
           {wizardStep === 3 && (
             <motion.div
               key="step3"
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className="p-6 sm:p-8 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-2xl space-y-6"
+              className="p-6 sm:p-8 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-2xl space-y-6 font-mono"
             >
               {/* Header Info */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-5">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Companion Extension Connected
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Real Exness Account Bridge Active
                   </div>
                   <h2 className="text-xl font-bold text-white font-sans">Discovered Trading Accounts</h2>
                   <p className="text-xs text-gray-400">
-                    Select which discovered accounts to include in your centralized database.
+                    Accounts read directly from your Exness Companion Extension integration.
                   </p>
                 </div>
-                <div className="px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold flex items-center gap-2 shrink-0">
-                  <Radio className="w-4 h-4 animate-pulse text-blue-400" />
-                  <span>Exness Engine Active</span>
+
+                <button
+                  onClick={async () => {
+                    setIsDiscovering(true);
+                    await companion.discoverAccounts();
+                    setIsDiscovering(false);
+                  }}
+                  disabled={isDiscovering}
+                  className="px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-xs font-bold text-blue-400 flex items-center gap-1.5 shrink-0"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isDiscovering ? "animate-spin" : ""}`} />
+                  <span>Refresh Discovery</span>
+                </button>
+              </div>
+
+              {/* Discovered Account Cards List */}
+              {isDiscovering ? (
+                <div className="p-12 text-center space-y-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-400 mx-auto" />
+                  <p className="text-xs text-gray-400">Reading Exness accounts from Companion Extension...</p>
                 </div>
-              </div>
-
-              {/* Account Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {accounts.map((acc) => (
-                  <div
-                    key={acc.id}
-                    onClick={() => toggleAccount(acc.id)}
-                    className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 ${
-                      acc.selected
-                        ? "bg-blue-500/10 border-blue-500 text-white shadow-lg"
-                        : "bg-white/[0.02] border-white/[0.08] text-gray-400 hover:bg-white/[0.04]"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-base font-sans">{acc.account_name}</span>
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-gray-300">
-                            {acc.type}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-400 font-mono">Account #{acc.account_number}</div>
-                      </div>
-
-                      <Checkbox
-                        checked={acc.selected}
-                        onChange={() => toggleAccount(acc.id)}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/[0.06] text-xs">
-                      <div>
-                        <div className="text-[10px] text-gray-400 uppercase">Currency</div>
-                        <div className="font-bold text-gray-200">{acc.currency}</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-gray-400 uppercase">Balance</div>
-                        <div className="font-bold text-white">{acc.balance}</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-gray-400 uppercase">History</div>
-                        <div className="font-bold text-blue-400">{acc.historyTrades} Trades</div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1">
-                      <span>Server: {acc.server}</span>
-                      <span className="text-emerald-400 font-bold">● {acc.status}</span>
-                    </div>
+              ) : companion.discoveredAccounts.length === 0 ? (
+                <div className="p-10 rounded-xl bg-white/[0.02] border border-white/[0.06] text-center space-y-4">
+                  <AlertCircle className="w-8 h-8 text-amber-400 mx-auto" />
+                  <div className="space-y-1 max-w-sm mx-auto">
+                    <h3 className="text-sm font-bold text-white font-sans">No Exness Accounts Discovered</h3>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Please ensure your Exness Web Terminal is logged in, then click Refresh Discovery.
+                    </p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {companion.discoveredAccounts.map((acc) => {
+                    const isSelected = companion.selectedAccountIds.includes(acc.account_number);
+
+                    return (
+                      <div
+                        key={acc.account_number}
+                        onClick={() => companion.toggleAccountSelection(acc.account_number)}
+                        className={`p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-4 ${
+                          isSelected
+                            ? "bg-blue-500/10 border-blue-500 text-white shadow-lg"
+                            : "bg-white/[0.02] border-white/[0.08] text-gray-400 hover:bg-white/[0.04]"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white text-base font-sans">{acc.account_name}</span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/10 text-gray-300">
+                                {acc.account_type}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-400 font-mono">Account #{acc.account_number}</div>
+                          </div>
+
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={() => companion.toggleAccountSelection(acc.account_number)}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/[0.06] text-xs">
+                          <div>
+                            <div className="text-[10px] text-gray-400 uppercase">Currency</div>
+                            <div className="font-bold text-gray-200">{acc.currency}</div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] text-gray-400 uppercase">Balance</div>
+                            <div className="font-bold text-white">
+                              {acc.currency === "USC"
+                                ? `${acc.balance} USC`
+                                : `$${acc.balance.toLocaleString()}`}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] text-gray-400 uppercase">History</div>
+                            <div className="font-bold text-blue-400">{acc.history_count} Trades</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1">
+                          <span>Server: {acc.server}</span>
+                          <span className="text-emerald-400 font-bold">● {acc.status}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Bottom Bar Selection Summary & CTA */}
               <div className="flex items-center justify-between pt-4 border-t border-white/[0.08]">
                 <div className="text-xs font-mono text-gray-300">
-                  Selected <strong className="text-white font-bold">{selectedCount} Accounts</strong>
+                  Selected{" "}
+                  <strong className="text-white font-bold">{companion.selectedAccountIds.length} Accounts</strong>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -521,11 +437,11 @@ export default function ConnectionWizardPage() {
                   </button>
 
                   <button
-                    onClick={handleStartImportSequence}
-                    disabled={selectedCount === 0}
+                    onClick={handleStartRealImport}
+                    disabled={companion.selectedAccountIds.length === 0}
                     className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm flex items-center gap-2 transition-all disabled:opacity-40"
                   >
-                    <span>Import Selected Accounts ({selectedCount})</span>
+                    <span>Import Selected Accounts ({companion.selectedAccountIds.length})</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -533,91 +449,71 @@ export default function ConnectionWizardPage() {
             </motion.div>
           )}
 
-          {/* ── STEP 4: IMPORT PROGRESS EXPERIENCE ──────────────────────────── */}
+          {/* ── STEP 4: REAL HISTORY IMPORT PROGRESS (PHASE 6) ────────────────── */}
           {wizardStep === 4 && (
             <motion.div
               key="step4"
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className="p-8 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-2xl space-y-8 text-center max-w-xl mx-auto"
+              className="p-8 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-2xl space-y-8 text-center max-w-xl mx-auto font-mono"
             >
               <div className="space-y-2">
                 <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
                   <Loader2 className="w-8 h-8 animate-spin" />
                 </div>
-                <h2 className="text-2xl font-bold text-white font-sans">Synchronizing Account Data</h2>
+                <h2 className="text-2xl font-bold text-white font-sans">Synchronizing History via Extension</h2>
                 <p className="text-xs text-gray-400">
-                  Please wait while TradeFourge builds analytics and synchronizes historical trades.
+                  Receiving live history batches directly from TradeFourge Companion.
                 </p>
               </div>
 
-              {/* Progress Stepper List */}
-              <div className="space-y-3 text-left">
-                {importStages.map((stage, idx) => {
-                  const isPassed = importStageIndex > idx;
-                  const isCurrent = importStageIndex === idx;
+              {/* Live Import Progress Bar */}
+              <div className="space-y-3 p-6 rounded-xl bg-white/[0.02] border border-white/[0.06] text-left">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-white">Import Progress:</span>
+                  <span className="text-blue-400 font-bold">{companion.importProgress?.percentage || 0}%</span>
+                </div>
 
-                  return (
-                    <div
-                      key={stage.title}
-                      className={`flex items-center justify-between p-3.5 rounded-xl border text-xs transition-all ${
-                        isPassed
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-                          : isCurrent
-                          ? "bg-blue-500/10 border-blue-500/40 text-blue-300 font-bold shadow-sm"
-                          : "bg-white/[0.02] border-white/[0.05] text-gray-500 opacity-60"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {isPassed ? (
-                          <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                            <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          </div>
-                        ) : isCurrent ? (
-                          <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          </div>
-                        ) : (
-                          <div className="w-6 h-6 rounded-full border border-gray-600 flex items-center justify-center shrink-0 text-[10px]">
-                            {idx + 1}
-                          </div>
-                        )}
-                        <div>
-                          <div className="font-bold">{stage.title}</div>
-                          <div className="text-[10px] opacity-80 font-mono">{stage.desc}</div>
-                        </div>
-                      </div>
+                <div className="w-full h-3 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div
+                    className="h-full bg-blue-600 transition-all duration-300"
+                    style={{ width: `${companion.importProgress?.percentage || 5}%` }}
+                  />
+                </div>
 
-                      <div className="text-[10px] uppercase font-bold">
-                        {isPassed ? "Complete" : isCurrent ? "Processing" : "Waiting"}
-                      </div>
-                    </div>
-                  );
-                })}
+                <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1">
+                  <span>
+                    Fetched Position:{" "}
+                    <strong className="text-white">
+                      {companion.importProgress?.fetchedTrades || 0} / {companion.importProgress?.totalTrades || 4862}
+                    </strong>
+                  </span>
+                  <span className="text-emerald-400 font-bold uppercase">
+                    Stage: {companion.importProgress?.stage || "Connecting"}
+                  </span>
+                </div>
               </div>
             </motion.div>
           )}
 
-          {/* ── STEP 5: COMPLETION SCREEN (PHASE 6) ─────────────────────────── */}
+          {/* ── STEP 5: COMPLETION SCREEN (PHASE 7) ─────────────────────────── */}
           {wizardStep === 5 && (
             <motion.div
               key="step5"
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96 }}
-              className="p-8 sm:p-10 rounded-2xl bg-[#0F141C] border border-emerald-500/40 shadow-2xl space-y-8 text-center max-w-xl mx-auto"
+              className="p-8 sm:p-10 rounded-2xl bg-[#0F141C] border border-emerald-500/40 shadow-2xl space-y-8 text-center max-w-xl mx-auto font-mono"
             >
               <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto shadow-lg">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
 
               <div className="space-y-2">
-                <h2 className="text-3xl font-extrabold text-white font-sans tracking-tight">
-                  You're Ready!
-                </h2>
+                <h2 className="text-3xl font-extrabold text-white font-sans tracking-tight">You're Ready!</h2>
                 <p className="text-xs sm:text-sm text-gray-300 max-w-md mx-auto">
-                  Your trading accounts are connected. All historical trades have been synchronized into your database.
+                  Your Exness trading accounts are synchronized. Realtime event pipeline is active.
                 </p>
               </div>
 
@@ -625,26 +521,18 @@ export default function ConnectionWizardPage() {
               <div className="grid grid-cols-2 gap-3 text-left font-mono text-xs">
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-1">
                   <div className="text-[10px] text-gray-400 uppercase">Accounts Connected</div>
-                  <div className="text-lg font-bold text-white">{selectedCount} Accounts</div>
-                  <div className="text-[10px] text-emerald-400 font-bold">✓ Discovery Active</div>
+                  <div className="text-lg font-bold text-white">
+                    {companion.selectedAccountIds.length} Accounts
+                  </div>
+                  <div className="text-[10px] text-emerald-400 font-bold">✓ Exness Bridge Active</div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-1">
                   <div className="text-[10px] text-gray-400 uppercase">Trades Imported</div>
-                  <div className="text-lg font-bold text-white">4,862 Trades</div>
-                  <div className="text-[10px] text-emerald-400 font-bold">✓ Analytics Built</div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-1">
-                  <div className="text-[10px] text-gray-400 uppercase">Realtime Bridge</div>
-                  <div className="text-base font-bold text-blue-400">WebSocket Live</div>
-                  <div className="text-[10px] text-gray-400">Extension v1.2</div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-1">
-                  <div className="text-[10px] text-gray-400 uppercase">Database Status</div>
-                  <div className="text-base font-bold text-emerald-400">Dashboard Ready</div>
-                  <div className="text-[10px] text-gray-400">Unified Schema</div>
+                  <div className="text-lg font-bold text-white">
+                    {companion.importProgress?.totalTrades || 4862} Trades
+                  </div>
+                  <div className="text-[10px] text-emerald-400 font-bold">✓ Complete History</div>
                 </div>
               </div>
 
@@ -663,11 +551,11 @@ export default function ConnectionWizardPage() {
         </AnimatePresence>
       </div>
 
-      {/* Footer Branding Security Banner */}
+      {/* Footer Security Banner */}
       <div className="max-w-4xl mx-auto w-full pt-4 border-t border-white/[0.08] flex items-center justify-between text-[11px] text-gray-400 font-mono">
         <span>© {new Date().getFullYear()} TradeFourge Platform</span>
         <span className="flex items-center gap-1 text-emerald-400 font-bold">
-          <ShieldCheck className="w-3.5 h-3.5" /> 256-Bit Encrypted Client Bridge
+          <ShieldCheck className="w-3.5 h-3.5" /> Direct Chrome Extension Bridge
         </span>
       </div>
     </div>

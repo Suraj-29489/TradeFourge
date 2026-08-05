@@ -7,9 +7,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useUserProfile } from "@/context/UserProfileContext";
-import { Moon, Sun, Menu, LogOut, Wallet, ChevronDown, Plus, Check, User, Settings } from "lucide-react";
+import { Moon, Sun, Menu, LogOut, Wallet, ChevronDown, Plus, Check, User, Settings, Layers } from "lucide-react";
 import { MultiAccountFilter } from "@/components/accounts/MultiAccountFilter";
 import { useCompanion } from "@/lib/companion/provider";
+import { useConnectionModeStore } from "@/lib/store/useConnectionModeStore";
 import { createClient } from "@/lib/supabase/client";
 import { AccountFormModal } from "@/components/accounts/AccountFormModal";
 import type { NewTradingAccount } from "@/types/database";
@@ -74,6 +75,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
     : profile?.full_name || "Trader";
 
   const companion = useCompanion();
+  const openConnectionHub = useConnectionModeStore((s) => s.openConnectionHub);
+  const selectedMode = useConnectionModeStore((s) => s.selectedMode);
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 bg-[#090D14]/90 backdrop-blur-md border-b border-white/[0.08] select-none font-mono">
@@ -87,21 +90,30 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="hidden sm:flex items-center gap-2">
+        <Link href="/dashboard" className="hidden sm:flex items-center gap-2 hover:opacity-90 transition-opacity">
           <span className="text-sm font-extrabold tracking-tight text-white font-sans">TRADEFOURGE</span>
           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wide">
             TERMINAL v5.1
           </span>
-        </div>
+        </Link>
       </div>
 
-      {/* Center: Accounts Selector Dropdown */}
+      {/* Center: Accounts Selector Dropdown + Connection Hub Switcher */}
       <div className="flex items-center gap-2">
         <MultiAccountFilter
           accounts={accounts}
           selectedAccountIds={selectedAccountIds}
           onChange={setSelectedAccountIds}
         />
+
+        <button
+          onClick={openConnectionHub}
+          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-blue-500/40 text-xs font-mono text-gray-300 hover:text-white transition-all"
+          title="Open Connection Mode Hub"
+        >
+          <Layers className="w-3.5 h-3.5 text-blue-400" />
+          <span className="text-[11px] font-medium capitalize">{selectedMode} Mode</span>
+        </button>
       </div>
 
       {/* Right: Companion Status Popover + Theme Toggle + User Profile Dropdown */}

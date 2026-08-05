@@ -1,9 +1,9 @@
-import { DEFAULT_COMPANION_STATE } from "./status";
-import { CompanionState } from "./types";
+import { CompanionBridge } from "./bridge";
+import { TF_MESSAGE_TYPES } from "./protocol";
 
 /**
  * Lightweight Companion Detection Service Interface.
- * Later this will hook into window.postMessage() or chrome.runtime.sendMessage()
+ * Wraps CompanionBridge for ping detection and latency heartbeats.
  */
 export class CompanionConnectionService {
   private static instance: CompanionConnectionService;
@@ -16,20 +16,22 @@ export class CompanionConnectionService {
   }
 
   public async detectExtension(): Promise<boolean> {
-    // Simulated detection check
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(true);
-      }, 400);
-    });
+    try {
+      const response = await CompanionBridge.getInstance().send(TF_MESSAGE_TYPES.PING, undefined, 3000);
+      return Boolean(response);
+    } catch {
+      return false;
+    }
   }
 
   public async pingHeartbeat(): Promise<{ latency: number; alive: boolean }> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const latency = Math.floor(Math.random() * 25) + 30; // 30-55ms
-        resolve({ latency, alive: true });
-      }, 150);
-    });
+    const startTime = Date.now();
+    try {
+      await CompanionBridge.getInstance().send(TF_MESSAGE_TYPES.HEARTBEAT, undefined, 3000);
+      const latency = Math.max(1, Date.now() - startTime);
+      return { latency, alive: true };
+    } catch {
+      return { latency: 0, alive: false };
+    }
   }
 }

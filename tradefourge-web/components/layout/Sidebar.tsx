@@ -32,11 +32,13 @@ import {
   Sliders,
   Terminal,
   Radio,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { createClient } from "@/lib/supabase/client";
 import { isOwner as checkIsOwner } from "@/lib/config/owner";
 import { useUserProfile } from "@/context/UserProfileContext";
+import { useConnectionModeStore } from "@/lib/store/useConnectionModeStore";
 
 // ─── Nav Structure ────────────────────────────────────────────────────────────
 
@@ -181,6 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
   const [isOwnerState, setIsOwnerState] = useState(false);
   const [guardrailModalOpen, setGuardrailModalOpen] = useState(false);
   const { profile, accounts } = useUserProfile();
+  const openConnectionHub = useConnectionModeStore((s) => s.openConnectionHub);
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -298,7 +301,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-dark-border space-y-3">
+            <div className="p-4 border-t border-dark-border space-y-2">
+              <button
+                onClick={() => {
+                  if (onCloseMobile) onCloseMobile();
+                  openConnectionHub();
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 font-mono text-xs font-bold transition-all hover:bg-blue-500/20"
+              >
+                <Layers className="w-4 h-4" /> Connection Hub
+              </button>
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono text-xs font-bold"

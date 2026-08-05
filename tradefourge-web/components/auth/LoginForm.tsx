@@ -7,6 +7,7 @@ import { Eye, EyeOff, Lock, Mail, ArrowRight, AlertCircle, CheckCircle2, ShieldC
 import { createClient } from "@/lib/supabase/client";
 import { getAuthCallbackUrl, sanitizeSupabaseUrl } from "@/lib/supabase/config";
 import { useOnboardingStore } from "@/lib/store/useOnboardingStore";
+import { useConnectionModeStore } from "@/lib/store/useConnectionModeStore";
 
 function LoginFormContent() {
   const router = useRouter();
@@ -62,8 +63,9 @@ function LoginFormContent() {
         setErrorMessage(error.message);
         setLoading(false);
       } else if (data.session) {
-        setSuccessMessage("Authentication successful. Verification complete...");
+        setSuccessMessage("Authentication successful. Opening terminal...");
         const hasCompletedOnboarding = useOnboardingStore.getState().hasCompletedOnboarding;
+        useConnectionModeStore.getState().openConnectionHub();
         setTimeout(() => {
           if (!hasCompletedOnboarding) {
             router.push("/connect");

@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Database,
   ExternalLink,
+  X,
 } from "lucide-react";
 import { useCompanion } from "@/lib/companion/provider";
 import { CompanionHealth, LogSeverity } from "@/lib/companion/types";
@@ -126,6 +127,37 @@ export default function ConnectionManagerPage() {
           </div>
         </div>
       </div>
+
+      {/* Production Error Banner (Phase 10) */}
+      {companion.lastError && (
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <div className="font-bold font-sans text-white text-sm">
+                Error Code: {companion.lastError.code}
+              </div>
+              <p className="text-gray-300 leading-relaxed">{companion.lastError.message}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => companion.reconnect()}
+              className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold transition-all text-xs"
+            >
+              Retry Connection
+            </button>
+            <button
+              onClick={() => companion.clearError()}
+              className="p-1.5 rounded-lg hover:bg-rose-500/20 text-rose-400 transition-all"
+              title="Dismiss error"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* SECTION 1: Companion Integration Panel */}
       <div className="p-6 sm:p-8 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-2xl space-y-6">
