@@ -8,9 +8,11 @@
     "build:web": "npm run build --prefix tradefourge-web",
     "start:web": "npm run start --prefix tradefourge-web",
     "lint:web": "npm run lint --prefix tradefourge-web",
+    "build:extension": "npm run build --prefix tradefourge-extension",
     "check:extension": "powershell -Command \"Get-ChildItem -Path tradefourge-extension -Recurse -Filter '*.js' | ForEach-Object { node --check $($_.FullName) }\""
   },
   "workspaces": [
-    "tradefourge-web"
+    "tradefourge-web",
+    "tradefourge-extension"
   ]
 }

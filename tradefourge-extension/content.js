@@ -1,5 +1,5 @@
 /**
- * TradeFourge Companion Extension v3.0 — Content Script (Isolated World & Main Page Bridge)
+ * TradeFourge Companion Extension v3.1 — Content Script Entry
  * Injects modular BridgeDispatcher, BrokerAdapter engines, and EventBus into DOM.
  */
 
@@ -14,11 +14,15 @@ import { Logger } from './src/logger/Logger.js';
   }
   document.documentElement.dataset.tradefourgeV3Injected = 'true';
 
-  Logger.success('ContentScript', 'TradeFourge Companion Extension v3.0 initializing...');
+  console.log('[TradeFourge Companion] Content Script Loaded');
+  Logger.success('ContentScript', 'TradeFourge Companion Extension v3.1 initializing...');
 
   try {
     BridgeDispatcher.getInstance().init();
+    console.log('[TradeFourge Companion] Bridge Initialized');
+    console.log('[TradeFourge Companion] Listening for Website Messages');
   } catch (err) {
+    console.error('[TradeFourge Companion] Failed to initialize BridgeDispatcher', err);
     Logger.error('ContentScript', 'Failed to initialize BridgeDispatcher', err);
   }
 })();

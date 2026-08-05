@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TradeFourge Companion",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Official TradeFourge Companion Extension — Multi-Broker Adapter & Runtime Intelligence Engine",
   "icons": {
     "16": "icons/icon16.png",
@@ -18,7 +18,7 @@
     "default_title": "TradeFourge Companion"
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "dist/background.js"
   },
   "content_scripts": [
     {
@@ -42,26 +42,15 @@
         "https://*.exness-trade.pro/*",
         "https://*.exness.cloud/*"
       ],
-      "js": ["content.js"],
+      "js": ["dist/content.js"],
       "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [
     {
       "resources": [
-        "content.js",
-        "src/types/protocol.js",
-        "src/logger/Logger.js",
-        "src/cache/LocalCache.js",
-        "src/eventBus/EventBus.js",
-        "src/adapters/BrokerAdapter.js",
-        "src/adapters/ExnessAdapter.js",
-        "src/adapters/AdapterManager.js",
-        "src/engines/DiscoveryEngine.js",
-        "src/engines/HistoryImportEngine.js",
-        "src/engines/LiveRuntimeMonitor.js",
-        "src/heartbeat/HeartbeatSystem.js",
-        "src/bridge/dispatcher.js"
+        "dist/content.js",
+        "dist/background.js"
       ],
       "matches": ["<all_urls>"]
     }
