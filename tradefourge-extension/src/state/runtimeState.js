@@ -1,16 +1,17 @@
 /**
  * TradeFourge Companion Extension — In-Memory Runtime State Manager
  *
- * Maintains live account state, open positions, pending orders, and event counts in memory.
+ * Maintains live account state, open positions, pending orders, event counts,
+ * and derived intelligence metrics (drawdown, floating PnL, win rate, current spread).
  */
 
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
     module.exports = factory();
   } else {
-    root.TradeFourgeRuntimeState = factory(root.TradeFourgeDispatcher, root.TradeFourgeEventTypes);
+    root.TradeFourgeRuntimeState = factory(root.TradeFourgeDispatcher);
   }
-})(typeof self !== 'undefined' ? self : this, function (Dispatcher, EventTypes) {
+})(typeof self !== 'undefined' ? self : this, function (Dispatcher) {
 
   const state = {
     account: {
@@ -22,6 +23,16 @@
       freeMargin: 0,
       marginLevel: 0,
       leverage: 100
+    },
+    intelligence: {
+      floatingPnL: 0,
+      drawdownPercent: 0,
+      drawdownAmount: 0,
+      peakEquity: 0,
+      currentSpread: 0,
+      winRate: 0,
+      exposurePercent: 0,
+      totalLots: 0
     },
     openPositions: new Map(),
     pendingOrders: new Map(),
@@ -40,8 +51,10 @@
   function updateStateFromEvent(event) {
     if (!event) return;
 
-    state.counts.totalCaptured++;
-    state.lastEvent = event;
+    if (!event.isDerived) {
+      state.counts.totalCaptured++;
+      state.lastEvent = event;
+    }
 
     const type = event.type;
 
@@ -49,6 +62,7 @@
       state.counts.ticks++;
       if (event.instrument) {
         state.lastTicks.set(event.instrument, event);
+        state.intelligence.currentSpread = event.spread || state.intelligence.currentSpread;
       }
     } else if (type === 'POSITION') {
       state.counts.positions++;
@@ -82,9 +96,26 @@
         marginLevel: typeof event.marginLevel === 'number' ? event.marginLevel : state.account.marginLevel,
         leverage: typeof event.leverage === 'number' ? event.leverage : state.account.leverage
       };
+      state.intelligence.floatingPnL = parseFloat((state.account.equity - state.account.balance).toFixed(2));
     }
 
-    // Dispatch state update to extension bridge / window listeners
+    // Derived Event updates
+    else if (type === 'DERIVED_SPREAD_CHANGED') {
+      state.intelligence.currentSpread = event.spread || state.intelligence.currentSpread;
+    } else if (type === 'DERIVED_DRAWDOWN_CHANGED') {
+      state.intelligence.drawdownPercent = event.drawdownPercent || 0;
+      state.intelligence.drawdownAmount = event.drawdownAmount || 0;
+      state.intelligence.peakEquity = event.peakEquity || state.intelligence.peakEquity;
+    } else if (type === 'DERIVED_EXPOSURE_CHANGED') {
+      state.intelligence.exposurePercent = event.exposurePercent || 0;
+      state.intelligence.totalLots = event.totalLots || 0;
+    } else if (type === 'DERIVED_FLOATING_PROFIT_CHANGED') {
+      // Re-calculate aggregate floating PnL if needed
+    } else if (type === 'DERIVED_WINRATE_UPDATED') {
+      state.intelligence.winRate = event.winRate || 0;
+    }
+
+    // Dispatch live state metrics bridge to window.postMessage for content script / popup
     if (typeof window !== 'undefined' && window.postMessage) {
       try {
         window.postMessage({
@@ -92,7 +123,9 @@
           type: 'TF_STATE_UPDATE',
           detail: {
             counts: Object.assign({}, state.counts),
-            account: Object.assign({}, state.account)
+            account: Object.assign({}, state.account),
+            intelligence: Object.assign({}, state.intelligence),
+            openPositionsCount: state.openPositions.size
           }
         }, '*');
       } catch (e) {}
@@ -109,11 +142,15 @@
     getState: function () {
       return {
         account: Object.assign({}, state.account),
+        intelligence: Object.assign({}, state.intelligence),
         openPositionsCount: state.openPositions.size,
         pendingOrdersCount: state.pendingOrders.size,
         counts: Object.assign({}, state.counts),
         lastEvent: state.lastEvent
       };
+    },
+    getRawState: function () {
+      return state;
     },
     getCounts: function () {
       return Object.assign({}, state.counts);

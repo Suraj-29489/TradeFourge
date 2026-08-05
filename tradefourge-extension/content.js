@@ -1,8 +1,8 @@
 /**
  * TradeFourge Extension — Content Script (Isolated World)
  *
- * Injects Event Pipeline modules and `inject.js` into page DOM in dependency order.
- * Bridges state updates to extension storage for popup subscriber counters.
+ * Injects Event Pipeline & Runtime Intelligence Engine modules into page DOM.
+ * Bridges live derived state metrics to extension storage for popup subscribers.
  */
 
 (function () {
@@ -44,7 +44,18 @@
     'src/parser/dealParser.js',
     'src/parser/accountParser.js',
     'src/parser/parserManager.js',
+    'src/intelligence/derivedEvents.js',
+    'src/intelligence/metrics/spreadTracker.js',
+    'src/intelligence/metrics/floatingPnL.js',
+    'src/intelligence/metrics/equityTracker.js',
+    'src/intelligence/metrics/drawdownTracker.js',
+    'src/intelligence/metrics/riskCalculator.js',
+    'src/intelligence/metrics/portfolioExposure.js',
+    'src/intelligence/metrics/tradeDuration.js',
+    'src/intelligence/metrics/performanceTracker.js',
+    'src/intelligence/metrics/statistics.js',
     'src/state/runtimeState.js',
+    'src/intelligence/runtimeEngine.js',
     'src/capture/websocketCapture.js',
     'utils/logger.js',
     'inject.js'
@@ -52,7 +63,7 @@
 
   function injectScriptsSequentially(index) {
     if (index >= pipelineScripts.length) {
-      console.log('[TradeFourge ContentScript] All Event Pipeline modules loaded.');
+      console.log('[TradeFourge ContentScript] All Runtime Intelligence Engine modules loaded.');
       return;
     }
 
@@ -81,8 +92,11 @@
   window.addEventListener('message', function (event) {
     if (event.source !== window) return;
     if (event.data && event.data.source === 'tradefourge-injected' && event.data.type === 'TF_STATE_UPDATE') {
-      const counts = event.data.detail ? event.data.detail.counts : null;
-      if (counts && typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      const detail = event.data.detail || {};
+      const counts = detail.counts || {};
+      const intel = detail.intelligence || {};
+
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
         chrome.storage.local.set({
           tf_messages_captured: counts.totalCaptured || 0,
           tf_ticks_captured: counts.ticks || 0,
@@ -90,6 +104,11 @@
           tf_deals_captured: counts.deals || 0,
           tf_positions_captured: counts.positions || 0,
           tf_accounts_captured: counts.accountUpdates || 0,
+          tf_open_trades_count: detail.openPositionsCount || 0,
+          tf_floating_pnl: intel.floatingPnL || 0,
+          tf_current_spread: intel.currentSpread || 0,
+          tf_win_rate: intel.winRate || 0,
+          tf_drawdown_percent: intel.drawdownPercent || 0,
           tf_last_updated: new Date().toISOString()
         });
       }

@@ -1,5 +1,5 @@
 /**
- * TradeFourge Extension v1.1 — Popup UI Logic
+ * TradeFourge Extension v1.2 — Popup UI Logic
  */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -7,28 +7,39 @@ document.addEventListener('DOMContentLoaded', function () {
   const siteDotEl = document.getElementById('site-dot');
 
   const cntTotalEl = document.getElementById('cnt-total');
-  const cntTicksEl = document.getElementById('cnt-ticks');
-  const cntOrdersEl = document.getElementById('cnt-orders');
-  const cntDealsEl = document.getElementById('cnt-deals');
-  const cntPositionsEl = document.getElementById('cnt-positions');
-  const cntAccountsEl = document.getElementById('cnt-accounts');
+  const cntOpenTradesEl = document.getElementById('cnt-open-trades');
+  const cntFloatingPnlEl = document.getElementById('cnt-floating-pnl');
+  const cntSpreadEl = document.getElementById('cnt-spread');
+  const cntWinRateEl = document.getElementById('cnt-win-rate');
+  const cntDrawdownEl = document.getElementById('cnt-drawdown');
 
   function updateMetricsDisplay() {
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       chrome.storage.local.get([
         'tf_messages_captured',
-        'tf_ticks_captured',
-        'tf_orders_captured',
-        'tf_deals_captured',
-        'tf_positions_captured',
-        'tf_accounts_captured'
+        'tf_open_trades_count',
+        'tf_floating_pnl',
+        'tf_current_spread',
+        'tf_win_rate',
+        'tf_drawdown_percent'
       ], function (result) {
-        cntTotalEl.textContent = (result.tf_messages_captured || 0).toLocaleString();
-        cntTicksEl.textContent = (result.tf_ticks_captured || 0).toLocaleString();
-        cntOrdersEl.textContent = (result.tf_orders_captured || 0).toLocaleString();
-        cntDealsEl.textContent = (result.tf_deals_captured || 0).toLocaleString();
-        cntPositionsEl.textContent = (result.tf_positions_captured || 0).toLocaleString();
-        cntAccountsEl.textContent = (result.tf_accounts_captured || 0).toLocaleString();
+        const total = result.tf_messages_captured || 0;
+        const openTrades = result.tf_open_trades_count || 0;
+        const floatPnl = result.tf_floating_pnl || 0;
+        const spread = result.tf_current_spread || 0;
+        const winRate = result.tf_win_rate || 0;
+        const drawdown = result.tf_drawdown_percent || 0;
+
+        cntTotalEl.textContent = total.toLocaleString();
+        cntOpenTradesEl.textContent = openTrades.toLocaleString();
+
+        const formattedPnl = (floatPnl >= 0 ? '+$' : '-$') + Math.abs(floatPnl).toFixed(2);
+        cntFloatingPnlEl.textContent = formattedPnl;
+        cntFloatingPnlEl.className = 'metric-val ' + (floatPnl >= 0 ? 'profit-positive' : 'profit-negative');
+
+        cntSpreadEl.textContent = spread.toFixed(2);
+        cntWinRateEl.textContent = winRate.toFixed(1) + '%';
+        cntDrawdownEl.textContent = drawdown.toFixed(2) + '%';
       });
     }
   }

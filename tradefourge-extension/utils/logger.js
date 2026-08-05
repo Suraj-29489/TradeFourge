@@ -1,16 +1,46 @@
 /**
  * TradeFourge Extension — Pretty Structured Console Logger
- * Subscribes to the central Event Dispatcher to log beautiful structured event outputs.
+ * Subscribes to the central Event Dispatcher to log native & derived intelligence events.
  */
 
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
     module.exports = factory();
   } else {
-    root.TradeFourgeLogger = factory(root.TradeFourgeDispatcher);
+    root.TradeFourgeLogger = factory(root.TradeFourgeDispatcher, root.TradeFourgeRuntimeState);
   }
-})(typeof self !== 'undefined' ? self : this, function (Dispatcher) {
+})(typeof self !== 'undefined' ? self : this, function (Dispatcher, RuntimeState) {
   const PREFIX = '[TradeFourge]';
+
+  function logIntelligenceSummary() {
+    const stateMgr = RuntimeState || (typeof window !== 'undefined' && window.TradeFourgeRuntimeState);
+    if (!stateMgr) return;
+
+    const state = stateMgr.getState();
+    const acc = state.account;
+    const intel = state.intelligence;
+
+    console.groupCollapsed(
+      `%c${PREFIX}%c Runtime Intelligence Summary %c(Equity: $${acc.equity} | Floating P/L: ${intel.floatingPnL >= 0 ? '+' : ''}$${intel.floatingPnL})`,
+      'color: #00e5ff; font-weight: bold;',
+      'color: #b388ff; font-weight: bold;',
+      intel.floatingPnL >= 0 ? 'color: #76ff03; font-weight: bold;' : 'color: #ff5252; font-weight: bold;'
+    );
+    console.log(
+      `${PREFIX}\n\n` +
+      `Runtime Intelligence\n` +
+      `----------------------------\n` +
+      `Balance     : $ ${acc.balance.toLocaleString()} ${acc.currency}\n` +
+      `Equity      : $ ${acc.equity.toLocaleString()} ${acc.currency}\n` +
+      `Floating P/L: ${intel.floatingPnL >= 0 ? '+' : ''}$ ${intel.floatingPnL}\n` +
+      `Drawdown    : ${intel.drawdownPercent}%\n` +
+      `Exposure    : ${intel.exposurePercent}% (${intel.totalLots} lots)\n` +
+      `Spread      : ${intel.currentSpread}\n` +
+      `Win Rate    : ${intel.winRate}%\n` +
+      `----------------------------`
+    );
+    console.groupEnd();
+  }
 
   function logEvent(event) {
     if (!event || !event.type) return;
@@ -137,8 +167,13 @@
           console.groupEnd();
           break;
 
+        case 'DERIVED_DRAWDOWN_CHANGED':
+        case 'DERIVED_EQUITY_HIGH':
+        case 'DERIVED_EXPOSURE_CHANGED':
+          logIntelligenceSummary();
+          break;
+
         default:
-          // RAW_UNKNOWN or unrecognized payload
           break;
       }
     } catch (e) {
@@ -154,6 +189,7 @@
 
   return {
     logEvent: logEvent,
+    logIntelligenceSummary: logIntelligenceSummary,
     info: function (msg, ...args) { console.log(`${PREFIX} [INFO] ${msg}`, ...args); },
     warn: function (msg, ...args) { console.warn(`${PREFIX} [WARN] ${msg}`, ...args); },
     error: function (msg, ...args) { console.error(`${PREFIX} [ERROR] ${msg}`, ...args); }

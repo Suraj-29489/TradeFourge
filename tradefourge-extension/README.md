@@ -1,26 +1,34 @@
-# TradeFourge Companion Extension v1.1 — Event Pipeline & Parser Foundation
+# TradeFourge Companion Extension v1.2 — Runtime Intelligence Engine
 
 The **TradeFourge Companion Extension** is an independent Chromium extension designed as the primary real-time data bridge between broker web terminals (starting with Exness Web Terminal) and the TradeFourge platform.
 
-Version 1.1 establishes the permanent, modular **Event Pipeline & Parser Foundation**:
+Version 1.2 introduces the **Runtime Intelligence Engine**, evolving the extension into an autonomous real-time trading engine that derives live analytics not provided natively by Exness.
 
 ```
-WebSocket
+Exness WebSocket
    │
    ▼
-Capture Layer (src/capture/websocketCapture.js)
+Capture & Validation Layer
    │
    ▼
-Validation Layer (src/validation/validator.js)
+Parser & Normalization Layer (TickEvent, PositionEvent, OrderEvent, DealEvent, AccountEvent)
    │
    ▼
-Parser Layer (src/parser/*) ──► Normalization (src/models/*)
+Central Event Dispatcher ◄────────────────────────────────────────┐
+   │                                                              │ (Dispatches Derived Events)
+   ▼                                                              │
+Runtime Intelligence Engine (src/intelligence/runtimeEngine.js) ──┘
+   ├──► Spread & Velocity Tracker (metrics/spreadTracker.js)
+   ├──► Floating PnL Engine (metrics/floatingPnL.js)
+   ├──► Equity Intelligence (metrics/equityTracker.js)
+   ├──► Drawdown Engine (metrics/drawdownTracker.js)
+   ├──► Risk & Exposure Calculator (metrics/riskCalculator.js)
+   ├──► Portfolio Exposure (metrics/portfolioExposure.js)
+   ├──► Trade Duration Engine (metrics/tradeDuration.js)
+   └──► Win Rate & Performance Tracker (metrics/performanceTracker.js)
    │
    ▼
-Event Dispatcher (src/events/dispatcher.js)
-   ├──► Pretty Console Logger (utils/logger.js)
-   ├──► Runtime State Manager (src/state/runtimeState.js)
-   └──► Extension Storage Bridge (content.js) ──► Popup UI (popup.js)
+Pretty Console Logger & Popup Subscribers
 ```
 
 ---
@@ -31,59 +39,55 @@ Event Dispatcher (src/events/dispatcher.js)
 tradefourge-extension/
 ├── manifest.json                  # Manifest Version 3 configuration
 ├── background.js                 # Extension lifecycle service worker
-├── content.js                    # Isolated content script (sequential pipeline injection)
+├── content.js                    # Content script & derived state storage bridge
 ├── inject.js                     # Page-context WebSocket hook (no business logic)
-├── popup.html / popup.js         # Companion UI with categorized metric counters
+├── popup.html / popup.js         # Companion UI displaying live derived metrics
 ├── styles/
 │   └── popup.css                 # Dark mode UI styles
 ├── icons/                        # Extension branding icons
 ├── src/
 │   ├── capture/
-│   │   └── websocketCapture.js   # Capture Layer (delegates raw frames)
+│   │   └── websocketCapture.js   # Capture Layer
 │   ├── validation/
 │   │   └── validator.js          # Payload validation & JSON safety checks
-│   ├── models/
-│   │   ├── BaseEvent.js          # Base TradeFourge Event schema
-│   │   ├── TickEvent.js          # Normalized Tick model (instrument, bid, ask, spread)
-│   │   ├── PositionEvent.js      # Normalized Position model (ticket, volume, profit, action)
-│   │   ├── OrderEvent.js         # Normalized Order model (ticket, orderType, price, state)
-│   │   ├── DealEvent.js          # Normalized Deal model (dealTicket, volume, profit, swap)
-│   │   └── AccountEvent.js       # Normalized Account model (balance, equity, margin)
-│   ├── events/
-│   │   ├── eventTypes.js         # Constant event identifiers (TICK, POSITION, ORDER, etc.)
-│   │   └── dispatcher.js         # Generic Pub/Sub event dispatcher
-│   ├── parser/
-│   │   ├── tickParser.js         # Quote tick parser
-│   │   ├── positionParser.js     # Position state parser
-│   │   ├── orderParser.js        # Pending order parser
-│   │   ├── dealParser.js         # Execution deal parser
-│   │   ├── accountParser.js      # Balance & equity parser
-│   │   └── parserManager.js      # Central parser coordinator
-│   └── state/
-│       └── runtimeState.js       # In-memory account & position state manager
+│   ├── models/                   # Native TradeFourge Event models
+│   ├── events/                   # Central Event Dispatcher & event types
+│   ├── parser/                   # Specialized event parsers
+│   ├── state/
+│   │   └── runtimeState.js       # Live in-memory state & metrics cache
+│   └── intelligence/
+│       ├── derivedEvents.js      # Derived event constructors
+│       ├── runtimeEngine.js      # Central Runtime Intelligence Engine
+│       └── metrics/
+│           ├── spreadTracker.js      # Spread & price velocity tracker
+│           ├── floatingPnL.js        # Real-time unrealized PnL engine
+│           ├── equityTracker.js      # Peak equity & equity milestone tracker
+│           ├── drawdownTracker.js    # Drawdown ($ & %) & recovery tracker
+│           ├── riskCalculator.js     # Portfolio risk % & margin usage calculator
+│           ├── portfolioExposure.js  # Asset allocation & lot distribution
+│           ├── tradeDuration.js      # Open trade duration timers (HH:MM:SS)
+│           ├── performanceTracker.js # Win rate %, profit factor & streak engine
+│           └── statistics.js         # Incremental trade statistics accumulator
 ├── utils/
-│   ├── logger.js                 # Pretty structured console logger
+│   ├── logger.js                 # Pretty structured console & intelligence summary logger
 │   ├── storage.js                # Chrome storage wrapper
 │   └── validator.js              # Host domain validator
-└── README.md                     # Extension technical documentation
+└── README.md                     # Technical documentation
 ```
 
 ---
 
-## ⚡ Pipeline Stages
+## 💡 Derived Events System
 
-1. **Capture Layer**: Receives raw frame parameters (`direction`, `socketUrl`, `payload`, `timestamp`) directly from `inject.js`. Performs zero parsing or business logic.
-2. **Validation Layer**: Filters empty, binary, or malformed ping/pong frames without throwing errors.
-3. **Parser & Normalization Layer**: Specialized parsers identify event structures and normalize raw Exness payloads into consistent TradeFourge event instances (`TickEvent`, `PositionEvent`, `OrderEvent`, `DealEvent`, `AccountEvent`).
-4. **Central Event Dispatcher**: Pub/Sub dispatcher (`subscribe`, `dispatch`) routes events to all subscribers.
-5. **Pretty Console Logger**: Subscribes to dispatcher and outputs organized, color-coded event logs:
-   ```
-   [TradeFourge] Tick Event: XAUUSD (Bid: 4197.25 | Ask: 4197.47)
-   [TradeFourge] Position UPDATE: Ticket #1089421 (EURUSD LONG 0.50 lots)
-   [TradeFourge] Account Update: Account #849102 (Balance: 10000 USD)
-   ```
-6. **Runtime State Manager**: Keeps in-memory maps of open positions, pending orders, latest symbol quotes, and event counts (`totalCaptured`, `ticks`, `orders`, `deals`, `positions`, `accountUpdates`).
-7. **Popup UI Integration**: Displays categorized counters populated live via storage updates.
+The Runtime Intelligence Engine emits new internal events dispatched via the central Pub/Sub bus:
+- `SpreadChangedEvent` (symbol, current spread, average spread, velocity)
+- `DrawdownChangedEvent` (drawdown amount, drawdown %, max drawdown %, recovery %)
+- `ExposureChangedEvent` (total lots, margin usage %, exposure %, largest position %)
+- `TradeDurationUpdatedEvent` (position ticket, duration ms, formatted `HH:MM:SS`)
+- `FloatingProfitChangedEvent` (ticket, symbol, floating profit, peak profit)
+- `WinRateUpdatedEvent` (win rate %, loss rate %, profit factor, streak)
+- `EquityHighEvent` / `EquityLowEvent` (peak equity milestones)
+- `PortfolioUpdatedEvent` (lot allocation % per instrument)
 
 ---
 
@@ -93,4 +97,4 @@ To test the extension:
 1. Open Chromium browser at `chrome://extensions`.
 2. Click **Load unpacked** and select `tradefourge-extension/`.
 3. Open `https://terminal.exness.com` or `https://my.exness.com`.
-4. Open Developer Tools Console (`F12`) to view beautiful structured event logs.
+4. Open Developer Tools Console (`F12`) to view live Runtime Intelligence summaries and structured event logs.
