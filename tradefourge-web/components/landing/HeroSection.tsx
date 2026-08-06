@@ -154,8 +154,8 @@ export const HeroSection: React.FC = () => {
               transition={{ duration: 0.7, delay: 0.2 }}
               className="relative mx-auto max-w-lg lg:max-w-none"
             >
-              {/* Simulated Terminal Preview Card (Dark contrast container) */}
-              <div className="relative rounded-2xl bg-[#131622] border border-white/10 p-5 shadow-2xl space-y-4 text-white font-sans">
+              {/* Simulated Terminal Preview Card (Dark contrast container with deep navy background & emerald tint) */}
+              <div className="relative rounded-2xl bg-[#0E131F] border border-emerald-500/30 p-5 shadow-[0_20px_50px_rgba(15,23,42,0.18)] space-y-4 text-white font-sans">
                 {/* Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
                   <div className="flex items-center gap-2">
@@ -171,7 +171,7 @@ export const HeroSection: React.FC = () => {
 
                 {/* Metric Quick Stats */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3.5 rounded-xl bg-[#0B0D13] border border-white/10">
+                  <div className="p-3.5 rounded-xl bg-[#080B11] border border-white/10">
                     <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Net Realized P&L</span>
                     <span className="text-xl font-extrabold text-emerald-400 font-mono mt-0.5 block">+$14,280.50</span>
                     <span className="text-[10px] text-emerald-400/80 font-mono mt-1 flex items-center gap-1">
@@ -179,11 +179,11 @@ export const HeroSection: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-[#0B0D13] border border-white/10">
+                  <div className="p-3.5 rounded-xl bg-[#080B11] border border-white/10">
                     <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Win Rate / R:R</span>
                     <span className="text-xl font-extrabold text-white font-mono mt-0.5 block">68.4% <span className="text-xs text-gray-400 font-normal">(2.4 R:R)</span></span>
-                    <span className="text-[10px] text-blue-400 font-mono mt-1 flex items-center gap-1">
-                      <BarChart2 className="w-3 h-3" /> Profit Factor: 2.38
+                    <span className="text-[10px] text-emerald-400 font-mono mt-1 flex items-center gap-1">
+                      <BarChart2 className="w-3 h-3 text-emerald-400" /> Profit Factor: 2.38
                     </span>
                   </div>
                 </div>
