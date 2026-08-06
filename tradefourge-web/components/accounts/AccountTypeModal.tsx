@@ -57,25 +57,25 @@ export const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ open, onSele
           className="fixed inset-0 bg-black/80 backdrop-blur-md"
         />
 
-        {/* Centered Dark Institutional Modal Card */}
+        {/* Centered Dark Institutional Modal Card (Expanded Width ~20% for Premium Spacing) */}
         <motion.div
           initial={{ opacity: 0, scale: 0.96, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
           transition={{ type: "spring", stiffness: 350, damping: 30 }}
-          className="relative z-10 w-full max-w-3xl p-6 sm:p-8 rounded-3xl bg-[#0F141C] border border-white/[0.08] shadow-2xl text-white space-y-6"
+          className="relative z-10 w-full max-w-4xl p-7 sm:p-9 rounded-3xl bg-[#0F141C] border border-white/[0.08] shadow-2xl text-white space-y-7"
         >
           {/* Close Button X */}
           <button
             onClick={closeAccountTypeModal}
-            className="absolute top-6 right-6 p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+            className="absolute top-7 right-7 p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
 
           {/* Header */}
-          <div className="space-y-1.5 text-center sm:text-left border-b border-white/[0.08] pb-5 pr-10">
+          <div className="space-y-1.5 text-center sm:text-left border-b border-white/[0.08] pb-5 pr-12">
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight font-sans">
               Select Trading Workspace Mode
             </h2>
@@ -84,8 +84,8 @@ export const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ open, onSele
             </p>
           </div>
 
-          {/* Equal Height Option Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch font-mono">
+          {/* Equal Height & Expanded Width Option Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch font-mono">
             {workspaces.map((ws) => {
               const Icon = ws.icon;
               const isActive = isWorkspaceActive(ws.id);
@@ -97,7 +97,7 @@ export const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ open, onSele
                   whileHover={isEnabled ? { scale: 1.01 } : {}}
                   transition={{ duration: 0.15 }}
                   onClick={() => handleCardClick(ws.id)}
-                  className={`relative p-6 rounded-2xl border transition-all duration-200 flex flex-col justify-between space-y-6 h-full select-none ${
+                  className={`relative p-6 sm:p-7 rounded-2xl border transition-all duration-200 flex flex-col justify-between space-y-6 h-full select-none ${
                     !isEnabled
                       ? "bg-white/[0.01] border-white/[0.06] opacity-40 cursor-not-allowed"
                       : isActive
@@ -105,9 +105,9 @@ export const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ open, onSele
                       : "bg-white/[0.02] border-white/[0.08] hover:border-blue-500/60 hover:bg-white/[0.04] cursor-pointer"
                   }`}
                 >
-                  <div className="space-y-4">
-                    {/* Icon & Badge Row */}
-                    <div className="flex items-center justify-between">
+                  <div className="space-y-5">
+                    {/* Icon & Badge Row with Generous Spacing */}
+                    <div className="flex items-center justify-between gap-3">
                       <div
                         className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold shrink-0 transition-colors ${
                           isActive
@@ -131,17 +131,17 @@ export const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ open, onSele
                     </div>
 
                     {/* Title & Description */}
-                    <div className="space-y-1.5">
-                      <h3 className="text-sm font-bold text-white font-sans">{ws.name}</h3>
-                      <p className="text-xs text-gray-400 leading-relaxed font-sans min-h-[48px]">
+                    <div className="space-y-2">
+                      <h3 className="text-base font-bold text-white font-sans">{ws.name}</h3>
+                      <p className="text-xs text-gray-400 leading-relaxed font-sans min-h-[52px]">
                         {ws.description}
                       </p>
                     </div>
                   </div>
 
-                  {/* Dynamic Action Indicator (No hardcoded CTA buttons) */}
+                  {/* Dynamic Action Indicator */}
                   <div
-                    className={`py-2.5 px-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                    className={`py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
                       !isEnabled
                         ? "bg-white/[0.04] text-gray-500 font-mono"
                         : isActive
