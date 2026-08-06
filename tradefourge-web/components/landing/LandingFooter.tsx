@@ -23,13 +23,13 @@ export const LandingFooter: React.FC = () => {
           
           {/* Brand Info & Newsletter */}
           <div className="lg:col-span-2 space-y-5">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-600 text-white shadow-md">
-                <Zap className="w-5 h-5" />
-              </div>
-              <span className="text-xl font-extrabold tracking-tight text-white font-mono">
-                TRADE<span className="text-blue-400">FOURGE</span>
-              </span>
+            <Link href="/" className="inline-block group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo_full.png"
+                alt="TradeFourge Logo"
+                className="h-8 w-auto object-contain transition-transform group-hover:scale-105"
+              />
             </Link>
 
             <p className="text-gray-400 text-xs max-w-sm leading-relaxed font-sans">

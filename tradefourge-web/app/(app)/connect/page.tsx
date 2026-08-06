@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap,
@@ -76,12 +77,14 @@ export default function ConnectionWizardPage() {
       {/* Top Header Navigation Bar */}
       <div className="max-w-4xl mx-auto w-full flex items-center justify-between border-b border-white/[0.08] pb-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-sm">
-            <Zap className="w-4 h-4 fill-white" />
-          </div>
-          <span className="font-extrabold text-sm tracking-tight text-white font-sans">
-            TRADE<span className="text-blue-400">FOURGE</span>
-          </span>
+          <Link href="/" className="inline-block group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo_full.png"
+              alt="TradeFourge Logo"
+              className="h-8 w-auto object-contain mx-auto transition-transform group-hover:scale-105"
+            />
+          </Link>
           <span className="text-[10px] text-gray-400 font-mono border-l border-white/10 pl-2.5">
             Setup Wizard v2.0
           </span>

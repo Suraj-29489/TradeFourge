@@ -21,13 +21,13 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
 
           {/* Logo Header */}
           <div className="relative z-10">
-            <Link href="/" className="inline-flex items-center gap-3 group">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-700 shadow-glow">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-extrabold tracking-tight text-white font-mono">
-                TRADE<span className="text-purple-400">FOURGE</span>
-              </span>
+            <Link href="/" className="inline-block group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo_full.png"
+                alt="TradeFourge Logo"
+                className="h-8 w-auto object-contain transition-transform group-hover:scale-105"
+              />
             </Link>
           </div>
 

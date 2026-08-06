@@ -11,13 +11,13 @@ export default function SignupPage() {
       <div className="w-full max-w-md space-y-6 text-center my-auto">
         {/* Brand Logo Header */}
         <div className="space-y-3">
-          <Link href="/" className="inline-flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-lg shadow-blue-600/20">
-              <Zap className="w-5 h-5 fill-white text-white" />
-            </div>
-            <span className="text-xl font-extrabold tracking-tight text-white font-sans">
-              TRADE<span className="text-blue-400">FOURGE</span>
-            </span>
+          <Link href="/" className="inline-block group">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo_full.png"
+              alt="TradeFourge Logo"
+              className="h-9 w-auto object-contain mx-auto transition-transform group-hover:scale-105"
+            />
           </Link>
 
           <h1 className="text-2xl font-extrabold text-white tracking-tight font-sans">
