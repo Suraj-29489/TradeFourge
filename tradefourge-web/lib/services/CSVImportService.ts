@@ -90,11 +90,13 @@ export class CSVImportService {
   /**
    * Delete an import record and cascaded trades.
    */
-  static async deleteImport(importId: string, userId: string): Promise<ServiceResult<boolean>> {
+  static async deleteImport(importId: string, userId: string, deleteTrades = true): Promise<ServiceResult<boolean>> {
     const supabase = createClient();
     try {
-      // First delete associated trades
-      await supabase.from("trades").delete().eq("import_id", importId).eq("user_id", userId);
+      // Optionally delete associated trades first
+      if (deleteTrades) {
+        await supabase.from("trades").delete().eq("import_id", importId).eq("user_id", userId);
+      }
       const { error } = await supabase.from("csv_imports").delete().eq("id", importId).eq("user_id", userId);
 
       if (error) return { data: false, error: error.message };

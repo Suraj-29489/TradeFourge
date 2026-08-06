@@ -1,20 +1,8 @@
 // lib/supabase/accounts.ts
-// CRUD service for trading_accounts table.
-// All writes validate user_id ownership server-side via RLS.
-// Never trust client-provided user_id — always use auth.uid() from RLS.
+// Re-export / Delegate service for trading_accounts table.
+// Delegates to AccountService in lib/services/AccountService.ts.
 
-import { createClient } from './client';
-import { isFrontendOnly } from '@/lib/config/frontend-only';
-import { generateAccountSlug, isAccountSlugUnique } from '@/lib/account/account-identity';
-import {
-  getFrontendTradingAccounts,
-  getFrontendTradingAccountById,
-  getFrontendDefaultAccount,
-  createFrontendTradingAccount,
-  updateFrontendTradingAccount,
-  setFrontendDefaultAccount,
-  deleteFrontendTradingAccount,
-} from './frontend-store';
+import { AccountService } from '@/lib/services/AccountService';
 import type {
   TradingAccount,
   NewTradingAccount,
@@ -22,256 +10,37 @@ import type {
   ServiceResult,
 } from '@/types/database';
 
-// ─── Fetch ────────────────────────────────────────────────────────────────────
-
-/**
- * Fetch all trading accounts for the authenticated user.
- * Default account is returned first, then by creation date.
- */
 export async function fetchTradingAccounts(
   userId: string
 ): Promise<ServiceResult<TradingAccount[]>> {
-  if (isFrontendOnly()) {
-    return getFrontendTradingAccounts(userId);
-  }
-
-  const supabase = createClient();
-  try {
-    const { data, error } = await supabase
-      .from('trading_accounts')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('is_default', { ascending: false })
-      .order('created_at', { ascending: false });
-
-    if (error) return { data: null, error: error.message };
-    return { data: data ?? [], error: null };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to fetch accounts';
-    return { data: null, error: message };
-  }
+  return AccountService.getAccounts(userId);
 }
 
-/**
- * Fetch a single trading account by ID.
- */
 export async function fetchTradingAccountById(
   id: string,
   userId: string
 ): Promise<ServiceResult<TradingAccount>> {
-  if (isFrontendOnly()) {
-    return getFrontendTradingAccountById(id, userId);
-  }
-
-  const supabase = createClient();
-  try {
-    const { data, error } = await supabase
-      .from('trading_accounts')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single();
-
-    if (error) return { data: null, error: error.message };
-    return { data, error: null };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to fetch account';
-    return { data: null, error: message };
-  }
+  return AccountService.getAccountById(id, userId);
 }
 
-/**
- * Fetch the default trading account for a user.
- */
-export async function fetchDefaultAccount(
-  userId: string
-): Promise<ServiceResult<TradingAccount>> {
-  if (isFrontendOnly()) {
-    return getFrontendDefaultAccount(userId);
-  }
-
-  const supabase = createClient();
-  try {
-    const { data, error } = await supabase
-      .from('trading_accounts')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_default', true)
-      .eq('is_active', true)
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      return { data: null, error: error.message };
-    }
-    return { data: data ?? null, error: null };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to fetch default account';
-    return { data: null, error: message };
-  }
-}
-
-// ─── Create ───────────────────────────────────────────────────────────────────
-
-/**
- * Create a new trading account.
- * Automatically generates normalized slug and enforces slug uniqueness per user.
- */
 export async function createTradingAccount(
   userId: string,
   payload: NewTradingAccount
 ): Promise<ServiceResult<TradingAccount>> {
-  if (isFrontendOnly()) {
-    return createFrontendTradingAccount(userId, payload);
-  }
-
-  const supabase = createClient();
-  try {
-    const slug = generateAccountSlug(payload.account_name);
-
-    // Duplicate validation compares ONLY slugs per authenticated user
-    const { data: existingAccounts } = await supabase
-      .from('trading_accounts')
-      .select('id, account_name, slug')
-      .eq('user_id', userId)
-      .eq('is_active', true);
-
-    if (existingAccounts && !isAccountSlugUnique(slug, existingAccounts)) {
-      return {
-        data: null,
-        error: "This account name already exists.",
-      };
-    }
-
-    const { data, error } = await supabase
-      .from('trading_accounts')
-      .insert({ ...payload, slug, user_id: userId, is_default: false })
-      .select()
-      .single();
-
-    if (error) return { data: null, error: error.message };
-    return { data, error: null };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to create account';
-    return { data: null, error: message };
-  }
+  return AccountService.createAccount(userId, payload);
 }
 
-// ─── Update ───────────────────────────────────────────────────────────────────
-
-/**
- * Update an existing trading account.
- * Updates name and slug if account_name changes while keeping id and display_id unchanged.
- */
 export async function updateTradingAccount(
   id: string,
   userId: string,
   updates: UpdateTradingAccount
 ): Promise<ServiceResult<TradingAccount>> {
-  if (isFrontendOnly()) {
-    return updateFrontendTradingAccount(id, userId, updates);
-  }
-
-  const supabase = createClient();
-  try {
-    let slug: string | undefined = undefined;
-
-    if (updates.account_name) {
-      slug = generateAccountSlug(updates.account_name);
-      const { data: existingAccounts } = await supabase
-        .from('trading_accounts')
-        .select('id, account_name, slug')
-        .eq('user_id', userId)
-        .eq('is_active', true);
-
-      if (existingAccounts && !isAccountSlugUnique(slug, existingAccounts, id)) {
-        return {
-          data: null,
-          error: "This account name already exists.",
-        };
-      }
-    }
-
-    const payloadToUpdate = slug ? { ...updates, slug, updated_at: new Date().toISOString() } : { ...updates, updated_at: new Date().toISOString() };
-
-    const { data, error } = await supabase
-      .from('trading_accounts')
-      .update(payloadToUpdate)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) return { data: null, error: error.message };
-    return { data, error: null };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to update account';
-    return { data: null, error: message };
-  }
+  return AccountService.updateAccount(id, userId, updates);
 }
 
-/**
- * Set one account as the default, clearing all others.
- */
-export async function setDefaultAccount(
-  id: string,
-  userId: string
-): Promise<ServiceResult<TradingAccount>> {
-  if (isFrontendOnly()) {
-    return setFrontendDefaultAccount(id, userId);
-  }
-
-  const supabase = createClient();
-  try {
-    // Clear all defaults
-    await supabase
-      .from('trading_accounts')
-      .update({ is_default: false })
-      .eq('user_id', userId);
-
-    // Set new default
-    const { data, error } = await supabase
-      .from('trading_accounts')
-      .update({ is_default: true, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) return { data: null, error: error.message };
-    return { data, error: null };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to set default account';
-    return { data: null, error: message };
-  }
-}
-
-// ─── Delete ───────────────────────────────────────────────────────────────────
-
-/**
- * Soft-delete (deactivate) a trading account.
- * Hard delete is not used — trades referencing this account use ON DELETE SET NULL.
- */
 export async function deleteTradingAccount(
   id: string,
   userId: string
 ): Promise<ServiceResult<boolean>> {
-  if (isFrontendOnly()) {
-    return deleteFrontendTradingAccount(id, userId);
-  }
-
-  const supabase = createClient();
-  try {
-    const { error } = await supabase
-      .from('trading_accounts')
-      .update({ is_active: false, is_default: false, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .eq('user_id', userId);
-
-    if (error) return { data: null, error: error.message };
-    return { data: true, error: null };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to delete account';
-    return { data: null, error: message };
-  }
+  return AccountService.deleteAccount(id, userId);
 }

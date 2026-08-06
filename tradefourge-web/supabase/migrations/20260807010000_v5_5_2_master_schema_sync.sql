@@ -329,3 +329,9 @@ DROP TRIGGER IF EXISTS trg_update_csv_imports_timestamp ON public.csv_imports;
 CREATE TRIGGER trg_update_csv_imports_timestamp
     BEFORE UPDATE ON public.csv_imports
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- SECTION 7: REFRESH POSTGREST SCHEMA CACHE
+-- ─────────────────────────────────────────────────────────────────────────────
+NOTIFY pgrst, 'reload schema';
+

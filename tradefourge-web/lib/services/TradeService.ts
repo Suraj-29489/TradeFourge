@@ -126,12 +126,39 @@ export class TradeService {
     let inserted = 0;
     const errors: string[] = [];
 
+    // Ensure default account fallback if any trade lacks account_id
+    let fallbackAccountId: string | null = null;
+    const missingAccount = trades.some((t) => !t.account_id);
+    if (missingAccount) {
+      const { data: accounts } = await supabase
+        .from("trading_accounts")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("is_default", true)
+        .limit(1);
+
+      if (accounts && accounts.length > 0) {
+        fallbackAccountId = accounts[0].id;
+      } else {
+        const { data: anyAcc } = await supabase
+          .from("trading_accounts")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("is_active", true)
+          .limit(1);
+        if (anyAcc && anyAcc.length > 0) {
+          fallbackAccountId = anyAcc[0].id;
+        }
+      }
+    }
+
     for (let i = 0; i < trades.length; i += BATCH_SIZE) {
       const batch = trades.slice(i, i + BATCH_SIZE).map((t) => {
         const { net_profit, ...cleanT } = t as Record<string, any>;
         return {
           ...cleanT,
           user_id: userId,
+          account_id: t.account_id || fallbackAccountId,
         };
       });
 
