@@ -24,8 +24,12 @@ import type {
 import { useActiveAccount } from "@/context/ActiveAccountContext";
 import { CompanionJournalView } from "@/components/companion/CompanionJournalView";
 
+import { useTheme } from "@/context/ThemeContext";
+
 export default function JournalPage() {
   const { workspaceMode } = useActiveAccount();
+  const { theme } = useTheme();
+  const isLight = theme === "light";
 
   if (workspaceMode === "tfc") {
     return <CompanionJournalView />;
@@ -130,19 +134,27 @@ export default function JournalPage() {
   return (
     <div className="space-y-6 text-xs font-mono max-w-7xl mx-auto w-full">
       {/* Header */}
-      <div className="p-6 rounded-2xl bg-[#111522] border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className={`p-6 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all ${
+        isLight ? "bg-white border-[#E5E7EB] shadow-sm text-slate-900" : "bg-[#111522] border-white/10 text-white"
+      }`}>
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
+          <div className={`p-3 rounded-xl border ${
+            isLight ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" : "bg-blue-500/10 border-blue-500/20 text-blue-400"
+          }`}>
             <TableProperties className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2 font-mono">
+            <h1 className={`text-2xl font-extrabold tracking-tight flex items-center gap-2 font-mono ${
+              isLight ? "text-slate-900" : "text-white"
+            }`}>
               Trade Journal
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase">
-                Institutional
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded border uppercase font-bold ${
+                isLight ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+              }`}>
+                Institutional Workspace
               </span>
             </h1>
-            <p className="text-xs text-gray-400 mt-0.5 font-sans">
+            <p className={`text-xs mt-0.5 font-sans ${isLight ? "text-slate-500" : "text-gray-400"}`}>
               {loading
                 ? "Loading trade records..."
                 : `${result.total.toLocaleString()} trade${result.total !== 1 ? "s" : ""} recorded`}
@@ -153,14 +165,18 @@ export default function JournalPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/upload"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] text-gray-200 font-bold text-xs font-mono transition-all"
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-bold text-xs font-mono transition-all ${
+              isLight ? "bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800" : "bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.08] text-gray-200"
+            }`}
           >
             <Upload className="w-4 h-4" />
             Import CSV
           </Link>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs font-mono transition-all active:scale-95 shadow-sm"
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs font-mono transition-all active:scale-95 shadow-sm text-white ${
+              isLight ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-500"
+            }`}
           >
             <Plus className="w-4 h-4" />
             Add Trade

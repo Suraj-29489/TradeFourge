@@ -53,7 +53,7 @@ export const LandingFooter: React.FC = () => {
                   />
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shrink-0"
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shrink-0"
                   >
                     <span>Join</span>
                     <ArrowRight className="w-3.5 h-3.5" />

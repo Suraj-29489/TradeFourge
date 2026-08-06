@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, HelpCircle } from "lucide-react";
+import { useTheme } from "@/context/ThemeContext";
 
 const FAQS = [
   {
@@ -44,26 +45,30 @@ const FAQS = [
 
 export const FAQSection: React.FC = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const { theme } = useTheme();
+  const isLight = theme === "light";
 
   const toggle = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
   };
 
   return (
-    <section id="faq" className="py-24 relative z-10 bg-[#0B0D13]">
+    <section id="faq" className={`py-24 relative z-10 ${isLight ? "bg-[#F8FAFC]" : "bg-[#0B0D13]"}`}>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#131622] border border-white/10 text-gray-300 text-xs font-mono font-semibold uppercase tracking-wider">
-            <HelpCircle className="w-3.5 h-3.5" /> Frequently Asked Questions
+          <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-mono font-semibold uppercase tracking-wider ${
+            isLight ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700" : "bg-[#131622] border-white/10 text-gray-300"
+          }`}>
+            <HelpCircle className={`w-3.5 h-3.5 ${isLight ? "text-emerald-600" : "text-blue-400"}`} /> Frequently Asked Questions
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
+          <h2 className={`text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight ${isLight ? "text-slate-900" : "text-white"}`}>
             Got Questions? <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-blue-400">
+            <span className={isLight ? "text-emerald-600" : "text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-blue-400"}>
               We Have Answers.
             </span>
           </h2>
-          <p className="text-gray-400 text-base sm:text-lg">
+          <p className={`text-base sm:text-lg ${isLight ? "text-slate-600" : "text-gray-400"}`}>
             Everything you need to know about TradeFourge pricing, security, AI auditing, and broker compatibility.
           </p>
         </div>
@@ -75,24 +80,38 @@ export const FAQSection: React.FC = () => {
             return (
               <div
                 key={faq.q}
-                className="rounded-xl bg-[#131622] border border-white/10 overflow-hidden transition-colors hover:border-blue-500/30"
+                className={`rounded-xl border overflow-hidden transition-all ${
+                  isLight
+                    ? "bg-white border-[#E5E7EB] hover:border-emerald-500/40 hover:bg-emerald-50/20 shadow-sm"
+                    : "bg-[#131622] border-white/10 hover:border-blue-500/30"
+                }`}
               >
                 <button
                   onClick={() => toggle(index)}
-                  className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-white text-base focus:outline-none"
+                  className={`w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-base focus:outline-none ${
+                    isLight ? "text-slate-900" : "text-white"
+                  }`}
                 >
                   <span className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-blue-400">
+                    <span className={`text-xs font-mono font-bold ${isLight ? "text-emerald-600" : "text-blue-400"}`}>
                       {index + 1 < 10 ? `0${index + 1}` : index + 1}.
                     </span>
                     <span>{faq.q}</span>
-                    <span className="text-[10px] font-mono font-normal uppercase px-2 py-0.5 rounded bg-white/5 text-gray-400 border border-white/10 hidden sm:inline-block">
+                    <span className={`text-[10px] font-mono font-normal uppercase px-2 py-0.5 rounded border hidden sm:inline-block ${
+                      isLight ? "bg-slate-100 text-slate-600 border-slate-200" : "bg-white/5 text-gray-400 border-white/10"
+                    }`}>
                       {faq.category}
                     </span>
                   </span>
                   <div
-                    className={`p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 transition-transform duration-200 shrink-0 ${
-                      isOpen ? "rotate-180 text-blue-400 bg-blue-600/20 border-blue-500/30" : ""
+                    className={`p-1.5 rounded-lg border transition-transform duration-200 shrink-0 ${
+                      isOpen
+                        ? isLight
+                          ? "rotate-180 text-emerald-700 bg-emerald-500/10 border-emerald-500/30"
+                          : "rotate-180 text-blue-400 bg-blue-600/20 border-blue-500/30"
+                        : isLight
+                        ? "bg-slate-100 border-slate-200 text-slate-500"
+                        : "bg-white/5 border-white/10 text-gray-400"
                     }`}
                   >
                     <ChevronDown className="w-4 h-4" />
@@ -105,11 +124,12 @@ export const FAQSection: React.FC = () => {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25 }}
+                      transition={{ duration: 0.2 }}
+                      className={`px-5 pb-5 pt-1 text-sm leading-relaxed font-sans border-t ${
+                        isLight ? "border-slate-100 text-slate-600" : "border-white/5 text-gray-300"
+                      }`}
                     >
-                      <div className="px-5 pb-5 text-xs text-gray-300 leading-relaxed border-t border-white/5 pt-3 font-sans">
-                        {faq.a}
-                      </div>
+                      {faq.a}
                     </motion.div>
                   )}
                 </AnimatePresence>

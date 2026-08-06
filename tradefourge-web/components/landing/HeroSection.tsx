@@ -10,33 +10,35 @@ import {
   ShieldCheck,
   Zap,
   Activity,
-  Award,
   CheckCircle2,
   Brain,
   BarChart2,
   X,
-  MousePointer,
-  Sparkles,
 } from "lucide-react";
 import { useMouseSpotlight } from "@/hooks/useMouseSpotlight";
+import { useTheme } from "@/context/ThemeContext";
 
 export const HeroSection: React.FC = () => {
   const [demoOpen, setDemoOpen] = useState(false);
   const { mousePos, isHovered, spotlightProps } = useMouseSpotlight();
+  const { theme } = useTheme();
+  const isLight = theme === "light";
 
   return (
     <section
       {...spotlightProps}
-      className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-[#0B0D13]"
+      className={`relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden transition-colors ${
+        isLight ? "bg-[#F8FAFC]" : "bg-[#0B0D13]"
+      }`}
     >
       {/* Background Terminal Grid & Subtle Spotlight */}
-      <div className="absolute inset-0 terminal-grid opacity-30 pointer-events-none" />
+      <div className={`absolute inset-0 terminal-grid pointer-events-none ${isLight ? "opacity-10" : "opacity-30"}`} />
       <div
         className="pointer-events-none absolute -inset-px transition-opacity duration-300 opacity-60"
         style={{
           background: isHovered
-            ? `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(37, 99, 235, 0.08), transparent 70%)`
-            : "radial-gradient(800px circle at 50% 30%, rgba(37, 99, 235, 0.05), transparent 70%)",
+            ? `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, ${isLight ? "rgba(22, 163, 74, 0.08)" : "rgba(37, 99, 235, 0.08)"}, transparent 70%)`
+            : `radial-gradient(800px circle at 50% 30%, ${isLight ? "rgba(22, 163, 74, 0.05)" : "rgba(37, 99, 235, 0.05)"}, transparent 70%)`,
         }}
       />
 
@@ -49,9 +51,11 @@ export const HeroSection: React.FC = () => {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#131622] border border-white/10 text-gray-300 text-xs font-mono font-medium shadow-sm"
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-mono font-medium shadow-sm ${
+                isLight ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700" : "bg-[#131622] border-white/10 text-gray-300"
+              }`}
             >
-              <Zap className="w-3.5 h-3.5 text-blue-400" />
+              <Zap className={`w-3.5 h-3.5 ${isLight ? "text-emerald-600" : "text-blue-400"}`} />
               <span>Institutional Trading Analytics Terminal</span>
             </motion.div>
 
@@ -60,10 +64,12 @@ export const HeroSection: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15]"
+              className={`text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] ${
+                isLight ? "text-slate-900" : "text-white"
+              }`}
             >
               Your Edge Isn't Luck. <br className="hidden sm:inline" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-blue-400">
+              <span className={isLight ? "text-emerald-600" : "text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-blue-400"}>
                 It's Hidden In Your Data.
               </span>
             </motion.h1>
@@ -73,7 +79,9 @@ export const HeroSection: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-base sm:text-lg text-gray-400 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-sans"
+              className={`text-base sm:text-lg max-w-2xl mx-auto lg:mx-0 leading-relaxed font-sans ${
+                isLight ? "text-slate-600" : "text-gray-400"
+              }`}
             >
               TradeFourge transforms raw trading history into professional performance analytics, helping traders discover patterns, eliminate mistakes, and improve consistency through intelligent insights.
             </motion.p>
@@ -87,7 +95,11 @@ export const HeroSection: React.FC = () => {
             >
               <Link
                 href="/signup"
-                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-base shadow-lg shadow-blue-600/20 flex items-center justify-center gap-3 transition-all active:scale-95"
+                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-base flex items-center justify-center gap-3 transition-all active:scale-95 text-white ${
+                  isLight
+                    ? "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 hover:-translate-y-0.5"
+                    : "bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-600/20"
+                }`}
               >
                 <span>Start Free</span>
                 <ArrowRight className="w-5 h-5" />
@@ -95,9 +107,15 @@ export const HeroSection: React.FC = () => {
 
               <button
                 onClick={() => setDemoOpen(true)}
-                className="w-full sm:w-auto px-7 py-4 rounded-xl bg-[#131622] hover:bg-[#1A1E2E] border border-white/10 text-gray-200 font-bold text-base flex items-center justify-center gap-3 transition-all hover:border-blue-500/30"
+                className={`w-full sm:w-auto px-7 py-4 rounded-xl border font-bold text-base flex items-center justify-center gap-3 transition-all ${
+                  isLight
+                    ? "bg-white hover:bg-slate-100 border-[#E5E7EB] text-slate-800 shadow-sm hover:border-emerald-500/40"
+                    : "bg-[#131622] hover:bg-[#1A1E2E] border-white/10 text-gray-200 hover:border-blue-500/30"
+                }`}
               >
-                <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${
+                  isLight ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                }`}>
                   <Play className="w-3 h-3 fill-current ml-0.5" />
                 </div>
                 <span>Watch Demo</span>
@@ -109,24 +127,26 @@ export const HeroSection: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="pt-6 border-t border-white/10 grid grid-cols-3 gap-3 text-xs font-mono text-gray-400 max-w-lg mx-auto lg:mx-0"
+              className={`pt-6 border-t grid grid-cols-3 gap-3 text-xs font-mono max-w-lg mx-auto lg:mx-0 ${
+                isLight ? "border-slate-200 text-slate-600" : "border-white/10 text-gray-400"
+              }`}
             >
               <div className="flex items-center gap-1.5 justify-center lg:justify-start">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                 <span>Zero Latency</span>
               </div>
               <div className="flex items-center gap-1.5 justify-center lg:justify-start">
-                <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0" />
+                <ShieldCheck className={`w-4 h-4 shrink-0 ${isLight ? "text-emerald-600" : "text-blue-400"}`} />
                 <span>Prop-Firm Ready</span>
               </div>
               <div className="flex items-center gap-1.5 justify-center lg:justify-start">
-                <Activity className="w-4 h-4 text-blue-400 shrink-0" />
+                <Activity className={`w-4 h-4 shrink-0 ${isLight ? "text-emerald-600" : "text-blue-400"}`} />
                 <span>Instant CSV Import</span>
               </div>
             </motion.div>
           </div>
 
-          {/* Right Column: Animated Dashboard Terminal Preview */}
+          {/* Right Column: Animated Simulated Trading Terminal Preview (ALWAYS DARK FOR CONTRAST) */}
           <div className="lg:col-span-5 relative">
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
@@ -134,8 +154,8 @@ export const HeroSection: React.FC = () => {
               transition={{ duration: 0.7, delay: 0.2 }}
               className="relative mx-auto max-w-lg lg:max-w-none"
             >
-              {/* Subtle Card Border Highlight */}
-              <div className="relative rounded-2xl bg-[#131622] border border-white/10 p-5 shadow-2xl space-y-4">
+              {/* Simulated Terminal Preview Card (Dark contrast container) */}
+              <div className="relative rounded-2xl bg-[#131622] border border-white/10 p-5 shadow-2xl space-y-4 text-white font-sans">
                 {/* Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
                   <div className="flex items-center gap-2">
@@ -160,80 +180,50 @@ export const HeroSection: React.FC = () => {
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-[#0B0D13] border border-white/10">
-                    <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Win Rate</span>
-                    <span className="text-xl font-extrabold text-white font-mono mt-0.5 block">68.4%</span>
-                    <span className="text-[10px] text-gray-400 font-mono mt-1">
-                      Profit Factor: <strong className="text-white">2.42</strong>
+                    <span className="text-[11px] font-mono text-gray-400 uppercase tracking-wider block">Win Rate / R:R</span>
+                    <span className="text-xl font-extrabold text-white font-mono mt-0.5 block">68.4% <span className="text-xs text-gray-400 font-normal">(2.4 R:R)</span></span>
+                    <span className="text-[10px] text-blue-400 font-mono mt-1 flex items-center gap-1">
+                      <BarChart2 className="w-3 h-3" /> Profit Factor: 2.38
                     </span>
                   </div>
                 </div>
 
-                {/* Animated Equity Curve Line */}
-                <div className="p-4 rounded-xl bg-[#0B0D13] border border-white/10 space-y-2 relative">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-200 font-bold flex items-center gap-1.5">
-                      <BarChart2 className="w-4 h-4 text-blue-400" /> Equity Growth Curve
-                    </span>
-                    <span className="text-xs text-blue-300 font-mono">142 Executions</span>
+                {/* Simulated AI Insight Alert */}
+                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-mono flex items-start gap-2.5">
+                  <Brain className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-white block">AI Optimization Active</strong>
+                    <span className="text-[11px] text-emerald-200/90 font-sans">EURUSD NY Overlap entries yield 84% win rate with average 3.1 R:R ratio.</span>
                   </div>
-                  
-                  {/* SVG Sparkline */}
-                  <div className="h-28 w-full relative pt-2">
-                    <svg className="w-full h-full overflow-visible" viewBox="0 0 300 80" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="heroFintechGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#10B981" stopOpacity="0.3" />
-                          <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d="M 0 70 Q 30 65, 60 50 T 120 40 T 180 25 T 240 30 T 300 10 L 300 80 L 0 80 Z"
-                        fill="url(#heroFintechGradient)"
-                      />
-                      <path
-                        d="M 0 70 Q 30 65, 60 50 T 120 40 T 180 25 T 240 30 T 300 10"
-                        fill="none"
-                        stroke="#10B981"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                      />
-                      {/* Pulse point */}
-                      <circle cx="300" cy="10" r="4" fill="#10B981" />
-                      <circle cx="300" cy="10" r="8" fill="#10B981" opacity="0.4" className="animate-ping" />
-                    </svg>
-                  </div>
-
-                  {/* Simulated Cursor Floating Effect */}
-                  <motion.div
-                    animate={{
-                      x: [20, 180, 260, 120, 20],
-                      y: [30, 20, 50, 40, 30],
-                    }}
-                    transition={{
-                      duration: 8,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                    className="absolute z-20 pointer-events-none flex items-center gap-1.5 px-2 py-1 rounded bg-blue-600/90 text-white text-[10px] font-mono shadow-md"
-                  >
-                    <MousePointer className="w-3 h-3 fill-current" />
-                    <span>Inspection @ London Open</span>
-                  </motion.div>
                 </div>
 
-                {/* AI Assistant Insight Highlight Card */}
-                <div className="p-3.5 rounded-xl bg-[#0B0D13] border border-white/10 flex items-start gap-3">
-                  <div className="p-2 rounded-lg bg-blue-600/20 text-blue-400 shrink-0 mt-0.5 border border-blue-500/30">
-                    <Brain className="w-4 h-4" />
+                {/* Mini Execution Log Table */}
+                <div className="rounded-xl bg-[#0B0D13] border border-white/10 overflow-hidden font-mono text-[11px]">
+                  <div className="grid grid-cols-4 p-2 bg-white/5 text-gray-400 font-bold border-b border-white/10">
+                    <span>Symbol</span>
+                    <span>Type</span>
+                    <span>Lots</span>
+                    <span className="text-right">P&L</span>
                   </div>
-                  <div className="space-y-0.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white">TradeFourge Insight</span>
-                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">94% Confidence</span>
+                  <div className="divide-y divide-white/5 text-gray-300">
+                    <div className="grid grid-cols-4 p-2">
+                      <span className="font-bold text-white">XAUUSD</span>
+                      <span className="text-emerald-400">BUY</span>
+                      <span>2.50</span>
+                      <span className="text-right text-emerald-400 font-bold">+$1,450.00</span>
                     </div>
-                    <p className="text-[11px] text-gray-300 leading-snug">
-                      London session win-rate is <strong>74%</strong> vs <strong>42%</strong> in NY. Capital reallocated to London Open entries.
-                    </p>
+                    <div className="grid grid-cols-4 p-2">
+                      <span className="font-bold text-white">EURUSD</span>
+                      <span className="text-emerald-400">BUY</span>
+                      <span>5.00</span>
+                      <span className="text-right text-emerald-400 font-bold">+$820.00</span>
+                    </div>
+                    <div className="grid grid-cols-4 p-2">
+                      <span className="font-bold text-white">US30</span>
+                      <span className="text-rose-400">SELL</span>
+                      <span>1.00</span>
+                      <span className="text-right text-rose-400 font-bold">-$340.00</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -242,39 +232,18 @@ export const HeroSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Watch Demo Modal */}
+      {/* Interactive Video Demo Modal */}
       {demoOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="relative w-full max-w-4xl rounded-2xl bg-[#131622] border border-white/10 p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Play className="w-5 h-5 text-blue-400 fill-current" /> TradeFourge Platform Walkthrough
-              </h3>
-              <button
-                onClick={() => setDemoOpen(false)}
-                className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white"
-              >
+          <div className="relative w-full max-w-4xl rounded-2xl bg-[#0F141C] border border-white/10 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <h3 className="text-lg font-bold text-white font-mono">TradeFourge Terminal Walkthrough</h3>
+              <button onClick={() => setDemoOpen(false)} className="p-1 rounded-lg text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
-            <div className="aspect-video w-full rounded-xl bg-[#0B0D13] border border-white/10 flex flex-col items-center justify-center p-8 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center animate-pulse">
-                <Award className="w-8 h-8" />
-              </div>
-              <div>
-                <h4 className="text-xl font-bold text-white">TradeFourge Terminal Overview</h4>
-                <p className="text-sm text-gray-400 max-w-md mx-auto mt-1">
-                  Watch how TradeFourge ingests CSV executions, calculates institutional statistics, and generates real-time edge recommendations.
-                </p>
-              </div>
-              <Link
-                href="/signup"
-                onClick={() => setDemoOpen(false)}
-                className="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm flex items-center gap-2 shadow-lg hover:bg-blue-500"
-              >
-                Launch Terminal Now <ArrowRight className="w-4 h-4" />
-              </Link>
+            <div className="aspect-video w-full rounded-xl bg-black flex items-center justify-center border border-white/10 text-gray-400 text-sm font-mono">
+              [ Interactive Simulated Terminal Demo Player ]
             </div>
           </div>
         </div>
