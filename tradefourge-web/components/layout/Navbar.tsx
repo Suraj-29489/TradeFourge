@@ -10,6 +10,9 @@ import { useCompanionAccount } from "@/context/CompanionAccountContext";
 import { Menu, LogOut, User, Settings, FileSpreadsheet, ChevronDown, Layers, Zap, RefreshCw, Radio, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { SharedBadge } from "@/components/ui/SharedBadge";
+
 interface NavbarProps {
   onOpenMobileNav?: () => void;
 }
@@ -19,7 +22,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
   const init = useJournalStore((s) => s.init);
 
   const { profile } = useUserProfile();
-  const { activeAccount, workspaceMode, openAccountTypeModal } = useActiveAccount();
+  const { activeAccount, openAccountTypeModal } = useActiveAccount();
+  const { currentWorkspace, getWorkspaceMetadata } = useWorkspace();
+  const currentMeta = getWorkspaceMetadata(currentWorkspace);
+  const isTfc = currentWorkspace === "tfc";
+
   const {
     currentAccount: tfcAccount,
     connectionStatus,
@@ -73,11 +80,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
     ? `@${profile.username}`
     : profile?.full_name || "Trader";
 
-  const isTfc = workspaceMode === "tfc";
-
   const accountDisplayName = isTfc
     ? tfcAccount ? `${tfcAccount.broker} • ${tfcAccount.accountNumber}` : "TradeForge Companion Account"
     : activeAccount?.account_name ? `CSV • ${activeAccount.account_name}` : "CSV • Personal Account";
+
+  const WorkspaceIcon = currentMeta.icon;
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 bg-[#090D14]/90 backdrop-blur-md border-b border-white/[0.08] select-none font-mono">
@@ -92,17 +99,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
         </button>
 
         <div className="flex items-center gap-2">
-          {isTfc ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 border border-blue-500/40 text-xs font-mono text-blue-300 font-bold">
-              <Zap className="w-3.5 h-3.5 fill-blue-300" />
-              <span>TRADEFORGE COMPANION</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs font-mono text-blue-400 font-bold">
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>CSV WORKSPACE</span>
-            </div>
-          )}
+          <SharedBadge
+            label={currentMeta.name}
+            variant="primary"
+            icon={WorkspaceIcon}
+            size="md"
+          />
 
           <span className="text-xs font-bold text-gray-200 hidden sm:inline-block font-sans">
             {accountDisplayName}

@@ -106,13 +106,17 @@ function NavLink({
   );
 }
 
+import { useWorkspace } from "@/context/WorkspaceContext";
+
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMobile }) => {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
-  const { workspaceMode } = useActiveAccount();
+  const { currentWorkspace, getWorkspaceMetadata } = useWorkspace();
+  const currentMeta = getWorkspaceMetadata(currentWorkspace);
 
-  const isTfc = workspaceMode === "tfc";
+  const isTfc = currentWorkspace === "tfc";
   const navItems = isTfc ? TFC_NAV_ITEMS : CSV_NAV_ITEMS;
+  const WorkspaceIcon = currentMeta.icon;
 
   const isActive = (href: string) => pathname === href;
 

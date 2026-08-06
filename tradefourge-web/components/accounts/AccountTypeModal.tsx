@@ -3,17 +3,19 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileSpreadsheet, Zap, Layers, ArrowRight, Lock, X } from "lucide-react";
+import { X, Check, ArrowRight, Lock } from "lucide-react";
+import { useWorkspace, WorkspaceMode } from "@/context/WorkspaceContext";
 import { useActiveAccount } from "@/context/ActiveAccountContext";
+import { SharedBadge } from "@/components/ui/SharedBadge";
 
 interface AccountTypeModalProps {
   open: boolean;
-  onSelectCsv?: () => void;
-  onSelectTfc?: () => void;
+  onSelectWorkspace?: (mode: WorkspaceMode) => void;
 }
 
-export const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ open, onSelectCsv, onSelectTfc }) => {
+export const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ open, onSelectWorkspace }) => {
   const router = useRouter();
+  const { currentWorkspace, selectWorkspace, isWorkspaceActive, workspaces } = useWorkspace();
   const { selectAccountType, closeAccountTypeModal } = useActiveAccount();
 
   // Listen for ESC key press to dismiss modal
@@ -30,21 +32,16 @@ export const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ open, onSele
 
   if (!open) return null;
 
-  const handleContinueCsv = () => {
-    selectAccountType("csv");
-    if (onSelectCsv) {
-      onSelectCsv();
-    } else {
-      router.push("/accounts");
-    }
-  };
+  const handleCardClick = (mode: WorkspaceMode) => {
+    if (mode === "mt5") return;
 
-  const handleContinueTfc = () => {
-    selectAccountType("tfc");
-    if (onSelectTfc) {
-      onSelectTfc();
+    selectWorkspace(mode);
+    selectAccountType(mode as "csv" | "tfc");
+
+    if (onSelectWorkspace) {
+      onSelectWorkspace(mode);
     } else {
-      router.push("/dashboard");
+      router.push(mode === "tfc" ? "/dashboard" : "/accounts");
     }
   };
 
@@ -66,7 +63,7 @@ export const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ open, onSele
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
           transition={{ type: "spring", stiffness: 350, damping: 30 }}
-          className="relative z-10 w-full max-w-2xl p-6 sm:p-8 rounded-3xl bg-[#0F141C] border border-white/[0.08] shadow-2xl text-white space-y-6"
+          className="relative z-10 w-full max-w-3xl p-6 sm:p-8 rounded-3xl bg-[#0F141C] border border-white/[0.08] shadow-2xl text-white space-y-6"
         >
           {/* Close Button X */}
           <button
@@ -87,99 +84,91 @@ export const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ open, onSele
             </p>
           </div>
 
-          {/* Option Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
-            {/* 1. CSV Journal */}
-            <div
-              onClick={handleContinueCsv}
-              className="relative p-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.15] transition-all cursor-pointer flex flex-col justify-between space-y-5 shadow-sm group"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
-                    <FileSpreadsheet className="w-5 h-5" />
+          {/* Equal Height Option Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch font-mono">
+            {workspaces.map((ws) => {
+              const Icon = ws.icon;
+              const isActive = isWorkspaceActive(ws.id);
+              const isEnabled = ws.isEnabled;
+
+              return (
+                <motion.div
+                  key={ws.id}
+                  whileHover={isEnabled ? { scale: 1.01 } : {}}
+                  transition={{ duration: 0.15 }}
+                  onClick={() => handleCardClick(ws.id)}
+                  className={`relative p-6 rounded-2xl border transition-all duration-200 flex flex-col justify-between space-y-6 h-full select-none ${
+                    !isEnabled
+                      ? "bg-white/[0.01] border-white/[0.06] opacity-40 cursor-not-allowed"
+                      : isActive
+                      ? "bg-blue-600/10 border-2 border-blue-600 shadow-xl shadow-blue-500/10 cursor-pointer"
+                      : "bg-white/[0.02] border-white/[0.08] hover:border-blue-500/60 hover:bg-white/[0.04] cursor-pointer"
+                  }`}
+                >
+                  <div className="space-y-4">
+                    {/* Icon & Badge Row */}
+                    <div className="flex items-center justify-between">
+                      <div
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold shrink-0 transition-colors ${
+                          isActive
+                            ? "bg-blue-600 text-white shadow-sm"
+                            : isEnabled
+                            ? "bg-blue-500/10 border border-blue-500/20 text-blue-400"
+                            : "bg-white/[0.04] text-gray-500"
+                        }`}
+                      >
+                        <Icon className="w-5 h-5" />
+                      </div>
+
+                      {isActive ? (
+                        <SharedBadge label="CURRENT WORKSPACE" variant="primary" icon={Check} />
+                      ) : (
+                        <SharedBadge
+                          label={ws.badge}
+                          variant={isEnabled ? "neutral" : "warning"}
+                        />
+                      )}
+                    </div>
+
+                    {/* Title & Description */}
+                    <div className="space-y-1.5">
+                      <h3 className="text-sm font-bold text-white font-sans">{ws.name}</h3>
+                      <p className="text-xs text-gray-400 leading-relaxed font-sans min-h-[48px]">
+                        {ws.description}
+                      </p>
+                    </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-semibold text-[10px] uppercase tracking-wider">
-                    CSV MODE
-                  </span>
-                </div>
 
-                <div>
-                  <h3 className="text-sm font-bold text-white font-sans">CSV Journal</h3>
-                  <p className="text-xs text-gray-400 mt-1 leading-relaxed font-sans">
-                    Import CSV statement files & analyze historical trades.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleContinueCsv}
-                className="w-full py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all group-hover:gap-2"
-              >
-                <span>Continue</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* 2. TradeForge Companion */}
-            <div
-              onClick={handleContinueTfc}
-              className="relative p-5 rounded-2xl border-2 border-blue-600 bg-blue-500/10 hover:bg-blue-500/15 transition-all cursor-pointer flex flex-col justify-between space-y-5 shadow-lg shadow-blue-600/10 group"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-sm">
-                    <Zap className="w-5 h-5 fill-white" />
+                  {/* Dynamic Action Indicator (No hardcoded CTA buttons) */}
+                  <div
+                    className={`py-2.5 px-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                      !isEnabled
+                        ? "bg-white/[0.04] text-gray-500 font-mono"
+                        : isActive
+                        ? "bg-blue-600 text-white font-mono shadow-sm"
+                        : "bg-white/[0.04] text-gray-300 group-hover:text-white font-mono"
+                    }`}
+                  >
+                    {!isEnabled ? (
+                      <>
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>Disabled</span>
+                      </>
+                    ) : isActive ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Current Workspace</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Switch Workspace</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
                   </div>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-600 text-white font-semibold text-[10px] uppercase tracking-wider">
-                    LIVE TFC
-                  </span>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-white font-sans">TradeForge Companion</h3>
-                  <p className="text-xs text-blue-200/80 mt-1 leading-relaxed font-sans">
-                    Discovered account manager & live synchronization workspace.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleContinueTfc}
-                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all group-hover:gap-2 shadow-sm"
-              >
-                <span>Open Workspace</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* 3. MetaTrader 5 Direct (DISABLED) */}
-            <div className="relative p-5 rounded-2xl border border-white/[0.06] bg-white/[0.01] opacity-40 cursor-not-allowed flex flex-col justify-between space-y-5 select-none">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-white/[0.04] text-gray-500 flex items-center justify-center">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-gray-400 font-bold text-[9px] uppercase tracking-wider">
-                    COMING SOON
-                  </span>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-gray-400 font-sans">MT5 Direct API</h3>
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed font-sans">
-                    Direct server-side API bridge for MetaTrader 5 terminals.
-                  </p>
-                </div>
-              </div>
-
-              <div className="py-2.5 px-3 rounded-xl bg-white/[0.04] text-gray-500 font-semibold text-xs text-center flex items-center justify-center gap-1.5">
-                <Lock className="w-3.5 h-3.5" />
-                <span>Disabled</span>
-              </div>
-            </div>
+                </motion.div>
+              );
+            })}
           </div>
         </motion.div>
       </div>
