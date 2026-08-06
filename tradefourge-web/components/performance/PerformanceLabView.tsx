@@ -333,7 +333,7 @@ export const PerformanceLabView: React.FC = () => {
   const isLight = theme === "light";
   const gridStroke = isLight ? "#E2E8F0" : "#1F293D";
   const axisStroke = isLight ? "#64748B" : "#6B7280";
-  const purpleColor = "#7C3AED";
+  const blueColor = "#2563EB";
   const emeraldColor = isLight ? "#16A34A" : "#10B981";
   const roseColor = isLight ? "#DC2626" : "#EF4444";
 
@@ -690,15 +690,15 @@ export const PerformanceLabView: React.FC = () => {
               <AreaChart data={equityChartData}>
                 <defs>
                   <linearGradient id="labEquityGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={purpleColor} stopOpacity={0.4} />
-                    <stop offset="95%" stopColor={purpleColor} stopOpacity={0.0} />
+                    <stop offset="5%" stopColor={blueColor} stopOpacity={0.4} />
+                    <stop offset="95%" stopColor={blueColor} stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} opacity={0.5} />
                 <XAxis dataKey="date" stroke={axisStroke} fontSize={10} tickLine={false} />
                 <YAxis stroke={axisStroke} fontSize={10} tickLine={false} domain={["auto", "auto"]} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [formatSigned(Number(v)), "Cumulative Net PnL"]} />
-                <Area type="monotone" dataKey="cumulativeProfit" stroke={purpleColor} strokeWidth={2.5} fill="url(#labEquityGrad)" />
+                <Area type="monotone" dataKey="cumulativeProfit" stroke={blueColor} strokeWidth={2.5} fill="url(#labEquityGrad)" />
               </AreaChart>
             ) : chartMode === "drawdown" ? (
               <BarChart data={equityChartData}>
@@ -712,15 +712,15 @@ export const PerformanceLabView: React.FC = () => {
               <AreaChart data={equityChartData}>
                 <defs>
                   <linearGradient id="dualEqGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={purpleColor} stopOpacity={0.4} />
-                    <stop offset="95%" stopColor={purpleColor} stopOpacity={0.0} />
+                    <stop offset="5%" stopColor={blueColor} stopOpacity={0.4} />
+                    <stop offset="95%" stopColor={blueColor} stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} opacity={0.5} />
                 <XAxis dataKey="date" stroke={axisStroke} fontSize={10} tickLine={false} />
                 <YAxis stroke={axisStroke} fontSize={10} tickLine={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Area type="monotone" dataKey="cumulativeProfit" stroke={purpleColor} strokeWidth={2} fill="url(#dualEqGrad)" name={`Equity (${symbol})`} />
+                <Area type="monotone" dataKey="cumulativeProfit" stroke={blueColor} strokeWidth={2} fill="url(#dualEqGrad)" name={`Equity (${symbol})`} />
                 <Line type="monotone" dataKey="drawdown" stroke={roseColor} strokeWidth={2} dot={false} name={`Drawdown (${symbol})`} />
               </AreaChart>
             )}

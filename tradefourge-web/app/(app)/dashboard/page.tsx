@@ -239,7 +239,7 @@ export default function DashboardPage() {
   const isLight = theme === "light";
   const gridStroke = isLight ? "#E2E8F0" : "#1F293D";
   const axisStroke = isLight ? "#64748B" : "#6B7280";
-  const purpleColor = "#7C3AED";
+  const primaryBlueColor = "#2563EB";
 
   const tooltipStyle: React.CSSProperties = isLight
     ? {
@@ -581,8 +581,8 @@ export default function DashboardPage() {
                 <AreaChart data={filteredEquityCurve}>
                   <defs>
                     <linearGradient id="dashboardEquityGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={purpleColor} stopOpacity={0.4} />
-                      <stop offset="95%" stopColor={purpleColor} stopOpacity={0.0} />
+                      <stop offset="5%" stopColor={primaryBlueColor} stopOpacity={0.4} />
+                      <stop offset="95%" stopColor={primaryBlueColor} stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} opacity={0.5} />
@@ -595,7 +595,7 @@ export default function DashboardPage() {
                   <Area
                     type="monotone"
                     dataKey="cumulativeProfit"
-                    stroke={purpleColor}
+                    stroke={primaryBlueColor}
                     strokeWidth={2.5}
                     fill="url(#dashboardEquityGrad)"
                   />

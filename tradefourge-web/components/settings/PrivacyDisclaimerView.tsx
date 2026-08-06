@@ -1,15 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
-import { Shield, AlertTriangle, Lock, CheckCircle2, FileText, ExternalLink } from "lucide-react";
+import React from "react";
+import { Shield, AlertTriangle, Lock } from "lucide-react";
 
 export const PrivacyDisclaimerView: React.FC = () => {
-  const [agreed, setAgreed] = useState(false);
-
   return (
     <div className="space-y-6 font-mono text-xs max-w-4xl mx-auto w-full text-gray-200 pb-12">
       {/* Top Header Card */}
-      <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
+      <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1 w-full">
         <h1 className="text-2xl font-extrabold text-white tracking-tight font-sans flex items-center gap-2">
           <Shield className="w-6 h-6 text-blue-400" />
           <span>Privacy & Data Usage Disclaimer</span>
@@ -19,8 +17,8 @@ export const PrivacyDisclaimerView: React.FC = () => {
         </p>
       </div>
 
-      {/* Main Content Card */}
-      <div className="p-6 sm:p-8 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-6 shadow-xl font-sans">
+      {/* Main Read-Only Content Card */}
+      <div className="p-6 sm:p-8 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-6 shadow-xl font-sans w-full">
         {/* Section 1: Data Collection */}
         <div className="space-y-2">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono text-blue-400">
@@ -90,28 +88,8 @@ export const PrivacyDisclaimerView: React.FC = () => {
             <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/20">● Unexpected synchronization errors</div>
           </div>
           <p className="text-xs font-bold text-rose-300 pt-2 font-sans">
-            By operating TradeForge Companion, users acknowledge and accept these terms at their own risk.
+            By operating TradeForge Companion or CSV Journal, users acknowledge and accept these terms at their own risk.
           </p>
-        </div>
-
-        {/* Bottom Acknowledgment Checkbox */}
-        <div className="pt-4 border-t border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 font-mono">
-          <label className="flex items-center gap-3 cursor-pointer select-none text-xs text-gray-200">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              className="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-600 focus:ring-blue-500 cursor-pointer"
-            />
-            <span>I have read, understood, and accept the Privacy & Data Usage Disclaimer.</span>
-          </label>
-
-          <button
-            disabled={!agreed}
-            className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold text-xs transition-all shrink-0 shadow-sm disabled:cursor-not-allowed"
-          >
-            Acknowledge & Save
-          </button>
         </div>
       </div>
     </div>

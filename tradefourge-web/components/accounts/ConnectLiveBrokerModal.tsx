@@ -187,12 +187,12 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative z-10 w-full max-w-xl rounded-2xl bg-[#0D111A] border border-purple-500/30 shadow-2xl overflow-hidden font-mono text-xs text-gray-200"
+          className="relative z-10 w-full max-w-xl rounded-2xl bg-[#0F141C] border border-blue-500/30 shadow-2xl overflow-hidden font-mono text-xs text-gray-200"
         >
           {/* Header */}
-          <div className="p-5 border-b border-white/10 flex items-center justify-between bg-dark-card">
+          <div className="p-6 border-b border-white/[0.08] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center font-bold shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold shrink-0">
                 <Radio className="w-5 h-5" />
               </div>
               <div>
@@ -224,7 +224,7 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
                 key={s.num}
                 className={`flex-1 py-2 text-center text-[10px] font-bold border-b-2 transition-all ${
                   step === s.num
-                    ? "border-purple-500 text-purple-400 bg-purple-500/10"
+                    ? "border-blue-500 text-blue-400 bg-blue-500/10"
                     : step > s.num
                     ? "border-emerald-500 text-emerald-400 bg-emerald-500/5"
                     : "border-transparent text-gray-500"
@@ -255,7 +255,7 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
                     }}
                     className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                       selectedBroker === "Exness"
-                        ? "bg-purple-500/10 border-purple-500/50 shadow-glow"
+                        ? "bg-blue-500/10 border-blue-500/50 shadow-sm"
                         : "bg-black/20 border-white/5 hover:bg-white/5"
                     }`}
                   >
@@ -301,7 +301,7 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
                 <div className="flex justify-end pt-2">
                   <button
                     onClick={() => setStep(2)}
-                    className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-glow text-xs flex items-center gap-2"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-sm text-xs flex items-center gap-2"
                   >
                     <span>Next: Select Platform</span>
                     <ChevronRight className="w-4 h-4" />
@@ -328,13 +328,13 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
                     }}
                     className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between space-y-3 ${
                       selectedPlatform === "MetaTrader 5"
-                        ? "bg-purple-500/10 border-purple-500/50 shadow-glow"
+                        ? "bg-blue-500/10 border-blue-500/50 shadow-sm"
                         : "bg-black/20 border-white/5 hover:bg-white/5"
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-extrabold text-white text-base">MT5</span>
-                      <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/30 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30 text-[10px] font-bold">
                         Active
                       </span>
                     </div>
@@ -367,7 +367,7 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
                   </button>
                   <button
                     onClick={() => setStep(3)}
-                    className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-glow text-xs flex items-center gap-2"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-sm text-xs flex items-center gap-2"
                   >
                     <span>Next: Connection Form</span>
                     <ChevronRight className="w-4 h-4" />
@@ -380,8 +380,8 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
             {step === 3 && (
               <form onSubmit={handleSubmitConnection} className="space-y-4">
                 {/* Security Notice Banner */}
-                <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-start gap-3">
-                  <ShieldCheck className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-start gap-3">
+                  <ShieldCheck className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                   <div className="space-y-1">
                     <div className="font-bold text-white text-xs">Read-Only Investor Password Security</div>
                     <p className="text-gray-300 text-[11px] leading-relaxed">
@@ -425,7 +425,7 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
                     value={accountName}
                     onChange={(e) => setAccountName(e.target.value)}
                     placeholder="e.g. Exness Scalping Account"
-                    className="w-full p-2.5 rounded-xl bg-black/40 border border-dark-border text-white text-xs font-mono focus:border-purple-500 focus:outline-none"
+                    className="w-full p-2.5 rounded-xl bg-black/40 border border-dark-border text-white text-xs font-mono focus:border-blue-500 focus:outline-none"
                     required
                   />
                 </div>
@@ -438,7 +438,7 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
                       value={accountNumber}
                       onChange={(e) => setAccountNumber(e.target.value)}
                       placeholder="e.g. 7788912"
-                      className="w-full p-2.5 rounded-xl bg-black/40 border border-dark-border text-white text-xs font-mono focus:border-purple-500 focus:outline-none"
+                      className="w-full p-2.5 rounded-xl bg-black/40 border border-dark-border text-white text-xs font-mono focus:border-blue-500 focus:outline-none"
                       required
                     />
                   </div>
@@ -450,7 +450,7 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
                       value={server}
                       onChange={(e) => setServer(e.target.value)}
                       placeholder="e.g. Exness-MT5Real"
-                      className="w-full p-2.5 rounded-xl bg-black/40 border border-dark-border text-white text-xs font-mono focus:border-purple-500 focus:outline-none"
+                      className="w-full p-2.5 rounded-xl bg-black/40 border border-dark-border text-white text-xs font-mono focus:border-blue-500 focus:outline-none"
                       required
                     />
                   </div>
@@ -459,14 +459,14 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
                 <div className="space-y-1">
                   <label className="text-[10px] text-gray-400 uppercase flex items-center justify-between">
                     <span>MT5 Investor Password (Read-Only) *</span>
-                    <span className="text-purple-400 font-normal">Encrypted on Client</span>
+                    <span className="text-blue-400 font-normal">Encrypted on Client</span>
                   </label>
                   <input
                     type="password"
                     value={investorPassword}
                     onChange={(e) => setInvestorPassword(e.target.value)}
                     placeholder="Enter your read-only Investor Password"
-                    className="w-full p-2.5 rounded-xl bg-black/40 border border-dark-border text-white text-xs font-mono focus:border-purple-500 focus:outline-none"
+                    className="w-full p-2.5 rounded-xl bg-black/40 border border-dark-border text-white text-xs font-mono focus:border-blue-500 focus:outline-none"
                     required
                   />
                 </div>
@@ -478,7 +478,7 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="e.g. Main intraday forex account"
-                    className="w-full p-2.5 rounded-xl bg-black/40 border border-dark-border text-white text-xs font-mono focus:border-purple-500 focus:outline-none"
+                    className="w-full p-2.5 rounded-xl bg-black/40 border border-dark-border text-white text-xs font-mono focus:border-blue-500 focus:outline-none"
                   />
                 </div>
 
@@ -493,7 +493,7 @@ export const ConnectLiveBrokerModal: React.FC<ConnectLiveBrokerModalProps> = ({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-glow text-xs flex items-center gap-2 disabled:opacity-50"
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-sm text-xs flex items-center gap-2 disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <>

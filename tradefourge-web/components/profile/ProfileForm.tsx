@@ -159,37 +159,37 @@ export function ProfileForm() {
       )}
 
       {/* Essential Personal Information Card */}
-      <div className="p-6 rounded-2xl bg-[#111726] border border-white/10 space-y-5 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <User className="w-4 h-4 text-purple-400" /> Personal Information
+      <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-5 shadow-xl font-mono">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2 font-sans">
+            <User className="w-4 h-4 text-blue-400" /> Personal Information
           </h3>
           <span className="text-[10px] text-gray-400">Account Identity</span>
         </div>
 
         {/* Full Name */}
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-gray-300 block">Full Name</label>
+          <label className="text-xs font-medium text-gray-300 block font-sans">Full Name</label>
           <input
             type="text"
             required
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="e.g. Alex Mercer"
-            className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-purple-500 transition-colors"
+            className="w-full px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-gray-500 text-xs focus:outline-none focus:border-blue-500 transition-colors font-mono"
           />
         </div>
 
         {/* Username */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-gray-300 block">Username</label>
+            <label className="text-xs font-medium text-gray-300 block font-sans">Username</label>
             {usernameChecking ? (
-              <span className="text-[10px] text-purple-400">Checking availability...</span>
+              <span className="text-[10px] text-blue-400 font-mono">Checking availability...</span>
             ) : usernameAvailable === true ? (
-              <span className="text-[10px] text-emerald-400 font-bold">Available</span>
+              <span className="text-[10px] text-emerald-400 font-bold font-mono">Available</span>
             ) : usernameAvailable === false ? (
-              <span className="text-[10px] text-rose-400 font-bold">Taken</span>
+              <span className="text-[10px] text-rose-400 font-bold font-mono">Taken</span>
             ) : null}
           </div>
           <div className="relative">
@@ -200,34 +200,34 @@ export function ProfileForm() {
               value={username}
               onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
               placeholder="username"
-              className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-purple-500 transition-colors"
+              className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-gray-500 text-xs focus:outline-none focus:border-blue-500 transition-colors font-mono"
             />
           </div>
         </div>
 
         {/* Email (Read-only) */}
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-gray-300 block">Email Address (Read-only)</label>
+          <label className="text-xs font-medium text-gray-300 block font-sans">Email Address (Read-only)</label>
           <div className="relative">
             <Mail className="absolute left-3.5 top-3 w-4 h-4 text-gray-500" />
             <input
               type="email"
               disabled
               value={userEmail}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-gray-400 text-xs cursor-not-allowed select-all"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-gray-400 text-xs cursor-not-allowed select-all font-mono"
             />
           </div>
         </div>
 
         {/* Bio (Optional) */}
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-gray-300 block">Bio (Optional)</label>
+          <label className="text-xs font-medium text-gray-300 block font-sans">Bio (Optional)</label>
           <textarea
             rows={3}
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             placeholder="Short trading summary or objective..."
-            className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-xs font-sans focus:outline-none focus:border-purple-500 transition-colors"
+            className="w-full px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder-gray-500 text-xs font-sans focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
 
@@ -236,7 +236,7 @@ export function ProfileForm() {
           <button
             type="submit"
             disabled={saving || !hasChanges || usernameAvailable === false}
-            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-glow transition-all flex items-center gap-2 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-2 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed font-mono"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>Save Profile</span>
@@ -246,9 +246,9 @@ export function ProfileForm() {
 
       {/* Floating unsaved indicator if scrolling */}
       {hasChanges && (
-        <div className="sticky bottom-4 z-20 p-4 rounded-2xl bg-[#111726]/95 border border-purple-500/40 backdrop-blur-md shadow-2xl flex items-center justify-between animate-slide-up">
-          <div className="flex items-center gap-2 text-xs text-purple-300">
-            <Sparkles className="w-4 h-4 text-purple-400" />
+        <div className="sticky bottom-4 z-20 p-4 rounded-2xl bg-[#0F141C]/95 border border-blue-500/40 backdrop-blur-md shadow-2xl flex items-center justify-between animate-slide-up font-mono">
+          <div className="flex items-center gap-2 text-xs text-blue-300 font-sans">
+            <Sparkles className="w-4 h-4 text-blue-400" />
             <span>Unsaved profile changes</span>
           </div>
 
@@ -257,7 +257,7 @@ export function ProfileForm() {
               type="button"
               onClick={handleReset}
               disabled={saving}
-              className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-bold transition-all flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-gray-300 text-xs font-bold transition-all flex items-center gap-1.5"
             >
               <RotateCcw className="w-3.5 h-3.5" /> Reset
             </button>
@@ -265,7 +265,7 @@ export function ProfileForm() {
             <button
               type="submit"
               disabled={saving || usernameAvailable === false}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-glow transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               <span>Save Changes</span>

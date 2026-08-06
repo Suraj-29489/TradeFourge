@@ -388,24 +388,24 @@ export const TradeCalendar: React.FC = () => {
       <div className="p-5 rounded-2xl bg-[#111726] border border-white/10 space-y-4 shadow-2xl">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-white/10 pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30">
+            <div className="p-2.5 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30">
               <CalendarIcon className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+              <h1 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2 font-sans">
                 Trading Timeline & Daily Review Workspace
-                <span className="text-xs px-2.5 py-0.5 rounded bg-purple-600/20 text-purple-300 border border-purple-500/30">
+                <span className="text-xs px-2.5 py-0.5 rounded bg-blue-600/20 text-blue-300 border border-blue-500/30 font-mono">
                   {format(currentMonth, "MMMM yyyy")}
                 </span>
               </h1>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-400 font-sans">
                 Institutional daily session diary, trade timeline, and daily reflections.
               </p>
             </div>
           </div>
 
           {/* View Switcher & Month Navigation Controls */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 font-mono">
             {accounts.length > 0 && (
               <MultiAccountFilter
                 accounts={accounts}
@@ -421,11 +421,11 @@ export const TradeCalendar: React.FC = () => {
             )}
 
             {/* Calendar vs Timeline Mode Switcher */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 text-xs">
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs">
               <button
                 onClick={() => setViewMode("calendar")}
                 className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
-                  viewMode === "calendar" ? "bg-purple-600 text-white shadow-glow" : "text-gray-400 hover:text-white"
+                  viewMode === "calendar" ? "bg-blue-600 text-white shadow-sm" : "text-gray-400 hover:text-white"
                 }`}
               >
                 Calendar Grid
@@ -433,7 +433,7 @@ export const TradeCalendar: React.FC = () => {
               <button
                 onClick={() => setViewMode("timeline")}
                 className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
-                  viewMode === "timeline" ? "bg-purple-600 text-white shadow-glow" : "text-gray-400 hover:text-white"
+                  viewMode === "timeline" ? "bg-blue-600 text-white shadow-sm" : "text-gray-400 hover:text-white"
                 }`}
               >
                 Session Timeline
@@ -444,7 +444,7 @@ export const TradeCalendar: React.FC = () => {
             <select
               value={filterSymbol}
               onChange={(e) => setFilterSymbol(e.target.value)}
-              className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500"
+              className="px-2.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-gray-300 focus:outline-none focus:border-blue-500"
             >
               <option value="ALL">All Symbols</option>
               {availableSymbols.map((s) => (
@@ -455,7 +455,7 @@ export const TradeCalendar: React.FC = () => {
             <select
               value={filterSide}
               onChange={(e) => setFilterSide(e.target.value)}
-              className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500"
+              className="px-2.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-gray-300 focus:outline-none focus:border-blue-500"
             >
               <option value="ALL">All Directions</option>
               <option value="BUY">Buy / Long</option>
@@ -605,7 +605,7 @@ export const TradeCalendar: React.FC = () => {
         </div>
       ) : (
         /* ── SECTION 7: Chronological Timeline View ───────────────────────── */
-        <div className="space-y-4">
+        <div className="space-y-4 font-mono">
           {activeTimelineDays.map(({ day, dateKey, data }) => (
             <div
               key={dateKey}
@@ -614,12 +614,12 @@ export const TradeCalendar: React.FC = () => {
                 if (data.trades[0]?.notes) setReflectionNotes(data.trades[0].notes);
                 else setReflectionNotes("");
               }}
-              className="p-5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 cursor-pointer space-y-3 shadow-2xl transition-all group"
+              className="p-5 rounded-2xl bg-[#0F141C] border border-white/[0.08] hover:border-blue-500/40 cursor-pointer space-y-3 shadow-xl transition-all group"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.08] pb-3">
                 <div className="flex items-center gap-3">
-                  <span className="font-bold text-white text-sm">{format(day, "EEEE, MMMM dd, yyyy")}</span>
-                  <span className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-300 border border-purple-500/30 text-xs font-bold">
+                  <span className="font-bold text-white text-sm font-sans">{format(day, "EEEE, MMMM dd, yyyy")}</span>
+                  <span className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-300 border border-blue-500/30 text-xs font-bold font-mono">
                     {data.trades.length} Trade{data.trades.length > 1 ? "s" : ""}
                   </span>
                 </div>
@@ -628,14 +628,14 @@ export const TradeCalendar: React.FC = () => {
                   <span className={`text-base font-extrabold ${data.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                     {formatSigned(data.pnl)}
                   </span>
-                  <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-purple-400 transition-colors" />
+                  <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-blue-400 transition-colors" />
                 </div>
               </div>
 
               {/* Trade Preview Row */}
               <div className="flex flex-wrap gap-2">
                 {data.trades.map((t) => (
-                  <span key={t.id} className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-gray-300 flex items-center gap-1.5 font-mono">
+                  <span key={t.id} className="px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.08] text-[11px] text-gray-300 flex items-center gap-1.5 font-mono">
                     <span className="font-bold text-white">{t.symbol}</span>
                     <span className={t.net_profit >= 0 ? "text-emerald-400" : "text-rose-400"}>
                       {formatSigned(t.net_profit)}
@@ -647,7 +647,7 @@ export const TradeCalendar: React.FC = () => {
           ))}
 
           {activeTimelineDays.length === 0 && (
-            <div className="p-12 text-center text-gray-500 border border-dashed border-white/10 rounded-2xl">
+            <div className="p-12 text-center text-gray-500 border border-dashed border-white/[0.08] rounded-2xl">
               No trading sessions recorded for {format(currentMonth, "MMMM yyyy")}.
             </div>
           )}
@@ -655,28 +655,28 @@ export const TradeCalendar: React.FC = () => {
       )}
 
       {/* ── SECTION 8: Year Overview Breakdown ────────────────────────────── */}
-      <div className="p-6 rounded-2xl bg-[#111726] border border-white/10 space-y-4 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+      <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-4 shadow-xl font-mono">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
           <div>
-            <h2 className="text-base font-extrabold text-white flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-purple-400" />
+            <h2 className="text-base font-extrabold text-white flex items-center gap-2 font-sans">
+              <BarChart2 className="w-4 h-4 text-blue-400" />
               {selectedYear} Yearly Performance Breakdown
             </h2>
-            <p className="text-xs text-gray-400">Monthly PnL distribution, active trading days, and win rates.</p>
+            <p className="text-xs text-gray-400 font-sans">Monthly PnL distribution, active trading days, and win rates.</p>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentMonth(setYear(currentMonth, selectedYear - 1))}
-              className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:text-white"
+              className="px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.08] text-gray-300 hover:text-white"
             >
               {selectedYear - 1}
             </button>
-            <span className="px-3 py-1 rounded-lg bg-purple-600/20 text-purple-300 border border-purple-500/30 font-bold">
+            <span className="px-3 py-1 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 font-bold">
               {selectedYear}
             </span>
             <button
               onClick={() => setCurrentMonth(setYear(currentMonth, selectedYear + 1))}
-              className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:text-white"
+              className="px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/[0.08] text-gray-300 hover:text-white"
             >
               {selectedYear + 1}
             </button>
@@ -689,12 +689,12 @@ export const TradeCalendar: React.FC = () => {
             <div
               key={m.monthIdx}
               onClick={() => setCurrentMonth(setMonth(currentMonth, m.monthIdx))}
-              className={`p-3.5 rounded-xl border cursor-pointer hover:border-purple-500/50 transition-all ${
+              className={`p-3.5 rounded-xl border cursor-pointer hover:border-blue-500/50 transition-all ${
                 m.pnl > 0
                   ? "bg-emerald-500/10 border-emerald-500/30"
                   : m.pnl < 0
                   ? "bg-rose-500/10 border-rose-500/30"
-                  : "bg-white/5 border-white/10"
+                  : "bg-white/[0.03] border-white/[0.08]"
               }`}
             >
               <span className="font-bold text-white block">{m.monthName}</span>
@@ -726,12 +726,12 @@ export const TradeCalendar: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="relative z-10 w-full md:max-w-xl bg-[#0F1523] border-l border-white/10 h-full overflow-y-auto p-6 space-y-5 shadow-2xl text-xs font-mono"
+              className="relative z-10 w-full md:max-w-xl bg-[#0F141C] border-l border-white/[0.08] h-full overflow-y-auto p-6 space-y-5 shadow-2xl text-xs font-mono"
             >
               {/* Panel Header */}
-              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
                 <div>
-                  <h3 className="text-xl font-extrabold text-white">
+                  <h3 className="text-xl font-extrabold text-white font-sans">
                     Daily Review: {format(selectedDayData.date, "EEEE, MMMM dd, yyyy")}
                   </h3>
                   <span className={`text-xs font-bold ${selectedDayData.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
@@ -746,19 +746,19 @@ export const TradeCalendar: React.FC = () => {
 
               {/* Day Metrics Grid (Section 4) */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                  <span className="text-[10px] text-gray-400 block uppercase">EXECUTED TRADES</span>
+                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                  <span className="text-[10px] text-gray-400 block uppercase font-sans font-bold">EXECUTED TRADES</span>
                   <span className="text-white font-bold">{selectedDayData.trades.length}</span>
                 </div>
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                  <span className="text-[10px] text-gray-400 block uppercase">SESSION P&L</span>
+                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                  <span className="text-[10px] text-gray-400 block uppercase font-sans font-bold">SESSION P&L</span>
                   <span className={`font-bold ${selectedDayData.pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                     {formatSigned(selectedDayData.pnl)}
                   </span>
                 </div>
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                  <span className="text-[10px] text-gray-400 block uppercase">SYMBOLS TRADED</span>
-                  <span className="text-purple-300 font-bold truncate block">
+                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                  <span className="text-[10px] text-gray-400 block uppercase font-sans font-bold">SYMBOLS TRADED</span>
+                  <span className="text-blue-300 font-bold truncate block">
                     {Array.from(new Set(selectedDayData.trades.map((t) => t.symbol))).join(", ") || "None"}
                   </span>
                 </div>
@@ -766,10 +766,10 @@ export const TradeCalendar: React.FC = () => {
 
               {/* Trade List Table (Section 5) */}
               <div className="space-y-2">
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider text-gray-400">Executed Trades</h4>
-                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider font-sans">Executed Trades</h4>
+                <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
                   {selectedDayData.trades.length === 0 ? (
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 text-center text-gray-400 font-bold">
+                    <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] text-center text-gray-400 font-bold">
                       No trades available.
                     </div>
                   ) : (
@@ -779,7 +779,7 @@ export const TradeCalendar: React.FC = () => {
                       onClick={() => {
                         setActiveDrawerTrade(t);
                       }}
-                      className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/40 cursor-pointer flex items-center justify-between transition-colors"
+                      className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-blue-500/40 cursor-pointer flex items-center justify-between transition-colors"
                     >
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
@@ -804,10 +804,10 @@ export const TradeCalendar: React.FC = () => {
               </div>
 
               {/* Daily Reflection & Notes (Section 6) */}
-              <div className="space-y-2 pt-2 border-t border-white/10">
+              <div className="space-y-2 pt-2 border-t border-white/[0.08]">
                 <div className="flex items-center justify-between">
-                  <label className="font-bold text-white flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-purple-400" />
+                  <label className="font-bold text-white flex items-center gap-1.5 font-sans">
+                    <FileText className="w-4 h-4 text-blue-400" />
                     Daily Reflection & Mindset Notes
                   </label>
                   {reflectionSavedToast && (
@@ -822,14 +822,14 @@ export const TradeCalendar: React.FC = () => {
                   value={reflectionNotes}
                   onChange={(e) => setReflectionNotes(e.target.value)}
                   placeholder="How was your mindset today? Did you follow your trading plan? Lessons learned..."
-                  className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-purple-500 font-mono text-xs"
+                  className="w-full p-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white focus:border-blue-500 font-mono text-xs focus:outline-none"
                 />
 
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={handleSaveReflection}
                     disabled={savingReflection || selectedDayData.trades.length === 0}
-                    className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold flex items-center gap-1.5 disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center gap-1.5 disabled:opacity-50 transition-all shadow-sm"
                   >
                     {savingReflection ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     <span>Save Daily Reflection</span>
@@ -837,14 +837,14 @@ export const TradeCalendar: React.FC = () => {
                 </div>
               </div>
 
-              {/* ── PART D: TradeFourge AI Coach (Future Architecture Preview) ──── */}
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-900/30 via-indigo-900/20 to-black border border-purple-500/30 space-y-3 shadow-2xl relative overflow-hidden">
-                <div className="flex items-center justify-between border-b border-purple-500/20 pb-2">
+              {/* ── PART D: TradeFourge AI Coach Preview ──── */}
+              <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/30 space-y-3 shadow-xl relative overflow-hidden">
+                <div className="flex items-center justify-between border-b border-blue-500/20 pb-2">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-purple-400" />
-                    <span className="font-extrabold text-white text-xs">🧠 TradeFourge AI Coach</span>
+                    <Sparkles className="w-4 h-4 text-blue-400" />
+                    <span className="font-extrabold text-white text-xs font-sans">🧠 TradeFourge AI Coach</span>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full bg-purple-600/30 text-purple-300 border border-purple-500/40 text-[9px] font-bold uppercase tracking-wider">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-600/30 text-blue-300 border border-blue-500/40 text-[9px] font-bold uppercase tracking-wider font-mono">
                     Future AI Mentor
                   </span>
                 </div>
@@ -855,41 +855,41 @@ export const TradeCalendar: React.FC = () => {
 
                 {/* Simulated AI Scores & Metrics Preview */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                  <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <span className="text-[9px] text-gray-400 block uppercase">DISCIPLINE</span>
+                  <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.08] text-center">
+                    <span className="text-[9px] text-gray-400 block uppercase font-sans font-bold">DISCIPLINE</span>
                     <span className="text-xs font-bold text-emerald-400">91 / 100</span>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <span className="text-[9px] text-gray-400 block uppercase">CONSISTENCY</span>
-                    <span className="text-xs font-bold text-purple-300">87 / 100</span>
+                  <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.08] text-center">
+                    <span className="text-[9px] text-gray-400 block uppercase font-sans font-bold">CONSISTENCY</span>
+                    <span className="text-xs font-bold text-blue-300">87 / 100</span>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <span className="text-[9px] text-gray-400 block uppercase">RISK RATING</span>
-                    <span className="text-xs font-bold text-indigo-300">Excellent</span>
+                  <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.08] text-center">
+                    <span className="text-[9px] text-gray-400 block uppercase font-sans font-bold">RISK RATING</span>
+                    <span className="text-xs font-bold text-blue-400">Excellent</span>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <span className="text-[9px] text-gray-400 block uppercase">OVERALL</span>
+                  <div className="p-2 rounded-xl bg-white/[0.03] border border-white/[0.08] text-center">
+                    <span className="text-[9px] text-gray-400 block uppercase font-sans font-bold">OVERALL</span>
                     <span className="text-xs font-bold text-amber-400">Grade A</span>
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-purple-600/10 border border-purple-500/20 text-[10px] text-purple-300 space-y-1">
-                  <span className="font-bold block text-white">Next Focus Recommendation:</span>
-                  <p className="text-gray-300">Limit daily execution to 3 high-confluence trades during London session to prevent overtrading.</p>
+                <div className="p-2.5 rounded-xl bg-blue-600/10 border border-blue-500/20 text-[10px] text-blue-300 space-y-1">
+                  <span className="font-bold block text-white font-sans">Next Focus Recommendation:</span>
+                  <p className="text-gray-300 font-sans">Limit daily execution to 3 high-confluence trades during London session to prevent overtrading.</p>
                 </div>
               </div>
 
               {/* Direct Journal Navigation Shortcut */}
-              <div className="pt-3 border-t border-white/10 flex justify-end">
+              <div className="pt-3 border-t border-white/[0.08] flex justify-end">
                 <button
                   onClick={() => {
                     router.push(`/journal?search=${selectedDayData.dateKey}`);
                     setSelectedDayData(null);
                   }}
-                  className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white font-bold flex items-center gap-1.5 transition-colors"
                 >
                   <span>Open Filtered Trade Journal</span>
                   <ExternalLink className="w-3.5 h-3.5" />

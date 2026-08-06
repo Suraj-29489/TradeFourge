@@ -69,7 +69,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ trades: initia
   const axisStroke = isLight ? "#6B7280" : "#6B7280";
   const profitColor = isLight ? "#16A34A" : "#10B981";
   const lossColor   = isLight ? "#DC2626" : "#EF4444";
-  const purpleColor = "#7C3AED";
+  const blueColor = "#2563EB";
 
   const tooltipStyle: React.CSSProperties = isLight
     ? {
@@ -144,15 +144,15 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ trades: initia
               <AreaChart data={analytics.equityCurve}>
                 <defs>
                   <linearGradient id="equityGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor={purpleColor} stopOpacity={0.4} />
-                    <stop offset="95%" stopColor={purpleColor} stopOpacity={0.0} />
+                    <stop offset="5%"  stopColor={blueColor} stopOpacity={0.4} />
+                    <stop offset="95%" stopColor={blueColor} stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} opacity={0.7} />
-                <XAxis dataKey="date" stroke={axisStroke} fontSize={10} tickLine={false} interval="preserveStartEnd" />
-                <YAxis stroke={axisStroke} fontSize={10} tickLine={false} domain={["auto", "auto"]} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(v: unknown) => [formatSigned(Number(v)), "Cumulative Net PnL"]} />
-                <Area type="monotone" dataKey="cumulativeProfit" stroke={purpleColor} strokeWidth={2.5} fill="url(#equityGrad)" />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} opacity={0.5} />
+                <XAxis dataKey="date" stroke={axisStroke} fontSize={11} tickLine={false} />
+                <YAxis stroke={axisStroke} fontSize={11} tickLine={false} tickFormatter={(v) => `$${v}`} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [formatCurrency(v), "Cumulative PnL"]} />
+                <Area type="monotone" dataKey="cumulativeProfit" stroke={blueColor} strokeWidth={2.5} fill="url(#equityGrad)" />
               </AreaChart>
             ) : activeTab === "daily" ? (
               <BarChart data={analytics.daysOfWeek}>

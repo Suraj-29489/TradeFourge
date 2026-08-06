@@ -67,7 +67,7 @@ export const SyncHistoryTable: React.FC<SyncHistoryTableProps> = ({ userId }) =>
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search sync logs by account or broker..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500"
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500"
             />
           </div>
 
@@ -130,7 +130,7 @@ export const SyncHistoryTable: React.FC<SyncHistoryTableProps> = ({ userId }) =>
                       </td>
                       <td className="p-3.5 font-bold text-white">
                         <div>{log.account_name}</div>
-                        <span className="text-[10px] text-purple-400 font-normal">{log.broker}</span>
+                        <span className="text-[10px] text-blue-400 font-normal">{log.broker}</span>
                       </td>
                       <td className="p-3.5 text-center font-bold text-emerald-400">
                         +{log.trades_imported} trades
@@ -159,7 +159,7 @@ export const SyncHistoryTable: React.FC<SyncHistoryTableProps> = ({ userId }) =>
                           onClick={() => setSelectedLog(log)}
                           className="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-300 font-bold text-[10px] inline-flex items-center gap-1 transition-all"
                         >
-                          <Eye className="w-3 h-3 text-purple-400" />
+                          <Eye className="w-3 h-3 text-blue-400" />
                           <span>View Log</span>
                         </button>
                       </td>
@@ -187,11 +187,11 @@ export const SyncHistoryTable: React.FC<SyncHistoryTableProps> = ({ userId }) =>
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative z-10 w-full max-w-lg p-6 rounded-2xl bg-dark-card border border-purple-500/30 space-y-4 font-mono shadow-2xl"
+              className="relative z-10 w-full max-w-lg p-6 rounded-2xl bg-dark-card border border-blue-500/30 space-y-4 font-mono shadow-2xl"
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-purple-400" />
+                  <FileText className="w-4 h-4 text-blue-400" />
                   <span className="font-bold text-white text-sm">Sync Cycle Execution Log</span>
                 </div>
                 <button
@@ -221,7 +221,7 @@ export const SyncHistoryTable: React.FC<SyncHistoryTableProps> = ({ userId }) =>
                 </div>
                 <div className="flex justify-between py-1 border-b border-white/5">
                   <span className="text-gray-400">Execution Duration:</span>
-                  <span className="text-purple-400 font-bold">{selectedLog.duration_ms}ms</span>
+                  <span className="text-blue-400 font-bold">{selectedLog.duration_ms}ms</span>
                 </div>
                 {selectedLog.error_message && (
                   <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 space-y-1">
@@ -242,7 +242,7 @@ export const SyncHistoryTable: React.FC<SyncHistoryTableProps> = ({ userId }) =>
               <div className="flex justify-end pt-2">
                 <button
                   onClick={() => setSelectedLog(null)}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs"
                 >
                   Close Audit Log
                 </button>
