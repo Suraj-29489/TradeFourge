@@ -1,5 +1,5 @@
 /**
- * TradeFourge Companion Extension v3.0 — Protocol Definitions
+ * TradeFourge Companion Extension v3.4 — Protocol Definitions
  * Message envelope and event type constants matching tradefourge-web bridge protocol.
  */
 
@@ -43,7 +43,7 @@ export function createMessageEnvelope(type, payload = null, requestId = null, er
     type,
     requestId: requestId || `ext_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
     timestamp: Date.now(),
-    version: '3.0.0',
+    version: '3.4.0',
     payload,
     error,
   };

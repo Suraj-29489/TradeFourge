@@ -1,5 +1,5 @@
 /**
- * TradeFourge Companion Extension v3.3 — Background Service Worker
+ * TradeFourge Companion Extension v3.4 — Background Service Worker
  * Fully instrumented Manifest V3 cross-tab messaging pipeline.
  *
  * Message flow:
@@ -8,12 +8,25 @@
  *       → For PING: respond directly with PONG
  *       → For DISCOVER_ACCOUNTS / IMPORT: forward to Exness content script via chrome.tabs.sendMessage
  *         → Content script responds → background forwards response → website callback
+ *   Content Script (Exness) → chrome.runtime.sendMessage(pushEvent)
+ *     → onMessage listener (this file)
+ *       → background forwards to all TradeFourge tabs via chrome.tabs.sendMessage
  */
 
-const VERSION = '3.3.0';
+const VERSION = '3.4.0';
 const TAG = '[TradeFourge Background]';
 
 console.log(`${TAG} Service Worker v${VERSION} initializing...`);
+
+// ─── Startup & Recovery ─────────────────────────────────────────────────────
+
+chrome.runtime.onInstalled.addListener((details) => {
+  console.log(`${TAG} Extension installed/updated:`, details.reason);
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  console.log(`${TAG} Service Worker starting up...`);
+});
 
 // ─── Tab Discovery ──────────────────────────────────────────────────────────
 
@@ -32,8 +45,52 @@ async function getExnessTabs() {
           'https://*.exness.cloud/*',
         ],
       },
-      (tabs) => resolve(tabs || [])
+      (tabs) => {
+        if (chrome.runtime.lastError) {
+          console.error(`${TAG} Error getting Exness tabs:`, chrome.runtime.lastError.message);
+          resolve([]);
+        } else {
+          resolve(tabs || []);
+        }
+      }
     );
+  });
+}
+
+async function getTradeFourgeTabs() {
+  if (typeof chrome === 'undefined' || !chrome.tabs) return [];
+  return new Promise((resolve) => {
+    chrome.tabs.query(
+      {
+        url: [
+          'http://localhost/*',
+          'http://127.0.0.1/*',
+          'https://*.tradefourge.com/*',
+          'https://*.vercel.app/*',
+          'https://tradefourge.vercel.app/*'
+        ],
+      },
+      (tabs) => {
+        if (chrome.runtime.lastError) {
+          console.error(`${TAG} Error getting TradeFourge tabs:`, chrome.runtime.lastError.message);
+          resolve([]);
+        } else {
+          resolve(tabs || []);
+        }
+      }
+    );
+  });
+}
+
+async function forwardToTradeFourgeTabs(message) {
+  const tfTabs = await getTradeFourgeTabs();
+  console.log(`${TAG} Forwarding push event ${message.type} to ${tfTabs.length} TradeFourge tabs`);
+  tfTabs.forEach((tab) => {
+    chrome.tabs.sendMessage(tab.id, message, (response) => {
+      if (chrome.runtime.lastError) {
+        console.warn(`${TAG} Could not deliver message to TF tab ${tab.id}:`, chrome.runtime.lastError.message);
+      }
+    });
   });
 }
 
@@ -50,6 +107,14 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
   console.log(`${TAG} Origin: ${senderOrigin}`);
   console.log(`${TAG} Extension ID: ${chrome.runtime.id}`);
   console.log(`${TAG} Request ID: ${message?.requestId || 'none'}`);
+
+  // If this is an internal push event from the content script, forward to TradeFourge website tabs
+  if (!isExternal && message.isPushEvent) {
+    console.log(`${TAG} Processing PUSH event from Exness content script...`);
+    await forwardToTradeFourgeTabs(message);
+    sendResponse({ success: true });
+    return;
+  }
 
   // ── PING / GET_EXTENSION_INFO ──
   if (type === 'PING' || type === 'GET_EXTENSION_INFO') {

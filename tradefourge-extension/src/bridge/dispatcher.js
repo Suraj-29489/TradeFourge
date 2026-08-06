@@ -1,8 +1,8 @@
 /**
- * TradeFourge Companion Extension v3.3 — Bridge Dispatcher
+ * TradeFourge Companion Extension v3.4 — Bridge Dispatcher
  * Runs in the Exness tab content script.
  * Handles messages from the Background Service Worker via chrome.runtime.onMessage
- * and from same-tab postMessage (legacy fallback).
+ * and sends messages to background using chrome.runtime.sendMessage.
  */
 
 import { TF_SOURCE_EXTENSION, TF_SOURCE_WEB, createMessageEnvelope } from '../types/protocol.js';
@@ -33,7 +33,7 @@ export class BridgeDispatcher {
     if (this.isListening) return;
     this.isListening = true;
 
-    Logger.success('BridgeDispatcher', 'Initializing Exness ↔ Extension Bridge Dispatcher v3.3...');
+    Logger.success('BridgeDispatcher', 'Initializing Exness ↔ Extension Bridge Dispatcher v3.4...');
 
     // Start broker engines
     HeartbeatSystem.getInstance().start();
@@ -41,11 +41,18 @@ export class BridgeDispatcher {
 
     // Listen for EventBus emissions
     EventBus.getInstance().on('HistoryImported', (payload) => {
-      this.postToWeb('IMPORT_COMPLETED', payload);
+      this.sendToBackground('IMPORT_COMPLETED', payload);
     });
 
     EventBus.getInstance().on('Heartbeat', (payload) => {
-      this.postToWeb('PONG', payload);
+      this.sendToBackground('PONG', payload);
+    });
+
+    const liveEvents = ['LIVE_EVENT', 'ACCOUNT_UPDATED', 'BALANCE_UPDATED', 'EQUITY_UPDATED', 'POSITION_OPENED', 'POSITION_MODIFIED', 'POSITION_CLOSED'];
+    liveEvents.forEach(eventType => {
+      EventBus.getInstance().on(eventType, (payload) => {
+        this.sendToBackground(eventType, payload);
+      });
     });
 
     // ── PRIMARY: Listen for messages from Background Service Worker ──
@@ -86,7 +93,7 @@ export class BridgeDispatcher {
       case 'GET_EXTENSION_INFO': {
         const response = this.createResponse('PONG', {
           isInstalled: true,
-          version: '3.3.0',
+          version: '3.4.0',
           browser: 'Chrome',
           status: 'connected',
           latency: 0,
@@ -96,7 +103,7 @@ export class BridgeDispatcher {
         if (sendResponse) {
           sendResponse(response);
         } else {
-          this.postToWeb('PONG', response.payload, requestId);
+          this.sendToBackground('PONG', response.payload, requestId);
         }
         break;
       }
@@ -111,7 +118,7 @@ export class BridgeDispatcher {
           if (sendResponse) {
             sendResponse(response);
           } else {
-            this.postToWeb('ACCOUNT_LIST', accounts, requestId);
+            this.sendToBackground('ACCOUNT_LIST', accounts, requestId);
           }
         } catch (err) {
           console.error(`${TAG} Account discovery failed:`, err);
@@ -123,7 +130,7 @@ export class BridgeDispatcher {
           if (sendResponse) {
             sendResponse(response);
           } else {
-            this.postToWeb('ERROR', null, requestId, response.error);
+            this.sendToBackground('ERROR', null, requestId, response.error);
           }
         }
         break;
@@ -143,16 +150,16 @@ export class BridgeDispatcher {
         if (sendResponse) {
           sendResponse(startedResponse);
         } else {
-          this.postToWeb('IMPORT_STARTED', startedResponse.payload, requestId);
+          this.sendToBackground('IMPORT_STARTED', startedResponse.payload, requestId);
         }
 
         HistoryImportEngine.getInstance().importSelectedAccounts(
           accountIds,
           (progress) => {
-            this.postToWeb('IMPORT_PROGRESS', progress, requestId);
+            this.sendToBackground('IMPORT_PROGRESS', progress, requestId);
           },
           (completed) => {
-            this.postToWeb('IMPORT_COMPLETED', completed, requestId);
+            this.sendToBackground('IMPORT_COMPLETED', completed, requestId);
           }
         );
         break;
@@ -163,7 +170,7 @@ export class BridgeDispatcher {
         if (sendResponse) {
           sendResponse(response);
         } else {
-          this.postToWeb('PONG', response.payload, requestId);
+          this.sendToBackground('PONG', response.payload, requestId);
         }
         break;
       }
@@ -178,9 +185,20 @@ export class BridgeDispatcher {
     return createMessageEnvelope(type, payload, requestId, error);
   }
 
-  postToWeb(type, payload = null, requestId = null, error = null) {
-    if (typeof window === 'undefined') return;
+  sendToBackground(type, payload = null, requestId = null, error = null) {
+    if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) return;
     const envelope = createMessageEnvelope(type, payload, requestId, error);
-    window.postMessage(envelope, '*');
+    
+    // Mark as push event so the background knows to forward to TradeFourge tabs
+    envelope.isPushEvent = true;
+
+    console.log(`${TAG} Pushing ${type} to background (requestId: ${envelope.requestId})`);
+
+    chrome.runtime.sendMessage(envelope, (response) => {
+      if (chrome.runtime.lastError) {
+        // Suppress expected errors when background isn't listening yet
+        console.warn(`${TAG} sendToBackground error for ${type}:`, chrome.runtime.lastError.message);
+      }
+    });
   }
 }

@@ -1,8 +1,8 @@
 {
   "name": "tradefourge-extension",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "private": true,
-  "description": "TradeFourge Companion Extension v3.3 — Production Bundled Extension Bridge",
+  "description": "TradeFourge Companion Extension v3.4 — Production Bundled Extension Bridge",
   "scripts": {
     "build": "npx esbuild content.js --bundle --outfile=dist/content.js --format=iife && npx esbuild background.js --bundle --outfile=dist/background.js --format=iife"
   }

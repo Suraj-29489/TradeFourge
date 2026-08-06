@@ -1,5 +1,5 @@
 /**
- * TradeFourge Companion Extension v3.3 — Exness Content Script Entry
+ * TradeFourge Companion Extension v3.4 — Exness Content Script Entry
  * Injected into Exness broker pages only.
  * Initializes BridgeDispatcher, BrokerAdapter engines, and EventBus.
  */
@@ -21,7 +21,7 @@ import { Logger } from './src/logger/Logger.js';
   console.log(`${TAG} Content Script Loaded (Exness Page)`);
   console.log(`${TAG} URL: ${window.location.href}`);
   console.log(`${TAG} Extension ID: ${chrome.runtime.id}`);
-  Logger.success('ContentScript', 'TradeFourge Companion Extension v3.3 initializing on Exness page...');
+  Logger.success('ContentScript', 'TradeFourge Companion Extension v3.4 initializing on Exness page...');
 
   try {
     BridgeDispatcher.getInstance().init();

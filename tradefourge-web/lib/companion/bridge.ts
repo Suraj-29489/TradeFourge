@@ -1,7 +1,8 @@
 /**
- * TradeFourge Companion v3.3 — Communication Bridge
+ * TradeFourge Companion v3.4 — Communication Bridge
  * Uses chrome.runtime.sendMessage(extensionId, message) for cross-tab Manifest V3 messaging.
  * Extension ID is discovered dynamically from DOM attribute set by injector.js content script.
+ * Also receives push events from injector.js via window.postMessage (Background → Injector → Web).
  */
 
 import {
@@ -138,7 +139,7 @@ export class CompanionBridge {
 
       console.log(`${TAG} Received ${data.type} via window.postMessage (requestId: ${data.requestId})`);
 
-      // Resolve pending requests
+      // Resolve pending requests (request-response pattern)
       if (data.requestId && this.pendingRequests.has(data.requestId)) {
         const pending = this.pendingRequests.get(data.requestId)!;
         clearTimeout(pending.timer);
@@ -151,10 +152,29 @@ export class CompanionBridge {
         }
       }
 
-      // Notify event subscribers
+      // Notify event subscribers (push event pattern — fires for ALL events, not just pending)
       const subscribers = this.eventSubscribers.get(data.type);
-      if (subscribers) {
-        subscribers.forEach((cb) => cb(data));
+      if (subscribers && subscribers.size > 0) {
+        console.log(`${TAG} Notifying ${subscribers.size} subscriber(s) for ${data.type}`);
+        subscribers.forEach((cb) => {
+          try {
+            cb(data);
+          } catch (err) {
+            console.error(`${TAG} Subscriber error for ${data.type}:`, err);
+          }
+        });
+      }
+
+      // Wildcard subscribers (receive ALL events)
+      const wildcardSubs = this.eventSubscribers.get("*");
+      if (wildcardSubs && wildcardSubs.size > 0) {
+        wildcardSubs.forEach((cb) => {
+          try {
+            cb(data);
+          } catch (err) {
+            console.error(`${TAG} Wildcard subscriber error:`, err);
+          }
+        });
       }
     });
   }
@@ -174,7 +194,7 @@ export class CompanionBridge {
       type,
       requestId,
       timestamp: Date.now(),
-      version: "3.3.0",
+      version: "3.4.0",
       payload,
     };
 
