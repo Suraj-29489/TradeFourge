@@ -13,12 +13,11 @@ import {
   BarChart3,
   BookOpen,
   Settings,
-  FileSpreadsheet,
-  Zap,
   X,
 } from "lucide-react";
-import { cn } from "@/utils/cn";
-import { useActiveAccount } from "@/context/ActiveAccountContext";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useTheme } from "@/context/ThemeContext";
 
 interface NavItem {
   name: string;
@@ -51,77 +50,19 @@ interface SidebarProps {
   onCloseMobile?: () => void;
 }
 
-function NavLink({
-  item,
-  isActive,
-  collapsed,
-  onClick,
-}: {
-  item: NavItem;
-  isActive: boolean;
-  collapsed: boolean;
-  onClick?: () => void;
-}) {
-  const Icon = item.icon;
-
-  return (
-    <Link href={item.href} onClick={onClick} className="block relative">
-      <div
-        className={cn(
-          "flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-mono text-xs font-medium transition-all duration-150 group",
-          isActive
-            ? "bg-blue-500/10 text-white border border-blue-500/30 font-bold"
-            : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]"
-        )}
-        title={collapsed ? item.name : undefined}
-      >
-        <Icon
-          className={cn(
-            "w-4 h-4 shrink-0 transition-transform duration-150 group-hover:scale-105",
-            isActive ? "text-blue-400" : "text-gray-400 group-hover:text-gray-200"
-          )}
-        />
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              className="whitespace-nowrap truncate font-sans text-xs"
-            >
-              {item.name}
-            </motion.span>
-          )}
-        </AnimatePresence>
-
-        {isActive && (
-          <motion.div
-            layoutId="sidebar-active-indicator"
-            className="absolute right-2 w-1.5 h-4 rounded-full bg-blue-500"
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          />
-        )}
-      </div>
-    </Link>
-  );
-}
-
-import { useWorkspace } from "@/context/WorkspaceContext";
-
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMobile }) => {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
-  const { currentWorkspace, getWorkspaceMetadata } = useWorkspace();
-  const currentMeta = getWorkspaceMetadata(currentWorkspace);
+  const { currentWorkspace } = useWorkspace();
+  const { theme } = useTheme();
+  const isLight = theme === "light";
 
   const isTfc = currentWorkspace === "tfc";
   const navItems = isTfc ? TFC_NAV_ITEMS : CSV_NAV_ITEMS;
-  const WorkspaceIcon = currentMeta.icon;
 
-  const isActive = (href: string) => pathname === href;
-
-  const handleNavClick = () => {
-    if (onCloseMobile) onCloseMobile();
+  const isActive = (href: string) => {
+    if (href === "/dashboard") return pathname === "/dashboard";
+    return pathname.startsWith(href);
   };
 
   // ── Mobile Drawer ─────────────────────────────────────────────────────────
@@ -146,39 +87,61 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 350, damping: 30 }}
-            className="fixed inset-y-0 left-0 z-50 w-72 bg-[#090D14] border-r border-white/[0.08] flex flex-col justify-between md:hidden shadow-2xl overflow-y-auto font-mono"
+            className={`fixed inset-y-0 left-0 z-50 w-72 border-r flex flex-col justify-between md:hidden shadow-2xl overflow-y-auto font-mono ${
+              isLight ? "bg-white border-slate-200" : "bg-[#090D14] border-white/[0.08]"
+            }`}
           >
             <div>
               {/* Top Header - Workspace Branding */}
-              <div className="flex items-center justify-between h-16 px-4 border-b border-white/[0.08]">
+              <div className={`flex items-center justify-between h-16 px-4 border-b ${isLight ? "border-slate-200" : "border-white/[0.08]"}`}>
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold shrink-0">
-                    {isTfc ? <Zap className="w-4 h-4 text-blue-400 fill-blue-400" /> : <FileSpreadsheet className="w-4 h-4" />}
-                  </div>
-                  <span className="text-sm font-bold text-white font-sans tracking-tight">
-                    {isTfc ? "TradeForge Companion" : "CSV Workspace"}
-                  </span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={isLight ? "/logo_full_light.png" : "/logo_full.png"}
+                    alt="TradeFourge Logo"
+                    className="h-7 w-auto object-contain"
+                  />
                 </div>
                 <button
                   onClick={onCloseMobile}
-                  className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                  className={`p-2 rounded-xl transition-colors ${
+                    isLight ? "text-slate-500 hover:bg-slate-100" : "text-gray-400 hover:text-white hover:bg-white/5"
+                  }`}
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Navigation Items */}
-              <nav className="px-3 py-4 space-y-1">
-                {navItems.map((item) => (
-                  <NavLink
-                    key={item.href}
-                    item={item}
-                    isActive={isActive(item.href)}
-                    collapsed={false}
-                    onClick={handleNavClick}
-                  />
-                ))}
+              {/* Nav Items */}
+              <nav className="p-3 space-y-1">
+                {navItems.map((item) => {
+                  const active = isActive(item.href);
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onCloseMobile}
+                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-mono text-xs font-medium transition-all ${
+                        active
+                          ? isLight
+                            ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/30 font-bold"
+                            : "bg-blue-500/10 text-white border border-blue-500/30 font-bold"
+                          : isLight
+                          ? "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${active ? (isLight ? "text-emerald-600" : "text-blue-400") : "text-gray-400"}`} />
+                      <span className="font-sans text-xs">{item.name}</span>
+                    </Link>
+                  );
+                })}
               </nav>
+            </div>
+
+            <div className={`p-4 border-t ${isLight ? "border-slate-200" : "border-white/[0.08]"}`}>
+              <ThemeToggle showLabel className="w-full justify-center" />
             </div>
           </motion.aside>
         )}
@@ -191,46 +154,73 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
     <motion.aside
       animate={{ width: collapsed ? 72 : 240 }}
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
-      className="relative z-30 hidden md:flex flex-col h-screen bg-[#090D14] border-r border-white/[0.08] select-none shrink-0 overflow-hidden font-mono"
+      className={`relative z-30 hidden md:flex flex-col h-screen border-r select-none shrink-0 overflow-hidden font-mono ${
+        isLight ? "bg-white border-slate-200" : "bg-[#090D14] border-white/[0.08]"
+      }`}
     >
       {/* Top Header - Workspace Branding & Toggle */}
-      <div className="flex items-center justify-between h-16 px-3 border-b border-white/[0.08] shrink-0">
+      <div className={`flex items-center justify-between h-16 px-3 border-b shrink-0 ${isLight ? "border-slate-200" : "border-white/[0.08]"}`}>
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex items-center gap-3 overflow-hidden min-w-0 w-full hover:opacity-90 transition-opacity text-left"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 shrink-0">
-            {isTfc ? <Zap className="w-4.5 h-4.5 text-blue-400 fill-blue-400" /> : <FileSpreadsheet className="w-4.5 h-4.5" />}
-          </div>
-          <AnimatePresence>
-            {!collapsed && (
-              <motion.div
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -8 }}
-                className="flex flex-col whitespace-nowrap overflow-hidden"
-              >
-                <span className="text-sm font-bold tracking-tight text-white font-sans">
-                  {isTfc ? "TradeForge Companion" : "CSV Workspace"}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={collapsed ? (isLight ? "/logo_icon_light.png" : "/logo_icon.png") : (isLight ? "/logo_full_light.png" : "/logo_full.png")}
+            alt="TradeFourge"
+            className={`${collapsed ? "w-8 h-8" : "h-7"} w-auto object-contain shrink-0`}
+          />
         </button>
       </div>
 
       {/* Navigation Items */}
       <nav className="flex-1 px-2 py-4 overflow-y-auto space-y-1 scrollbar-thin">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            isActive={isActive(item.href)}
-            collapsed={collapsed}
-          />
-        ))}
+        {navItems.map((item) => {
+          const active = isActive(item.href);
+          const Icon = item.icon;
+          return (
+            <Link key={item.href} href={item.href} className="block relative">
+              <div
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-mono text-xs font-medium transition-all duration-150 group ${
+                  active
+                    ? isLight
+                      ? "bg-emerald-500/10 text-emerald-800 border border-emerald-500/30 font-bold"
+                      : "bg-blue-500/10 text-white border border-blue-500/30 font-bold"
+                    : isLight
+                    ? "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]"
+                }`}
+                title={collapsed ? item.name : undefined}
+              >
+                <Icon
+                  className={`w-4 h-4 shrink-0 transition-transform duration-150 group-hover:scale-105 ${
+                    active ? (isLight ? "text-emerald-600" : "text-blue-400") : isLight ? "text-slate-500" : "text-gray-400"
+                  }`}
+                />
+                {!collapsed && (
+                  <span className="whitespace-nowrap truncate font-sans text-xs">
+                    {item.name}
+                  </span>
+                )}
+
+                {active && (
+                  <motion.div
+                    layoutId="sidebar-active-indicator"
+                    className={`absolute right-2 w-1.5 h-4 rounded-full ${isLight ? "bg-emerald-600" : "bg-blue-500"}`}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+              </div>
+            </Link>
+          );
+        })}
       </nav>
+
+      {/* Bottom Footer Action */}
+      <div className={`p-3 border-t shrink-0 ${isLight ? "border-slate-200" : "border-white/[0.08]"}`}>
+        <ThemeToggle showLabel={!collapsed} className="w-full justify-center" />
+      </div>
     </motion.aside>
   );
 

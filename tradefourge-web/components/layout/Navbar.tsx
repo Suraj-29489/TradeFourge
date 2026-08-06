@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { SharedBadge } from "@/components/ui/SharedBadge";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface NavbarProps {
   onOpenMobileNav?: () => void;
@@ -198,6 +199,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
             )}
           </div>
         )}
+
+        {/* Global Theme Toggle */}
+        <ThemeToggle />
 
         {/* Change Workspace Button */}
         <button

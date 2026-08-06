@@ -119,7 +119,7 @@ export function ReportGeneratorModal({
   };
 
   const inputClass =
-    "w-full px-3 py-2 rounded-xl bg-[#0d1117] border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 font-mono";
+    "w-full px-3 py-2 rounded-xl bg-[#0d1117] border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 font-mono";
   const labelClass = "block text-xs font-mono text-gray-400 mb-1";
 
   return (
@@ -144,7 +144,7 @@ export function ReportGeneratorModal({
                   onClick={() => handleTemplateChange(t.id)}
                   className={`p-2.5 rounded-xl border text-left transition-all ${
                     isSelected
-                      ? "bg-purple-600/15 border-purple-500 text-white shadow-glow"
+                      ? "bg-blue-600/15 border-blue-500 text-white shadow-glow"
                       : "bg-dark-card border-white/10 text-gray-400 hover:border-white/20 hover:text-white"
                   }`}
                 >
@@ -221,7 +221,7 @@ export function ReportGeneratorModal({
                 onClick={() => setExportFormat("PDF")}
                 className={`flex-1 py-1.5 rounded-xl border text-xs font-bold ${
                   exportFormat === "PDF"
-                    ? "bg-purple-600/20 border-purple-500 text-purple-300"
+                    ? "bg-blue-600/20 border-blue-500 text-blue-300"
                     : "bg-dark-card border-white/10 text-gray-400"
                 }`}
               >
@@ -232,7 +232,7 @@ export function ReportGeneratorModal({
                 onClick={() => setExportFormat("CSV")}
                 className={`flex-1 py-1.5 rounded-xl border text-xs font-bold ${
                   exportFormat === "CSV"
-                    ? "bg-purple-600/20 border-purple-500 text-purple-300"
+                    ? "bg-blue-600/20 border-blue-500 text-blue-300"
                     : "bg-dark-card border-white/10 text-gray-400"
                 }`}
               >
@@ -283,7 +283,7 @@ export function ReportGeneratorModal({
                 type="checkbox"
                 checked={includeCharts}
                 onChange={(e) => setIncludeCharts(e.target.checked)}
-                className="accent-purple-500"
+                className="accent-blue-500"
               />
               <span>Charts & Visuals</span>
             </label>
@@ -293,7 +293,7 @@ export function ReportGeneratorModal({
                 type="checkbox"
                 checked={includeTradeList}
                 onChange={(e) => setIncludeTradeList(e.target.checked)}
-                className="accent-purple-500"
+                className="accent-blue-500"
               />
               <span>Trade Log Table</span>
             </label>
@@ -303,7 +303,7 @@ export function ReportGeneratorModal({
                 type="checkbox"
                 checked={includeNotes}
                 onChange={(e) => setIncludeNotes(e.target.checked)}
-                className="accent-purple-500"
+                className="accent-blue-500"
               />
               <span>Trade Notes</span>
             </label>
@@ -313,7 +313,7 @@ export function ReportGeneratorModal({
                 type="checkbox"
                 checked={includeCalendar}
                 onChange={(e) => setIncludeCalendar(e.target.checked)}
-                className="accent-purple-500"
+                className="accent-blue-500"
               />
               <span>Calendar Heatmap</span>
             </label>
@@ -333,7 +333,7 @@ export function ReportGeneratorModal({
             type="button"
             onClick={handleGenerate}
             disabled={isGenerating || trades.length === 0}
-            className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-glow flex items-center gap-2 disabled:opacity-50"
+            className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-glow flex items-center gap-2 disabled:opacity-50"
           >
             <Download className="w-4 h-4" />
             <span>Generate & Download {exportFormat}</span>

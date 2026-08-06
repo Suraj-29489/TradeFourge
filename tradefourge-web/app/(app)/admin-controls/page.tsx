@@ -163,10 +163,10 @@ export default function AdminControlsPage() {
   return (
     <div className="space-y-6 font-mono text-xs max-w-7xl mx-auto pb-16">
       {/* ── Top Header Banner ── */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-950/40 via-dark-card to-dark-bg border border-purple-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xl">
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-950/40 via-dark-card to-dark-bg border border-blue-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xl">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 font-bold text-[10px] uppercase">
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 font-bold text-[10px] uppercase">
               Owner Security Scope
             </span>
             <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-[10px] uppercase">
@@ -174,7 +174,7 @@ export default function AdminControlsPage() {
             </span>
           </div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2 mt-2">
-            <ShieldCheck className="w-6 h-6 text-purple-400" />
+            <ShieldCheck className="w-6 h-6 text-blue-400" />
             <span>Admin Controls</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">
@@ -214,7 +214,7 @@ export default function AdminControlsPage() {
               onClick={() => handleTabChange(tab.id as AdminTab)}
               className={`px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
                 isActive
-                  ? "bg-purple-600 text-white shadow-glow border border-purple-400/40"
+                  ? "bg-blue-600 text-white shadow-glow border border-blue-400/40"
                   : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 border border-transparent"
               }`}
             >
@@ -238,7 +238,7 @@ export default function AdminControlsPage() {
             </div>
             <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
               <span className="text-gray-400 text-[10px]">ACTIVE SESSIONS TODAY</span>
-              <div className="text-2xl font-extrabold text-purple-400">1,240</div>
+              <div className="text-2xl font-extrabold text-blue-400">1,240</div>
               <span className="text-[10px] text-gray-400">Peak 340 concurrency</span>
             </div>
             <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
@@ -259,7 +259,7 @@ export default function AdminControlsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="p-5 rounded-2xl bg-dark-card border border-dark-border space-y-4">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <HardDrive className="w-4 h-4 text-purple-400" />
+                <HardDrive className="w-4 h-4 text-blue-400" />
                 <span>Hybrid Architecture Storage Breakdown</span>
               </h3>
               <div className="space-y-3">
@@ -268,7 +268,7 @@ export default function AdminControlsPage() {
                     <div className="font-bold text-white">Local Users (CSV Offline Mode)</div>
                     <div className="text-[10px] text-gray-400">Trades stored exclusively in browser IndexedDB</div>
                   </div>
-                  <span className="px-2.5 py-1 rounded bg-purple-500/10 border border-purple-500/30 text-purple-400 font-bold">
+                  <span className="px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/30 text-blue-400 font-bold">
                     3,210 Users (83.3%)
                   </span>
                 </div>
@@ -296,7 +296,7 @@ export default function AdminControlsPage() {
                     <span className="text-white font-bold">4.2 GB / 100 GB (4.2%)</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-black/40 overflow-hidden">
-                    <div className="h-full bg-purple-500 w-[4.2%]" />
+                    <div className="h-full bg-blue-500 w-[4.2%]" />
                   </div>
                 </div>
                 <div>
@@ -319,7 +319,7 @@ export default function AdminControlsPage() {
         <div className="p-5 rounded-2xl bg-dark-card border border-dark-border space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <UsersIcon className="w-4 h-4 text-purple-400" />
+              <UsersIcon className="w-4 h-4 text-blue-400" />
               <span>User Accounts Directory</span>
             </h3>
             <span className="text-xs text-gray-400">Showing 4 sample active users</span>
@@ -347,7 +347,7 @@ export default function AdminControlsPage() {
                   <tr key={idx} className="hover:bg-white/5 transition-colors">
                     <td className="py-3 px-3 font-bold text-white">{u.email}</td>
                     <td className="py-3 px-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.plan.includes("Pro") ? "bg-purple-500/10 text-purple-400 border border-purple-500/30" : "bg-gray-500/10 text-gray-300 border border-gray-500/30"}`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${u.plan.includes("Pro") ? "bg-blue-500/10 text-blue-400 border border-blue-500/30" : "bg-gray-500/10 text-gray-300 border border-gray-500/30"}`}>
                         {u.plan}
                       </span>
                     </td>
@@ -375,10 +375,10 @@ export default function AdminControlsPage() {
       {activeTab === "monitoring" && health && (
         <div className="space-y-6">
           {/* Python MT5 Bridge Microservice Telemetry */}
-          <div className="p-5 rounded-2xl bg-purple-950/20 border border-purple-500/30 space-y-4 shadow-xl">
+          <div className="p-5 rounded-2xl bg-blue-950/20 border border-blue-500/30 space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Server className="w-4 h-4 text-purple-400" />
+                <Server className="w-4 h-4 text-blue-400" />
                 <span>Python MT5 Bridge Microservice Telemetry</span>
               </h3>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${bridgeHealth?.status === "healthy" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/10 text-amber-400 border border-amber-500/30"}`}>
@@ -397,7 +397,7 @@ export default function AdminControlsPage() {
               </div>
               <div className="p-3 rounded-xl bg-black/30 border border-white/5 space-y-1">
                 <span className="text-[10px] text-gray-400">Bridge CPU / RAM</span>
-                <div className="font-bold text-purple-400">{bridgeHealth?.system ? `${bridgeHealth.system.cpu_percent}% / ${bridgeHealth.system.memory_used_mb}MB` : "1.2% / 64MB"}</div>
+                <div className="font-bold text-blue-400">{bridgeHealth?.system ? `${bridgeHealth.system.cpu_percent}% / ${bridgeHealth.system.memory_used_mb}MB` : "1.2% / 64MB"}</div>
               </div>
               <div className="p-3 rounded-xl bg-black/30 border border-white/5 space-y-1">
                 <span className="text-[10px] text-gray-400">Uptime / Queue</span>
@@ -408,7 +408,7 @@ export default function AdminControlsPage() {
 
           <div className="p-5 rounded-2xl bg-dark-card border border-dark-border space-y-4">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Activity className="w-4 h-4 text-purple-400" />
+              <Activity className="w-4 h-4 text-blue-400" />
               <span>Real-Time Telemetry & Log Events</span>
             </h3>
             <div className="space-y-2">
@@ -450,7 +450,7 @@ export default function AdminControlsPage() {
             </div>
             <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
               <span className="text-gray-400 text-[10px]">PRO SUBSCRIBERS</span>
-              <div className="text-2xl font-extrabold text-purple-400">640</div>
+              <div className="text-2xl font-extrabold text-blue-400">640</div>
               <span className="text-[10px] text-emerald-400">$29/mo plan</span>
             </div>
             <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
@@ -473,7 +473,7 @@ export default function AdminControlsPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
               <span className="text-gray-400 text-[10px]">DAILY ACTIVE USERS (DAU)</span>
-              <div className="text-2xl font-extrabold text-purple-400">1,240</div>
+              <div className="text-2xl font-extrabold text-blue-400">1,240</div>
             </div>
             <div className="p-4 rounded-2xl bg-dark-card border border-dark-border space-y-1">
               <span className="text-gray-400 text-[10px]">MONTHLY ACTIVE USERS (MAU)</span>
@@ -496,7 +496,7 @@ export default function AdminControlsPage() {
         <div className="p-5 rounded-2xl bg-dark-card border border-dark-border space-y-6">
           <div>
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Sliders className="w-4 h-4 text-purple-400" />
+              <Sliders className="w-4 h-4 text-blue-400" />
               <span>Feature Flags Management</span>
             </h3>
             <p className="text-xs text-gray-400 mt-1">
@@ -551,7 +551,7 @@ export default function AdminControlsPage() {
         <div className="p-5 rounded-2xl bg-dark-card border border-dark-border space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-purple-400" />
+              <MessageSquare className="w-4 h-4 text-blue-400" />
               <span>Feedback Inbox & Bug Tracker</span>
             </h3>
             <span className="text-xs text-gray-400">{feedbackList.length} user submissions</span>
@@ -565,7 +565,7 @@ export default function AdminControlsPage() {
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30">
                       {item.category}
                     </span>
                     <span className="font-bold text-white">{item.title}</span>
@@ -581,7 +581,7 @@ export default function AdminControlsPage() {
                       onClick={() => handleUpdateFeedback(item.id, st)}
                       className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${
                         item.status === st
-                          ? "bg-purple-600 text-white shadow-glow"
+                          ? "bg-blue-600 text-white shadow-glow"
                           : "bg-white/5 text-gray-400 hover:text-white"
                       }`}
                     >
@@ -609,7 +609,7 @@ export default function AdminControlsPage() {
             className="p-5 rounded-2xl bg-dark-card border border-dark-border space-y-4 md:col-span-1"
           >
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Plus className="w-4 h-4 text-purple-400" />
+              <Plus className="w-4 h-4 text-blue-400" />
               <span>Create Announcement</span>
             </h3>
 
@@ -653,7 +653,7 @@ export default function AdminControlsPage() {
 
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-glow text-xs flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-glow text-xs flex items-center justify-center gap-2"
             >
               <Megaphone className="w-4 h-4" />
               <span>Broadcast Announcement</span>
@@ -662,7 +662,7 @@ export default function AdminControlsPage() {
 
           <div className="p-5 rounded-2xl bg-dark-card border border-dark-border space-y-4 md:col-span-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Megaphone className="w-4 h-4 text-purple-400" />
+              <Megaphone className="w-4 h-4 text-blue-400" />
               <span>Active Broadcasts</span>
             </h3>
 
@@ -674,7 +674,7 @@ export default function AdminControlsPage() {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30">
                         {ann.type}
                       </span>
                       <span className="font-bold text-white">{ann.title}</span>
@@ -711,7 +711,7 @@ export default function AdminControlsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="p-5 rounded-2xl bg-dark-card border border-dark-border space-y-4">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-purple-400" />
+              <Terminal className="w-4 h-4 text-blue-400" />
               <span>Owner Developer Utilities</span>
             </h3>
 
@@ -729,9 +729,9 @@ export default function AdminControlsPage() {
                   <button
                     key={act.id}
                     onClick={() => triggerDevAction(act.id)}
-                    className="p-3 rounded-xl bg-black/30 border border-white/10 hover:border-purple-500/50 hover:bg-purple-500/10 text-white font-bold transition-all text-left flex items-center gap-2.5"
+                    className="p-3 rounded-xl bg-black/30 border border-white/10 hover:border-blue-500/50 hover:bg-blue-500/10 text-white font-bold transition-all text-left flex items-center gap-2.5"
                   >
-                    <IconComp className="w-4 h-4 text-purple-400 shrink-0" />
+                    <IconComp className="w-4 h-4 text-blue-400 shrink-0" />
                     <span>{act.label}</span>
                   </button>
                 );

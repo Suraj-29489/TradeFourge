@@ -72,7 +72,7 @@ export default function ReviewsPage() {
       <div className="p-6 rounded-2xl glass-card border border-dark-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <CalendarDays className="w-6 h-6 text-purple-400" />
+            <CalendarDays className="w-6 h-6 text-blue-400" />
             <span>Weekly & Monthly Reviews Workspace</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">
@@ -84,7 +84,7 @@ export default function ReviewsPage() {
           {activeTab === "weekly" ? (
             <button
               onClick={handleGenerateWeekly}
-              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-glow flex items-center gap-2 shrink-0 transition-all"
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-glow flex items-center gap-2 shrink-0 transition-all"
             >
               <Sparkles className="w-4 h-4" />
               <span>Generate Weekly Review</span>
@@ -92,7 +92,7 @@ export default function ReviewsPage() {
           ) : (
             <button
               onClick={handleGenerateMonthly}
-              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-glow flex items-center gap-2 shrink-0 transition-all"
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-glow flex items-center gap-2 shrink-0 transition-all"
             >
               <Sparkles className="w-4 h-4" />
               <span>Generate Monthly Review</span>
@@ -107,7 +107,7 @@ export default function ReviewsPage() {
           onClick={() => setActiveTab("weekly")}
           className={`px-4 py-2 rounded-xl font-bold transition-colors flex items-center gap-2 ${
             activeTab === "weekly"
-              ? "bg-purple-600/20 border border-purple-500/30 text-purple-300"
+              ? "bg-blue-600/20 border border-blue-500/30 text-blue-300"
               : "text-gray-400 hover:text-white hover:bg-white/5"
           }`}
         >
@@ -119,7 +119,7 @@ export default function ReviewsPage() {
           onClick={() => setActiveTab("monthly")}
           className={`px-4 py-2 rounded-xl font-bold transition-colors flex items-center gap-2 ${
             activeTab === "monthly"
-              ? "bg-purple-600/20 border border-purple-500/30 text-purple-300"
+              ? "bg-blue-600/20 border border-blue-500/30 text-blue-300"
               : "text-gray-400 hover:text-white hover:bg-white/5"
           }`}
         >
@@ -143,7 +143,7 @@ export default function ReviewsPage() {
             weeklyReviews.map((r) => (
               <div
                 key={r.id}
-                className="p-5 rounded-2xl glass-card border border-dark-border space-y-4 hover:border-purple-500/30 transition-all"
+                className="p-5 rounded-2xl glass-card border border-dark-border space-y-4 hover:border-blue-500/30 transition-all"
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -210,7 +210,7 @@ export default function ReviewsPage() {
             monthlyReviews.map((r) => (
               <div
                 key={r.id}
-                className="p-5 rounded-2xl glass-card border border-dark-border space-y-4 hover:border-purple-500/30 transition-all"
+                className="p-5 rounded-2xl glass-card border border-dark-border space-y-4 hover:border-blue-500/30 transition-all"
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -227,7 +227,7 @@ export default function ReviewsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/5">
                   <div className="p-3 rounded-xl bg-dark-card border border-white/5 space-y-1">
-                    <span className="text-[10px] text-purple-400 font-bold block">STRATEGY PERFORMANCE</span>
+                    <span className="text-[10px] text-blue-400 font-bold block">STRATEGY PERFORMANCE</span>
                     <p className="text-gray-300">Best Model: <strong className="text-white">{r.best_strategy}</strong></p>
                     <p className="text-gray-300">Weakest Model: <strong className="text-white">{r.weakest_strategy}</strong></p>
                   </div>

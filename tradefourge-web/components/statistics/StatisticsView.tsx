@@ -28,7 +28,11 @@ function formatDuration(seconds: number): string {
   return `${seconds}s`;
 }
 
+import { useTheme } from "@/context/ThemeContext";
+
 export const StatisticsView: React.FC = () => {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const { formatSigned, symbol } = useCurrencyFormatter();
   const supabase = createClient();
 
@@ -114,7 +118,7 @@ export const StatisticsView: React.FC = () => {
         <div>
           <h2 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
             Performance Diagnostics Lab
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30">
               DEEP DIAGNOSTICS
             </span>
           </h2>
@@ -129,7 +133,7 @@ export const StatisticsView: React.FC = () => {
             onClick={loadData}
             className="p-2.5 rounded-xl bg-dark-card border border-dark-border hover:bg-dark-hover text-gray-300 flex items-center gap-2"
           >
-            <RefreshCw className="w-4 h-4 text-purple-400" />
+            <RefreshCw className="w-4 h-4 text-blue-400" />
             <span>Refresh</span>
           </button>
         </div>
@@ -155,7 +159,7 @@ export const StatisticsView: React.FC = () => {
                   onClick={() => setActiveTab(t.id as any)}
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                     isActive
-                      ? "bg-purple-600 text-white shadow-glow"
+                      ? "bg-blue-600 text-white shadow-glow"
                       : "text-gray-400 hover:text-white hover:bg-dark-hover"
                   }`}
                 >
@@ -170,7 +174,7 @@ export const StatisticsView: React.FC = () => {
         {/* Filter Controls Bar */}
         <div className="flex items-center gap-3 flex-wrap text-xs">
           <div className="flex items-center gap-1 text-gray-400 font-bold shrink-0">
-            <Filter className="w-3.5 h-3.5 text-purple-400" />
+            <Filter className="w-3.5 h-3.5 text-blue-400" />
             <span>Filters:</span>
           </div>
 
@@ -179,7 +183,7 @@ export const StatisticsView: React.FC = () => {
             <select
               value={filterSymbol}
               onChange={(e) => setFilterSymbol(e.target.value)}
-              className="px-2.5 py-1.5 rounded-xl bg-dark-card border border-dark-border text-white focus:border-purple-500 font-bold"
+              className="px-2.5 py-1.5 rounded-xl bg-dark-card border border-dark-border text-white focus:border-blue-500 font-bold"
             >
               <option value="ALL">All Symbols ({uniqueSymbols.length})</option>
               {uniqueSymbols.map((s) => (
@@ -193,7 +197,7 @@ export const StatisticsView: React.FC = () => {
             <select
               value={filterSide}
               onChange={(e) => setFilterSide(e.target.value)}
-              className="px-2.5 py-1.5 rounded-xl bg-dark-card border border-dark-border text-white focus:border-purple-500 font-bold"
+              className="px-2.5 py-1.5 rounded-xl bg-dark-card border border-dark-border text-white focus:border-blue-500 font-bold"
             >
               <option value="ALL">All Sides</option>
               <option value="BUY">BUY / LONG</option>
@@ -206,7 +210,7 @@ export const StatisticsView: React.FC = () => {
             <select
               value={filterOutcome}
               onChange={(e) => setFilterOutcome(e.target.value)}
-              className="px-2.5 py-1.5 rounded-xl bg-dark-card border border-dark-border text-white focus:border-purple-500 font-bold"
+              className="px-2.5 py-1.5 rounded-xl bg-dark-card border border-dark-border text-white focus:border-blue-500 font-bold"
             >
               <option value="ALL">All Outcomes</option>
               <option value="WINS">Wins Only</option>
@@ -223,7 +227,7 @@ export const StatisticsView: React.FC = () => {
       {/* Empty State Banner if 0 trades */}
       {trades.length === 0 ? (
         <div className="p-8 rounded-2xl glass-card border border-dark-border text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-purple-600/20 border border-purple-500/30 text-purple-400 flex items-center justify-center mx-auto">
+          <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center mx-auto">
             <BarChart2 className="w-6 h-6" />
           </div>
           <h3 className="text-base font-bold text-white">No Trading Data Available</h3>
@@ -259,7 +263,7 @@ export const StatisticsView: React.FC = () => {
               </div>
               <div className="p-2.5 rounded-xl bg-black/40 border border-white/10">
                 <span className="text-gray-400 block text-[10px]">AVG HOLD TIME</span>
-                <span className="text-purple-300 font-extrabold text-sm">{formatDuration(analytics.avgHoldSeconds)}</span>
+                <span className="text-blue-300 font-extrabold text-sm">{formatDuration(analytics.avgHoldSeconds)}</span>
               </div>
             </div>
           </div>
@@ -275,7 +279,7 @@ export const StatisticsView: React.FC = () => {
 
             <div className="p-3.5 rounded-xl bg-dark-card border border-dark-border space-y-1">
               <span className="text-[10px] text-gray-400 block uppercase">WIN RATE</span>
-              <span className="text-base font-extrabold text-purple-400 block">{analytics.winRate}%</span>
+              <span className="text-base font-extrabold text-blue-400 block">{analytics.winRate}%</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-dark-card border border-dark-border space-y-1">
@@ -285,7 +289,7 @@ export const StatisticsView: React.FC = () => {
 
             <div className="p-3.5 rounded-xl bg-dark-card border border-dark-border space-y-1">
               <span className="text-[10px] text-gray-400 block uppercase">AVG RISK : REWARD</span>
-              <span className="text-base font-extrabold text-purple-300 block">{analytics.avgRR}R</span>
+              <span className="text-base font-extrabold text-blue-300 block">{analytics.avgRR}R</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-dark-card border border-dark-border space-y-1">
@@ -317,7 +321,7 @@ export const StatisticsView: React.FC = () => {
       {activeTab === "symbols" && (
         <div className="p-5 rounded-2xl glass-card border border-dark-border space-y-4">
           <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2 border-b border-dark-border pb-3">
-            <BarChart2 className="w-4 h-4 text-purple-400" />
+            <BarChart2 className="w-4 h-4 text-blue-400" />
             Symbol Performance Breakdown
           </h3>
 
@@ -338,17 +342,17 @@ export const StatisticsView: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-dark-border text-gray-300">
                 {analytics.symbols.map((s) => (
-                  <tr key={s.symbol} className="hover:bg-purple-600/10 transition-colors">
+                  <tr key={s.symbol} className="hover:bg-blue-600/10 transition-colors">
                     <td className="py-3 px-4 font-bold text-white">{s.symbol}</td>
                     <td className="py-3 px-4">{s.trades}</td>
-                    <td className="py-3 px-4 text-purple-300 font-bold">{s.winRate}%</td>
+                    <td className="py-3 px-4 text-blue-300 font-bold">{s.winRate}%</td>
                     <td className={`py-3 px-4 font-bold ${s.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {formatSigned(s.netProfit)}
                     </td>
                     <td className="py-3 px-4 text-emerald-400">{formatSigned(s.grossProfit)}</td>
                     <td className="py-3 px-4 text-rose-400">{formatSigned(s.grossLoss)}</td>
                     <td className="py-3 px-4">{s.profitFactor}</td>
-                    <td className="py-3 px-4 text-purple-400 font-bold">{s.avgRR}R</td>
+                    <td className="py-3 px-4 text-blue-400 font-bold">{s.avgRR}R</td>
                     <td className="py-3 px-4 text-gray-300">{s.avgLotSize} Lots</td>
                   </tr>
                 ))}
@@ -364,7 +368,7 @@ export const StatisticsView: React.FC = () => {
           {/* Session Performance */}
           <div className="p-5 rounded-2xl glass-card border border-dark-border space-y-3">
             <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2 border-b border-dark-border pb-3">
-              <Clock className="w-4 h-4 text-purple-400" />
+              <Clock className="w-4 h-4 text-blue-400" />
               Trading Session Performance
             </h3>
             <div className="space-y-2">
@@ -427,7 +431,7 @@ export const StatisticsView: React.FC = () => {
       {activeTab === "compare" && (
         <div className="p-5 rounded-2xl glass-card border border-dark-border space-y-4">
           <h3 className="text-sm font-bold text-white font-mono flex items-center gap-2 border-b border-dark-border pb-3">
-            <Scale className="w-4 h-4 text-purple-400" />
+            <Scale className="w-4 h-4 text-blue-400" />
             Side-by-Side Symbol Comparison
           </h3>
 
@@ -447,9 +451,9 @@ export const StatisticsView: React.FC = () => {
                 <div className="p-4 rounded-xl bg-dark-card border border-dark-border mt-3 space-y-2">
                   <span className="text-base font-extrabold text-white block">{symbolAStats.symbol}</span>
                   <div className="flex justify-between text-gray-400"><span>Net Profit:</span><span className="text-emerald-400 font-bold">{formatSigned(symbolAStats.netProfit)}</span></div>
-                  <div className="flex justify-between text-gray-400"><span>Win Rate:</span><span className="text-purple-300 font-bold">{symbolAStats.winRate}%</span></div>
+                  <div className="flex justify-between text-gray-400"><span>Win Rate:</span><span className="text-blue-300 font-bold">{symbolAStats.winRate}%</span></div>
                   <div className="flex justify-between text-gray-400"><span>Profit Factor:</span><span className="text-white font-bold">{symbolAStats.profitFactor}</span></div>
-                  <div className="flex justify-between text-gray-400"><span>Avg RR:</span><span className="text-purple-400 font-bold">{symbolAStats.avgRR}R</span></div>
+                  <div className="flex justify-between text-gray-400"><span>Avg RR:</span><span className="text-blue-400 font-bold">{symbolAStats.avgRR}R</span></div>
                 </div>
               )}
             </div>
@@ -469,9 +473,9 @@ export const StatisticsView: React.FC = () => {
                 <div className="p-4 rounded-xl bg-dark-card border border-dark-border mt-3 space-y-2">
                   <span className="text-base font-extrabold text-white block">{symbolBStats.symbol}</span>
                   <div className="flex justify-between text-gray-400"><span>Net Profit:</span><span className="text-emerald-400 font-bold">{formatSigned(symbolBStats.netProfit)}</span></div>
-                  <div className="flex justify-between text-gray-400"><span>Win Rate:</span><span className="text-purple-300 font-bold">{symbolBStats.winRate}%</span></div>
+                  <div className="flex justify-between text-gray-400"><span>Win Rate:</span><span className="text-blue-300 font-bold">{symbolBStats.winRate}%</span></div>
                   <div className="flex justify-between text-gray-400"><span>Profit Factor:</span><span className="text-white font-bold">{symbolBStats.profitFactor}</span></div>
-                  <div className="flex justify-between text-gray-400"><span>Avg RR:</span><span className="text-purple-400 font-bold">{symbolBStats.avgRR}R</span></div>
+                  <div className="flex justify-between text-gray-400"><span>Avg RR:</span><span className="text-blue-400 font-bold">{symbolBStats.avgRR}R</span></div>
                 </div>
               )}
             </div>
@@ -482,7 +486,7 @@ export const StatisticsView: React.FC = () => {
       {/* TAB 6: TRADE REPLAY ENGINE */}
       {activeTab === "replay" && (
         <div className="p-8 rounded-2xl glass-card border border-dark-border text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-purple-600/20 border border-purple-500/30 text-purple-400 flex items-center justify-center mx-auto">
+          <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center mx-auto">
             <PlayCircle className="w-6 h-6" />
           </div>
           <h3 className="text-base font-bold text-white">Trade Replay Engine (Coming Soon)</h3>

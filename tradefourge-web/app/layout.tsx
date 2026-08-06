@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -64,10 +65,8 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  var t = localStorage.getItem('tj_theme');
-                  if (t === 'light' || t === 'dark') {
-                    document.documentElement.setAttribute('data-theme', t);
-                  }
+                  var t = localStorage.getItem('tj_theme') || 'dark';
+                  document.documentElement.setAttribute('data-theme', t);
                 } catch(e) {}
               })();
             `,
@@ -75,11 +74,13 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} antialiased selection:bg-blue-600 selection:text-white`}
+        className={`${inter.variable} antialiased selection:bg-blue-600 selection:text-white transition-colors duration-250`}
         style={{ backgroundColor: "var(--body-bg)", color: "var(--body-text)" }}
       >
-        {children}
-        <Analytics />
+        <ThemeProvider>
+          {children}
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   );

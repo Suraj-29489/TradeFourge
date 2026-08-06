@@ -129,7 +129,7 @@ export default function LiveAccountsPage() {
         );
       case "Syncing":
         return (
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 flex items-center gap-1.5 w-fit">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30 flex items-center gap-1.5 w-fit">
             <Loader2 className="w-3 h-3 animate-spin" />
             <span>Syncing</span>
           </span>
@@ -183,10 +183,10 @@ export default function LiveAccountsPage() {
       </AnimatePresence>
 
       {/* Top Banner */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-950/40 via-dark-card to-dark-bg border border-purple-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xl">
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-950/40 via-dark-card to-dark-bg border border-blue-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xl">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 font-bold text-[10px] uppercase">
+            <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 font-bold text-[10px] uppercase">
               Cloud Mode Engine
             </span>
             {isProUser ? (
@@ -200,7 +200,7 @@ export default function LiveAccountsPage() {
             )}
           </div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2 mt-2">
-            <Radio className="w-6 h-6 text-purple-400" />
+            <Radio className="w-6 h-6 text-blue-400" />
             <span>Live Broker Synchronization</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">
@@ -219,7 +219,7 @@ export default function LiveAccountsPage() {
 
           <button
             onClick={handleOpenConnect}
-            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-glow flex items-center gap-2"
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-glow flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             <span>Connect Live Broker</span>
@@ -230,12 +230,12 @@ export default function LiveAccountsPage() {
       {/* Main Table / Empty State */}
       {loading ? (
         <div className="p-12 text-center text-gray-400 font-mono space-y-3">
-          <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto" />
+          <Loader2 className="w-8 h-8 text-blue-400 animate-spin mx-auto" />
           <div>Loading connected live accounts...</div>
         </div>
       ) : credentials.length === 0 ? (
         <div className="p-12 rounded-2xl bg-dark-card border border-dark-border text-center space-y-6 max-w-xl mx-auto my-8">
-          <div className="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center mx-auto">
             <Radio className="w-7 h-7" />
           </div>
           <div className="space-y-2">
@@ -257,7 +257,7 @@ export default function LiveAccountsPage() {
 
           <button
             onClick={handleOpenConnect}
-            className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-glow text-xs inline-flex items-center gap-2"
+            className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-glow text-xs inline-flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             <span>Connect Exness MT5 Account</span>
@@ -267,7 +267,7 @@ export default function LiveAccountsPage() {
         <div className="p-5 rounded-2xl bg-dark-card border border-dark-border space-y-4 shadow-xl">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Server className="w-4 h-4 text-purple-400" />
+              <Server className="w-4 h-4 text-blue-400" />
               <span>Connected Broker Accounts ({credentials.length})</span>
             </h3>
             <span className="text-xs text-gray-400 font-mono">Institutional MT5 Feeds</span>
@@ -306,7 +306,7 @@ export default function LiveAccountsPage() {
 
                       <td className="py-3.5 px-3">
                         <div className="font-bold text-white">{cred.account_name}</div>
-                        <div className="text-[10px] text-purple-400">#{cred.account_number}</div>
+                        <div className="text-[10px] text-blue-400">#{cred.account_number}</div>
                       </td>
 
                       <td className="py-3.5 px-3 text-gray-300 font-bold">{cred.server}</td>
@@ -339,7 +339,7 @@ export default function LiveAccountsPage() {
                           <button
                             onClick={() => handleManualSync(cred)}
                             disabled={isSyncing}
-                            className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] transition-all flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] transition-all flex items-center gap-1.5 shadow-md disabled:opacity-50"
                           >
                             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
                             <span>{isSyncing ? "Syncing..." : "Sync Now"}</span>
@@ -384,8 +384,8 @@ export default function LiveAccountsPage() {
             onClick={() => setIsUpgradeModalOpen(false)}
             className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity"
           />
-          <div className="relative z-10 w-full max-w-md p-6 rounded-2xl bg-dark-card border border-purple-500/30 space-y-5 text-center font-mono shadow-2xl">
-            <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center mx-auto">
+          <div className="relative z-10 w-full max-w-md p-6 rounded-2xl bg-dark-card border border-blue-500/30 space-y-5 text-center font-mono shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center mx-auto">
               <Sparkles className="w-6 h-6" />
             </div>
             <div className="space-y-2">
@@ -405,7 +405,7 @@ export default function LiveAccountsPage() {
               <Link
                 href="/billing"
                 onClick={() => setIsUpgradeModalOpen(false)}
-                className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-glow text-xs flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-glow text-xs flex items-center justify-center gap-1.5"
               >
                 <span>Upgrade to Pro</span>
                 <ArrowRight className="w-4 h-4" />

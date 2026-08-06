@@ -12,12 +12,12 @@ interface AuthLayoutProps {
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitle }) => {
   return (
-    <div className="min-h-screen bg-[#080B11] text-gray-100 flex flex-col justify-between selection:bg-purple-600 selection:text-white">
+    <div className="min-h-screen bg-[#080B11] text-gray-100 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-screen">
         {/* Left Side: Branding & Feature Highlights (Hidden on mobile, 5 cols on lg) */}
         <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-[#0F1420] via-[#111726] to-[#080B11] border-r border-white/10 p-12 flex-col justify-between relative overflow-hidden">
           {/* Ambient Glow */}
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
 
           {/* Logo Header */}
           <div className="relative z-10">
@@ -34,7 +34,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
           {/* Middle Value Proposition */}
           <div className="relative z-10 space-y-8 my-auto">
             <div className="space-y-3">
-              <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-mono font-bold uppercase">
+              <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-mono font-bold uppercase">
                 Institutional SaaS Terminal
               </span>
               <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
@@ -51,7 +51,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, title, subtitl
                 <span>Instant MT4/MT5 position parser engine</span>
               </div>
               <div className="flex items-start gap-3 text-sm text-gray-300">
-                <CheckCircle2 className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                 <span>AI Coach pattern & drawdown alerts</span>
               </div>
               <div className="flex items-start gap-3 text-sm text-gray-300">

@@ -46,7 +46,7 @@ export default function AdminControlsLayout({
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 font-mono text-xs text-gray-400">
-        <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+        <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
         <span>Authenticating Owner Workspace Authority...</span>
       </div>
     );
@@ -66,7 +66,7 @@ export default function AdminControlsLayout({
         </div>
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-glow text-xs"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-glow text-xs"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Return to Dashboard</span>

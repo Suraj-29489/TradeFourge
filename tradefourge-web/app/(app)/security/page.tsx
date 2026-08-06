@@ -28,7 +28,7 @@ export default function SecurityPage() {
 
           <button
             type="button"
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-mono text-xs font-bold shadow-glow shrink-0 transition-all"
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-mono text-xs font-bold shadow-glow shrink-0 transition-all"
           >
             Enable 2FA
           </button>
@@ -37,7 +37,7 @@ export default function SecurityPage() {
 
       <div className="p-6 rounded-2xl bg-[#111726] border border-white/10 space-y-4">
         <h2 className="text-sm font-bold font-mono text-white flex items-center gap-2 border-b border-white/10 pb-3">
-          <Laptop className="w-4 h-4 text-purple-400" /> Authorized Devices & Browser Sessions
+          <Laptop className="w-4 h-4 text-blue-400" /> Authorized Devices & Browser Sessions
         </h2>
 
         <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between font-mono text-xs text-gray-300">

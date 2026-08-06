@@ -18,7 +18,7 @@ export default function ApiKeysPage() {
       </div>
 
       <div className="p-8 rounded-2xl glass-card border border-dark-border text-center space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-purple-600/20 border border-purple-500/30 text-purple-400 flex items-center justify-center mx-auto">
+        <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 text-blue-400 flex items-center justify-center mx-auto">
           <Key className="w-6 h-6" />
         </div>
 
@@ -31,7 +31,7 @@ export default function ApiKeysPage() {
           </p>
         </div>
 
-        <div className="pt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[11px] font-bold">
+        <div className="pt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[11px] font-bold">
           <ShieldAlert className="w-3.5 h-3.5" />
           <span>Manual CSV upload & entry are active across TradeFourge v3.1</span>
         </div>

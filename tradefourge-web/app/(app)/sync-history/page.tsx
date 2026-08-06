@@ -26,7 +26,7 @@ export default function SyncHistoryPage() {
       <div className="p-6 rounded-2xl glass-card border border-dark-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <Activity className="w-6 h-6 text-purple-400" />
+            <Activity className="w-6 h-6 text-blue-400" />
             <span>Sync History Audit Log</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">

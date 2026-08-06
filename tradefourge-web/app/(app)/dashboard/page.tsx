@@ -353,20 +353,20 @@ export default function DashboardPage() {
         {/* 1. Balance */}
         <div
           onClick={() => router.push("/accounts")}
-          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
         >
-          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">BALANCE</span>
+          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300 transition-colors">BALANCE</span>
           <span className="text-sm font-extrabold text-white block truncate">
             {symbol}{totalSelectedBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
             <span>Account Equity</span>
-            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-purple-400 transition-opacity" />
+            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-blue-400 transition-opacity" />
           </span>
 
           {/* Hover Tooltip */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
-            <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Current Account Equity</p>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
+            <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Current Account Equity</p>
             <p className="text-gray-300">Total balance of your active trading account including realized PnL.</p>
             <p className="text-[10px] text-emerald-400 font-bold pt-1">Click to manage trading accounts →</p>
           </div>
@@ -375,20 +375,20 @@ export default function DashboardPage() {
         {/* 2. Today's PnL */}
         <div
           onClick={() => router.push("/journal")}
-          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
         >
-          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">TODAY P&L</span>
+          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300 transition-colors">TODAY P&L</span>
           <span className={`text-sm font-extrabold block truncate ${todaysPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
             {formatSigned(todaysPnL)}
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
             <span>Closed Today</span>
-            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-purple-400 transition-opacity" />
+            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-blue-400 transition-opacity" />
           </span>
 
           {/* Hover Tooltip */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
-            <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Today's Session PnL</p>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
+            <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Today's Session PnL</p>
             <p className="text-gray-300">Net profit/loss generated from trades closed during today's session.</p>
             <p className="text-[10px] text-emerald-400 font-bold pt-1">Click to view trade journal →</p>
           </div>
@@ -397,7 +397,7 @@ export default function DashboardPage() {
         {/* 3. Total Net Profit */}
         <div
           onClick={() => router.push("/performance")}
-          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
         >
           <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-400 transition-colors">NET PnL</span>
           <span className={`text-sm font-extrabold block truncate ${analytics.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
@@ -405,12 +405,12 @@ export default function DashboardPage() {
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
             <span>All-time PnL</span>
-            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-purple-400 transition-opacity" />
+            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-blue-400 transition-opacity" />
           </span>
 
           {/* Hover Tooltip */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
-            <p className="font-bold text-purple-300 border-b border-white/10 pb-1">All-Time Cumulative Net PnL</p>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
+            <p className="font-bold text-blue-300 border-b border-white/10 pb-1">All-Time Cumulative Net PnL</p>
             <p className="text-gray-300">Gross profit minus gross loss, commissions, and swap across all cloud trades.</p>
             <p className="text-[10px] text-emerald-400 font-bold pt-1">Click for Performance Lab →</p>
           </div>
@@ -419,20 +419,20 @@ export default function DashboardPage() {
         {/* 4. Win Rate */}
         <div
           onClick={() => router.push("/performance")}
-          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
         >
-          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">WIN RATE</span>
-          <span className="text-sm font-extrabold text-purple-400 block truncate">
+          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300 transition-colors">WIN RATE</span>
+          <span className="text-sm font-extrabold text-blue-400 block truncate">
             {analytics.totalTrades > 0 ? `${analytics.winRate}%` : "—"}
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
             <span>{analytics.wins}W / {analytics.losses}L</span>
-            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-purple-400 transition-opacity" />
+            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-blue-400 transition-opacity" />
           </span>
 
           {/* Hover Tooltip */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
-            <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Winning Trade Accuracy</p>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
+            <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Winning Trade Accuracy</p>
             <p className="text-gray-300">{analytics.wins} winning trades out of {analytics.totalTrades} total closed positions.</p>
             <p className="text-[10px] text-emerald-400 font-bold pt-1">Click for Performance Lab →</p>
           </div>
@@ -441,20 +441,20 @@ export default function DashboardPage() {
         {/* 5. Profit Factor */}
         <div
           onClick={() => router.push("/performance")}
-          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
         >
-          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">PROFIT FACTOR</span>
+          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300 transition-colors">PROFIT FACTOR</span>
           <span className="text-sm font-extrabold text-white block truncate">
             {analytics.totalTrades > 0 ? analytics.profitFactor : "—"}
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
             <span>Exp: {analytics.totalTrades > 0 ? `${symbol}${analytics.expectancy}` : "—"}</span>
-            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-purple-400 transition-opacity" />
+            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-blue-400 transition-opacity" />
           </span>
 
           {/* Hover Tooltip */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
-            <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Gross Profit / Gross Loss</p>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
+            <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Gross Profit / Gross Loss</p>
             <p className="text-gray-300">Values above 1.5 indicate a strong mathematical trading edge.</p>
             <p className="text-[10px] text-emerald-400 font-bold pt-1">Click for Performance Lab →</p>
           </div>
@@ -463,20 +463,20 @@ export default function DashboardPage() {
         {/* 6. Average RR */}
         <div
           onClick={() => router.push("/performance")}
-          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
         >
-          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">AVG RR</span>
+          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300 transition-colors">AVG RR</span>
           <span className="text-sm font-extrabold text-indigo-400 block truncate">
             1:{analytics.avgRR}
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
             <span>Reward : Risk</span>
-            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-purple-400 transition-opacity" />
+            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-blue-400 transition-opacity" />
           </span>
 
           {/* Hover Tooltip */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
-            <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Average Risk-to-Reward</p>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
+            <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Average Risk-to-Reward</p>
             <p className="text-gray-300">Average realized gain per unit of risk taken across logged setups.</p>
             <p className="text-[10px] text-emerald-400 font-bold pt-1">Click for Performance Lab →</p>
           </div>
@@ -485,20 +485,20 @@ export default function DashboardPage() {
         {/* 7. Drawdown */}
         <div
           onClick={() => router.push("/performance")}
-          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
         >
-          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">DRAWDOWN</span>
+          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300 transition-colors">DRAWDOWN</span>
           <span className="text-sm font-extrabold text-rose-400 block truncate">
             -{drawdownInfo.pct}%
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
             <span>Peak-to-Trough</span>
-            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-purple-400 transition-opacity" />
+            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-blue-400 transition-opacity" />
           </span>
 
           {/* Hover Tooltip */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
-            <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Max Equity Drawdown</p>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
+            <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Max Equity Drawdown</p>
             <p className="text-gray-300">Largest peak-to-trough equity contraction experienced: -{symbol}{drawdownInfo.amount.toLocaleString()}.</p>
             <p className="text-[10px] text-emerald-400 font-bold pt-1">Click for Performance Lab →</p>
           </div>
@@ -507,20 +507,20 @@ export default function DashboardPage() {
         {/* 8. Streak */}
         <div
           onClick={() => router.push("/journal")}
-          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+          className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
         >
-          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">STREAK</span>
+          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300 transition-colors">STREAK</span>
           <span className={`text-xs font-extrabold block truncate ${streakInfo.color}`}>
             {streakInfo.text}
           </span>
           <span className="text-[9px] text-gray-400 block flex items-center justify-between">
             <span>Current Run</span>
-            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-purple-400 transition-opacity" />
+            <ExternalLink className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-blue-400 transition-opacity" />
           </span>
 
           {/* Hover Tooltip */}
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
-            <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Active Trading Streak</p>
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
+            <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Active Trading Streak</p>
             <p className="text-gray-300">{streakInfo.desc}.</p>
             <p className="text-[10px] text-emerald-400 font-bold pt-1">Click to view trade journal →</p>
           </div>
@@ -611,7 +611,7 @@ export default function DashboardPage() {
                 <Target className="w-4 h-4 text-indigo-400" />
                 Performance Snapshot & Highlights
               </h2>
-              <Link href="/performance" className="text-xs text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1">
+              <Link href="/performance" className="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1">
                 Full Performance Lab <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -626,22 +626,22 @@ export default function DashboardPage() {
                     router.push("/performance");
                   }
                 }}
-                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
               >
-                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-purple-300 transition-colors">BEST SYMBOL</span>
+                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-blue-300 transition-colors">BEST SYMBOL</span>
                 <span className="text-sm font-extrabold text-emerald-400 block truncate">
                   {analytics.bestSymbol?.symbol || "N/A"}
                 </span>
                 <span className="text-[10px] text-gray-300 block font-bold flex items-center justify-between">
                   <span>{analytics.bestSymbol ? formatSigned(analytics.bestSymbol.netProfit) : formatCurrency(0)}</span>
-                  <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-3 h-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 
                 {/* Hover Tooltip */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
                   <p className="font-bold text-emerald-400 border-b border-white/10 pb-1">Top Performing Instrument</p>
                   <p className="text-gray-300">Highest gross net PnL symbol across logged history ({analytics.bestSymbol?.trades || 0} trades).</p>
-                  <p className="text-[10px] text-purple-300 font-bold pt-1">Click to filter journal by {analytics.bestSymbol?.symbol || "symbol"} →</p>
+                  <p className="text-[10px] text-blue-300 font-bold pt-1">Click to filter journal by {analytics.bestSymbol?.symbol || "symbol"} →</p>
                 </div>
               </div>
 
@@ -654,88 +654,88 @@ export default function DashboardPage() {
                     router.push("/performance");
                   }
                 }}
-                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
               >
-                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-purple-300 transition-colors">WORST SYMBOL</span>
+                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-blue-300 transition-colors">WORST SYMBOL</span>
                 <span className="text-sm font-extrabold text-rose-400 block truncate">
                   {analytics.worstSymbol?.symbol || "N/A"}
                 </span>
                 <span className="text-[10px] text-gray-300 block font-bold flex items-center justify-between">
                   <span>{analytics.worstSymbol ? formatSigned(analytics.worstSymbol.netProfit) : formatCurrency(0)}</span>
-                  <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-3 h-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 
                 {/* Hover Tooltip */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
                   <p className="font-bold text-rose-400 border-b border-white/10 pb-1">Lowest Performing Instrument</p>
                   <p className="text-gray-300">Instrument responsible for highest total net drag on equity.</p>
-                  <p className="text-[10px] text-purple-300 font-bold pt-1">Click to filter journal by {analytics.worstSymbol?.symbol || "symbol"} →</p>
+                  <p className="text-[10px] text-blue-300 font-bold pt-1">Click to filter journal by {analytics.worstSymbol?.symbol || "symbol"} →</p>
                 </div>
               </div>
 
               {/* Best Day */}
               <div
                 onClick={() => router.push("/calendar")}
-                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
               >
-                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-purple-300 transition-colors">BEST DAY OF WEEK</span>
+                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-blue-300 transition-colors">BEST DAY OF WEEK</span>
                 <span className="text-sm font-extrabold text-white block truncate">
                   {analytics.bestDay?.period || "N/A"}
                 </span>
                 <span className="text-[10px] text-emerald-400 block font-bold flex items-center justify-between">
                   <span>{analytics.bestDay ? formatSigned(analytics.bestDay.netProfit) : formatCurrency(0)}</span>
-                  <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-3 h-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 
                 {/* Hover Tooltip */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
                   <p className="font-bold text-emerald-400 border-b border-white/10 pb-1">Most Profitable Trading Day</p>
                   <p className="text-gray-300">Day of the week with highest cumulative net gains ({analytics.bestDay?.winRate || 0}% WR).</p>
-                  <p className="text-[10px] text-purple-300 font-bold pt-1">Click to open trading calendar →</p>
+                  <p className="text-[10px] text-blue-300 font-bold pt-1">Click to open trading calendar →</p>
                 </div>
               </div>
 
               {/* Worst Day */}
               <div
                 onClick={() => router.push("/calendar")}
-                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
               >
-                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-purple-300 transition-colors">WORST DAY OF WEEK</span>
+                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-blue-300 transition-colors">WORST DAY OF WEEK</span>
                 <span className="text-sm font-extrabold text-rose-400 block truncate">
                   {analytics.worstDay?.period || "N/A"}
                 </span>
                 <span className="text-[10px] text-gray-400 block flex items-center justify-between">
                   <span>{analytics.worstDay ? formatSigned(analytics.worstDay.netProfit) : formatCurrency(0)}</span>
-                  <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-3 h-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 
                 {/* Hover Tooltip */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
                   <p className="font-bold text-rose-400 border-b border-white/10 pb-1">Least Profitable Day</p>
                   <p className="text-gray-300">Day of the week exhibiting highest net losses.</p>
-                  <p className="text-[10px] text-purple-300 font-bold pt-1">Click to open trading calendar →</p>
+                  <p className="text-[10px] text-blue-300 font-bold pt-1">Click to open trading calendar →</p>
                 </div>
               </div>
 
               {/* Best Session */}
               <div
                 onClick={() => router.push("/performance")}
-                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
               >
-                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-purple-300 transition-colors">BEST SESSION</span>
-                <span className="text-sm font-extrabold text-purple-300 block truncate">
+                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-blue-300 transition-colors">BEST SESSION</span>
+                <span className="text-sm font-extrabold text-blue-300 block truncate">
                   {bestSessionName}
                 </span>
                 <span className="text-[10px] text-gray-400 block flex items-center justify-between">
                   <span>Top Session Edge</span>
-                  <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-3 h-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 
                 {/* Hover Tooltip */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
-                  <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Optimal Market Session</p>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
+                  <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Optimal Market Session</p>
                   <p className="text-gray-300">Market window (London, New York, Tokyo) delivering highest consistency.</p>
-                  <p className="text-[10px] text-purple-300 font-bold pt-1">Click for Performance Lab analysis →</p>
+                  <p className="text-[10px] text-blue-300 font-bold pt-1">Click for Performance Lab analysis →</p>
                 </div>
               </div>
 
@@ -748,22 +748,22 @@ export default function DashboardPage() {
                     router.push("/journal");
                   }
                 }}
-                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
               >
-                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-purple-300 transition-colors">MOST TRADED</span>
+                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-blue-300 transition-colors">MOST TRADED</span>
                 <span className="text-sm font-extrabold text-white block truncate">
                   {mostTradedSymbol}
                 </span>
                 <span className="text-[10px] text-gray-400 block flex items-center justify-between">
                   <span>Highest Volume</span>
-                  <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-3 h-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 
                 {/* Hover Tooltip */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
                   <p className="font-bold text-white border-b border-white/10 pb-1">Highest Trade Frequency</p>
                   <p className="text-gray-300">Instrument representing highest number of executed trades.</p>
-                  <p className="text-[10px] text-purple-300 font-bold pt-1">Click to filter journal by {mostTradedSymbol} →</p>
+                  <p className="text-[10px] text-blue-300 font-bold pt-1">Click to filter journal by {mostTradedSymbol} →</p>
                 </div>
               </div>
 
@@ -776,44 +776,44 @@ export default function DashboardPage() {
                     router.push("/journal");
                   }
                 }}
-                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
               >
-                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-purple-300 transition-colors">LARGEST WIN</span>
+                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-blue-300 transition-colors">LARGEST WIN</span>
                 <span className="text-sm font-extrabold text-emerald-400 block truncate">
                   {formatSigned(analytics.largestWin)}
                 </span>
                 <span className="text-[9px] text-gray-400 block flex items-center justify-between">
                   <span>Single Trade Peak</span>
-                  <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-3 h-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 
                 {/* Hover Tooltip */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
                   <p className="font-bold text-emerald-400 border-b border-white/10 pb-1">Max Winning Trade</p>
                   <p className="text-gray-300">Highest single profit gain recorded ({largestWinTrade?.symbol || "Trade"}).</p>
-                  <p className="text-[10px] text-purple-300 font-bold pt-1">Click to view trade drawer →</p>
+                  <p className="text-[10px] text-blue-300 font-bold pt-1">Click to view trade drawer →</p>
                 </div>
               </div>
 
               {/* Avg Hold Duration */}
               <div
                 onClick={() => router.push("/performance")}
-                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
+                className="p-3.5 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
               >
-                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-purple-300 transition-colors">AVG DURATION</span>
+                <span className="text-[10px] text-gray-400 block uppercase font-bold group-hover:text-blue-300 transition-colors">AVG DURATION</span>
                 <span className="text-sm font-extrabold text-indigo-400 block truncate">
                   {formatHoldDuration(analytics.avgHoldSeconds)}
                 </span>
                 <span className="text-[9px] text-gray-400 block flex items-center justify-between">
                   <span>Average Hold Time</span>
-                  <ExternalLink className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ExternalLink className="w-3 h-3 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>
 
                 {/* Hover Tooltip */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 bottom-full mb-2 left-1/2 -translate-x-1/2 w-60 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
                   <p className="font-bold text-indigo-400 border-b border-white/10 pb-1">Average Trade Hold Duration</p>
                   <p className="text-gray-300">Mean time elapsed between trade open time and trade execution exit.</p>
-                  <p className="text-[10px] text-purple-300 font-bold pt-1">Click for Performance Lab →</p>
+                  <p className="text-[10px] text-blue-300 font-bold pt-1">Click for Performance Lab →</p>
                 </div>
               </div>
             </div>
@@ -828,10 +828,10 @@ export default function DashboardPage() {
             <div className="lg:col-span-2 p-6 rounded-2xl bg-[#111726] border border-white/10 space-y-4 shadow-2xl">
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-purple-400" />
+                  <Activity className="w-4 h-4 text-blue-400" />
                   Recent Trades
                 </h2>
-                <Link href="/journal" className="text-xs text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1">
+                <Link href="/journal" className="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1">
                   View Full Journal <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
@@ -841,7 +841,7 @@ export default function DashboardPage() {
                   <div
                     key={t.id}
                     onClick={() => setSelectedTrade(t)}
-                    className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-purple-500/40 cursor-pointer flex items-center justify-between transition-all active:scale-[0.99]"
+                    className="p-3 rounded-xl bg-white/5 border border-white/5 hover:border-blue-500/40 cursor-pointer flex items-center justify-between transition-all active:scale-[0.99]"
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
@@ -878,7 +878,7 @@ export default function DashboardPage() {
                   <History className="w-4 h-4 text-indigo-400" />
                   Recent CSV Import
                 </h2>
-                <Link href="/import-history" className="text-xs text-purple-400 hover:text-purple-300 font-bold">
+                <Link href="/import-history" className="text-xs text-blue-400 hover:text-blue-300 font-bold">
                   History →
                 </Link>
               </div>
@@ -898,7 +898,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex justify-between">
                       <span>Platform:</span>
-                      <span className="text-purple-300 font-bold">{latestImport.platform || "Standard"}</span>
+                      <span className="text-blue-300 font-bold">{latestImport.platform || "Standard"}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Uploaded:</span>
@@ -911,9 +911,9 @@ export default function DashboardPage() {
               )}
 
               {/* Quick Productivity Hint */}
-              <div className="p-3 rounded-xl bg-purple-600/10 border border-purple-500/20 text-purple-300 text-[11px] space-y-1">
+              <div className="p-3 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-300 text-[11px] space-y-1">
                 <div className="flex items-center gap-1.5 font-bold">
-                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
                   <span>Situational Awareness Tip</span>
                 </div>
                 <p className="text-[10px] text-gray-300 leading-relaxed">

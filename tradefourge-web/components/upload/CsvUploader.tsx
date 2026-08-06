@@ -460,7 +460,7 @@ export const CsvUploader: React.FC = () => {
 
           <div className="p-4 rounded-xl bg-white/5 border border-white/10 max-w-md mx-auto text-left space-y-2 text-[11px] text-gray-300">
             <div className="font-bold text-white flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-purple-400" /> Account Requirements:
+              <ShieldCheck className="w-4 h-4 text-blue-400" /> Account Requirements:
             </div>
             <ul className="list-disc list-inside space-y-1 text-gray-400">
               <li>Assigned Broker & Platform (MT4, MT5, cTrader)</li>
@@ -503,12 +503,12 @@ export const CsvUploader: React.FC = () => {
       <div className="p-5 rounded-2xl bg-[#111522] border border-white/10 shadow-2xl space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-purple-400" />
+            <Layers className="w-4 h-4 text-blue-400" />
             <h1 className="text-sm font-extrabold text-white tracking-wide uppercase">
               CSV Import Engine 2.0
             </h1>
           </div>
-          <span className="px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-bold text-[10px] flex items-center gap-1.5">
+          <span className="px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold text-[10px] flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
             Phase 10 — High-Performance Batch Engine (50,000+ Trades)
           </span>
@@ -525,7 +525,7 @@ export const CsvUploader: React.FC = () => {
                 key={s.step}
                 className={`p-2.5 rounded-xl border transition-all ${
                   isCurrent
-                    ? "bg-purple-600/20 border-purple-500 text-white shadow-lg"
+                    ? "bg-blue-600/20 border-blue-500 text-white shadow-lg"
                     : isCompleted
                     ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
                     : "bg-white/5 border-white/10 text-gray-500 opacity-70"
@@ -536,7 +536,7 @@ export const CsvUploader: React.FC = () => {
                   {isCompleted ? (
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   ) : isCurrent ? (
-                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
                   ) : null}
                 </div>
                 <div className="text-xs font-extrabold truncate text-white">{s.title}</div>
@@ -578,7 +578,7 @@ export const CsvUploader: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
             <div>
               <h2 className="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-purple-400" />
+                <Wallet className="w-5 h-5 text-blue-400" />
                 Step 1 — Choose Target Account
               </h2>
               <p className="text-xs text-gray-400 mt-1">
@@ -588,7 +588,7 @@ export const CsvUploader: React.FC = () => {
 
             <button
               onClick={() => setAddAccountModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-purple-600/20 border border-purple-500/30 hover:bg-purple-600/30 text-purple-300 text-xs font-bold flex items-center gap-1.5 self-start sm:self-auto transition-all"
+              className="px-3.5 py-2 rounded-xl bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 text-blue-300 text-xs font-bold flex items-center gap-1.5 self-start sm:self-auto transition-all"
             >
               <Plus className="w-4 h-4" /> Add New Account
             </button>
@@ -606,7 +606,7 @@ export const CsvUploader: React.FC = () => {
                   onClick={() => setSelectedAccountId(acc.id)}
                   className={`p-4 rounded-xl border text-left space-y-3 transition-all relative ${
                     isSelected
-                      ? "bg-purple-600/15 border-purple-500 text-white shadow-xl ring-1 ring-purple-500"
+                      ? "bg-blue-600/15 border-blue-500 text-white shadow-xl ring-1 ring-blue-500"
                       : "bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20"
                   }`}
                 >
@@ -616,7 +616,7 @@ export const CsvUploader: React.FC = () => {
                       <div className="text-[10px] text-gray-400 font-mono truncate">ID: {displayId}</div>
                     </div>
                     {isSelected ? (
-                      <CheckCircle2 className="w-5 h-5 text-purple-400 shrink-0" />
+                      <CheckCircle2 className="w-5 h-5 text-blue-400 shrink-0" />
                     ) : (
                       <div className="w-4 h-4 rounded-full border border-white/20 shrink-0" />
                     )}
@@ -624,17 +624,17 @@ export const CsvUploader: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-2 text-[10px] pt-1 border-t border-white/10">
                     <div className="flex items-center gap-1 text-gray-400 truncate">
-                      <Building2 className="w-3 h-3 text-purple-400 shrink-0" />
+                      <Building2 className="w-3 h-3 text-blue-400 shrink-0" />
                       <span className="truncate">{acc.broker || "Generic"}</span>
                     </div>
                     <div className="flex items-center gap-1 text-gray-400 truncate justify-end">
-                      <Monitor className="w-3 h-3 text-purple-400 shrink-0" />
+                      <Monitor className="w-3 h-3 text-blue-400 shrink-0" />
                       <span className="truncate">{acc.platform}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between text-[10px] pt-1">
-                    <span className="text-purple-300 font-bold px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">
+                    <span className="text-blue-300 font-bold px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
                       {getCurrencyShortLabel(acc.currency)}
                     </span>
                     <span className="text-gray-400 font-bold">
@@ -663,13 +663,13 @@ export const CsvUploader: React.FC = () => {
       {currentStep === 2 && (
         <div className="space-y-6">
           {selectedAccount && (
-            <div className="p-4 rounded-2xl bg-[#111522] border border-purple-500/30 flex items-center justify-between gap-4 shadow-lg">
+            <div className="p-4 rounded-2xl bg-[#111522] border border-blue-500/30 flex items-center justify-between gap-4 shadow-lg">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
                   <Wallet className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] text-purple-400 uppercase tracking-wider font-bold">
+                  <div className="text-[10px] text-blue-400 uppercase tracking-wider font-bold">
                     Active Target Account
                   </div>
                   <div className="text-xs font-extrabold text-white truncate flex items-center gap-2">
@@ -696,7 +696,7 @@ export const CsvUploader: React.FC = () => {
             <div className="p-6 rounded-2xl bg-[#111522] border border-white/10 space-y-4 shadow-2xl">
               <div className="border-b border-white/10 pb-3">
                 <h2 className="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
-                  <Upload className="w-5 h-5 text-purple-400" />
+                  <Upload className="w-5 h-5 text-blue-400" />
                   Step 2 — Select CSV Statement File
                 </h2>
                 <p className="text-xs text-gray-400 mt-1">
@@ -711,8 +711,8 @@ export const CsvUploader: React.FC = () => {
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 ${
                   dragActive
-                    ? "border-purple-500 bg-purple-500/10 scale-[0.99]"
-                    : "border-white/10 hover:border-purple-500/40 bg-white/5 hover:bg-white/10"
+                    ? "border-blue-500 bg-blue-500/10 scale-[0.99]"
+                    : "border-white/10 hover:border-blue-500/40 bg-white/5 hover:bg-white/10"
                 }`}
               >
                 <input
@@ -723,7 +723,7 @@ export const CsvUploader: React.FC = () => {
                   className="hidden"
                 />
 
-                <div className="w-14 h-14 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center mx-auto mb-4 border border-purple-500/20 shadow-inner">
+                <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto mb-4 border border-blue-500/20 shadow-inner">
                   <Upload className="w-7 h-7" />
                 </div>
 
@@ -735,7 +735,7 @@ export const CsvUploader: React.FC = () => {
                 </p>
 
                 <div className="pt-4 flex items-center justify-center gap-2 text-[11px] text-gray-500">
-                  <Cpu className="w-3.5 h-3.5 text-purple-400" />
+                  <Cpu className="w-3.5 h-3.5 text-blue-400" />
                   <span>Streaming batch engine prevents browser freezing on 50k+ row files</span>
                 </div>
               </div>
@@ -744,10 +744,10 @@ export const CsvUploader: React.FC = () => {
 
           {/* Processing Indicator */}
           {isUploading && (
-            <div className="p-6 rounded-2xl bg-[#111726] border border-purple-500/30 space-y-5 shadow-2xl">
+            <div className="p-6 rounded-2xl bg-[#111726] border border-blue-500/30 space-y-5 shadow-2xl">
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
-                  <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+                  <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
                   <h3 className="text-sm font-extrabold text-white">Validation Pipeline</h3>
                 </div>
 
@@ -762,12 +762,12 @@ export const CsvUploader: React.FC = () => {
               <div className="space-y-3 p-4 rounded-xl bg-white/5 border border-white/10">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-white">{processingState.label}</span>
-                  <span className="font-mono text-purple-400 font-extrabold">{processingState.progress}%</span>
+                  <span className="font-mono text-blue-400 font-extrabold">{processingState.progress}%</span>
                 </div>
 
                 <div className="w-full bg-white/10 h-2.5 rounded-full overflow-hidden">
                   <motion.div
-                    className="bg-gradient-to-r from-purple-600 via-indigo-500 to-emerald-400 h-full"
+                    className="bg-gradient-to-r from-blue-600 via-indigo-500 to-emerald-400 h-full"
                     initial={{ width: 0 }}
                     animate={{ width: `${processingState.progress}%` }}
                     transition={{ duration: 0.2 }}
@@ -790,7 +790,7 @@ export const CsvUploader: React.FC = () => {
         <div className="space-y-6">
           <div className="p-4 rounded-2xl bg-[#111522] border border-white/10 flex items-center justify-between gap-4 shadow-lg">
             <div className="flex items-center gap-2 text-xs text-gray-300">
-              <FileSearch className="w-4 h-4 text-purple-400" />
+              <FileSearch className="w-4 h-4 text-blue-400" />
               <span>Statement: <strong className="text-white">{stagedFile?.name}</strong> ({stagedFile ? formatFileSize(stagedFile.size) : ""})</span>
             </div>
 
@@ -855,7 +855,7 @@ export const CsvUploader: React.FC = () => {
 
             <div className="p-3.5 rounded-xl bg-[#111522] border border-white/10 space-y-1 min-w-0">
               <span className="text-[10px] text-gray-400 uppercase font-bold block">Broker</span>
-              <span className="text-xs font-bold text-purple-300 truncate block">{validationReport.brokerDetected}</span>
+              <span className="text-xs font-bold text-blue-300 truncate block">{validationReport.brokerDetected}</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-[#111522] border border-white/10 space-y-1 min-w-0">
@@ -895,10 +895,10 @@ export const CsvUploader: React.FC = () => {
       {/* ── STEP 4: IMPORT PREVIEW & DUPLICATE POLICY ───────────────────────── */}
       {currentStep === 4 && validationReport && stagedFile && selectedAccount && (
         <div className="space-y-6">
-          <div className="p-5 rounded-2xl bg-[#111522] border border-purple-500/30 shadow-2xl space-y-4">
+          <div className="p-5 rounded-2xl bg-[#111522] border border-blue-500/30 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <h2 className="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
-                <Table className="w-5 h-5 text-purple-400" />
+                <Table className="w-5 h-5 text-blue-400" />
                 Step 4 — Statement Import Preview
               </h2>
 
@@ -915,7 +915,7 @@ export const CsvUploader: React.FC = () => {
 
               <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
                 <span className="text-gray-400 block text-[9px] uppercase font-bold">Currency</span>
-                <span className="font-extrabold text-purple-300 block">{selectedAccount.currency}</span>
+                <span className="font-extrabold text-blue-300 block">{selectedAccount.currency}</span>
               </div>
 
               <div className="p-2.5 rounded-xl bg-white/5 border border-white/10">
@@ -950,7 +950,7 @@ export const CsvUploader: React.FC = () => {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div>
                 <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-                  <FileSpreadsheet className="w-4 h-4 text-purple-400" />
+                  <FileSpreadsheet className="w-4 h-4 text-blue-400" />
                   Trade Sample Preview
                 </h3>
                 <p className="text-[11px] text-gray-400 mt-0.5">
@@ -958,7 +958,7 @@ export const CsvUploader: React.FC = () => {
                 </p>
               </div>
 
-              <span className="text-[10px] text-purple-300 font-mono font-bold bg-purple-500/10 px-2.5 py-1 rounded-lg border border-purple-500/20">
+              <span className="text-[10px] text-blue-300 font-mono font-bold bg-blue-500/10 px-2.5 py-1 rounded-lg border border-blue-500/20">
                 Temporary Memory Buffer
               </span>
             </div>
@@ -1017,10 +1017,10 @@ export const CsvUploader: React.FC = () => {
           </div>
 
           {/* DUPLICATE RESOLUTION POLICY CARD */}
-          <div className="p-6 rounded-2xl bg-[#111726] border border-purple-500/30 space-y-4 shadow-2xl">
+          <div className="p-6 rounded-2xl bg-[#111726] border border-blue-500/30 space-y-4 shadow-2xl">
             <div className="border-b border-white/10 pb-3 flex items-center justify-between">
               <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-                <CopyX className="w-4 h-4 text-purple-400" />
+                <CopyX className="w-4 h-4 text-blue-400" />
                 Duplicate Handling Policy Options
               </h3>
 
@@ -1037,7 +1037,7 @@ export const CsvUploader: React.FC = () => {
                 onClick={() => setDuplicatePolicy("skip")}
                 className={`p-4 rounded-xl border text-left space-y-2 transition-all ${
                   duplicatePolicy === "skip"
-                    ? "bg-purple-600/20 border-purple-500 text-white ring-1 ring-purple-500 shadow-xl"
+                    ? "bg-blue-600/20 border-blue-500 text-white ring-1 ring-blue-500 shadow-xl"
                     : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/20"
                 }`}
               >
@@ -1045,7 +1045,7 @@ export const CsvUploader: React.FC = () => {
                   <span className="text-xs font-extrabold text-white flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" /> Skip Duplicates (Default)
                   </span>
-                  {duplicatePolicy === "skip" && <Check className="w-4 h-4 text-purple-400" />}
+                  {duplicatePolicy === "skip" && <Check className="w-4 h-4 text-blue-400" />}
                 </div>
                 <p className="text-[11px] text-gray-400 leading-relaxed">
                   Automatically ignores any trade that matches an existing database record or duplicate CSV row. Safe & recommended.
@@ -1096,18 +1096,18 @@ export const CsvUploader: React.FC = () => {
 
           {/* Live Batch Streaming Progress Overlay */}
           {isFinalizingImport && (
-            <div className="p-5 rounded-2xl bg-purple-950/40 border border-purple-500/40 space-y-3 shadow-2xl">
+            <div className="p-5 rounded-2xl bg-blue-950/40 border border-blue-500/40 space-y-3 shadow-2xl">
               <div className="flex items-center justify-between text-xs font-extrabold text-white">
                 <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                  <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
                   {processingState.label}
                 </span>
-                <span className="text-purple-300 font-mono">{processingState.progress}%</span>
+                <span className="text-blue-300 font-mono">{processingState.progress}%</span>
               </div>
 
               <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden">
                 <motion.div
-                  className="bg-gradient-to-r from-purple-600 via-indigo-500 to-emerald-400 h-full"
+                  className="bg-gradient-to-r from-blue-600 via-indigo-500 to-emerald-400 h-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${processingState.progress}%` }}
                   transition={{ duration: 0.1 }}
@@ -1193,7 +1193,7 @@ export const CsvUploader: React.FC = () => {
 
                 <button
                   onClick={() => exportImportReportPdf(finalReport)}
-                  className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-lg active:scale-95"
+                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-lg active:scale-95"
                 >
                   <FileDown className="w-4 h-4" /> Export PDF Audit
                 </button>
@@ -1226,7 +1226,7 @@ export const CsvUploader: React.FC = () => {
 
             <div className="p-4 rounded-xl bg-[#111522] border border-white/10 space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold block">Time Taken</span>
-              <span className="text-lg font-extrabold text-purple-300 flex items-center gap-1">
+              <span className="text-lg font-extrabold text-blue-300 flex items-center gap-1">
                 <Clock className="w-4 h-4" /> {finalReport.timeTakenSeconds.toFixed(2)}s
               </span>
             </div>
@@ -1271,7 +1271,7 @@ export const CsvUploader: React.FC = () => {
 
               <button
                 onClick={() => exportImportReportPdf(finalReport)}
-                className="px-4 py-2.5 rounded-xl bg-purple-600/20 border border-purple-500/30 hover:bg-purple-600/30 text-purple-300 font-bold text-xs flex items-center gap-1.5 transition-all"
+                className="px-4 py-2.5 rounded-xl bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 text-blue-300 font-bold text-xs flex items-center gap-1.5 transition-all"
               >
                 <FileDown className="w-4 h-4" /> Export PDF Audit
               </button>

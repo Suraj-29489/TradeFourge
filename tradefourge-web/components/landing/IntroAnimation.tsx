@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useTheme } from "@/context/ThemeContext";
 
 interface IntroAnimationProps {
   onComplete: () => void;
@@ -13,13 +14,20 @@ const EASE_CUBIC = [0.65, 0, 0.35, 1] as const;
 export const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) => {
   const [step, setStep] = useState<number>(0);
   const [assetsReady, setAssetsReady] = useState<boolean>(false);
+  const { theme } = useTheme();
+  const isLight = theme === "light";
 
-  // Preload & decode images before initiating animation timeline to guarantee 60 FPS
+  // Preload & decode theme images before initiating animation timeline
   useEffect(() => {
     let active = true;
 
     async function preloadAssets() {
-      const urls = ["/logo_icon.png", "/logo_wordmark.png"];
+      const urls = [
+        "/logo_icon.png",
+        "/logo_wordmark.png",
+        "/logo_icon_light.png",
+        "/logo_wordmark_light.png",
+      ];
       try {
         await Promise.all(
           urls.map((url) => {
@@ -99,10 +107,16 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) =>
       animate={step === 7 ? { opacity: 0 } : { opacity: 1 }}
       transition={{ duration: 0.75, ease: EASE_EXPO }}
       style={{ willChange: "opacity" }}
-      className="fixed inset-0 z-[9999] bg-[#0B0D13] flex items-center justify-center overflow-hidden select-none pointer-events-none font-sans"
+      className={`fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden select-none pointer-events-none font-sans ${
+        isLight ? "bg-[#F8FAFC]" : "bg-[#0B0D13]"
+      }`}
     >
-      {/* Soft Institutional Blue Ambient Glow (Apple Keynote Style) */}
-      <div className="absolute w-[450px] h-[450px] rounded-full bg-blue-600/12 blur-[140px] pointer-events-none" />
+      {/* Soft Ambient Glow (Blue for Dark / Green for Light) */}
+      <div
+        className={`absolute w-[450px] h-[450px] rounded-full blur-[140px] pointer-events-none ${
+          isLight ? "bg-emerald-600/12" : "bg-blue-600/12"
+        }`}
+      />
 
       {/* Main Assembled Brand Container */}
       <motion.div
@@ -126,7 +140,7 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) =>
           animate={{
             scale: step >= 2 ? 1 : 0.05,
             opacity: step >= 2 ? 1 : 0,
-            x: step >= 4 ? -8 : 0, // Slight left offset when wordmark appears
+            x: step >= 4 ? -8 : 0,
           }}
           transition={{
             scale: { duration: 0.95, ease: EASE_EXPO },
@@ -137,12 +151,16 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) =>
           className="relative shrink-0 z-20 flex items-center justify-center"
         >
           {/* Soft Focused Icon Glow */}
-          <div className="absolute -inset-6 rounded-full bg-blue-500/12 blur-3xl pointer-events-none" />
+          <div
+            className={`absolute -inset-6 rounded-full blur-3xl pointer-events-none ${
+              isLight ? "bg-emerald-500/15" : "bg-blue-500/12"
+            }`}
+          />
 
           {/* Official TF Icon Asset */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo_icon.png"
+            src={isLight ? "/logo_icon_light.png" : "/logo_icon.png"}
             alt="TradeFourge Icon"
             className="w-24 sm:w-32 md:w-36 h-auto object-contain drop-shadow-2xl"
           />
@@ -167,7 +185,7 @@ export const IntroAnimation: React.FC<IntroAnimationProps> = ({ onComplete }) =>
             {/* Official TradeFourge Wordmark Asset */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logo_wordmark.png"
+              src={isLight ? "/logo_wordmark_light.png" : "/logo_wordmark.png"}
               alt="TradeFourge Wordmark"
               className="h-12 sm:h-16 md:h-20 w-auto object-contain drop-shadow-xl"
             />

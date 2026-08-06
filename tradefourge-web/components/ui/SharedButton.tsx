@@ -3,6 +3,7 @@
 import React from "react";
 import { LucideIcon, Loader2 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { useTheme } from "@/context/ThemeContext";
 
 export interface SharedButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "danger" | "ghost";
@@ -24,11 +25,20 @@ export const SharedButton: React.FC<SharedButtonProps> = ({
   children,
   ...props
 }) => {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+
   const variantStyles = {
-    primary: "bg-blue-600 hover:bg-blue-500 text-white font-mono shadow-sm active:scale-95 border border-blue-500/30",
-    secondary: "bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border border-white/[0.08] font-mono active:scale-95",
+    primary: isLight
+      ? "bg-emerald-600 hover:bg-emerald-700 text-white font-mono shadow-sm active:scale-95 border border-emerald-500/30"
+      : "bg-blue-600 hover:bg-blue-500 text-white font-mono shadow-sm active:scale-95 border border-blue-500/30",
+    secondary: isLight
+      ? "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-mono active:scale-95"
+      : "bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 border border-white/[0.08] font-mono active:scale-95",
     danger: "bg-rose-600 hover:bg-rose-500 text-white font-mono shadow-sm active:scale-95 border border-rose-500/30",
-    ghost: "bg-transparent hover:bg-white/[0.05] text-gray-300 hover:text-white font-mono",
+    ghost: isLight
+      ? "bg-transparent hover:bg-slate-100 text-slate-700 hover:text-slate-900 font-mono"
+      : "bg-transparent hover:bg-white/[0.05] text-gray-300 hover:text-white font-mono",
   };
 
   const sizeStyles = {

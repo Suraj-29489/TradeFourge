@@ -78,14 +78,14 @@ const ROADMAP_ITEMS: RoadmapItem[] = [
 
 export default function RoadmapPage() {
   return (
-    <div className="min-h-screen bg-[#0B0D13] text-white font-mono text-xs selection:bg-purple-600 selection:text-white">
+    <div className="min-h-screen bg-[#0B0D13] text-white font-mono text-xs selection:bg-blue-600 selection:text-white">
       {/* Header */}
       <div className="max-w-6xl mx-auto px-4 py-8 flex items-center justify-between border-b border-white/10">
         <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span>Back to TradeFourge Home</span>
         </Link>
-        <span className="text-purple-400 font-bold px-3 py-1 rounded-full bg-purple-600/20 border border-purple-500/30">
+        <span className="text-blue-400 font-bold px-3 py-1 rounded-full bg-blue-600/20 border border-blue-500/30">
           Public Product Roadmap
         </span>
       </div>
@@ -111,7 +111,7 @@ export default function RoadmapPage() {
                 key={item.version}
                 className={`p-6 rounded-2xl border transition-all ${
                   isInProgress
-                    ? "bg-purple-600/10 border-purple-500/40 shadow-glow"
+                    ? "bg-blue-600/10 border-blue-500/40 shadow-glow"
                     : isCompleted
                     ? "bg-[#131622] border-white/10"
                     : "bg-[#131622]/50 border-white/5 opacity-80"
@@ -120,7 +120,7 @@ export default function RoadmapPage() {
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-purple-400">{item.version}</span>
+                      <span className="text-xs font-bold text-blue-400">{item.version}</span>
                       <span className="text-[10px] text-gray-500">({item.quarter})</span>
                     </div>
                     <h2 className="text-base font-bold text-white mt-1">{item.title}</h2>
@@ -134,8 +134,8 @@ export default function RoadmapPage() {
                       </span>
                     )}
                     {isInProgress && (
-                      <span className="px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-bold text-[10px] flex items-center gap-1 animate-pulse">
-                        <Zap className="w-3.5 h-3.5 text-purple-400" />
+                      <span className="px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/40 text-blue-300 font-bold text-[10px] flex items-center gap-1 animate-pulse">
+                        <Zap className="w-3.5 h-3.5 text-blue-400" />
                         <span>Active Release</span>
                       </span>
                     )}
@@ -151,7 +151,7 @@ export default function RoadmapPage() {
                 <ul className="mt-4 space-y-2 border-t border-white/5 pt-4 text-gray-300">
                   {item.features.map((feat, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <span className="text-purple-400 font-bold">•</span>
+                      <span className="text-blue-400 font-bold">•</span>
                       <span>{feat}</span>
                     </li>
                   ))}

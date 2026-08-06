@@ -88,14 +88,14 @@ const RELEASE_NOTES: ReleaseNote[] = [
 
 export default function ChangelogPage() {
   return (
-    <div className="min-h-screen bg-[#0B0D13] text-white font-mono text-xs selection:bg-purple-600 selection:text-white">
+    <div className="min-h-screen bg-[#0B0D13] text-white font-mono text-xs selection:bg-blue-600 selection:text-white">
       {/* Header */}
       <div className="max-w-6xl mx-auto px-4 py-8 flex items-center justify-between border-b border-white/10">
         <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span>Back to TradeFourge Home</span>
         </Link>
-        <span className="text-purple-400 font-bold px-3 py-1 rounded-full bg-purple-600/20 border border-purple-500/30">
+        <span className="text-blue-400 font-bold px-3 py-1 rounded-full bg-blue-600/20 border border-blue-500/30">
           Changelog & Release Notes
         </span>
       </div>
@@ -117,7 +117,7 @@ export default function ChangelogPage() {
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center gap-3">
                   <span className="text-base font-extrabold text-white">{rel.version}</span>
-                  <span className="text-xs text-purple-400 font-bold px-2 py-0.5 rounded bg-purple-600/20 border border-purple-500/30">
+                  <span className="text-xs text-blue-400 font-bold px-2 py-0.5 rounded bg-blue-600/20 border border-blue-500/30">
                     {rel.title}
                   </span>
                 </div>
@@ -141,13 +141,13 @@ export default function ChangelogPage() {
 
                 {rel.improvements && rel.improvements.length > 0 && (
                   <div>
-                    <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block mb-1">
+                    <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider block mb-1">
                       Improvements & Optimization
                     </span>
                     <ul className="space-y-1 text-gray-300">
                       {rel.improvements.map((imp, idx) => (
                         <li key={idx} className="flex items-start gap-2">
-                          <span className="text-purple-400 font-bold">•</span>
+                          <span className="text-blue-400 font-bold">•</span>
                           <span>{imp}</span>
                         </li>
                       ))}

@@ -59,7 +59,7 @@ export default function BillingPage() {
     <div className="space-y-6 max-w-5xl mx-auto pb-12 font-mono text-xs">
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
-          <CreditCard className="w-6 h-6 text-purple-400" />
+          <CreditCard className="w-6 h-6 text-blue-400" />
           <span>Billing & SaaS Subscriptions</span>
         </h1>
         <p className="text-xs text-gray-400 mt-1">
@@ -68,10 +68,10 @@ export default function BillingPage() {
       </div>
 
       {/* Active Subscription Banner */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-[#111726] to-[#182238] border border-purple-500/40 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-[#111726] to-[#182238] border border-blue-500/40 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-bold text-[11px]">
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/40 text-blue-300 font-bold text-[11px]">
+            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
             <span>Active Subscription: {currentPlan.name}</span>
           </div>
           <h2 className="text-xl font-extrabold text-white">{currentPlan.name} Tier</h2>
@@ -86,7 +86,7 @@ export default function BillingPage() {
           <button
             onClick={() => handleCheckout("pro")}
             disabled={currentPlan.id === "pro" || isCheckingOut !== null}
-            className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-glow flex items-center gap-2 transition-all disabled:opacity-40"
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-glow flex items-center gap-2 transition-all disabled:opacity-40"
           >
             {isCheckingOut === "pro" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
             <span>{currentPlan.id === "pro" ? "Current Active Plan" : "Upgrade to Pro ($29/mo)"}</span>
@@ -97,7 +97,7 @@ export default function BillingPage() {
       {/* Feature Access Matrix */}
       <div className="p-5 rounded-2xl glass-card border border-dark-border space-y-3">
         <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-purple-400" />
+          <ShieldCheck className="w-4 h-4 text-blue-400" />
           <span>Active Plan Feature Access & Entitlements</span>
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -155,23 +155,23 @@ export default function BillingPage() {
         </div>
 
         {/* Pro Plan (Highlighted) */}
-        <div className="p-6 rounded-2xl bg-[#111726] border-2 border-purple-500/60 shadow-glow space-y-4 relative flex flex-col justify-between">
-          <span className="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full bg-purple-600 text-white text-[10px] font-bold">POPULAR</span>
+        <div className="p-6 rounded-2xl bg-[#111726] border-2 border-blue-500/60 shadow-glow space-y-4 relative flex flex-col justify-between">
+          <span className="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold">POPULAR</span>
           <div className="space-y-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Pro Trader</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Pro Trader</span>
             <div className="text-3xl font-extrabold text-white">$29 <span className="text-xs font-normal text-gray-400">/ month</span></div>
             <p className="text-gray-400 text-xs">Institutional analytics, automated live sync, and report generation.</p>
             <ul className="space-y-2 pt-2 text-gray-200">
-              <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-purple-400" /> Unlimited Trading Accounts</li>
-              <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-purple-400" /> Automated Live Broker Sync Engine</li>
-              <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-purple-400" /> Professional PDF Reports Engine</li>
-              <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-purple-400" /> Trader Toolkit (Playbooks & Goals)</li>
+              <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-blue-400" /> Unlimited Trading Accounts</li>
+              <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-blue-400" /> Automated Live Broker Sync Engine</li>
+              <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-blue-400" /> Professional PDF Reports Engine</li>
+              <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-blue-400" /> Trader Toolkit (Playbooks & Goals)</li>
             </ul>
           </div>
           <button
             onClick={() => handleCheckout("pro")}
             disabled={currentPlan.id === "pro"}
-            className="w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-glow transition-all disabled:opacity-40"
+            className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-glow transition-all disabled:opacity-40"
           >
             {currentPlan.id === "pro" ? "Current Active Plan" : "Upgrade to Pro ($29/mo)"}
           </button>
@@ -203,7 +203,7 @@ export default function BillingPage() {
       {subscription?.invoices && subscription.invoices.length > 0 && (
         <div className="p-5 rounded-2xl glass-card border border-dark-border space-y-3">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-purple-400" />
+            <Receipt className="w-4 h-4 text-blue-400" />
             <span>Stripe Invoice & Billing History</span>
           </h3>
           <div className="divide-y divide-white/5">

@@ -93,7 +93,7 @@ export default function GoalsPage() {
   };
 
   const inputClass =
-    "w-full px-3 py-2 rounded-xl bg-[#0d1117] border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 font-mono";
+    "w-full px-3 py-2 rounded-xl bg-[#0d1117] border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 font-mono";
   const labelClass = "block text-xs font-mono text-gray-400 mb-1";
 
   return (
@@ -102,7 +102,7 @@ export default function GoalsPage() {
       <div className="p-6 rounded-2xl glass-card border border-dark-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <Target className="w-6 h-6 text-purple-400" />
+            <Target className="w-6 h-6 text-blue-400" />
             <span>Discipline & Goal Tracking</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">
@@ -112,7 +112,7 @@ export default function GoalsPage() {
 
         <button
           onClick={() => setIsFormOpen(true)}
-          className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-glow flex items-center gap-2 shrink-0 transition-all"
+          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-glow flex items-center gap-2 shrink-0 transition-all"
         >
           <Plus className="w-4 h-4" />
           <span>New Goal Target</span>
@@ -121,9 +121,9 @@ export default function GoalsPage() {
 
       {/* Form Card if open */}
       {isFormOpen && (
-        <div className="p-6 rounded-3xl glass-card border border-purple-500/30 space-y-4">
+        <div className="p-6 rounded-3xl glass-card border border-blue-500/30 space-y-4">
           <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <Target className="w-4 h-4 text-purple-400" />
+            <Target className="w-4 h-4 text-blue-400" />
             <span>Set New Target Goal</span>
           </h2>
 
@@ -174,7 +174,7 @@ export default function GoalsPage() {
             <button
               onClick={handleSave}
               disabled={!title}
-              className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold disabled:opacity-50"
             >
               Save Goal Target
             </button>
@@ -191,14 +191,14 @@ export default function GoalsPage() {
           return (
             <div
               key={g.id}
-              className="p-5 rounded-2xl glass-card border border-dark-border space-y-4 hover:border-purple-500/30 transition-all"
+              className="p-5 rounded-2xl glass-card border border-dark-border space-y-4 hover:border-blue-500/30 transition-all"
             >
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
                     <span>{g.title}</span>
                   </h3>
-                  <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block mt-0.5">
+                  <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider block mt-0.5">
                     Category: {g.category.replace("_", " ")}
                   </span>
                 </div>
@@ -210,7 +210,7 @@ export default function GoalsPage() {
                       <span>Achieved</span>
                     </span>
                   ) : (
-                    <span className="px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-[10px] font-bold">
+                    <span className="px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-[10px] font-bold">
                       In Progress
                     </span>
                   )}
@@ -234,7 +234,7 @@ export default function GoalsPage() {
 
                 <div className="text-right">
                   <span className="text-gray-500 block text-[10px]">TARGET VALUE</span>
-                  <span className="text-sm font-bold text-purple-300 font-mono">
+                  <span className="text-sm font-bold text-blue-300 font-mono">
                     {g.unit === "$" ? `$${g.target_value.toLocaleString()}` : `${g.target_value} ${g.unit}`}
                   </span>
                 </div>
@@ -247,7 +247,7 @@ export default function GoalsPage() {
                     className={`h-full rounded-full transition-all duration-500 ${
                       isAchieved
                         ? "bg-gradient-to-r from-emerald-500 to-teal-400"
-                        : "bg-gradient-to-r from-purple-600 to-indigo-500"
+                        : "bg-gradient-to-r from-blue-600 to-indigo-500"
                     }`}
                     style={{ width: `${Math.max(pct, 2)}%` }}
                   />

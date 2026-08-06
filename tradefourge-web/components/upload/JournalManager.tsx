@@ -22,7 +22,7 @@ export function JournalManager() {
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
         <Link
           href="/accounts"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-400 text-xs font-mono font-bold hover:bg-purple-600/30 transition-all"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400 text-xs font-mono font-bold hover:bg-blue-600/30 transition-all"
         >
           <Wallet className="w-4 h-4" />
           Manage Accounts

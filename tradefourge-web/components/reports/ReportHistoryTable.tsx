@@ -82,7 +82,7 @@ export const ReportHistoryTable: React.FC<ReportHistoryTableProps> = ({ userId, 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search report history..."
-            className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-dark-card border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500"
+            className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-dark-card border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500"
           />
         </div>
 
@@ -127,7 +127,7 @@ export const ReportHistoryTable: React.FC<ReportHistoryTableProps> = ({ userId, 
                     </td>
                     <td className="p-3 font-bold text-white">
                       <div>{item.title}</div>
-                      <span className="text-[10px] text-purple-400 font-normal">{item.templateName}</span>
+                      <span className="text-[10px] text-blue-400 font-normal">{item.templateName}</span>
                     </td>
                     <td className="p-3 text-center text-gray-300 whitespace-nowrap">
                       {item.periodLabel}
@@ -138,7 +138,7 @@ export const ReportHistoryTable: React.FC<ReportHistoryTableProps> = ({ userId, 
                     <td className="p-3 text-center whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                         item.format === "PDF"
-                          ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                          ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
                           : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
                       }`}>
                         {item.format}
@@ -151,7 +151,7 @@ export const ReportHistoryTable: React.FC<ReportHistoryTableProps> = ({ userId, 
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleRedownload(item)}
-                          className="p-1.5 rounded-lg text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 transition-colors"
+                          className="p-1.5 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
                           title="Redownload report"
                         >
                           <Download className="w-4 h-4" />

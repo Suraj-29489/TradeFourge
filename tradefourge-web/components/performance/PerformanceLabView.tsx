@@ -383,7 +383,7 @@ export const PerformanceLabView: React.FC = () => {
       <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 shadow-xl flex flex-wrap items-center justify-between gap-3">
         {/* Left Filter Controls */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1 text-purple-400 font-bold uppercase tracking-wider text-[11px] pr-2 border-r border-white/10">
+          <div className="flex items-center gap-1 text-blue-400 font-bold uppercase tracking-wider text-[11px] pr-2 border-r border-white/10">
             <Filter className="w-3.5 h-3.5" />
             <span>Filters</span>
           </div>
@@ -411,7 +411,7 @@ export const PerformanceLabView: React.FC = () => {
                 onClick={() => setTimeRange(r)}
                 className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
                   timeRange === r
-                    ? "bg-purple-600 text-white shadow-glow"
+                    ? "bg-blue-600 text-white shadow-glow"
                     : "text-gray-400 hover:text-white"
                 }`}
               >
@@ -424,7 +424,7 @@ export const PerformanceLabView: React.FC = () => {
           <select
             value={filterSymbol}
             onChange={(e) => setFilterSymbol(e.target.value)}
-            className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-purple-500"
+            className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-blue-500"
           >
             <option value="ALL" className="bg-dark-card text-white">All Symbols</option>
             {availableSymbols.map((s) => (
@@ -436,7 +436,7 @@ export const PerformanceLabView: React.FC = () => {
           <select
             value={filterSide}
             onChange={(e) => setFilterSide(e.target.value)}
-            className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-purple-500"
+            className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-blue-500"
           >
             <option value="ALL" className="bg-dark-card text-white">All Directions</option>
             <option value="BUY" className="bg-dark-card text-emerald-400">LONG (Buy)</option>
@@ -447,7 +447,7 @@ export const PerformanceLabView: React.FC = () => {
           <select
             value={filterOutcome}
             onChange={(e) => setFilterOutcome(e.target.value)}
-            className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-purple-500"
+            className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-blue-500"
           >
             <option value="ALL" className="bg-dark-card text-white">All Outcomes</option>
             <option value="WINS" className="bg-dark-card text-emerald-400">Wins Only</option>
@@ -465,13 +465,13 @@ export const PerformanceLabView: React.FC = () => {
               placeholder="Search symbol, notes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-purple-500 w-44"
+              className="pl-8 pr-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-blue-500 w-44"
             />
           </div>
 
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-glow active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-glow active:scale-95"
             title="Export filtered performance data to CSV"
           >
             <Download className="w-3.5 h-3.5" />
@@ -484,7 +484,7 @@ export const PerformanceLabView: React.FC = () => {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-extrabold text-white flex items-center gap-2">
-            <Zap className="w-4 h-4 text-purple-400" />
+            <Zap className="w-4 h-4 text-blue-400" />
             Institutional Performance Ratios & Metrics
           </h2>
           <span className="text-xs text-gray-400">
@@ -494,16 +494,16 @@ export const PerformanceLabView: React.FC = () => {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           {/* 1. Net Profit */}
-          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
-            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300">NET PROFIT</span>
+          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
+            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300">NET PROFIT</span>
             <span className={`text-sm font-extrabold block truncate ${analytics.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
               {formatSigned(analytics.netProfit)}
             </span>
             <span className="text-[9px] text-gray-400 block">Realized Total</span>
 
             {/* Hover Insight Card */}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
-              <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Net Realized PnL</p>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
+              <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Net Realized PnL</p>
               <p className="text-gray-300">Sum of all trade profits minus commissions and swap fees.</p>
               <div className="text-[10px] text-gray-400 bg-white/5 p-2 rounded-lg space-y-0.5">
                 <div>Formula: Gross Profit - Gross Loss - Fees</div>
@@ -513,16 +513,16 @@ export const PerformanceLabView: React.FC = () => {
           </div>
 
           {/* 2. Win Rate */}
-          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
-            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300">WIN RATE</span>
-            <span className="text-sm font-extrabold text-purple-400 block truncate">
+          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
+            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300">WIN RATE</span>
+            <span className="text-sm font-extrabold text-blue-400 block truncate">
               {analytics.winRate}%
             </span>
             <span className="text-[9px] text-gray-400 block">{analytics.wins}W / {analytics.losses}L</span>
 
             {/* Hover Insight Card */}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
-              <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Win Rate Accuracy</p>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
+              <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Win Rate Accuracy</p>
               <p className="text-gray-300">Percentage of total executed trades resulting in positive PnL.</p>
               <div className="text-[10px] text-gray-400 bg-white/5 p-2 rounded-lg space-y-0.5">
                 <div>Formula: (Wins / Total Trades) * 100</div>
@@ -532,16 +532,16 @@ export const PerformanceLabView: React.FC = () => {
           </div>
 
           {/* 3. Profit Factor */}
-          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
-            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300">PROFIT FACTOR</span>
+          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
+            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300">PROFIT FACTOR</span>
             <span className="text-sm font-extrabold text-white block truncate">
               {analytics.profitFactor}
             </span>
             <span className="text-[9px] text-gray-400 block">Gross Gain / Loss</span>
 
             {/* Hover Insight Card */}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
-              <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Profit Factor Ratio</p>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
+              <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Profit Factor Ratio</p>
               <p className="text-gray-300">Gross profit divided by gross loss. Values above 1.5 indicate a strong edge.</p>
               <div className="text-[10px] text-gray-400 bg-white/5 p-2 rounded-lg space-y-0.5">
                 <div>Formula: Gross Profit / Gross Loss</div>
@@ -551,16 +551,16 @@ export const PerformanceLabView: React.FC = () => {
           </div>
 
           {/* 4. Expectancy */}
-          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
-            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300">EXPECTANCY</span>
+          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
+            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300">EXPECTANCY</span>
             <span className="text-sm font-extrabold text-emerald-400 block truncate">
               {symbol}{analytics.expectancy}
             </span>
             <span className="text-[9px] text-gray-400 block">Expected / Trade</span>
 
             {/* Hover Insight Card */}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
-              <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Mathematical Expectancy</p>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
+              <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Mathematical Expectancy</p>
               <p className="text-gray-300">Expected dollar return for every trade taken over time.</p>
               <div className="text-[10px] text-gray-400 bg-white/5 p-2 rounded-lg space-y-0.5">
                 <div>Formula: (Win% * AvgWin) - (Loss% * AvgLoss)</div>
@@ -570,16 +570,16 @@ export const PerformanceLabView: React.FC = () => {
           </div>
 
           {/* 5. Average RR */}
-          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
-            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300">AVG RR</span>
+          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
+            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300">AVG RR</span>
             <span className="text-sm font-extrabold text-indigo-400 block truncate">
               1:{analytics.avgRR}
             </span>
             <span className="text-[9px] text-gray-400 block">Reward : Risk</span>
 
             {/* Hover Insight Card */}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
-              <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Average Risk Reward Ratio</p>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
+              <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Average Risk Reward Ratio</p>
               <p className="text-gray-300">Average payout multiple relative to initial risk setup.</p>
               <div className="text-[10px] text-gray-400 bg-white/5 p-2 rounded-lg space-y-0.5">
                 <div>Target: 1:1.5 or higher</div>
@@ -588,16 +588,16 @@ export const PerformanceLabView: React.FC = () => {
           </div>
 
           {/* 6. Recovery Factor */}
-          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
-            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300">RECOVERY FACTOR</span>
-            <span className="text-sm font-extrabold text-purple-300 block truncate">
+          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
+            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300">RECOVERY FACTOR</span>
+            <span className="text-sm font-extrabold text-blue-300 block truncate">
               {institutionalMetrics.recoveryFactor}
             </span>
             <span className="text-[9px] text-gray-400 block">Net PnL / Max DD</span>
 
             {/* Hover Insight Card */}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
-              <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Recovery Factor</p>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
+              <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Recovery Factor</p>
               <p className="text-gray-300">Measures strategy resilience by comparing Net Profit against Max Drawdown depth.</p>
               <div className="text-[10px] text-gray-400 bg-white/5 p-2 rounded-lg space-y-0.5">
                 <div>Formula: Net Profit / Max Drawdown</div>
@@ -607,31 +607,31 @@ export const PerformanceLabView: React.FC = () => {
           </div>
 
           {/* 7. Max Drawdown */}
-          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
-            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300">MAX DRAWDOWN</span>
+          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
+            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300">MAX DRAWDOWN</span>
             <span className="text-sm font-extrabold text-rose-400 block truncate">
               -{institutionalMetrics.maxDrawdownPct}
             </span>
             <span className="text-[9px] text-gray-400 block">Peak to Trough</span>
 
             {/* Hover Insight Card */}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
-              <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Max Equity Contraction</p>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
+              <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Max Equity Contraction</p>
               <p className="text-gray-300">Largest percentage drop from peak equity to lowest trough (-{symbol}{institutionalMetrics.maxDrawdownAmount.toLocaleString()}).</p>
             </div>
           </div>
 
           {/* 8. Sharpe Ratio */}
-          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
-            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300">SHARPE RATIO</span>
+          <div className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-blue-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative">
+            <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-300">SHARPE RATIO</span>
             <span className="text-sm font-extrabold text-emerald-400 block truncate">
               {institutionalMetrics.sharpeRatio}
             </span>
             <span className="text-[9px] text-gray-400 block">Risk-Adjusted</span>
 
             {/* Hover Insight Card */}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
-              <p className="font-bold text-purple-300 border-b border-white/10 pb-1">Sharpe Efficiency Ratio</p>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-64 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1.5">
+              <p className="font-bold text-blue-300 border-b border-white/10 pb-1">Sharpe Efficiency Ratio</p>
               <p className="text-gray-300">Annualized return generated per unit of total return volatility.</p>
               <div className="text-[10px] text-gray-400 bg-white/5 p-2 rounded-lg space-y-0.5">
                 <div>Benchmark: &gt; 1.0 is Good, &gt; 2.0 is Institutional</div>
@@ -646,7 +646,7 @@ export const PerformanceLabView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <LineChart className="w-4 h-4 text-purple-400" />
+              <LineChart className="w-4 h-4 text-blue-400" />
               Interactive Cumulative Equity & Drawdown Workstation
             </h2>
             <p className="text-xs text-gray-400">
@@ -659,7 +659,7 @@ export const PerformanceLabView: React.FC = () => {
             <button
               onClick={() => setChartMode("equity")}
               className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
-                chartMode === "equity" ? "bg-purple-600 text-white shadow-glow" : "text-gray-400 hover:text-white"
+                chartMode === "equity" ? "bg-blue-600 text-white shadow-glow" : "text-gray-400 hover:text-white"
               }`}
             >
               Equity Curve
@@ -667,7 +667,7 @@ export const PerformanceLabView: React.FC = () => {
             <button
               onClick={() => setChartMode("drawdown")}
               className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
-                chartMode === "drawdown" ? "bg-purple-600 text-white shadow-glow" : "text-gray-400 hover:text-white"
+                chartMode === "drawdown" ? "bg-blue-600 text-white shadow-glow" : "text-gray-400 hover:text-white"
               }`}
             >
               Drawdown Curve
@@ -675,7 +675,7 @@ export const PerformanceLabView: React.FC = () => {
             <button
               onClick={() => setChartMode("both")}
               className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
-                chartMode === "both" ? "bg-purple-600 text-white shadow-glow" : "text-gray-400 hover:text-white"
+                chartMode === "both" ? "bg-blue-600 text-white shadow-glow" : "text-gray-400 hover:text-white"
               }`}
             >
               Dual Overlay
@@ -733,7 +733,7 @@ export const PerformanceLabView: React.FC = () => {
         {/* PnL Distribution Bins */}
         <div className="p-6 rounded-2xl bg-[#111726] border border-white/10 space-y-4 shadow-2xl">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <BarChart2 className="w-4 h-4 text-purple-400" />
+            <BarChart2 className="w-4 h-4 text-blue-400" />
             Trade PnL Distribution Bins
           </h3>
           <div className="h-64 w-full">
@@ -794,7 +794,7 @@ export const PerformanceLabView: React.FC = () => {
       <div className="p-6 rounded-2xl bg-[#111726] border border-white/10 space-y-4 shadow-2xl">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Layers className="w-4 h-4 text-purple-400" />
+            <Layers className="w-4 h-4 text-blue-400" />
             Granular Breakdown Tables
           </h3>
 
@@ -805,7 +805,7 @@ export const PerformanceLabView: React.FC = () => {
                 key={tab}
                 onClick={() => setBreakdownTab(tab)}
                 className={`px-3 py-1.5 rounded-lg transition-all font-bold capitalize ${
-                  breakdownTab === tab ? "bg-purple-600 text-white shadow-glow" : "text-gray-400 hover:text-white"
+                  breakdownTab === tab ? "bg-blue-600 text-white shadow-glow" : "text-gray-400 hover:text-white"
                 }`}
               >
                 {tab === "symbols" ? "By Symbol" : tab === "sessions" ? "By Session" : tab === "dayOfWeek" ? "By Day" : "By Hour"}
@@ -833,7 +833,7 @@ export const PerformanceLabView: React.FC = () => {
                   <tr key={s.symbol} className="hover:bg-white/5 transition-colors">
                     <td className="py-2.5 px-3 font-bold text-white">{s.symbol}</td>
                     <td className="py-2.5 px-3 text-gray-300">{s.trades}</td>
-                    <td className="py-2.5 px-3 text-purple-400 font-bold">{s.winRate}%</td>
+                    <td className="py-2.5 px-3 text-blue-400 font-bold">{s.winRate}%</td>
                     <td className={`py-2.5 px-3 font-bold ${s.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {formatSigned(s.netProfit)}
                     </td>
@@ -859,9 +859,9 @@ export const PerformanceLabView: React.FC = () => {
               <tbody className="divide-y divide-white/5">
                 {analytics.sessions.map((sess) => (
                   <tr key={sess.session} className="hover:bg-white/5 transition-colors">
-                    <td className="py-2.5 px-3 font-bold text-purple-300">{sess.session}</td>
+                    <td className="py-2.5 px-3 font-bold text-blue-300">{sess.session}</td>
                     <td className="py-2.5 px-3 text-gray-300">{sess.trades}</td>
-                    <td className="py-2.5 px-3 text-purple-400 font-bold">{sess.winRate}%</td>
+                    <td className="py-2.5 px-3 text-blue-400 font-bold">{sess.winRate}%</td>
                     <td className={`py-2.5 px-3 font-bold ${sess.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {formatSigned(sess.netProfit)}
                     </td>
@@ -888,7 +888,7 @@ export const PerformanceLabView: React.FC = () => {
                   <tr key={d.period} className="hover:bg-white/5 transition-colors">
                     <td className="py-2.5 px-3 font-bold text-white">{d.period}</td>
                     <td className="py-2.5 px-3 text-gray-300">{d.trades}</td>
-                    <td className="py-2.5 px-3 text-purple-400 font-bold">{d.winRate}%</td>
+                    <td className="py-2.5 px-3 text-blue-400 font-bold">{d.winRate}%</td>
                     <td className={`py-2.5 px-3 font-bold ${d.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {formatSigned(d.netProfit)}
                     </td>
@@ -914,7 +914,7 @@ export const PerformanceLabView: React.FC = () => {
                   <tr key={h.period} className="hover:bg-white/5 transition-colors">
                     <td className="py-2.5 px-3 font-bold text-white">{h.period}</td>
                     <td className="py-2.5 px-3 text-gray-300">{h.trades}</td>
-                    <td className="py-2.5 px-3 text-purple-400 font-bold">{h.winRate}%</td>
+                    <td className="py-2.5 px-3 text-blue-400 font-bold">{h.winRate}%</td>
                     <td className={`py-2.5 px-3 font-bold ${h.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
                       {formatSigned(h.netProfit)}
                     </td>
@@ -930,10 +930,10 @@ export const PerformanceLabView: React.FC = () => {
       <div className="p-6 rounded-2xl bg-[#111726] border border-white/10 space-y-4 shadow-2xl">
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <FileText className="w-4 h-4 text-purple-400" />
+            <FileText className="w-4 h-4 text-blue-400" />
             Filtered Trade Explorer ({filteredTrades.length})
           </h2>
-          <Link href="/journal" className="text-xs text-purple-400 hover:text-purple-300 font-bold flex items-center gap-1">
+          <Link href="/journal" className="text-xs text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1">
             Open Full Journal <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -975,11 +975,11 @@ export const PerformanceLabView: React.FC = () => {
                     {formatSigned(t.net_profit)}
                   </td>
                   <td className="py-2.5 px-3 text-indigo-400 font-bold">{t.rr_ratio ? `1:${t.rr_ratio}` : "—"}</td>
-                  <td className="py-2.5 px-3 text-purple-300">{t.session || "Standard"}</td>
+                  <td className="py-2.5 px-3 text-blue-300">{t.session || "Standard"}</td>
                   <td className="py-2.5 px-3 text-right">
                     <button
                       onClick={() => setSelectedTrade(t)}
-                      className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-purple-300 font-bold text-[10px] transition-colors"
+                      className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-blue-300 font-bold text-[10px] transition-colors"
                     >
                       Inspect
                     </button>

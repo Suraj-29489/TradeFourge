@@ -71,7 +71,7 @@ export const ResetPasswordForm: React.FC = () => {
         <div className="pt-2">
           <Link
             href="/login"
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all"
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all"
           >
             <span>Proceed to Login</span>
             <ArrowRight className="w-4 h-4" />
@@ -105,7 +105,7 @@ export const ResetPasswordForm: React.FC = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Minimum 8 characters"
-            className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+            className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
           />
           <button
             type="button"
@@ -148,7 +148,7 @@ export const ResetPasswordForm: React.FC = () => {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Re-enter password"
-            className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+            className="w-full pl-10 pr-10 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
           />
           <button
             type="button"
@@ -164,7 +164,7 @@ export const ResetPasswordForm: React.FC = () => {
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 mt-2"
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 mt-2"
       >
         {loading ? (
           <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -178,7 +178,7 @@ export const ResetPasswordForm: React.FC = () => {
 
       {/* Security badge */}
       <div className="pt-2 text-center text-[11px] font-mono text-gray-500 flex items-center justify-center gap-1.5">
-        <ShieldCheck className="w-3.5 h-3.5 text-purple-400" /> End-to-End Encrypted Recovery Key
+        <ShieldCheck className="w-3.5 h-3.5 text-blue-400" /> End-to-End Encrypted Recovery Key
       </div>
     </form>
   );

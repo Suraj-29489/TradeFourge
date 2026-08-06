@@ -76,7 +76,7 @@ function ColumnDropdown({
         <div className="flex gap-1.5">
           <button
             onClick={() => onChange(Object.fromEntries(Object.keys(visibility).map((k) => [k, true])) as Partial<ColumnVisibility>)}
-            className="text-purple-400 hover:text-purple-300"
+            className="text-blue-400 hover:text-blue-300"
             title="Show all"
           >
             <CheckCheck className="w-3.5 h-3.5" />
@@ -103,7 +103,7 @@ function ColumnDropdown({
             type="checkbox"
             checked={visibility[key]}
             onChange={(e) => onChange({ [key]: e.target.checked } as Partial<ColumnVisibility>)}
-            className="rounded accent-purple-600"
+            className="rounded accent-blue-600"
           />
           {COLUMN_LABELS[key]}
         </label>
@@ -231,7 +231,7 @@ export function CloudTradesTable({
             placeholder="Search symbol, ticket, notes..."
             value={filters.search}
             onChange={(e) => onFiltersChange({ search: e.target.value })}
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 transition-colors font-mono"
+            className="w-full pl-9 pr-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 transition-colors font-mono"
           />
         </div>
 
@@ -241,7 +241,7 @@ export function CloudTradesTable({
           <select
             value={filters.side}
             onChange={(e) => onFiltersChange({ side: e.target.value as CloudTradeFilters["side"] })}
-            className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500"
+            className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-blue-500"
           >
             <option value="ALL">All Sides</option>
             <option value="BUY">Buy</option>
@@ -254,7 +254,7 @@ export function CloudTradesTable({
           <select
             value={filters.outcome}
             onChange={(e) => onFiltersChange({ outcome: e.target.value as CloudTradeFilters["outcome"] })}
-            className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500"
+            className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-blue-500"
           >
             <option value="ALL">All Outcomes</option>
             <option value="WIN">Win</option>
@@ -267,7 +267,7 @@ export function CloudTradesTable({
           <select
             value={filters.dateRange}
             onChange={(e) => onFiltersChange({ dateRange: e.target.value as CloudTradeFilters["dateRange"] })}
-            className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-purple-500"
+            className="px-2.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-gray-300 focus:outline-none focus:border-blue-500"
           >
             <option value="ALL">All Time</option>
             <option value="7D">Last 7 Days</option>
@@ -297,7 +297,7 @@ export function CloudTradesTable({
             onClick={openColMenu}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 transition-colors"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-purple-400" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-blue-400" />
             <span>Columns</span>
           </button>
         </div>
@@ -305,16 +305,16 @@ export function CloudTradesTable({
 
       {/* Floating Bulk Actions Bar */}
       {selectedIds.length > 0 && (
-        <div className="p-3 rounded-2xl bg-purple-900/30 border border-purple-500/40 flex items-center justify-between gap-3 text-xs font-mono shadow-2xl">
-          <div className="flex items-center gap-2 text-purple-300 font-bold">
-            <CheckCheck className="w-4 h-4 text-purple-400" />
+        <div className="p-3 rounded-2xl bg-blue-900/30 border border-blue-500/40 flex items-center justify-between gap-3 text-xs font-mono shadow-2xl">
+          <div className="flex items-center gap-2 text-blue-300 font-bold">
+            <CheckCheck className="w-4 h-4 text-blue-400" />
             <span>{selectedIds.length} trade(s) selected</span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleBulkExport}
-              className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold flex items-center gap-1 transition-all"
+              className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold flex items-center gap-1 transition-all"
             >
               <Download className="w-3.5 h-3.5" /> Export Selected
             </button>
@@ -358,7 +358,7 @@ export function CloudTradesTable({
                       type="checkbox"
                       checked={trades.length > 0 && selectedIds.length === trades.length}
                       onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="rounded accent-purple-600"
+                      className="rounded accent-blue-600"
                     />
                   </th>
                   {cv.date       && <th className="py-3 px-3">Date</th>}
@@ -392,14 +392,14 @@ export function CloudTradesTable({
                   return (
                     <tr
                       key={t.id}
-                      className={`hover:bg-white/5 transition-colors group ${isSelected ? "bg-purple-600/10" : ""}`}
+                      className={`hover:bg-white/5 transition-colors group ${isSelected ? "bg-blue-600/10" : ""}`}
                     >
                       <td className="py-3 px-3">
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={(e) => handleSelectOne(t.id, e.target.checked)}
-                          className="rounded accent-purple-600"
+                          className="rounded accent-blue-600"
                         />
                       </td>
 
@@ -419,7 +419,7 @@ export function CloudTradesTable({
                         <td className="py-3 px-3">
                           <button
                             onClick={() => onFiltersChange({ search: t.symbol })}
-                            className="font-extrabold text-white hover:text-purple-400 transition-colors"
+                            className="font-extrabold text-white hover:text-blue-400 transition-colors"
                           >
                             {t.symbol}
                           </button>
@@ -481,7 +481,7 @@ export function CloudTradesTable({
                       )}
 
                       {cv.rr_ratio && (
-                        <td className="py-3 px-3 font-mono text-purple-400 font-bold">
+                        <td className="py-3 px-3 font-mono text-blue-400 font-bold">
                           {t.rr_ratio !== null ? `${t.rr_ratio}R` : "—"}
                         </td>
                       )}
@@ -508,7 +508,7 @@ export function CloudTradesTable({
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-1.5">
                           {hasNotes && (
-                            <span className="p-1 rounded bg-purple-500/20 text-purple-300" title="Has journal notes">
+                            <span className="p-1 rounded bg-blue-500/20 text-blue-300" title="Has journal notes">
                               <FileText className="w-3 h-3" />
                             </span>
                           )}

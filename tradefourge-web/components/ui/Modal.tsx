@@ -1,9 +1,8 @@
 "use client";
-// components/ui/Modal.tsx
-// TradeFourge v3.9 — Institutional Modal Primitive (Raycast/Linear Style Dialogs)
 
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
+import { useTheme } from "@/context/ThemeContext";
 
 export interface ModalProps {
   open?: boolean;
@@ -27,6 +26,8 @@ export const Modal: React.FC<ModalProps> = ({
   size,
 }) => {
   const isModalOpen = open ?? isOpen ?? false;
+  const { theme } = useTheme();
+  const isLight = theme === "light";
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -59,28 +60,34 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-black/60 backdrop-blur-md transition-opacity"
         onClick={onClose}
       />
       <div
-        className={`relative z-10 w-full ${chosenWidthClass} p-6 rounded-2xl bg-[#0F1420] border border-white/10 shadow-2xl space-y-4 font-mono text-xs text-white`}
+        className={`relative z-10 w-full ${chosenWidthClass} p-6 rounded-2xl border shadow-2xl space-y-4 font-mono text-xs ${
+          isLight
+            ? "bg-white border-slate-200 text-slate-900"
+            : "bg-[#0F1420] border-white/10 text-white"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {title && (
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <div className={`flex items-center justify-between border-b pb-3 ${isLight ? "border-slate-200" : "border-white/10"}`}>
             <div>
-              <div className="font-extrabold text-sm text-white uppercase tracking-wide flex items-center gap-2">
+              <div className={`font-extrabold text-sm uppercase tracking-wide flex items-center gap-2 ${isLight ? "text-slate-900" : "text-white"}`}>
                 {title}
               </div>
               {description && (
-                <div className="text-[11px] text-gray-400 font-normal mt-0.5">
+                <div className={`text-[11px] font-normal mt-0.5 ${isLight ? "text-slate-500" : "text-gray-400"}`}>
                   {description}
                 </div>
               )}
             </div>
             <button
               onClick={onClose}
-              className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors self-start"
+              className={`p-1 rounded-lg transition-colors self-start ${
+                isLight ? "text-slate-400 hover:text-slate-900 hover:bg-slate-100" : "text-gray-400 hover:text-white hover:bg-white/5"
+              }`}
             >
               <X className="w-4 h-4" />
             </button>

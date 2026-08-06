@@ -60,15 +60,15 @@ function VerifyEmailFormContent() {
     <div className="space-y-6 text-center">
       {/* Header Icon & Title */}
       <div className="space-y-3">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-purple-600/30 to-indigo-600/30 border border-purple-500/30 text-purple-300 flex items-center justify-center shadow-glow">
-          <Mail className="w-8 h-8 text-purple-400" />
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-600/30 to-indigo-600/30 border border-blue-500/30 text-blue-300 flex items-center justify-center shadow-glow">
+          <Mail className="w-8 h-8 text-blue-400" />
         </div>
         <h3 className="text-xl font-extrabold text-white font-mono tracking-tight">
           Check Your Email Inbox
         </h3>
         <p className="text-xs text-gray-400 leading-relaxed max-w-sm mx-auto">
           We have sent an official verification link to{" "}
-          <strong className="text-purple-300 font-mono block mt-1 text-sm">{email || "your email address"}</strong>.
+          <strong className="text-blue-300 font-mono block mt-1 text-sm">{email || "your email address"}</strong>.
           Click the link in your email to activate your account and open your terminal.
         </p>
       </div>
@@ -99,9 +99,9 @@ function VerifyEmailFormContent() {
           type="button"
           onClick={handleResend}
           disabled={resending}
-          className="w-full py-3 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-200 font-bold text-xs font-mono flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+          className="w-full py-3 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-200 font-bold text-xs font-mono flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
         >
-          <RefreshCw className={`w-4 h-4 ${resending ? "animate-spin text-purple-400" : ""}`} />
+          <RefreshCw className={`w-4 h-4 ${resending ? "animate-spin text-blue-400" : ""}`} />
           <span>{resending ? "Resending Verification Email..." : "Resend Verification Email"}</span>
         </button>
       </div>

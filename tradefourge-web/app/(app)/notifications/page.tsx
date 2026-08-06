@@ -11,7 +11,7 @@ export default function NotificationsPage() {
       description: "User profiles, customizable settings, and Supabase cloud storage synchronization are live.",
       time: "Just now",
       icon: Sparkles,
-      iconColor: "text-purple-400",
+      iconColor: "text-blue-400",
     },
     {
       id: 2,
@@ -48,7 +48,7 @@ export default function NotificationsPage() {
           return (
             <div
               key={n.id}
-              className="p-4 rounded-2xl bg-[#111726] border border-white/10 flex items-start gap-4 hover:border-purple-500/30 transition-all"
+              className="p-4 rounded-2xl bg-[#111726] border border-white/10 flex items-start gap-4 hover:border-blue-500/30 transition-all"
             >
               <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 mt-0.5">
                 <Icon className={`w-5 h-5 ${n.iconColor}`} />

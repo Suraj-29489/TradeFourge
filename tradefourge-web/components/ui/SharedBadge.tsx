@@ -3,6 +3,7 @@
 import React from "react";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { useTheme } from "@/context/ThemeContext";
 
 export interface SharedBadgeProps {
   label: string;
@@ -19,12 +20,25 @@ export const SharedBadge: React.FC<SharedBadgeProps> = ({
   icon: Icon,
   className,
 }) => {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+
   const variantStyles = {
-    primary: "bg-blue-600/20 text-blue-300 border-blue-500/30",
-    success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    danger: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-    warning: "bg-amber-500/10 text-amber-300 border-amber-500/20",
-    neutral: "bg-white/[0.04] text-gray-300 border-white/[0.08]",
+    primary: isLight
+      ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
+      : "bg-blue-600/20 text-blue-300 border-blue-500/30",
+    success: isLight
+      ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
+      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    danger: isLight
+      ? "bg-rose-500/10 text-rose-700 border-rose-500/30"
+      : "bg-rose-500/10 text-rose-400 border-rose-500/20",
+    warning: isLight
+      ? "bg-amber-500/10 text-amber-800 border-amber-500/30"
+      : "bg-amber-500/10 text-amber-300 border-amber-500/20",
+    neutral: isLight
+      ? "bg-slate-100 text-slate-700 border-slate-200"
+      : "bg-white/[0.04] text-gray-300 border-white/[0.08]",
   };
 
   const sizeStyles = {

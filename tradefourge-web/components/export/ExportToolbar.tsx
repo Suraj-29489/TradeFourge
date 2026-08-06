@@ -97,7 +97,7 @@ export const ExportToolbar: React.FC<ExportToolbarProps> = ({ trades: initialTra
 
   return (
     <div className="flex items-center gap-2 font-mono text-xs">
-      {loading && <Loader2 className="w-4 h-4 animate-spin text-purple-400" />}
+      {loading && <Loader2 className="w-4 h-4 animate-spin text-blue-400" />}
 
       <button
         onClick={handlePdfExport}
@@ -132,10 +132,10 @@ export const ExportToolbar: React.FC<ExportToolbarProps> = ({ trades: initialTra
       <button
         onClick={handleJsonExport}
         disabled={loading || trades.length === 0}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border hover:border-purple-500/40 text-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border hover:border-blue-500/40 text-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title="Export JSON Data"
       >
-        <FileCode className="w-3.5 h-3.5 text-purple-400" />
+        <FileCode className="w-3.5 h-3.5 text-blue-400" />
         <span className="hidden sm:inline">JSON</span>
       </button>
     </div>

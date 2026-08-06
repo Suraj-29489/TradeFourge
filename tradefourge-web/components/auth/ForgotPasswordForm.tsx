@@ -48,7 +48,7 @@ export const ForgotPasswordForm: React.FC = () => {
         <div className="space-y-2">
           <h3 className="text-xl font-bold text-white">Reset Instructions Sent</h3>
           <p className="text-sm text-gray-400 leading-relaxed">
-            Password recovery instructions have been sent to <strong className="text-purple-300 font-mono">{email}</strong>.
+            Password recovery instructions have been sent to <strong className="text-blue-300 font-mono">{email}</strong>.
           </p>
         </div>
 
@@ -87,7 +87,7 @@ export const ForgotPasswordForm: React.FC = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="trader@tradefourge.com"
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
           />
         </div>
       </div>
@@ -95,7 +95,7 @@ export const ForgotPasswordForm: React.FC = () => {
       <button
         type="submit"
         disabled={loading}
-        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-glow flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
       >
         {loading ? (
           <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

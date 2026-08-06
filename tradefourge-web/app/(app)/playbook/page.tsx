@@ -105,7 +105,7 @@ export default function PlaybookPage() {
   };
 
   const inputClass =
-    "w-full px-3 py-2 rounded-xl bg-[#0d1117] border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500 font-mono";
+    "w-full px-3 py-2 rounded-xl bg-[#0d1117] border border-white/10 text-xs text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500 font-mono";
   const labelClass = "block text-xs font-mono text-gray-400 mb-1";
 
   return (
@@ -114,7 +114,7 @@ export default function PlaybookPage() {
       <div className="p-6 rounded-2xl glass-card border border-dark-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
-            <BookOpen className="w-6 h-6 text-purple-400" />
+            <BookOpen className="w-6 h-6 text-blue-400" />
             <span>Trading Playbook Library</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">
@@ -124,7 +124,7 @@ export default function PlaybookPage() {
 
         <button
           onClick={() => openForm()}
-          className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-glow flex items-center gap-2 shrink-0 transition-all"
+          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-glow flex items-center gap-2 shrink-0 transition-all"
         >
           <Plus className="w-4 h-4" />
           <span>New Playbook Strategy</span>
@@ -133,9 +133,9 @@ export default function PlaybookPage() {
 
       {/* Form Dialog / Modal Card if open */}
       {isFormOpen && (
-        <div className="p-6 rounded-3xl glass-card border border-purple-500/30 space-y-4">
+        <div className="p-6 rounded-3xl glass-card border border-blue-500/30 space-y-4">
           <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-purple-400" />
+            <Sparkles className="w-4 h-4 text-blue-400" />
             <span>{editingPlaybook ? "Edit Playbook Strategy" : "Create New Playbook Strategy"}</span>
           </h2>
 
@@ -224,7 +224,7 @@ export default function PlaybookPage() {
             <button
               onClick={handleSave}
               disabled={!strategyName}
-              className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold disabled:opacity-50"
             >
               Save Strategy Playbook
             </button>
@@ -237,14 +237,14 @@ export default function PlaybookPage() {
         {playbooks.map((pb) => (
           <div
             key={pb.id}
-            className="p-5 rounded-2xl glass-card border border-dark-border space-y-4 hover:border-purple-500/30 transition-all"
+            className="p-5 rounded-2xl glass-card border border-dark-border space-y-4 hover:border-blue-500/30 transition-all"
           >
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <span>{pb.strategy_name}</span>
                 </h3>
-                <div className="flex items-center gap-2 mt-1 text-[11px] text-purple-300">
+                <div className="flex items-center gap-2 mt-1 text-[11px] text-blue-300">
                   <span>{pb.market}</span>
                   <span>·</span>
                   <span>{pb.timeframe}</span>
@@ -282,11 +282,11 @@ export default function PlaybookPage() {
               </div>
 
               <div className="p-3 rounded-xl bg-dark-card border border-white/5 space-y-1.5">
-                <span className="text-[10px] text-purple-400 font-bold block">EXIT RULES</span>
+                <span className="text-[10px] text-blue-400 font-bold block">EXIT RULES</span>
                 <ul className="space-y-1 text-gray-300">
                   {pb.exit_rules.map((rule, idx) => (
                     <li key={idx} className="flex items-start gap-1.5">
-                      <span className="text-purple-400 shrink-0">•</span>
+                      <span className="text-blue-400 shrink-0">•</span>
                       <span>{rule}</span>
                     </li>
                   ))}

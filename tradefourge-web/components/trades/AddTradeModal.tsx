@@ -241,7 +241,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
         <div className="p-4 rounded-xl bg-dark-card border border-dark-border space-y-3">
           <div className="flex items-center justify-between border-b border-dark-border pb-2">
             <span className="font-bold text-white uppercase text-[11px] flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" /> Account & Direction
+              <Sparkles className="w-3.5 h-3.5 text-blue-400" /> Account & Direction
             </span>
           </div>
 
@@ -251,7 +251,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
               <select
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
               >
                 <option value="">No Account (Unassigned)</option>
                 {accounts.map(acc => (
@@ -270,7 +270,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value.toUpperCase())}
                 list="common-symbols"
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white font-bold text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white font-bold text-xs focus:border-blue-500"
               />
               <datalist id="common-symbols">
                 {COMMON_SYMBOLS.map(s => <option key={s} value={s} />)}
@@ -323,7 +323,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 required
                 value={volume}
                 onChange={(e) => setVolume(parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
               />
             </div>
 
@@ -335,7 +335,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 value={openPrice}
                 onChange={(e) => setOpenPrice(e.target.value)}
                 placeholder="1.08500"
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
               />
             </div>
 
@@ -347,7 +347,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 value={closePrice}
                 onChange={(e) => setClosePrice(e.target.value)}
                 placeholder="1.09100"
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
               />
             </div>
 
@@ -359,7 +359,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 required
                 value={profit}
                 onChange={(e) => setProfit(e.target.value)}
-                className={`w-full px-3 py-2 rounded-xl bg-dark-bg border text-xs font-bold focus:border-purple-500 ${
+                className={`w-full px-3 py-2 rounded-xl bg-dark-bg border text-xs font-bold focus:border-blue-500 ${
                   parseFloat(profit) > 0 ? "text-emerald-400 border-emerald-500/40" : parseFloat(profit) < 0 ? "text-rose-400 border-rose-500/40" : "text-white border-dark-border"
                 }`}
               />
@@ -374,7 +374,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 step="any"
                 value={stopLoss}
                 onChange={(e) => setStopLoss(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-rose-400 text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-rose-400 text-xs focus:border-blue-500"
               />
             </div>
 
@@ -385,7 +385,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 step="any"
                 value={takeProfit}
                 onChange={(e) => setTakeProfit(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-emerald-400 text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-emerald-400 text-xs focus:border-blue-500"
               />
             </div>
 
@@ -396,7 +396,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 step="0.01"
                 value={commission}
                 onChange={(e) => setCommission(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-gray-300 text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-gray-300 text-xs focus:border-blue-500"
               />
             </div>
 
@@ -407,7 +407,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 step="0.01"
                 value={swap}
                 onChange={(e) => setSwap(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-gray-300 text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-gray-300 text-xs focus:border-blue-500"
               />
             </div>
           </div>
@@ -426,7 +426,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                   type="datetime-local"
                   value={openTime}
                   onChange={(e) => setOpenTime(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+                  className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
                 />
               </div>
               <div>
@@ -435,7 +435,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                   type="datetime-local"
                   value={closeTime}
                   onChange={(e) => setCloseTime(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+                  className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
                 />
               </div>
             </div>
@@ -454,7 +454,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                   value={riskAmount}
                   onChange={(e) => setRiskAmount(e.target.value)}
                   placeholder="100"
-                  className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+                  className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
                 />
               </div>
               <div>
@@ -465,7 +465,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                   value={rewardAmount}
                   onChange={(e) => setRewardAmount(e.target.value)}
                   placeholder="250"
-                  className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+                  className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
                 />
               </div>
             </div>
@@ -474,7 +474,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
               <select
                 value={session}
                 onChange={(e) => setSession(e.target.value as TradeSession)}
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
               >
                 {SESSIONS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -496,7 +496,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 value={strategy}
                 onChange={(e) => setStrategy(e.target.value)}
                 placeholder="e.g. Fair Value Gap Model"
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
               />
             </div>
             <div>
@@ -506,7 +506,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 value={setup}
                 onChange={(e) => setSetup(e.target.value)}
                 placeholder="e.g. 15m Liquidity Sweep + Break of Structure"
-                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
               />
             </div>
           </div>
@@ -518,7 +518,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Key execution insights, entry trigger, emotions..."
-              className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-purple-500"
+              className="w-full px-3 py-2 rounded-xl bg-dark-bg border border-dark-border text-white text-xs focus:border-blue-500"
             />
           </div>
 
@@ -527,7 +527,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
             <label className="text-gray-400 block mb-1">Chart Screenshot (Optional)</label>
             <div className="flex items-center gap-3">
               <label className="px-3 py-2 rounded-xl bg-dark-bg border border-dark-border hover:bg-dark-hover cursor-pointer text-gray-300 flex items-center gap-2">
-                <Camera className="w-4 h-4 text-purple-400" />
+                <Camera className="w-4 h-4 text-blue-400" />
                 <span>Upload Image</span>
                 <input
                   type="file"
@@ -537,7 +537,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
                 />
               </label>
               {screenshotFile && (
-                <span className="text-purple-400 font-bold">{screenshotFile.name}</span>
+                <span className="text-blue-400 font-bold">{screenshotFile.name}</span>
               )}
             </div>
             {screenshotPreview && (

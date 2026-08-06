@@ -16,6 +16,8 @@ import {
 } from "recharts";
 import { TrendingUp, BarChart3, PieChart as PieIcon, Info } from "lucide-react";
 
+import { useTheme } from "@/context/ThemeContext";
+
 type Tab = "equity" | "daily" | "weekly" | "monthly" | "symbols" | "hourly" | "weekday";
 
 const TABS: { key: Tab; label: string }[] = [
@@ -33,7 +35,8 @@ interface DashboardChartsProps {
 }
 
 export const DashboardCharts: React.FC<DashboardChartsProps> = ({ trades: initialTrades }) => {
-  const theme = useJournalStore(s => s.theme);
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const { format: formatCurrency, formatSigned, currency } = useCurrencyFormatter();
   const supabase = createClient();
 
@@ -64,7 +67,6 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ trades: initia
     return calculateCloudAnalytics(trades);
   }, [trades]);
 
-  const isLight = theme === "light";
   const gridStroke = isLight ? "#E5E7EB" : "#1F293D";
   const axisStroke = isLight ? "#6B7280" : "#6B7280";
   const profitColor = isLight ? "#16A34A" : "#10B981";
@@ -111,7 +113,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ trades: initia
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
             <h3 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-purple-400" />
+              <TrendingUp className="w-5 h-5 text-blue-400" />
               Performance Analytics
             </h3>
             <p className="text-xs text-gray-400">
@@ -127,7 +129,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ trades: initia
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-2.5 py-1.5 rounded-lg transition-all whitespace-nowrap ${
                   activeTab === tab.key
-                    ? "bg-purple-600 text-white font-bold shadow-glow"
+                    ? "bg-blue-600 text-white font-bold shadow-glow"
                     : "text-gray-400 hover:text-gray-200"
                 }`}
               >
@@ -257,7 +259,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ trades: initia
         <div className="p-6 rounded-2xl glass-card border border-dark-border space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-purple-400" />
+              <BarChart3 className="w-4 h-4 text-blue-400" />
               Session Performance Breakdown
             </h4>
             <span className="text-xs text-gray-400">{analytics.sessions.length} sessions</span>

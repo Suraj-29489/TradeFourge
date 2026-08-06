@@ -35,14 +35,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useActiveAccount } from "@/context/ActiveAccountContext";
 import { useCompanionAccount } from "@/context/CompanionAccountContext";
 
+import { useTheme } from "@/context/ThemeContext";
+
 type MainViewMode = "calendar" | "timeline";
 
 export const TradeCalendar: React.FC = () => {
+  const router = useRouter();
   const { workspaceMode } = useActiveAccount();
   const { currentAccount } = useCompanionAccount();
-
-  const router = useRouter();
-  const theme = useJournalStore((s) => s.theme);
+  const { theme } = useTheme();
   const { format: formatCurrency, formatSigned, mixedCurrency } = useCurrencyFormatter();
   const supabase = createClient();
 
@@ -482,7 +483,7 @@ export const TradeCalendar: React.FC = () => {
 
           <div className="p-3 rounded-xl bg-white/5 border border-white/10">
             <span className="text-[10px] text-gray-400 block uppercase font-bold">TOTAL TRADES</span>
-            <span className="text-sm font-extrabold text-purple-400 block">{monthlyInsights.totalMonthTrades}</span>
+            <span className={`text-sm font-extrabold block ${isLight ? "text-emerald-600" : "text-blue-400"}`}>{monthlyInsights.totalMonthTrades}</span>
           </div>
 
           <div className="p-3 rounded-xl bg-white/5 border border-white/10">
