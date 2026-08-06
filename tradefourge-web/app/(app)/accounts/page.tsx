@@ -9,19 +9,14 @@ import {
   Wallet,
   Pencil,
   Trash2,
-  RefreshCw,
   AlertCircle,
-  TrendingUp,
-  TrendingDown,
-  Lock,
-  Zap,
-  Radio,
   FileSpreadsheet,
   CheckCircle2,
   Clock,
   ArrowRight,
-  Server,
-  Activity,
+  TrendingUp,
+  TrendingDown,
+  RefreshCw,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAppEventListener } from "@/lib/events/event-bus";
@@ -30,28 +25,24 @@ import {
   deleteTradingAccount,
 } from "@/lib/supabase/accounts";
 import { AccountFormModal } from "@/components/accounts/AccountFormModal";
-import { LiveStatusBadge } from "@/components/accounts/LiveStatusBadge";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { AccountTypeBadge } from "@/components/ui/Badge";
 import { CardListSkeleton } from "@/components/ui/LoadingSkeleton";
 import { useUserProfile } from "@/context/UserProfileContext";
-import { useCompanion } from "@/lib/companion/provider";
-import { SyncManager } from "@/lib/live-sync/sync-manager";
-import { SyncScheduler } from "@/lib/live-sync/scheduler";
+import { useActiveAccount } from "@/context/ActiveAccountContext";
 import type { TradingAccount, NewTradingAccount } from "@/types/database";
 import { getCurrencySymbol, getCurrencyShortLabel } from "@/lib/config/currencies";
 
 export default function AccountsPage() {
   const router = useRouter();
   const { refreshAccounts } = useUserProfile();
-  const [accounts, setAccounts]       = useState<TradingAccount[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState<string | null>(null);
-  const [formOpen, setFormOpen]       = useState(false);
+  const { activeAccountId, setActiveAccountId } = useActiveAccount();
+
+  const [accounts, setAccounts] = useState<TradingAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [editAccount, setEditAccount] = useState<TradingAccount | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [manualSyncingId, setManualSyncingId] = useState<string | null>(null);
-  const [userId, setUserId]           = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const supabase = createClient();
 
   const loadAccounts = useCallback(async (uid: string) => {
@@ -72,33 +63,55 @@ export default function AccountsPage() {
       if (user) {
         setUserId(user.id);
         loadAccounts(user.id);
-        SyncScheduler.startScheduler(user.id);
       }
     })();
   }, [loadAccounts]);
 
   useAppEventListener(
-    ["tradefourge:account-created", "tradefourge:account-updated", "tradefourge:account-deleted", "tradefourge:trade-created", "tradefourge:trade-deleted"],
+    ["tradefourge:account-created", "tradefourge:account-updated", "tradefourge:account-deleted"],
     () => {
       if (userId) loadAccounts(userId);
     }
   );
 
-  const handleManualSync = async (accountId: string) => {
-    if (!userId) return;
-    setManualSyncingId(accountId);
-    try {
-      const result = await SyncManager.syncAccount(userId, accountId);
-      if (!result.success) {
-        setError(result.error || "Manual sync failed.");
-      } else {
-        await loadAccounts(userId);
-        await refreshAccounts();
-      }
-    } catch (err: any) {
-      setError(err?.message || "Sync execution error.");
-    } finally {
-      setManualSyncingId(null);
+  const handleCreateAccountSubmitted = async (data: NewTradingAccount) => {
+    const supabaseClient = createClient();
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return;
+
+    const { data: newAcc } = await supabaseClient
+      .from("trading_accounts")
+      .insert({
+        ...data,
+        user_id: user.id,
+      } as any)
+      .select()
+      .single();
+
+    if (newAcc) {
+      await loadAccounts(user.id);
+      await refreshAccounts();
+      setActiveAccountId(newAcc.id);
+      setFormOpen(false);
+      // Redirect directly to CSV Upload page for that account (PART 5 requirement)
+      router.push("/upload");
+    }
+  };
+
+  const handleEditAccountSubmitted = async (data: NewTradingAccount) => {
+    if (!editAccount || !userId) return;
+    const { error: err } = await supabase
+      .from("trading_accounts")
+      .update(data as any)
+      .eq("id", editAccount.id)
+      .eq("user_id", userId);
+
+    if (err) {
+      setError(err.message);
+    } else {
+      await loadAccounts(userId);
+      await refreshAccounts();
+      setEditAccount(null);
     }
   };
 
@@ -112,47 +125,34 @@ export default function AccountsPage() {
     setActionLoading(null);
   };
 
-  const companion = useCompanion();
+  const handleSwitchAccount = (id: string) => {
+    setActiveAccountId(id);
+  };
 
   return (
     <div className="space-y-6 font-mono text-gray-200">
       {/* Top Header Strip */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs text-gray-400 uppercase tracking-widest font-bold">PORTFOLIO</span>
-            <span className="text-gray-600">/</span>
-            <Link href="/settings/connections" className="text-xs text-blue-400 font-bold hover:underline flex items-center gap-1">
-              <span className={`w-2 h-2 rounded-full ${companion.isConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
-              <span>{companion.isConnected ? `Companion Connected (${companion.version})` : "Companion Disconnected"}</span>
-            </Link>
-          </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-white font-sans flex items-center gap-2">
             <Wallet className="w-6 h-6 text-blue-400" />
-            <span>Trading Accounts</span>
+            <span>Accounts</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            Centralized account manager for real-time live sync and imported trade history
+            Manage your CSV trading workspaces.
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <Link
-            href="/connect"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm transition-all shrink-0"
-          >
-            <Zap className="w-4 h-4 text-blue-200" />
-            <span>Connect Companion</span>
-          </Link>
-
-          <Link
-            href="/upload"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-white font-bold text-xs transition-all shrink-0"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-gray-400" />
-            <span>Upload CSV</span>
-          </Link>
-        </div>
+        <button
+          onClick={() => {
+            setEditAccount(null);
+            setFormOpen(true);
+          }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm transition-all shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Create Account</span>
+        </button>
       </div>
 
       {/* Error Banner */}
@@ -164,49 +164,40 @@ export default function AccountsPage() {
         </div>
       )}
 
-      {/* Content */}
+      {/* Content Grid */}
       {loading ? (
         <CardListSkeleton count={3} />
       ) : accounts.length === 0 ? (
         <div className="p-12 rounded-2xl bg-[#0F141C] border border-white/[0.08] text-center space-y-6">
           <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
-            <Wallet className="w-8 h-8" />
+            <FileSpreadsheet className="w-8 h-8" />
           </div>
           <div className="space-y-2 max-w-md mx-auto">
-            <h3 className="text-xl font-bold font-sans text-white">No Trading Accounts Connected</h3>
+            <h3 className="text-xl font-bold font-sans text-white">No CSV Accounts Found</h3>
             <p className="text-xs text-gray-400">
-              Connect your first trading account to view unified balances, historical trades, and real-time performance analytics.
+              Create your first CSV workspace to start uploading and analyzing historical trading statements.
             </p>
           </div>
-          <div className="flex items-center justify-center gap-4 flex-wrap pt-2">
-            <Link
-              href="/connect"
-              className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm flex items-center gap-2"
-            >
-              <Zap className="w-4 h-4" />
-              <span>Connect Companion</span>
-            </Link>
-            <Link
-              href="/upload"
-              className="px-5 py-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-white font-bold text-xs flex items-center gap-2"
-            >
-              <FileSpreadsheet className="w-4 h-4 text-gray-400" />
-              <span>Upload CSV</span>
-            </Link>
-          </div>
+          <button
+            onClick={() => {
+              setEditAccount(null);
+              setFormOpen(true);
+            }}
+            className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Account</span>
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
           <AnimatePresence>
             {accounts.map((account) => {
-              const pnl = account.current_balance - account.starting_balance;
-              const pnlPct = account.starting_balance > 0
-                ? ((pnl / account.starting_balance) * 100)
-                : 0;
-              const isPositive = pnl >= 0;
+              const isActive = activeAccountId === account.id;
               const isLoading = actionLoading === account.id;
-              const isSyncing = manualSyncingId === account.id;
-              const connectionType = account.is_live_synced ? "Companion Extension" : "CSV Import";
+              const currencySymbol = getCurrencySymbol(account.currency);
+              const pnl = account.current_balance - account.starting_balance;
+              const isPositive = pnl >= 0;
 
               return (
                 <motion.div
@@ -214,13 +205,19 @@ export default function AccountsPage() {
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
-                  className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] hover:border-white/[0.15] transition-all space-y-4 shadow-sm"
+                  className={`p-6 rounded-2xl border transition-all space-y-4 shadow-sm ${
+                    isActive
+                      ? "bg-blue-500/10 border-blue-500/60 shadow-lg shadow-blue-500/5"
+                      : "bg-[#0F141C] border-white/[0.08] hover:border-white/[0.15]"
+                  }`}
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     {/* Account Info Left */}
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 text-blue-400">
-                        <Wallet className="w-6 h-6" />
+                      <div className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 ${
+                        isActive ? "bg-blue-500/20 border-blue-500/40 text-blue-400" : "bg-white/[0.03] border-white/[0.08] text-gray-400"
+                      }`}>
+                        <FileSpreadsheet className="w-6 h-6" />
                       </div>
 
                       <div className="space-y-1">
@@ -228,80 +225,61 @@ export default function AccountsPage() {
                           <span className="text-base font-bold text-white font-sans">
                             {account.account_name}
                           </span>
-                          <AccountTypeBadge type={account.account_type} />
-                          {account.is_live_synced ? (
-                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
-                              <Radio className="w-3 h-3 animate-pulse text-emerald-400" />
-                              <span>Live Synced</span>
+                          {isActive ? (
+                            <span className="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] font-bold flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-blue-400" />
+                              <span>Active Workspace</span>
                             </span>
                           ) : (
-                            <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 text-[10px] font-bold flex items-center gap-1">
-                              <FileSpreadsheet className="w-3 h-3 text-blue-400" />
-                              <span>CSV Import</span>
+                            <span className="px-2.5 py-0.5 rounded-full bg-white/[0.04] text-gray-400 border border-white/[0.08] text-[10px] font-bold">
+                              CSV Account
                             </span>
                           )}
-                          <span className="text-[10px] text-gray-400 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.08]">
-                            #{account.account_number || account.display_id || "TF-ACC-8A91"}
-                          </span>
                         </div>
 
                         {/* Metadata Row */}
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 pt-0.5">
-                          <span>Broker: <strong className="text-gray-200">{account.broker}</strong></span>
-                          <span>·</span>
-                          <span>Platform: <strong className="text-gray-200">{account.platform}</strong></span>
-                          <span>·</span>
-                          <span>Server: <strong className="text-gray-200">{(account as any).server || "Exness-Live"}</strong></span>
+                          <span>Broker: <strong className="text-gray-200">{account.broker || "CSV"}</strong></span>
                           <span>·</span>
                           <span>Currency: <strong className="text-gray-200">{getCurrencyShortLabel(account.currency)}</strong></span>
-                          {account.leverage && (
-                            <>
-                              <span>·</span>
-                              <span>Leverage: <strong className="text-gray-200">{account.leverage}</strong></span>
-                            </>
-                          )}
+                          <span>·</span>
+                          <span>Account Type: <strong className="text-gray-200">{account.account_type}</strong></span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Financial Balances Right */}
+                    {/* Financial Balances & Actions Right */}
                     <div className="flex items-center gap-6 justify-between lg:justify-end border-t lg:border-t-0 border-white/[0.08] pt-3 lg:pt-0">
                       <div className="text-right">
                         <div className="text-[10px] text-gray-400 uppercase tracking-wider">Current Balance</div>
                         <p className="text-lg font-extrabold text-white font-mono">
-                          {getCurrencySymbol(account.currency)}
-                          {account.current_balance.toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </p>
-                        <p
-                          className={`text-xs font-mono flex items-center justify-end gap-1 ${
-                            isPositive ? "text-emerald-400" : "text-rose-400"
-                          }`}
-                        >
-                          {isPositive ? (
-                            <TrendingUp className="w-3 h-3" />
-                          ) : (
-                            <TrendingDown className="w-3 h-3" />
-                          )}
-                          {isPositive ? "+" : ""}
-                          {getCurrencySymbol(account.currency)}{pnl.toLocaleString("en-US", { minimumFractionDigits: 2 })} (
-                          {pnlPct.toFixed(1)}%)
+                          {currencySymbol}
+                          {account.current_balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                         </p>
                       </div>
 
                       {/* Action buttons */}
-                      <div className="flex items-center gap-1.5">
-                        {account.is_live_synced && (
+                      <div className="flex items-center gap-2">
+                        {!isActive && (
                           <button
-                            onClick={() => handleManualSync(account.id)}
-                            disabled={isSyncing}
-                            title="Sync live trades now"
-                            className="p-2 rounded-xl text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 border border-blue-500/20 transition-colors disabled:opacity-50"
+                            onClick={() => handleSwitchAccount(account.id)}
+                            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow-sm"
                           >
-                            <RefreshCw className={`w-4 h-4 ${isSyncing ? "animate-spin text-blue-400" : ""}`} />
+                            Switch Workspace
                           </button>
                         )}
+
+                        <button
+                          onClick={() => {
+                            setEditAccount(account);
+                            setFormOpen(true);
+                          }}
+                          title="Edit account details"
+                          className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.08] border border-white/[0.08] transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+
                         <button
                           onClick={() => handleDelete(account.id, account.account_name)}
                           disabled={isLoading}
@@ -318,16 +296,15 @@ export default function AccountsPage() {
                     </div>
                   </div>
 
-                  {/* Connection Details Footer Badge Strip */}
+                  {/* Account Summary Footer Strip */}
                   <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-400 bg-white/[0.02] p-3 rounded-xl border border-white/[0.06]">
                     <div className="flex items-center gap-4">
-                      <span>Connection: <strong className="text-gray-200">{connectionType}</strong></span>
-                      <span>History Imported: <strong className="text-emerald-400 font-bold">✓ Complete</strong></span>
+                      <span>Broker: <strong className="text-gray-200">{account.broker || "Generic CSV"}</strong></span>
+                      <span>Platform: <strong className="text-gray-200">{account.platform || "CSV Import"}</strong></span>
                     </div>
 
                     <div className="flex items-center gap-4 text-[10px]">
-                      <span>Last Sync: {account.last_synced_at ? new Date(account.last_synced_at).toLocaleTimeString() : "Just Now"}</span>
-                      <span className="text-blue-400 font-bold">● Active Database</span>
+                      <span>Last Import: <strong className="text-gray-300">{account.last_synced_at ? new Date(account.last_synced_at).toLocaleDateString() : "No imports yet"}</strong></span>
                     </div>
                   </div>
                 </motion.div>
@@ -336,6 +313,17 @@ export default function AccountsPage() {
           </AnimatePresence>
         </div>
       )}
+
+      {/* Account Create / Edit Form Modal */}
+      <AccountFormModal
+        open={formOpen}
+        onClose={() => {
+          setFormOpen(false);
+          setEditAccount(null);
+        }}
+        onSubmit={editAccount ? handleEditAccountSubmitted : handleCreateAccountSubmitted}
+        account={editAccount}
+      />
     </div>
   );
 }

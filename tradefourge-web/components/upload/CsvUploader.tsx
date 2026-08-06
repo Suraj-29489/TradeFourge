@@ -1277,18 +1277,28 @@ export const CsvUploader: React.FC = () => {
               </button>
             </div>
 
-            <button
-              onClick={() => {
-                setStagedFile(null);
-                setValidationReport(null);
-                setFinalReport(null);
-                setCurrentStep(1);
-              }}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all shadow-xl active:scale-95"
-            >
-              <span>Done / Start New Import</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all shadow-md active:scale-95"
+              >
+                <span>View Dashboard</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => {
+                  setStagedFile(null);
+                  setValidationReport(null);
+                  setFinalReport(null);
+                  setCurrentStep(1);
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white font-bold text-xs transition-all shadow-xl active:scale-95"
+              >
+                <span>Start New Import</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}

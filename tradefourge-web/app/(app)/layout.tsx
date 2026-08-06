@@ -4,6 +4,7 @@ import React from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { UserProfileProvider } from "@/context/UserProfileContext";
 import { AccountsProvider } from "@/context/AccountsContext";
+import { ActiveAccountProvider } from "@/context/ActiveAccountContext";
 import { CompanionProvider } from "@/lib/companion/provider";
 import { PersistenceErrorBoundary } from "@/components/common/PersistenceErrorBoundary";
 
@@ -16,9 +17,11 @@ export default function AuthenticatedAppLayout({
     <PersistenceErrorBoundary>
       <UserProfileProvider>
         <AccountsProvider>
-          <CompanionProvider>
-            <AppLayout>{children}</AppLayout>
-          </CompanionProvider>
+          <ActiveAccountProvider>
+            <CompanionProvider>
+              <AppLayout>{children}</AppLayout>
+            </CompanionProvider>
+          </ActiveAccountProvider>
         </AccountsProvider>
       </UserProfileProvider>
     </PersistenceErrorBoundary>

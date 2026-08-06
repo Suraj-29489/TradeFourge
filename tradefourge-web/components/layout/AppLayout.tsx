@@ -7,15 +7,21 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { ConnectionModeModal } from "@/components/connection/ConnectionModeModal";
+import { AccountTypeModal } from "@/components/accounts/AccountTypeModal";
+import { useActiveAccount } from "@/context/ActiveAccountContext";
 
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { isAccountTypeModalOpen } = useActiveAccount();
 
   return (
     <div className="flex h-screen overflow-hidden text-gray-100 font-sans terminal-grid"
          style={{ backgroundColor: "var(--body-bg)", color: "var(--body-text)" }}>
       {/* Global Connection Mode Selection Modal */}
       <ConnectionModeModal />
+
+      {/* Account Type Selection Modal */}
+      <AccountTypeModal open={isAccountTypeModalOpen} />
 
       {/* Sidebar handles both Desktop (md:flex) and Mobile Drawer (md:hidden) */}
       <ErrorBoundary fallbackTitle="Sidebar Navigation Error">
