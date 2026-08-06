@@ -461,30 +461,6 @@ export const TradeCalendar: React.FC = () => {
               <option value="BUY">Buy / Long</option>
               <option value="SELL">Sell / Short</option>
             </select>
-
-            {/* Month Navigation */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 transition-colors"
-                title="Previous Month"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setCurrentMonth(new Date())}
-                className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-glow"
-              >
-                Today
-              </button>
-              <button
-                onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                className="p-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 transition-colors"
-                title="Next Month"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
           </div>
         </div>
 
@@ -575,7 +551,7 @@ export const TradeCalendar: React.FC = () => {
                   }}
                   className={`h-24 sm:h-28 rounded-2xl p-2.5 border transition-all duration-200 cursor-pointer flex flex-col justify-between group relative ${
                     isToday
-                      ? "border-purple-500 ring-2 ring-purple-500/30 bg-purple-600/10"
+                      ? "border-blue-500 ring-2 ring-blue-500/30 bg-blue-600/10"
                       : tradeCount > 0
                       ? pnl > 0
                         ? "bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/60"
@@ -586,13 +562,13 @@ export const TradeCalendar: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className={`font-bold text-xs ${isToday ? "text-purple-400" : "text-white"}`}>
+                    <span className={`font-bold text-xs ${isToday ? "text-blue-400" : "text-white"}`}>
                       {format(day, "d")}
                     </span>
 
                     {/* Day Indicators Badges (Section 3) */}
                     <div className="flex items-center gap-1">
-                      {hasNotes && <span title="Has journal notes"><FileText className="w-3 h-3 text-purple-400" /></span>}
+                      {hasNotes && <span title="Has journal notes"><FileText className="w-3 h-3 text-blue-400" /></span>}
                       {hasImages && <span title="Has screenshots"><Camera className="w-3 h-3 text-emerald-400" /></span>}
                       {hasTags && <span title="Has strategy tags"><TagIcon className="w-3 h-3 text-indigo-400" /></span>}
                     </div>
@@ -613,8 +589,8 @@ export const TradeCalendar: React.FC = () => {
 
                   {/* Day Hover Tooltip */}
                   {tradeCount > 0 && (
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-50 bottom-full mb-2 left-1/2 -translate-x-1/2 w-52 p-3 rounded-xl bg-[#0B0F19] border border-purple-500/30 text-white text-[11px] shadow-2xl space-y-1">
-                      <p className="font-bold text-purple-300 border-b border-white/10 pb-1">{format(day, "EEEE, MMM dd, yyyy")}</p>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none absolute z-50 bottom-full mb-2 left-1/2 -translate-x-1/2 w-52 p-3 rounded-xl bg-[#0B0F19] border border-blue-500/30 text-white text-[11px] shadow-2xl space-y-1">
+                      <p className="font-bold text-blue-300 border-b border-white/10 pb-1">{format(day, "EEEE, MMM dd, yyyy")}</p>
                       <div className="space-y-0.5 text-gray-300 text-[10px]">
                         <div className="flex justify-between"><span>Executed Trades:</span><span className="text-white font-bold">{tradeCount}</span></div>
                         <div className="flex justify-between"><span>Wins / Losses:</span><span className="text-emerald-400 font-bold">{(dayData?.wins || 0)}W / {(dayData?.losses || 0)}L</span></div>

@@ -2,7 +2,8 @@
 
 import React from "react";
 import { useCompanionAccount } from "@/context/CompanionAccountContext";
-import { TableProperties, Zap, Radio, Info } from "lucide-react";
+import { TableProperties, Zap } from "lucide-react";
+import { DismissibleBanner } from "@/components/common/DismissibleBanner";
 
 export const CompanionJournalView: React.FC = () => {
   const { currentAccount } = useCompanionAccount();
@@ -10,18 +11,14 @@ export const CompanionJournalView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-mono text-xs max-w-7xl mx-auto w-full text-gray-200 pb-12">
-      {/* Synchronization Notice Banner */}
-      <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-300 flex items-center gap-3 shadow-md">
-        <Zap className="w-5 h-5 fill-blue-300 shrink-0" />
-        <div className="space-y-0.5">
-          <p className="font-bold text-white text-xs font-sans">
-            Automatic Live Terminal Synchronization
-          </p>
-          <p className="text-[11px] text-blue-200/90 font-sans">
-            Journal will synchronize automatically from connected accounts. Position entries, stop losses, and take profits are logged directly from {currentAccount?.broker || "Terminal"} (#{currentAccount?.accountNumber || "1001"}).
-          </p>
-        </div>
-      </div>
+      {/* Synchronization Notice Banner (Dismissible & Persisted) */}
+      <DismissibleBanner
+        storageKey="tfc_journal_sync_banner_hidden"
+        title="Automatic Live Terminal Synchronization"
+        description={`Journal will synchronize automatically from connected accounts. Position entries, stop losses, and take profits are logged directly from ${currentAccount?.broker || "Terminal"} (#${currentAccount?.accountNumber || "1001"}).`}
+        icon={Zap}
+        variant="blue"
+      />
 
       {/* Header */}
       <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] flex items-center justify-between gap-4 shadow-sm">
