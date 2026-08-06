@@ -5,8 +5,8 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { generateValidationReport, ValidationReport } from "@/lib/engine/validation/validation-report";
-import { bulkInsertTrades } from "@/lib/supabase/trades";
-import { createImportRecord, updateImportRecord } from "@/lib/supabase/csv-imports";
+import { CSVImportService } from "@/lib/services/CSVImportService";
+import { TradeService } from "@/lib/services/TradeService";
 import { createClient } from "@/lib/supabase/client";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { AccountFormModal } from "@/components/accounts/AccountFormModal";
@@ -298,7 +298,7 @@ export const CsvUploader: React.FC = () => {
       if (!user) throw new Error("Not authenticated");
 
       // 1. Create import record
-      const { data: importRecord } = await createImportRecord(
+      const { data: importRecord } = await CSVImportService.createImportRecord(
         user.id,
         stagedFile.name,
         validationReport.parsedTrades.length,
@@ -346,7 +346,7 @@ export const CsvUploader: React.FC = () => {
         allTrades,
         async (batchTrades, batchIdx) => {
           const targetUserId = user?.id || "local-user";
-          const res = await bulkInsertTrades(targetUserId, batchTrades);
+          const res = await TradeService.bulkInsertTrades(targetUserId, batchTrades);
           totalInserted += res.inserted;
           totalSkipped += res.skippedDuplicates;
           if (res.errors.length > 0) {
@@ -383,7 +383,7 @@ export const CsvUploader: React.FC = () => {
 
       // 4. Update import record
       if (importRecord) {
-        await updateImportRecord(importRecord.id, user.id, {
+        await CSVImportService.updateImportRecord(importRecord.id, user.id, {
           import_status: finalStatus,
           imported_rows: totalInserted,
           skipped_rows: totalSkipped,

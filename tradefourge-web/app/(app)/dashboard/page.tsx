@@ -11,8 +11,8 @@ import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useCurrencyFormatter } from "@/hooks/useCurrencyFormatter";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { createClient } from "@/lib/supabase/client";
-import { fetchTrades } from "@/lib/supabase/trades";
-import { fetchLatestImport } from "@/lib/supabase/csv-imports";
+import { TradeService } from "@/lib/services/TradeService";
+import { CSVImportService } from "@/lib/services/CSVImportService";
 import { useAppEventListener } from "@/lib/events/event-bus";
 import { calculateCloudAnalytics, CompleteAnalyticsSummary } from "@/lib/engine/cloud-analytics-engine";
 import { CloudTradeDetailDrawer } from "@/components/trades/CloudTradeDetailDrawer";
@@ -88,13 +88,14 @@ export default function DashboardPage() {
       if (!user) return;
 
       const [tradesRes, impRes] = await Promise.all([
-        fetchTrades(user.id, filters, 1, 5000, "close_time", false),
-        fetchLatestImport(user.id),
+        TradeService.getTrades(user.id, filters, 1, 5000, "close_time", false),
+        CSVImportService.getImportHistory(user.id),
       ]);
 
       const fetchedTrades = tradesRes.data?.data ?? [];
       setTrades(fetchedTrades);
-      setLatestImport(impRes.data ?? null);
+      const latest = impRes.data && impRes.data.length > 0 ? impRes.data[0] : null;
+      setLatestImport(latest);
 
       if (process.env.NODE_ENV !== "production") {
         console.log(`[TradeFourge Dev Log] Dashboard refresh completed. Active trade count: ${fetchedTrades.length}`);

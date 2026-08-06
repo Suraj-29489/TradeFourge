@@ -19,6 +19,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { AccountService } from "@/lib/services/AccountService";
 import { useAppEventListener } from "@/lib/events/event-bus";
 import {
   fetchTradingAccounts,
@@ -85,41 +86,31 @@ export default function AccountsPage() {
   const handleCreateAccountSubmitted = async (data: NewTradingAccount) => {
     const supabaseClient = createClient();
     const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) return;
+    if (!user) throw new Error("User not authenticated.");
 
-    const { data: newAcc } = await supabaseClient
-      .from("trading_accounts")
-      .insert({
-        ...data,
-        user_id: user.id,
-      } as any)
-      .select()
-      .single();
-
-    if (newAcc) {
+    const res = await AccountService.createAccount(user.id, data);
+    if (res.data) {
       await loadAccounts(user.id);
       await refreshAccounts();
-      setActiveAccountId(newAcc.id);
+      setActiveAccountId(res.data.id);
       setFormOpen(false);
-      // Redirect directly to CSV Upload page for that account (PART 5 requirement)
       router.push("/upload");
+    } else if (res.error) {
+      throw new Error(res.error);
     }
   };
 
   const handleEditAccountSubmitted = async (data: NewTradingAccount) => {
-    if (!editAccount || !userId) return;
-    const { error: err } = await supabase
-      .from("trading_accounts")
-      .update(data as any)
-      .eq("id", editAccount.id)
-      .eq("user_id", userId);
+    if (!editAccount || !userId) throw new Error("Missing edit target or authentication.");
 
-    if (err) {
-      setError(err.message);
-    } else {
+    const res = await AccountService.updateAccount(editAccount.id, userId, data);
+    if (res.data) {
       await loadAccounts(userId);
       await refreshAccounts();
+      setFormOpen(false);
       setEditAccount(null);
+    } else if (res.error) {
+      throw new Error(res.error);
     }
   };
 

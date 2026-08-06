@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { updateTrade, deleteTrade } from "@/lib/supabase/trades";
 import { addTagToTrade, removeTagFromTrade, fetchUserTags, createTag } from "@/lib/supabase/trade-tags";
 import { uploadTradeImage, deleteTradeImage } from "@/lib/supabase/trade-images";
-import { fetchJournalsByTradeId } from "@/lib/supabase/journals";
+import { JournalService } from "@/lib/services/JournalService";
 import type { CloudTradeWithRelations, TradeTag, TradeImage, TradeJournal } from "@/types/database";
 import {
   X, TrendingUp, TrendingDown, FileText, Camera, Tag as TagIcon,
@@ -72,7 +72,7 @@ export function CloudTradeDetailDrawer({ trade, onClose, onRefresh }: CloudTrade
 
     if (userId) {
       loadAllTags(userId);
-      fetchJournalsByTradeId(userId, trade.id).then((res) => {
+      JournalService.getJournalsByTradeId(userId, trade.id).then((res) => {
         if (res.data) setRelatedJournals(res.data);
       });
     }

@@ -6,7 +6,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { TableProperties, Upload, Plus } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { fetchTrades, deleteTrade } from "@/lib/supabase/trades";
+import { TradeService } from "@/lib/services/TradeService";
 import { useAppEventListener } from "@/lib/events/event-bus";
 import { fetchTradingAccounts } from "@/lib/supabase/accounts";
 import { useJournalStore } from "@/lib/store/useJournalStore";
@@ -78,7 +78,7 @@ export default function JournalPage() {
         return;
       }
 
-      const { data } = await fetchTrades(uid, filters, page, pageSize, "close_time", false);
+      const { data } = await TradeService.getTrades(uid, filters, page, pageSize, "close_time", false);
       if (data) {
         setResult(data);
       } else {
@@ -114,11 +114,11 @@ export default function JournalPage() {
     }
     if (!uid) return;
 
-    const { data: success, error: delErr } = await deleteTrade(id, uid);
+    const { data: success, error: delErr } = await TradeService.deleteTrade(id, uid);
     if (success) {
       await loadTrades();
     } else {
-      alert(`Delete trade failed: ${delErr || "Deletion failed"}`);
+      alert(`Failed to delete trade: ${delErr || "Database error"}`);
     }
   };
 

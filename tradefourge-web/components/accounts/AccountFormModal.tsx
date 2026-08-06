@@ -148,10 +148,13 @@ export function AccountFormModal({
       if (errMsg.includes("already exists")) {
         setError("account_name", {
           type: "manual",
-          message: "This account name already exists.",
+          message: "An account with this name already exists.",
         });
       } else {
-        console.error("AccountFormModal submit error:", err);
+        setError("root", {
+          type: "manual",
+          message: errMsg,
+        });
       }
     }
   };
@@ -170,6 +173,11 @@ export function AccountFormModal({
       size="lg"
     >
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+        {errors.root && (
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono font-bold">
+            ⚠️ {errors.root.message}
+          </div>
+        )}
         {/* Read-Only Auto-Generated Display ID */}
         <div>
           <label className={labelClass}>Account Display ID (Auto-Generated & Read-Only)</label>

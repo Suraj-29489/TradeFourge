@@ -1,21 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   BookOpen,
-  Plus,
   Search,
-  Filter,
   Trash2,
   Edit2,
   Copy,
   ExternalLink,
-  Sliders,
-  Sparkles,
-  Calendar,
-  Tag,
-  Smile,
-  X,
   Bold,
   Italic,
   List,
@@ -23,22 +15,19 @@ import {
   Heading1,
   Heading2,
   Quote,
-  Code,
   Undo,
   Redo,
   Check,
   TrendingUp,
-  TrendingDown,
+  X,
+  Smile,
+  Zap,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import {
-  fetchTradeJournals,
-  createTradeJournal,
-  updateTradeJournal,
-  deleteTradeJournal,
-  TradeJournalFilters,
-} from "@/lib/supabase/journals";
-import { fetchTrades } from "@/lib/supabase/trades";
+import { JournalService } from "@/lib/services/JournalService";
+import { TradeService } from "@/lib/services/TradeService";
+import { useActiveAccount } from "@/context/ActiveAccountContext";
+import { useAppEventListener } from "@/lib/events/event-bus";
 import type { TradeJournal, CloudTradeWithRelations, NewTradeJournal } from "@/types/database";
 import { useTheme } from "@/context/ThemeContext";
 
@@ -66,7 +55,7 @@ const CATEGORY_OPTIONS = [
   "Post-Trade Retrospective",
 ];
 
-const TAG_SUGGESTIONS = [
+const DEFAULT_TAGS = [
   "FOMO",
   "Discipline",
   "Revenge Trade",
@@ -83,9 +72,12 @@ const TAG_SUGGESTIONS = [
   "Risk Management",
 ];
 
+const STORAGE_DRAFT_KEY = "tf_journal_draft";
+
 export const TradingJournalManager: React.FC = () => {
   const { theme } = useTheme();
   const isLight = theme === "light";
+  const { activeAccountId } = useActiveAccount();
   const supabase = createClient();
 
   const [userId, setUserId] = useState<string | null>(null);
@@ -93,6 +85,7 @@ export const TradingJournalManager: React.FC = () => {
   const [userTrades, setUserTrades] = useState<CloudTradeWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<string | null>(null);
 
   // Form State
   const [isEditing, setIsEditing] = useState(false);
@@ -117,7 +110,7 @@ export const TradingJournalManager: React.FC = () => {
   // Modal State for Viewing Full Journal
   const [viewingJournal, setViewingJournal] = useState<TradeJournal | null>(null);
 
-  // Load User & Trades & Journals
+  // Load User & Data
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -125,22 +118,66 @@ export const TradingJournalManager: React.FC = () => {
       if (user) {
         setUserId(user.id);
         const [jRes, tRes] = await Promise.all([
-          fetchTradeJournals(user.id),
-          fetchTrades(user.id, {}, 1, 100, "close_time", false),
+          JournalService.getJournals(user.id, {
+            search: searchQuery,
+            category: filterCategory,
+            mood: filterMood,
+            tag: filterTag,
+          }),
+          TradeService.getTrades(user.id, {}, 1, 100, "close_time", false),
         ]);
         if (jRes.data) setJournals(jRes.data);
         if (tRes.data?.data) setUserTrades(tRes.data.data);
       }
     } catch (err) {
-      console.error("Failed to load journal records:", err);
+      console.error("[TradingJournalManager] Failed to load journals:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchQuery, filterCategory, filterMood, filterTag]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useAppEventListener("tradefourge:data-changed", () => {
+    loadData();
+  });
+
+  // PART 5: Restore Draft from localStorage on Mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const rawDraft = localStorage.getItem(STORAGE_DRAFT_KEY);
+      if (rawDraft) {
+        const parsed = JSON.parse(rawDraft);
+        if (parsed.title || parsed.content) {
+          setTitle(parsed.title || "");
+          setContent(parsed.content || "");
+          if (parsed.category) setCategory(parsed.category);
+          if (parsed.mood) setMood(parsed.mood);
+          if (parsed.confidence) setConfidence(parsed.confidence);
+          if (parsed.tags) setSelectedTags(parsed.tags);
+          setDraftStatus("Restored unsaved draft");
+        }
+      }
+    } catch {}
+  }, []);
+
+  // PART 5: Auto-Save Draft Every 30 Seconds
+  const lastSavedDraftRef = useRef<string>("");
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (typeof window === "undefined" || isEditing) return;
+      const currentPayload = JSON.stringify({ title, content, category, mood, confidence, tags: selectedTags });
+      if ((title.trim() || content.trim()) && currentPayload !== lastSavedDraftRef.current) {
+        localStorage.setItem(STORAGE_DRAFT_KEY, currentPayload);
+        lastSavedDraftRef.current = currentPayload;
+        setDraftStatus(`Draft auto-saved ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+      }
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [title, content, category, mood, confidence, selectedTags, isEditing]);
 
   // Word counter
   const wordCount = useMemo(() => {
@@ -148,20 +185,30 @@ export const TradingJournalManager: React.FC = () => {
     return text ? text.split(/\s+/).length : 0;
   }, [content]);
 
+  // PART 6: Tag Sanitization & Addition Engine
+  const sanitizeTag = (input: string): string => {
+    return input
+      .replace(/[^a-zA-Z0-9 _-]/g, "")
+      .trim()
+      .slice(0, 30);
+  };
+
   const handleTagToggle = (tag: string) => {
-    if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter((t) => t !== tag));
+    const clean = sanitizeTag(tag);
+    if (!clean) return;
+    if (selectedTags.includes(clean)) {
+      setSelectedTags(selectedTags.filter((t) => t !== clean));
     } else {
-      setSelectedTags([...selectedTags, tag]);
+      setSelectedTags([...selectedTags, clean]);
     }
   };
 
   const handleAddCustomTag = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && customTagInput.trim()) {
+    if (e.key === "Enter") {
       e.preventDefault();
-      const newTag = customTagInput.trim();
-      if (!selectedTags.includes(newTag)) {
-        setSelectedTags([...selectedTags, newTag]);
+      const clean = sanitizeTag(customTagInput);
+      if (clean && !selectedTags.includes(clean)) {
+        setSelectedTags([...selectedTags, clean]);
       }
       setCustomTagInput("");
     }
@@ -181,19 +228,25 @@ export const TradingJournalManager: React.FC = () => {
         confidence,
         tags: selectedTags,
         session: sessionName,
+        account_id: activeAccountId || null,
         trade_id: journalType === "trade" && selectedTradeId ? selectedTradeId : null,
       };
 
       if (isEditing && editingId) {
-        await updateTradeJournal(editingId, userId, payload);
+        await JournalService.updateJournal(editingId, userId, payload);
       } else {
-        await createTradeJournal(userId, payload);
+        await JournalService.createJournal(userId, payload);
       }
 
+      // Clear local draft upon successful save
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(STORAGE_DRAFT_KEY);
+      }
+      setDraftStatus(null);
       resetForm();
       await loadData();
     } catch (err) {
-      console.error("Failed to save journal:", err);
+      console.error("[TradingJournalManager] Failed to save journal:", err);
     } finally {
       setSaving(false);
     }
@@ -233,7 +286,7 @@ export const TradingJournalManager: React.FC = () => {
 
   const handleDeleteClick = async (id: string) => {
     if (!userId || !confirm("Are you sure you want to delete this journal entry?")) return;
-    await deleteTradeJournal(id, userId);
+    await JournalService.deleteJournal(id, userId);
     await loadData();
   };
 
@@ -247,33 +300,16 @@ export const TradingJournalManager: React.FC = () => {
       confidence: j.confidence,
       tags: j.tags,
       session: j.session,
+      account_id: j.account_id || activeAccountId || null,
       trade_id: j.trade_id,
     };
-    await createTradeJournal(userId, payload);
+    await JournalService.createJournal(userId, payload);
     await loadData();
   };
 
-  // Basic Rich Text Helper Functions
   const applyFormat = (command: string, value: string | undefined = undefined) => {
     document.execCommand(command, false, value);
   };
-
-  // Filtered Journals List
-  const filteredJournals = useMemo(() => {
-    return journals.filter((j) => {
-      if (filterCategory !== "ALL" && j.category !== filterCategory) return false;
-      if (filterMood !== "ALL" && j.mood !== filterMood) return false;
-      if (filterTag !== "ALL" && !j.tags?.includes(filterTag)) return false;
-      if (searchQuery.trim() !== "") {
-        const q = searchQuery.toLowerCase();
-        const matchTitle = j.title.toLowerCase().includes(q);
-        const matchContent = j.content.toLowerCase().includes(q);
-        const matchCategory = j.category.toLowerCase().includes(q);
-        if (!matchTitle && !matchContent && !matchCategory) return false;
-      }
-      return true;
-    });
-  }, [journals, filterCategory, filterMood, filterTag, searchQuery]);
 
   return (
     <div className="space-y-8 font-mono">
@@ -289,6 +325,11 @@ export const TradingJournalManager: React.FC = () => {
               }`}>
                 Institutional Journaling Module
               </span>
+              {draftStatus && (
+                <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
+                  <Zap className="w-3 h-3 animate-pulse" /> {draftStatus}
+                </span>
+              )}
             </div>
             <h2 className={`text-2xl font-black font-sans tracking-tight ${isLight ? "text-slate-900" : "text-white"}`}>
               {isEditing ? "Edit Trading Journal" : "Trading Journal"}
@@ -388,10 +429,12 @@ export const TradingJournalManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Mood, Confidence, & Session Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 rounded-2xl border bg-slate-50/50 dark:bg-white/[0.02] border-slate-200 dark:border-white/10">
+          {/* PART 7: REBUILT MOOD, CONFIDENCE & SESSION ROW */}
+          <div className={`p-5 rounded-2xl border grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch ${
+            isLight ? "bg-slate-50/70 border-slate-200" : "bg-[#080B11]/80 border-white/10"
+          }`}>
             {/* Mood Selector */}
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col justify-between">
               <label className={`text-xs font-bold block ${isLight ? "text-slate-700" : "text-gray-300"}`}>
                 Trader Mood / Mindset
               </label>
@@ -401,11 +444,11 @@ export const TradingJournalManager: React.FC = () => {
                     key={m.label}
                     type="button"
                     onClick={() => setMood(m.label)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border flex items-center gap-1 transition-all ${
+                    className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all ${
                       mood === m.label
                         ? isLight
-                          ? "bg-emerald-500/10 border-emerald-600 text-emerald-800 shadow-sm"
-                          : "bg-blue-600/20 border-blue-500 text-blue-300"
+                          ? "bg-emerald-500/10 border-emerald-600 text-emerald-800 shadow-sm font-black"
+                          : "bg-blue-600/30 border-blue-500 text-blue-300 font-black"
                         : isLight
                         ? "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
                         : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10"
@@ -419,7 +462,7 @@ export const TradingJournalManager: React.FC = () => {
             </div>
 
             {/* Confidence Slider */}
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col justify-between p-3 rounded-xl border bg-white dark:bg-white/[0.02] border-slate-200 dark:border-white/10">
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className={isLight ? "text-slate-700" : "text-gray-300"}>Setup Confidence</span>
                 <span className={isLight ? "text-emerald-700" : "text-emerald-400"}>{confidence}%</span>
@@ -432,18 +475,21 @@ export const TradingJournalManager: React.FC = () => {
                 onChange={(e) => setConfidence(parseInt(e.target.value))}
                 className="w-full accent-emerald-600 cursor-pointer"
               />
+              <span className="text-[10px] text-gray-400 font-sans">
+                {confidence >= 80 ? "High Conviction Setup" : confidence >= 50 ? "Standard Planned Trade" : "Low Conviction / Caution"}
+              </span>
             </div>
 
             {/* Session Selector */}
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col justify-between">
               <label className={`text-xs font-bold block ${isLight ? "text-slate-700" : "text-gray-300"}`}>
                 Market Session
               </label>
               <select
                 value={sessionName}
                 onChange={(e) => setSessionName(e.target.value)}
-                className={`w-full px-3 py-2 rounded-xl border text-xs font-sans font-bold focus:outline-none ${
-                  isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#080B11] border-white/10 text-white"
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-sans font-bold focus:outline-none ${
+                  isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/10 text-white"
                 }`}
               >
                 <option value="London">London Session</option>
@@ -456,13 +502,13 @@ export const TradingJournalManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Tags Selector */}
+          {/* PART 6: TAGS SELECTOR & SANITIZED INPUT */}
           <div className="space-y-2">
             <label className={`text-xs font-bold block ${isLight ? "text-slate-700" : "text-gray-300"}`}>
-              Tags & Strategy Themes
+              Tags & Strategy Themes (Press Enter to Add)
             </label>
             <div className="flex flex-wrap gap-1.5 items-center">
-              {TAG_SUGGESTIONS.map((tag) => {
+              {DEFAULT_TAGS.map((tag) => {
                 const selected = selectedTags.includes(tag);
                 return (
                   <button
@@ -484,9 +530,21 @@ export const TradingJournalManager: React.FC = () => {
                 );
               })}
 
+              {selectedTags.filter((t) => !DEFAULT_TAGS.includes(t)).map((customTag) => (
+                <span
+                  key={customTag}
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1"
+                >
+                  #{customTag}
+                  <button type="button" onClick={() => handleTagToggle(customTag)}>
+                    <X className="w-3 h-3 hover:text-rose-400" />
+                  </button>
+                </span>
+              ))}
+
               <input
                 type="text"
-                placeholder="+ Add Tag (Press Enter)"
+                placeholder="+ Add Custom Tag"
                 value={customTagInput}
                 onChange={(e) => setCustomTagInput(e.target.value)}
                 onKeyDown={handleAddCustomTag}
@@ -497,89 +555,44 @@ export const TradingJournalManager: React.FC = () => {
             </div>
           </div>
 
-          {/* Notion-Style Clean Rich Text Editor Container */}
+          {/* PART 8: NOTION-STYLE RICH TEXT EDITOR */}
           <div className={`rounded-2xl border overflow-hidden ${
             isLight ? "bg-white border-[#E5E7EB]" : "bg-[#080B11] border-white/10"
           }`}>
-            {/* Formatting Toolbar */}
-            <div className={`p-2 border-b flex flex-wrap items-center gap-1 text-xs font-sans ${
+            {/* Toolbar */}
+            <div className={`p-2.5 border-b flex flex-wrap items-center gap-1 text-xs font-sans ${
               isLight ? "bg-slate-50 border-slate-200 text-slate-700" : "bg-white/5 border-white/10 text-gray-300"
             }`}>
-              <button
-                type="button"
-                onClick={() => applyFormat("bold")}
-                className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10 font-bold"
-                title="Bold"
-              >
+              <button type="button" onClick={() => applyFormat("bold")} className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10 font-bold" title="Bold">
                 <Bold className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => applyFormat("italic")}
-                className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10 italic"
-                title="Italic"
-              >
+              <button type="button" onClick={() => applyFormat("italic")} className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10 italic" title="Italic">
                 <Italic className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => applyFormat("formatBlock", "<h1>")}
-                className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10"
-                title="Heading 1"
-              >
+              <button type="button" onClick={() => applyFormat("formatBlock", "<h1>")} className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10" title="Heading 1">
                 <Heading1 className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => applyFormat("formatBlock", "<h2>")}
-                className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10"
-                title="Heading 2"
-              >
+              <button type="button" onClick={() => applyFormat("formatBlock", "<h2>")} className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10" title="Heading 2">
                 <Heading2 className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => applyFormat("insertUnorderedList")}
-                className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10"
-                title="Bullet List"
-              >
+              <button type="button" onClick={() => applyFormat("insertUnorderedList")} className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10" title="Bullet List">
                 <List className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => applyFormat("insertOrderedList")}
-                className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10"
-                title="Numbered List"
-              >
+              <button type="button" onClick={() => applyFormat("insertOrderedList")} className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10" title="Numbered List">
                 <ListOrdered className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => applyFormat("formatBlock", "<blockquote>")}
-                className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10"
-                title="Quote"
-              >
+              <button type="button" onClick={() => applyFormat("formatBlock", "<blockquote>")} className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10" title="Quote">
                 <Quote className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => applyFormat("undo")}
-                className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10 ml-auto"
-                title="Undo"
-              >
+              <button type="button" onClick={() => applyFormat("undo")} className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10 ml-auto" title="Undo">
                 <Undo className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={() => applyFormat("redo")}
-                className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10"
-                title="Redo"
-              >
+              <button type="button" onClick={() => applyFormat("redo")} className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-white/10" title="Redo">
                 <Redo className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Rich Text Editor Textarea */}
+            {/* Textarea Editor */}
             <textarea
               required
               rows={8}
@@ -591,16 +604,16 @@ export const TradingJournalManager: React.FC = () => {
               }`}
             />
 
-            {/* Editor Footer / Word Counter */}
+            {/* Footer */}
             <div className={`px-4 py-2 border-t flex items-center justify-between text-[11px] font-mono ${
               isLight ? "bg-slate-50 border-slate-200 text-slate-500" : "bg-white/5 border-white/10 text-gray-400"
             }`}>
               <span>Word Count: <strong>{wordCount}</strong> words</span>
-              <span>Cloud Auto-Save Ready</span>
+              <span>Supabase Cloud Sync Ready</span>
             </div>
           </div>
 
-          {/* Submit Action Row */}
+          {/* Submit Button */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="submit"
@@ -616,7 +629,7 @@ export const TradingJournalManager: React.FC = () => {
         </form>
       </div>
 
-      {/* ── JOURNAL TIMELINE SECTION ─────────────────────────────────────────── */}
+      {/* ── PART 9: JOURNAL TIMELINE SECTION ─────────────────────────────────── */}
       <div className={`p-6 sm:p-8 rounded-3xl border shadow-sm space-y-6 transition-colors ${
         isLight ? "bg-white border-[#E5E7EB] text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"
       }`}>
@@ -626,11 +639,11 @@ export const TradingJournalManager: React.FC = () => {
               Journal Timeline
             </h3>
             <p className={`text-xs font-sans ${isLight ? "text-slate-500" : "text-gray-400"}`}>
-              {filteredJournals.length} saved journal entry records
+              {journals.length} saved database journal records
             </p>
           </div>
 
-          {/* Search & Filter Bar */}
+          {/* Search & Filter Controls */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
               <Search className={`w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 ${isLight ? "text-slate-400" : "text-gray-400"}`} />
@@ -674,14 +687,14 @@ export const TradingJournalManager: React.FC = () => {
         </div>
 
         {/* Timeline Cards */}
-        {filteredJournals.length === 0 ? (
+        {journals.length === 0 ? (
           <div className="py-12 text-center text-xs font-sans text-slate-500 dark:text-gray-400 space-y-2">
             <BookOpen className="w-8 h-8 mx-auto text-slate-400 opacity-60" />
             <p>No journal entries found matching filters.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredJournals.map((j) => {
+            {journals.map((j) => {
               const moodObj = MOOD_OPTIONS.find((m) => m.label === j.mood);
               return (
                 <div

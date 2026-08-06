@@ -183,6 +183,7 @@ export interface TradeJournal {
   id: string;
   user_id: string;
   trade_id?: string | null;
+  account_id?: string | null;
   title: string;
   content: string;
   category: string;

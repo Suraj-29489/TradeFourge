@@ -5,6 +5,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { AccountService } from "@/lib/services/AccountService";
 import { fetchTradingAccounts, createTradingAccount } from "@/lib/supabase/accounts";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useAppEventListener } from "@/lib/events/event-bus";
@@ -81,7 +82,7 @@ export const AccountsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const loadAccounts = useCallback(async (userId: string) => {
     try {
-      const { data } = await fetchTradingAccounts(userId);
+      const { data } = await AccountService.getAccounts(userId);
       const loaded = data ?? [];
       setAccounts(loaded);
 
@@ -162,13 +163,17 @@ export const AccountsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const { data: { user } } = await supabase.auth.getUser();
       targetUserId = user?.id;
     }
-    if (!targetUserId) return null;
-    const { data, error } = await createTradingAccount(targetUserId, payload);
+    if (!targetUserId) {
+      throw new Error("User not authenticated. Please log in again.");
+    }
+    const { data, error } = await AccountService.createAccount(targetUserId, payload);
     if (data) {
       await loadAccounts(targetUserId);
       return data;
     }
-    if (error) console.error("[AccountsProvider] addNewAccount error:", error);
+    if (error) {
+      throw new Error(error);
+    }
     return null;
   };
 
