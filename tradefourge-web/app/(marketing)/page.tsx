@@ -10,6 +10,8 @@ import { WhyTradeFourge } from "@/components/landing/WhyTradeFourge";
 import { AIShowcase } from "@/components/landing/AIShowcase";
 import { PricingSection } from "@/components/landing/PricingSection";
 import { FAQSection } from "@/components/landing/FAQSection";
+import { IntroAnimation } from "@/components/landing/IntroAnimation";
+import { useIntroAnimation } from "@/hooks/useIntroAnimation";
 
 function StorytellingWrapper({
   children,
@@ -44,8 +46,15 @@ function StorytellingWrapper({
 }
 
 export default function MarketingLandingPage() {
+  const { isMounted, shouldPlayIntro, handleAnimationComplete } = useIntroAnimation();
+
   return (
     <div className="relative bg-[#0B0D13] overflow-clip selection:bg-blue-600 selection:text-white">
+      {/* Premium First-Visit Intro Brand Reveal Overlay */}
+      {isMounted && shouldPlayIntro && (
+        <IntroAnimation onComplete={handleAnimationComplete} />
+      )}
+
       {/* Storytelling Section 1: Hero & Stats */}
       <StorytellingWrapper zIndex={10}>
         <div className="flex flex-col justify-between min-h-screen">
@@ -89,7 +98,7 @@ export default function MarketingLandingPage() {
         </div>
       </StorytellingWrapper>
 
-      {/* Normal Scrolling Section: FAQ & Footer (Exits sticky stacking context) */}
+      {/* Normal Scrolling Section: FAQ & Footer */}
       <div className="relative z-[70] bg-[#0B0D13] border-t border-white/10 shadow-2xl">
         <FAQSection />
       </div>

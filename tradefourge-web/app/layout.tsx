@@ -26,8 +26,15 @@ export const metadata: Metadata = {
   creator: "TradeFourge",
   publisher: "TradeFourge",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
+  manifest: "/site.webmanifest",
   openGraph: {
     title: "TradeFourge — Advanced Trading Intelligence Terminal",
     description:
@@ -68,7 +75,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} antialiased selection:bg-purple-600 selection:text-white`}
+        className={`${inter.variable} antialiased selection:bg-blue-600 selection:text-white`}
         style={{ backgroundColor: "var(--body-bg)", color: "var(--body-text)" }}
       >
         {children}
