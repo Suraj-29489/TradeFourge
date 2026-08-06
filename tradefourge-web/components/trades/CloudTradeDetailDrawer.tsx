@@ -10,7 +10,8 @@ import { createClient } from "@/lib/supabase/client";
 import { updateTrade, deleteTrade } from "@/lib/supabase/trades";
 import { addTagToTrade, removeTagFromTrade, fetchUserTags, createTag } from "@/lib/supabase/trade-tags";
 import { uploadTradeImage, deleteTradeImage } from "@/lib/supabase/trade-images";
-import type { CloudTradeWithRelations, TradeTag, TradeImage } from "@/types/database";
+import { fetchJournalsByTradeId } from "@/lib/supabase/journals";
+import type { CloudTradeWithRelations, TradeTag, TradeImage, TradeJournal } from "@/types/database";
 import {
   X, TrendingUp, TrendingDown, FileText, Camera, Tag as TagIcon,
   Trash2, CheckCircle2, AlertCircle, Edit3, Save, Plus, Loader2, Sparkles, Check, PlayCircle, Eye, Maximize2
@@ -49,6 +50,9 @@ export function CloudTradeDetailDrawer({ trade, onClose, onRefresh }: CloudTrade
   const [uploadingImage, setUploadingImage] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
+  // Related Journals state
+  const [relatedJournals, setRelatedJournals] = useState<TradeJournal[]>([]);
+
   useEffect(() => {
     async function loadUser() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -68,6 +72,9 @@ export function CloudTradeDetailDrawer({ trade, onClose, onRefresh }: CloudTrade
 
     if (userId) {
       loadAllTags(userId);
+      fetchJournalsByTradeId(userId, trade.id).then((res) => {
+        if (res.data) setRelatedJournals(res.data);
+      });
     }
   }, [trade, userId]);
 
@@ -367,6 +374,32 @@ export function CloudTradeDetailDrawer({ trade, onClose, onRefresh }: CloudTrade
                       {trade.close_time ? format(parseISO(trade.close_time), "yyyy-MM-dd HH:mm:ss") : "—"}
                     </span>
                   </div>
+                </div>
+
+                {/* Related Journals Section */}
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-white flex items-center gap-1.5 font-sans">
+                      <FileText className="w-4 h-4 text-emerald-400" />
+                      <span>Related Journals ({relatedJournals.length} Entries)</span>
+                    </span>
+                  </div>
+
+                  {relatedJournals.length === 0 ? (
+                    <p className="text-[11px] text-gray-400 font-sans">No journal entries linked to this trade ticket yet.</p>
+                  ) : (
+                    <div className="space-y-2 font-sans">
+                      {relatedJournals.map((j) => (
+                        <div key={j.id} className="p-3 rounded-xl bg-[#080B11] border border-white/10 space-y-1">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-white">{j.title}</span>
+                            <span className="text-emerald-400 font-mono text-[10px]">{j.mood}</span>
+                          </div>
+                          <p className="text-[11px] text-gray-300 line-clamp-2">{j.content.replace(/<[^>]*>/g, " ")}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

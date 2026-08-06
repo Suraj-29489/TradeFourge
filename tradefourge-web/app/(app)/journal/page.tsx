@@ -23,6 +23,7 @@ import type {
 
 import { useActiveAccount } from "@/context/ActiveAccountContext";
 import { CompanionJournalView } from "@/components/companion/CompanionJournalView";
+import { TradingJournalManager } from "@/components/journal/TradingJournalManager";
 
 import { useTheme } from "@/context/ThemeContext";
 
@@ -213,6 +214,9 @@ export default function JournalPage() {
           accounts={accounts}
         />
       )}
+
+      {/* ── PART 2: DEDICATED TRADING JOURNAL SYSTEM ────────────────────────── */}
+      <TradingJournalManager />
 
       {/* Manual Trade Entry Modal */}
       <AddTradeModal

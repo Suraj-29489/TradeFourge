@@ -177,6 +177,27 @@ export type NewTradeTag = Omit<TradeTag, 'id' | 'user_id' | 'created_at'>;
 
 export type TradeImageType = 'chart' | 'setup' | 'exit' | 'screenshot' | 'other';
 
+// ─── Trade Journals ──────────────────────────────────────────────────────────
+
+export interface TradeJournal {
+  id: string;
+  user_id: string;
+  trade_id?: string | null;
+  title: string;
+  content: string;
+  category: string;
+  mood: string;
+  confidence: number;
+  tags: string[];
+  session?: string | null;
+  created_at: string;
+  updated_at: string;
+  trade?: Partial<CloudTrade> | null;
+}
+
+export type NewTradeJournal = Omit<TradeJournal, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
+export type UpdateTradeJournal = Partial<NewTradeJournal>;
+
 export interface TradeImage {
   id: string;
   trade_id: string;

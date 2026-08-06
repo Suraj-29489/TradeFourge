@@ -140,8 +140,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
               </nav>
             </div>
 
-            <div className={`p-4 border-t ${isLight ? "border-slate-200" : "border-white/[0.08]"}`}>
-              <ThemeToggle showLabel className="w-full justify-center" />
+            <div className={`p-4 border-t flex items-center justify-center ${isLight ? "border-slate-200" : "border-white/[0.08]"}`}>
+              <span className="text-[11px] font-mono opacity-60 text-slate-500 dark:text-gray-500 select-none">
+                TradeFourge v5.5.0
+              </span>
             </div>
           </motion.aside>
         )}
@@ -217,9 +219,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
         })}
       </nav>
 
-      {/* Bottom Footer Action */}
-      <div className={`p-3 border-t shrink-0 ${isLight ? "border-slate-200" : "border-white/[0.08]"}`}>
-        <ThemeToggle showLabel={!collapsed} className="w-full justify-center" />
+      {/* Bottom Footer Version Badge */}
+      <div className={`p-3.5 border-t shrink-0 flex items-center justify-center ${isLight ? "border-slate-200" : "border-white/[0.08]"}`}>
+        <span className={`text-[11px] font-mono opacity-60 select-none ${collapsed ? "text-[10px]" : ""} ${isLight ? "text-slate-500" : "text-gray-500"}`}>
+          {collapsed ? "v5.5.0" : "TradeFourge v5.5.0"}
+        </span>
       </div>
     </motion.aside>
   );

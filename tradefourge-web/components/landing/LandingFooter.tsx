@@ -169,7 +169,7 @@ export const LandingFooter: React.FC = () => {
             </div>
             <div className="flex items-center gap-3">
               <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
-                v5.3.0
+                v5.5.0
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />

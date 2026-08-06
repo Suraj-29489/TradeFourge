@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { generateValidationReport, ValidationReport } from "@/lib/engine/validation/validation-report";
-import { bulkInsertFrontendTrades } from "@/lib/supabase/frontend-store";
+import { bulkInsertTrades } from "@/lib/supabase/trades";
 import { createImportRecord, updateImportRecord } from "@/lib/supabase/csv-imports";
 import { createClient } from "@/lib/supabase/client";
 import { useUserProfile } from "@/context/UserProfileContext";
@@ -346,7 +346,7 @@ export const CsvUploader: React.FC = () => {
         allTrades,
         async (batchTrades, batchIdx) => {
           const targetUserId = user?.id || "local-user";
-          const res = await bulkInsertFrontendTrades(targetUserId, batchTrades);
+          const res = await bulkInsertTrades(targetUserId, batchTrades);
           totalInserted += res.inserted;
           totalSkipped += res.skippedDuplicates;
           if (res.errors.length > 0) {

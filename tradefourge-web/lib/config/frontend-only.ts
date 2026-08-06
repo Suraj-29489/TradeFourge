@@ -1,7 +1,7 @@
 /**
- * TradeFourge v5.1 — Hybrid Architecture Configuration
- * Backend services are re-enabled for Auth, User Profiles, Billing, Subscriptions, Owner Workspace, Teams, and Live Sync.
- * CSV Trade storage remains 100% offline and local (Browser Storage).
+ * TradeFourge v5.5.0 — Permanent Cloud Architecture
+ * All trade records, CSV imports, journal entries, and account statistics are stored permanently in Supabase.
+ * Browser storage (sessionStorage/localStorage) is strictly forbidden for trade history persistence.
  */
 
 export function isFrontendOnly(): boolean {
@@ -10,14 +10,13 @@ export function isFrontendOnly(): boolean {
       return true;
     }
   }
-  // Backend re-enabled by default for Auth, Profiles, Billing, Admin Workspace
   return false;
 }
 
 /**
- * CSV Trade storage is permanently local in browser storage (IndexedDB/sessionStorage/localStorage).
- * CSV trades must NEVER be uploaded to Supabase trade tables under any plan or auth state.
+ * CSV Trade storage is 100% cloud-persisted in Supabase PostgreSQL tables.
+ * Returns false so all trade imports and queries hit Supabase with RLS user isolation.
  */
 export function isCsvStorageLocal(): boolean {
-  return true;
+  return false;
 }
