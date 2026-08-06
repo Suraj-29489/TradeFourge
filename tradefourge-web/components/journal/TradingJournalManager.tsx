@@ -462,7 +462,9 @@ export const TradingJournalManager: React.FC = () => {
             </div>
 
             {/* Confidence Slider */}
-            <div className="space-y-2 flex flex-col justify-between p-3 rounded-xl border bg-white dark:bg-white/[0.02] border-slate-200 dark:border-white/10">
+            <div className={`space-y-2 flex flex-col justify-between p-3 rounded-xl border ${
+              isLight ? "bg-white border-slate-200" : "bg-[#0F141C] border-white/10"
+            }`}>
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className={isLight ? "text-slate-700" : "text-gray-300"}>Setup Confidence</span>
                 <span className={isLight ? "text-emerald-700" : "text-emerald-400"}>{confidence}%</span>

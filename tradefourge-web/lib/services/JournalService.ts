@@ -3,6 +3,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { emitAppEvent } from "@/lib/events/event-bus";
+import { ensureOrCreateTags } from "@/lib/supabase/trade-tags";
 import type {
   TradeJournal,
   NewTradeJournal,
@@ -97,6 +98,10 @@ export class JournalService {
         .filter(Boolean)
         .slice(0, 20);
 
+      if (sanitizedTags.length > 0) {
+        await ensureOrCreateTags(userId, sanitizedTags);
+      }
+
       const { data, error } = await supabase
         .from("trade_journals")
         .insert({
@@ -136,7 +141,11 @@ export class JournalService {
       };
 
       if (payload.tags) {
-        updateData.tags = payload.tags.map((t) => t.trim()).filter(Boolean).slice(0, 20);
+        const sanitizedTags = payload.tags.map((t) => t.trim()).filter(Boolean).slice(0, 20);
+        updateData.tags = sanitizedTags;
+        if (sanitizedTags.length > 0) {
+          await ensureOrCreateTags(userId, sanitizedTags);
+        }
       }
 
       const { data, error } = await supabase

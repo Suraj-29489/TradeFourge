@@ -59,6 +59,77 @@ export async function createTag(
   }
 }
 
+/**
+ * Ensure array of tag names exist in trade_tags table for user.
+ * Normalizes tag names (case-insensitive) to prevent duplicate tag records.
+ */
+export async function ensureOrCreateTags(
+  userId: string,
+  tagNames: string[]
+): Promise<ServiceResult<TradeTag[]>> {
+  if (isFrontendOnly()) {
+    return fetchUserTags(userId);
+  }
+
+  const supabase = createClient();
+  try {
+    const normalizedNames = Array.from(
+      new Set(tagNames.map((t) => t.trim()).filter(Boolean))
+    );
+
+    if (normalizedNames.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Fetch existing user tags
+    const { data: existingTags, error: fetchErr } = await supabase
+      .from('trade_tags')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (fetchErr) return { data: null, error: fetchErr.message };
+
+    const existingMap = new Map<string, TradeTag>();
+    (existingTags || []).forEach((t: TradeTag) => {
+      existingMap.set(t.name.toLowerCase(), t);
+    });
+
+    const resultTags: TradeTag[] = [];
+    const missingNames: string[] = [];
+
+    for (const name of normalizedNames) {
+      const lower = name.toLowerCase();
+      if (existingMap.has(lower)) {
+        resultTags.push(existingMap.get(lower)!);
+      } else {
+        missingNames.push(name);
+      }
+    }
+
+    if (missingNames.length > 0) {
+      const newRows = missingNames.map((name) => ({
+        user_id: userId,
+        name,
+        color: '#3b82f6',
+      }));
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from('trade_tags')
+        .insert(newRows)
+        .select();
+
+      if (!insertErr && inserted) {
+        resultTags.push(...inserted);
+      }
+    }
+
+    return { data: resultTags, error: null };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to ensure tags';
+    return { data: null, error: message };
+  }
+}
+
 // ─── Delete ───────────────────────────────────────────────────────────────────
 
 export async function deleteTag(
