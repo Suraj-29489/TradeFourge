@@ -558,7 +558,7 @@ export function AddTradeModal({ isOpen, onClose, onSuccess }: AddTradeModalProps
           <button
             type="submit"
             disabled={submitting}
-            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold shadow-glow flex items-center gap-2 active:scale-95 disabled:opacity-50"
+            className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-sm flex items-center gap-2 active:scale-95 disabled:opacity-50"
           >
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             <span>Log Trade</span>

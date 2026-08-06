@@ -5,7 +5,7 @@ import { BookOpen, Sparkles, Lock } from "lucide-react";
 
 export default function ReportsPage() {
   return (
-    <div className="space-y-6 font-mono text-gray-200">
+    <div className="space-y-6 font-mono text-gray-200 max-w-7xl mx-auto w-full">
       {/* Header Banner */}
       <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08]">
         <h1 className="text-2xl font-extrabold text-white tracking-tight font-sans flex items-center gap-2">

@@ -297,6 +297,28 @@ export const TradeCalendar: React.FC = () => {
     return `${m}m`;
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6 font-mono text-xs max-w-7xl mx-auto w-full pb-16">
+        <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] flex items-center justify-between animate-pulse">
+          <div className="h-6 w-48 bg-white/10 rounded-lg" />
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-28 bg-white/10 rounded-xl" />
+            <div className="h-9 w-28 bg-white/10 rounded-xl" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-7 gap-3">
+          {Array.from({ length: 35 }).map((_, i) => (
+            <div key={i} className="h-28 rounded-2xl bg-[#0F141C] border border-white/[0.08] p-3 animate-pulse space-y-2">
+              <div className="h-3 w-6 bg-white/10 rounded" />
+              <div className="h-4 w-16 bg-white/10 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (!loading && trades.length === 0) {
     return (
       <div className="space-y-6 font-mono text-xs max-w-7xl mx-auto pb-16">

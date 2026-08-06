@@ -304,13 +304,6 @@ export default function DashboardPage() {
 
         {/* Right: Productivity Quick Actions */}
         <div className="flex items-center gap-2 flex-wrap shrink-0">
-          <Link
-            href="/connect"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all text-xs"
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>Connect Companion</span>
-          </Link>
 
           <Link
             href="/upload"
@@ -398,7 +391,7 @@ export default function DashboardPage() {
           onClick={() => router.push("/performance")}
           className="p-3.5 rounded-2xl bg-[#111726] border border-white/10 hover:border-purple-500/40 hover:-translate-y-1 hover:shadow-xl transition-all duration-200 cursor-pointer space-y-1 group relative"
         >
-          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-purple-300 transition-colors">NET PROFIT</span>
+          <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-wider group-hover:text-blue-400 transition-colors">NET PnL</span>
           <span className={`text-sm font-extrabold block truncate ${analytics.netProfit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
             {formatSigned(analytics.netProfit)}
           </span>
@@ -528,55 +521,43 @@ export default function DashboardPage() {
 
       {/* ── ZERO STATE ONBOARDING (If no trades logged) ───────────────────── */}
       {trades.length === 0 ? (
-        <div className="p-8 rounded-2xl bg-[#111726] border border-purple-500/30 text-center space-y-4 shadow-2xl">
-          <div className="w-12 h-12 rounded-2xl bg-purple-600/20 text-purple-400 flex items-center justify-center mx-auto border border-purple-500/30">
-            <Upload className="w-6 h-6" />
-          </div>
-          <div className="max-w-md mx-auto space-y-1">
-            <h3 className="text-lg font-extrabold text-white">No trades imported yet</h3>
-            <p className="text-xs text-gray-400">
-              Upload your first MT4, MT5, cTrader, or brokerage CSV statement to unlock institutional trade analytics and performance metrics.
-            </p>
-          </div>
-          <div className="flex items-center justify-center gap-3 pt-2">
-            <Link
-              href="/upload"
-              className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all active:scale-95"
-            >
-              Upload CSV Statement
-            </Link>
-            <Link
-              href="/accounts"
-              className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-bold text-xs transition-all active:scale-95"
-            >
-              Create Account
-            </Link>
-          </div>
-        </div>
+        <EmptyState
+          icon={Upload}
+          title="No Trades Imported Yet"
+          description="Upload your first broker CSV statement to unlock trade analytics, equity curves, and performance metrics."
+          action={{
+            label: "Upload CSV Statement",
+            href: "/upload",
+          }}
+          secondaryAction={{
+            label: "Create Account",
+            href: "/accounts",
+          }}
+        />
       ) : (
         <>
           {/* ── SECTION 3: Large Responsive Equity Curve Chart ────────────── */}
-          <div className="p-6 rounded-2xl bg-[#111726] border border-white/10 space-y-4 shadow-2xl">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+          <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-4 shadow-2xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
               <div>
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  <LineChart className="w-4 h-4 text-purple-400" />
+                <h2 className="text-base font-bold text-white flex items-center gap-2 font-sans">
+                  <LineChart className="w-4 h-4 text-blue-400" />
                   Equity Growth Curve
                 </h2>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 font-sans">
                   Cumulative net profit trajectory over time · {currency}
                 </p>
               </div>
 
               {/* Range Filters */}
-              <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 text-xs shrink-0">
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs shrink-0 font-mono">
                 {(["7D", "30D", "90D", "ALL"] as TimeRange[]).map((r) => (
                   <button
                     key={r}
                     onClick={() => setTimeRange(r)}
                     className={`px-3 py-1.5 rounded-lg transition-all font-bold ${
                       timeRange === r
-                        ? "bg-purple-600 text-white shadow-glow"
+                        ? "bg-blue-600 text-white shadow-sm"
                         : "text-gray-400 hover:text-white"
                     }`}
                   >

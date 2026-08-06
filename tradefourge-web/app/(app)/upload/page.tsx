@@ -11,7 +11,7 @@ export default function UploadPage() {
   const { activeAccount } = useActiveAccount();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 font-mono text-gray-200">
+    <div className="max-w-7xl mx-auto w-full space-y-6 font-mono text-gray-200">
       {/* Current Active Account Header Strip */}
       <div className="p-5 rounded-2xl bg-[#0F141C] border border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
         <div className="space-y-1">

@@ -241,14 +241,6 @@ export const SettingsTabs: React.FC = () => {
             );
           })}
         </div>
-
-        <Link
-          href="/settings/connections"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-bold transition-all whitespace-nowrap shrink-0"
-        >
-          <Zap className="w-4 h-4" />
-          <span>Connection Manager →</span>
-        </Link>
       </div>
 
       {/* Global Toasts */}

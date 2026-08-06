@@ -130,7 +130,7 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className="space-y-6 font-mono text-gray-200">
+    <div className="space-y-6 font-mono text-gray-200 max-w-7xl mx-auto w-full">
       {/* Top Header Strip */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
         <div>

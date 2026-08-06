@@ -1,6 +1,4 @@
 "use client";
-// components/ui/EmptyState.tsx
-// TradeFourge v3.7.8 — Institutional Empty State Primitive (Blue Accent)
 
 import React from "react";
 import Link from "next/link";
@@ -30,18 +28,18 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   secondaryAction,
 }) => {
   return (
-    <div className="p-10 rounded-2xl bg-[#0F1420] border border-white/10 text-center space-y-4 font-mono max-w-lg mx-auto shadow-xl">
-      <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center mx-auto shadow-inner">
-        <Icon className="w-6 h-6" />
+    <div className="p-12 sm:p-16 rounded-2xl bg-[#0F141C] border border-white/[0.08] text-center space-y-4 font-mono w-full max-w-7xl mx-auto shadow-xl">
+      <div className="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center mx-auto shadow-inner">
+        <Icon className="w-7 h-7" />
       </div>
 
-      <div className="space-y-1">
-        <h3 className="text-sm font-extrabold text-white uppercase tracking-wide">{title}</h3>
-        <p className="text-xs text-gray-400 leading-relaxed">{description}</p>
+      <div className="space-y-1.5 max-w-md mx-auto">
+        <h3 className="text-base font-extrabold text-white uppercase tracking-wide font-sans">{title}</h3>
+        <p className="text-xs text-gray-400 leading-relaxed font-sans">{description}</p>
       </div>
 
       {(action || secondaryAction) && (
-        <div className="pt-2 flex items-center justify-center gap-3">
+        <div className="pt-3 flex items-center justify-center gap-3">
           {action && (
             action.href ? (
               <Link

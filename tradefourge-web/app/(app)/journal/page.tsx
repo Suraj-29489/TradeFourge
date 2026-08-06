@@ -119,21 +119,21 @@ export default function JournalPage() {
     filters.accountId === "ALL";
 
   return (
-    <div className="space-y-6 text-xs font-mono">
+    <div className="space-y-6 text-xs font-mono max-w-7xl mx-auto w-full">
       {/* Header */}
       <div className="p-6 rounded-2xl bg-[#111522] border border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+          <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
             <TableProperties className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-2 font-mono">
               Trade Journal
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 uppercase">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase">
                 Institutional
               </span>
             </h1>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-400 mt-0.5 font-sans">
               {loading
                 ? "Loading trade records..."
                 : `${result.total.toLocaleString()} trade${result.total !== 1 ? "s" : ""} recorded`}
@@ -144,14 +144,14 @@ export default function JournalPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/upload"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-dark-card hover:bg-dark-hover border border-dark-border text-gray-200 font-bold text-xs font-mono transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] text-gray-200 font-bold text-xs font-mono transition-all"
           >
             <Upload className="w-4 h-4" />
             Import CSV
           </Link>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs font-mono transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs font-mono transition-all active:scale-95 shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Add Trade

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { useActiveAccount } from "@/context/ActiveAccountContext";
-import { Moon, Sun, Menu, LogOut, User, Settings, FileSpreadsheet, ChevronDown, Bell } from "lucide-react";
+import { Menu, LogOut, User, Settings, FileSpreadsheet, ChevronDown, Layers } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface NavbarProps {
@@ -16,11 +16,9 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
   const router = useRouter();
   const init = useJournalStore((s) => s.init);
-  const theme = useJournalStore((s) => s.theme);
-  const setTheme = useJournalStore((s) => s.setTheme);
 
   const { profile } = useUserProfile();
-  const { activeAccount } = useActiveAccount();
+  const { activeAccount, openAccountTypeModal } = useActiveAccount();
 
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
@@ -91,19 +89,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
       {/* CENTER: Nothing */}
       <div className="hidden md:block" />
 
-      {/* RIGHT: Light/Dark Toggle + Notifications + User Profile Dropdown (No AI Companion elements) */}
+      {/* RIGHT: Change Workspace Button + User Profile Dropdown (Theme Switcher Removed) */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Light / Dark Toggle */}
+        {/* Change Workspace Button */}
         <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/[0.03] border border-white/[0.08] text-gray-400 hover:text-white hover:border-white/20 transition-all"
-          title={`Switch to ${theme === "dark" ? "Light" : "Dark"} mode`}
+          onClick={openAccountTypeModal}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-blue-500/40 hover:bg-white/[0.06] text-xs font-mono text-gray-200 transition-all"
+          title="Change Workspace Type"
         >
-          {theme === "dark" ? (
-            <Sun className="w-4 h-4 text-amber-400" />
-          ) : (
-            <Moon className="w-4 h-4 text-blue-400" />
-          )}
+          <Layers className="w-3.5 h-3.5 text-blue-400" />
+          <span className="font-bold text-[11px]">Change Workspace</span>
         </button>
 
         {/* User Dropdown */}

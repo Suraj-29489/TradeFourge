@@ -27,16 +27,7 @@ export const SignupForm: React.FC = () => {
     setSuccessMessage(null);
     setLoading(true);
 
-    const supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
     const callbackUrl = getAuthCallbackUrl("/auth/callback");
-
-    console.log("[SignupForm.tsx:handleSubmit]", {
-      file: "components/auth/SignupForm.tsx",
-      function: "handleSubmit",
-      email: email.trim(),
-      emailRedirectTo: callbackUrl,
-      supabaseUrl,
-    });
 
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -50,13 +41,6 @@ export const SignupForm: React.FC = () => {
         },
       });
 
-      console.log("[SignupForm.tsx:signUp:Response]", {
-        userCreated: Boolean(data?.user),
-        identities: data?.user?.identities,
-        hasSession: Boolean(data?.session),
-        error,
-      });
-
       if (error) {
         setErrorMessage(error.message);
         setLoading(false);
@@ -66,18 +50,17 @@ export const SignupForm: React.FC = () => {
       } else if (data.session) {
         setSuccessMessage("Account created successfully! Welcome to TradeFourge...");
         setTimeout(() => {
-          router.push("/connect");
+          router.push("/dashboard");
           router.refresh();
         }, 500);
       } else if (data.user) {
-        setSuccessMessage(`Account created! A verification link has been sent to ${email.trim()}. Please check your email inbox and click the link to log in.`);
+        setSuccessMessage(`Account created! A verification link has been sent to ${email.trim()}. Please check your email inbox to activate.`);
         setLoading(false);
       } else {
         setErrorMessage("Signup request sent, but no user record was returned.");
         setLoading(false);
       }
     } catch (err: any) {
-      console.error("[SignupForm.tsx:signUp:CatchError]", err);
       setErrorMessage(err?.message || "An unexpected error occurred during signup.");
       setLoading(false);
     }
@@ -108,16 +91,16 @@ export const SignupForm: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 text-left font-mono">
       {errorMessage && (
-        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-center gap-2">
+        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono space-y-1">
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs space-y-1">
           <div className="flex items-center gap-2 font-bold text-sm">
             <CheckCircle2 className="w-4 h-4 shrink-0" /> Verification Email Sent
           </div>
@@ -125,9 +108,9 @@ export const SignupForm: React.FC = () => {
         </div>
       )}
 
-      {/* Full Name */}
+      {/* Full Name Input */}
       <div className="space-y-1.5 font-mono">
-        <label className="text-[11px] font-medium text-gray-300 block">
+        <label htmlFor="name" className="text-[11px] font-medium text-gray-300 block">
           Full Name
         </label>
         <div className="relative">
@@ -135,7 +118,10 @@ export const SignupForm: React.FC = () => {
             <User className="w-4 h-4" />
           </div>
           <input
+            id="name"
+            name="name"
             type="text"
+            autoComplete="name"
             required
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
@@ -145,17 +131,20 @@ export const SignupForm: React.FC = () => {
         </div>
       </div>
 
-      {/* Email */}
+      {/* Email Input */}
       <div className="space-y-1.5 font-mono">
-        <label className="text-[11px] font-medium text-gray-300 block">
-          Work / Trading Email
+        <label htmlFor="email" className="text-[11px] font-medium text-gray-300 block">
+          Email Address
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
             <Mail className="w-4 h-4" />
           </div>
           <input
+            id="email"
+            name="email"
             type="email"
+            autoComplete="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -165,9 +154,9 @@ export const SignupForm: React.FC = () => {
         </div>
       </div>
 
-      {/* Password */}
+      {/* Password Input */}
       <div className="space-y-1.5 font-mono">
-        <label className="text-[11px] font-medium text-gray-300 block">
+        <label htmlFor="password" className="text-[11px] font-medium text-gray-300 block">
           Password
         </label>
         <div className="relative">
@@ -175,7 +164,10 @@ export const SignupForm: React.FC = () => {
             <Lock className="w-4 h-4" />
           </div>
           <input
+            id="password"
+            name="password"
             type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -210,7 +202,7 @@ export const SignupForm: React.FC = () => {
         </label>
       </div>
 
-      {/* Submit Button */}
+      {/* Primary Submit Button - Institutional Blue */}
       <button
         type="submit"
         disabled={loading}
@@ -226,7 +218,17 @@ export const SignupForm: React.FC = () => {
         )}
       </button>
 
-      {/* Google Sign Up */}
+      {/* Social Divider */}
+      <div className="relative my-4 text-center">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-white/[0.08]" />
+        </div>
+        <span className="relative px-3 bg-[#0F141C] text-[10px] font-mono text-gray-400 uppercase tracking-wider">
+          Or Continue With
+        </span>
+      </div>
+
+      {/* Google OAuth Button */}
       <button
         type="button"
         onClick={handleGoogleSignUp}
@@ -255,17 +257,12 @@ export const SignupForm: React.FC = () => {
                 d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"
               />
             </svg>
-            <span>Sign Up with Google</span>
+            <span>Continue with Google</span>
           </>
         )}
       </button>
 
-      {/* Security badge */}
-      <div className="pt-2 text-center text-[11px] font-mono text-gray-400 flex items-center justify-center gap-1.5">
-        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Free Trial Included · No Credit Card Required
-      </div>
-
-      {/* Link to Login */}
+      {/* Link to Sign In */}
       <div className="pt-2 text-center text-xs font-mono text-gray-400 border-t border-white/[0.08]">
         Already have an account?{" "}
         <Link href="/login" className="text-blue-400 font-bold hover:underline">
@@ -274,4 +271,4 @@ export const SignupForm: React.FC = () => {
       </div>
     </form>
   );
-};;
+};

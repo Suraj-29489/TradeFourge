@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { getActiveAnnouncements, Announcement } from "@/lib/admin/announcements";
-import { Megaphone, X, Info, AlertTriangle, Sparkles, ShieldAlert } from "lucide-react";
+import { X, Info, AlertTriangle, Sparkles, ShieldAlert } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+const STORAGE_KEY = "tf_dismissed_announcements_v4";
 
 export const AnnouncementBanner: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -14,6 +16,15 @@ export const AnnouncementBanner: React.FC = () => {
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          setDismissedIds(JSON.parse(saved));
+        }
+      } catch {}
+    }
+
     loadAnnouncements();
     const handler = () => loadAnnouncements();
     window.addEventListener("tf-announcements-changed", handler);
@@ -21,7 +32,15 @@ export const AnnouncementBanner: React.FC = () => {
   }, []);
 
   const handleDismiss = (id: string) => {
-    setDismissedIds((prev) => [...prev, id]);
+    setDismissedIds((prev) => {
+      const next = [...prev, id];
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
   };
 
   const visibleAnnouncements = announcements.filter((a) => !dismissedIds.includes(a.id));
@@ -42,7 +61,7 @@ export const AnnouncementBanner: React.FC = () => {
         };
       case "New Feature":
         return {
-          bg: "bg-purple-500/10 border-purple-500/30 text-purple-400",
+          bg: "bg-blue-500/10 border-blue-500/30 text-blue-400",
           icon: Sparkles,
         };
       default:
@@ -73,12 +92,12 @@ export const AnnouncementBanner: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-white tracking-wide">{ann.title}</span>
+                    <span className="font-bold text-white tracking-wide font-sans">{ann.title}</span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-black/30 border border-white/10">
                       {ann.type}
                     </span>
                   </div>
-                  <p className="text-gray-300 mt-1 leading-relaxed text-xs">{ann.message}</p>
+                  <p className="text-gray-300 mt-1 leading-relaxed text-xs font-sans">{ann.message}</p>
                 </div>
               </div>
               <button

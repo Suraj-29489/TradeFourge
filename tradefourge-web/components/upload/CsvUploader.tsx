@@ -472,7 +472,7 @@ export const CsvUploader: React.FC = () => {
           <div className="pt-2">
             <button
               onClick={() => setAddAccountModalOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all active:scale-95 shadow-xl shadow-purple-600/25"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all active:scale-95 shadow-sm"
             >
               <Plus className="w-4 h-4" />
               <span>Create Trading Account</span>
@@ -650,7 +650,7 @@ export const CsvUploader: React.FC = () => {
             <button
               onClick={() => setCurrentStep(2)}
               disabled={!selectedAccount}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-lg active:scale-95"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-sm active:scale-95"
             >
               <span>Next Step: File Upload</span>
               <ChevronRight className="w-4 h-4" />
@@ -875,7 +875,7 @@ export const CsvUploader: React.FC = () => {
             {validationReport.isImportAllowed ? (
               <button
                 onClick={() => setCurrentStep(4)}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all shadow-xl active:scale-95"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-all shadow-sm active:scale-95"
               >
                 <span>Proceed to Step 4 (Trade Preview & Policy)</span>
                 <ChevronRight className="w-4 h-4" />
@@ -1149,7 +1149,7 @@ export const CsvUploader: React.FC = () => {
             <button
               onClick={handleConfirmImport}
               disabled={!validationReport.isImportAllowed || isFinalizingImport}
-              className="flex items-center gap-2 px-7 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-extrabold text-xs transition-all shadow-xl active:scale-95 shadow-purple-600/25"
+              className="flex items-center gap-2 px-7 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-extrabold text-xs transition-all shadow-sm active:scale-95 shadow-blue-600/25"
             >
               {isFinalizingImport ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
