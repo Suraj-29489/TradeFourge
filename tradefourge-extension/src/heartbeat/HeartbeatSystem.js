@@ -1,5 +1,5 @@
 /**
- * TradeFourge Companion Extension v3.4 — Heartbeat & Diagnostics System
+ * TradeFourge Companion Extension v5.1 — Heartbeat & Diagnostics System
  * Emits dynamic diagnostic health metrics every 5 seconds.
  */
 
@@ -44,7 +44,7 @@ export class HeartbeatSystem {
     const payload = {
       isInstalled: true,
       status: 'connected',
-      version: '3.4.0',
+      version: '5.1.0',
       browser: 'Chrome',
       latency,
       uptimeSeconds,

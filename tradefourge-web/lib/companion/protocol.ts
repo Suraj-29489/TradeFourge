@@ -1,5 +1,5 @@
 /**
- * TradeFourge Companion v2.0 — Message Protocol Definitions
+ * TradeFourge Companion v5.1 — Message Protocol Definitions
  * Strongly-typed bidirectional communication envelope for Web ↔ Extension Bridge.
  */
 
@@ -49,6 +49,8 @@ export interface TFMessageError {
     | "EXTENSION_OUTDATED"
     | "BROWSER_UNSUPPORTED"
     | "EXNESS_NOT_OPEN"
+    | "CONTENT_SCRIPT_UNREACHABLE"
+    | "MALFORMED_ACCOUNT_PAYLOAD"
     | "NO_ACCOUNTS_FOUND"
     | "IMPORT_FAILED"
     | "HISTORY_INTERRUPTED"
@@ -57,6 +59,9 @@ export interface TFMessageError {
     | "PERMISSION_DENIED"
     | "UNKNOWN_ERROR";
   message: string;
+  stage?: string;
+  reason?: string;
+  suggestedAction?: string;
   details?: any;
 }
 
@@ -72,8 +77,10 @@ export interface TFMessageEnvelope<T = any> {
 
 // Discovered Account Model from Extension
 export interface DiscoveredAccount {
+  id?: string;
   account_number: string;
   account_name: string;
+  nickname?: string;
   broker: string;
   platform: string;
   currency: string;
@@ -95,7 +102,18 @@ export interface ImportProgressPayload {
   totalTrades: number;
   offset: number;
   percentage: number;
-  stage: "connecting" | "discovering" | "fetching_history" | "importing" | "building_analytics" | "completed";
+  stage:
+    | "connecting"
+    | "discovering"
+    | "fetching_history"
+    | "importing"
+    | "building_analytics"
+    | "request_history"
+    | "receiving_batches"
+    | "writing_database"
+    | "verifying"
+    | "completed"
+    | "complete";
   message?: string;
 }
 

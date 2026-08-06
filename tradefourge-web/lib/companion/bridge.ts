@@ -1,5 +1,5 @@
 /**
- * TradeFourge Companion v3.4 — Communication Bridge
+ * TradeFourge Companion v5.1 — Communication Bridge
  * Uses chrome.runtime.sendMessage(extensionId, message) for cross-tab Manifest V3 messaging.
  * Extension ID is discovered dynamically from DOM attribute set by injector.js content script.
  * Also receives push events from injector.js via window.postMessage (Background → Injector → Web).
@@ -131,13 +131,14 @@ export class CompanionBridge {
     if (this.isInitialized) return;
     this.isInitialized = true;
 
-    // Listen for window.postMessage responses (fallback path from same-tab content scripts)
+    // Listen for window.postMessage responses (push event channel from background → injector → web)
     window.addEventListener("message", (event: MessageEvent) => {
       if (!event.data || typeof event.data !== "object") return;
       const data = event.data as TFMessageEnvelope;
       if (data.source !== TF_SOURCE_EXTENSION) return;
 
-      console.log(`${TAG} Received ${data.type} via window.postMessage (requestId: ${data.requestId})`);
+      const payloadSize = JSON.stringify(data || {}).length;
+      console.log(`${TAG} Injector → Website | type: ${data.type} | requestId: ${data.requestId || 'none'} | size: ${payloadSize}B | timestamp: ${Date.now()}`);
 
       // Resolve pending requests (request-response pattern)
       if (data.requestId && this.pendingRequests.has(data.requestId)) {
@@ -152,7 +153,7 @@ export class CompanionBridge {
         }
       }
 
-      // Notify event subscribers (push event pattern — fires for ALL events, not just pending)
+      // Notify event subscribers (push event pattern — fires for ALL events)
       const subscribers = this.eventSubscribers.get(data.type);
       if (subscribers && subscribers.size > 0) {
         console.log(`${TAG} Notifying ${subscribers.size} subscriber(s) for ${data.type}`);
@@ -194,13 +195,12 @@ export class CompanionBridge {
       type,
       requestId,
       timestamp: Date.now(),
-      version: "3.4.0",
+      version: "5.1.0",
       payload,
     };
 
-    console.log(`${TAG} ────────────────────────────────────────`);
-    console.log(`${TAG} Sending: ${type}`);
-    console.log(`${TAG} Request ID: ${requestId}`);
+    const payloadSize = JSON.stringify(message).length;
+    console.log(`${TAG} Website → Background | type: ${type} | requestId: ${requestId} | size: ${payloadSize}B | timestamp: ${Date.now()}`);
 
     return new Promise<TResponse>((resolve, reject) => {
       let resolved = false;
@@ -211,8 +211,10 @@ export class CompanionBridge {
           const error: TFMessageError = {
             code: "TIMEOUT",
             message: `Request '${type}' timed out after ${timeoutMs}ms. Extension did not respond.`,
+            stage: type,
+            suggestedAction: "Ensure TradeFourge Companion Extension is enabled and Exness tab is open.",
           };
-          console.warn(`${TAG} ⏱ Request '${type}' timed out after ${timeoutMs}ms`);
+          console.warn(`${TAG} ⏱ Request '${type}' timed out after ${timeoutMs}ms (requestId: ${requestId})`);
           reject(error);
         }
       }, timeoutMs);
@@ -236,7 +238,17 @@ export class CompanionBridge {
               const lastError = (window as any).chrome?.runtime?.lastError;
               if (lastError) {
                 console.error(`${TAG} chrome.runtime.lastError: ${lastError.message}`);
-                // Don't reject yet — window.postMessage fallback may succeed
+                if (!resolved) {
+                  resolved = true;
+                  clearTimeout(timer);
+                  this.pendingRequests.delete(requestId);
+                  reject({
+                    code: "CONNECTION_LOST",
+                    message: lastError.message,
+                    stage: type,
+                    suggestedAction: "Check if Companion Extension is active in chrome://extensions",
+                  });
+                }
                 return;
               }
 
@@ -245,13 +257,7 @@ export class CompanionBridge {
                 clearTimeout(timer);
                 this.pendingRequests.delete(requestId);
 
-                console.log(`${TAG} ✓ Received ${response.type} via chrome.runtime.sendMessage`);
-                console.log(`${TAG}   Version: ${response.version}`);
-                console.log(`${TAG}   Latency: ${Date.now() - message.timestamp}ms`);
-                if (response.payload) {
-                  console.log(`${TAG}   Payload:`, response.payload);
-                }
-                console.log(`${TAG} ────────────────────────────────────────`);
+                console.log(`${TAG} Background → Website | type: ${response.type} | requestId: ${requestId} | latency: ${Date.now() - message.timestamp}ms | status: SUCCESS`);
 
                 if (response.error) {
                   reject(response.error);
@@ -261,15 +267,22 @@ export class CompanionBridge {
               }
             }
           );
-        } catch (err) {
+        } catch (err: any) {
           console.error(`${TAG} chrome.runtime.sendMessage threw:`, err);
-          // Fall through to window.postMessage
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timer);
+            this.pendingRequests.delete(requestId);
+            reject({
+              code: "UNKNOWN_ERROR",
+              message: err?.message || String(err),
+              stage: type,
+            });
+          }
         }
       } else {
         if (!extensionId) {
           console.warn(`${TAG} No Extension ID available. Extension may not be installed.`);
-          console.warn(`${TAG} Expected DOM attribute: data-tradefourge-extension-id`);
-          console.warn(`${TAG} chrome.runtime available: ${!!(typeof window !== "undefined" && (window as any).chrome?.runtime)}`);
         }
         // Fallback: window.postMessage (only works if content script is in the same tab)
         if (typeof window !== "undefined") {

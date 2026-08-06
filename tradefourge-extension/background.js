@@ -1,20 +1,21 @@
 /**
- * TradeFourge Companion Extension v3.4 — Background Service Worker
- * Fully instrumented Manifest V3 cross-tab messaging pipeline.
+ * TradeFourge Companion Extension v5.1 — Background Service Worker
+ * Fully instrumented Manifest V3 cross-tab messaging pipeline with dynamic content script injection,
+ * exponential backoff retries, and comprehensive message flow tracing.
  *
- * Message flow:
+ * Message Flow Architecture:
  *   Website → chrome.runtime.sendMessage(extensionId, msg)
  *     → onMessageExternal listener (this file)
  *       → For PING: respond directly with PONG
- *       → For DISCOVER_ACCOUNTS / IMPORT: forward to Exness content script via chrome.tabs.sendMessage
+ *       → For DISCOVER_ACCOUNTS / IMPORT: ensure content script ready → forward via chrome.tabs.sendMessage
  *         → Content script responds → background forwards response → website callback
  *   Content Script (Exness) → chrome.runtime.sendMessage(pushEvent)
  *     → onMessage listener (this file)
  *       → background forwards to all TradeFourge tabs via chrome.tabs.sendMessage
  */
 
-const VERSION = '3.4.0';
-const TAG = '[TradeFourge Background]';
+const VERSION = '5.1.0';
+const TAG = '[Background]';
 
 console.log(`${TAG} Service Worker v${VERSION} initializing...`);
 
@@ -67,7 +68,7 @@ async function getTradeFourgeTabs() {
           'http://127.0.0.1/*',
           'https://*.tradefourge.com/*',
           'https://*.vercel.app/*',
-          'https://tradefourge.vercel.app/*'
+          'https://tradefourge.vercel.app/*',
         ],
       },
       (tabs) => {
@@ -82,49 +83,138 @@ async function getTradeFourgeTabs() {
   });
 }
 
-async function forwardToTradeFourgeTabs(message) {
-  const tfTabs = await getTradeFourgeTabs();
-  console.log(`${TAG} Forwarding push event ${message.type} to ${tfTabs.length} TradeFourge tabs`);
-  tfTabs.forEach((tab) => {
-    chrome.tabs.sendMessage(tab.id, message, (response) => {
-      if (chrome.runtime.lastError) {
-        console.warn(`${TAG} Could not deliver message to TF tab ${tab.id}:`, chrome.runtime.lastError.message);
+// ─── BUG 3 FIX: Content Script Verification & Dynamic Injection ──────────────
+
+async function pingContentScript(tabId) {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, { type: 'PING', requestId: `ping_cs_${Date.now()}` }, (response) => {
+      if (chrome.runtime.lastError || !response) {
+        resolve(false);
+      } else {
+        resolve(true);
       }
     });
   });
 }
 
-// ─── Message Handler ────────────────────────────────────────────────────────
+async function ensureContentScriptReady(tabId) {
+  // Step 1: Check if tab exists & status
+  const tab = await new Promise((r) => {
+    chrome.tabs.get(tabId, (t) => {
+      if (chrome.runtime.lastError) r(null);
+      else r(t);
+    });
+  });
+
+  if (!tab) {
+    console.warn(`${TAG} Tab ${tabId} does not exist.`);
+    return false;
+  }
+
+  // Step 2: If tab is loading, wait until complete
+  if (tab.status === 'loading') {
+    console.log(`${TAG} Tab ${tabId} is loading. Waiting for page completion...`);
+    await new Promise((resolve) => {
+      const listener = (tId, changeInfo) => {
+        if (tId === tabId && changeInfo.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }
+      };
+      chrome.tabs.onUpdated.addListener(listener);
+      setTimeout(() => {
+        chrome.tabs.onUpdated.removeListener(listener);
+        resolve();
+      }, 5000);
+    });
+  }
+
+  // Step 3: Ping content script
+  let isReady = await pingContentScript(tabId);
+  if (isReady) {
+    console.log(`${TAG} Content script on tab ${tabId} verified active (PONG).`);
+    return true;
+  }
+
+  // Step 4: If not injected, inject dynamically via chrome.scripting.executeScript
+  console.log(`${TAG} Content script not responding on tab ${tabId}. Attempting dynamic injection (dist/content.js)...`);
+  try {
+    if (chrome.scripting) {
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['dist/content.js'],
+      });
+      await new Promise((r) => setTimeout(r, 250));
+      isReady = await pingContentScript(tabId);
+      if (isReady) {
+        console.log(`${TAG} Dynamically injected content script on tab ${tabId} successfully!`);
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn(`${TAG} Dynamic script injection failed on tab ${tabId}:`, err?.message);
+  }
+
+  // Step 5: Retry ping with exponential backoff
+  const retries = [300, 600, 1200, 2400];
+  for (const delay of retries) {
+    console.log(`${TAG} Retrying ping to content script on tab ${tabId} in ${delay}ms...`);
+    await new Promise((r) => setTimeout(r, delay));
+    isReady = await pingContentScript(tabId);
+    if (isReady) {
+      console.log(`${TAG} Content script responded after retry on tab ${tabId}!`);
+      return true;
+    }
+  }
+
+  console.error(`${TAG} FAILED to establish connection with Content Script on tab ${tabId} after retries.`);
+  return false;
+}
+
+// ─── Push Event Broadcaster ──────────────────────────────────────────────────
+
+async function forwardToTradeFourgeTabs(message) {
+  const tfTabs = await getTradeFourgeTabs();
+  const payloadSize = JSON.stringify(message || {}).length;
+  console.log(`${TAG} Background → Website | type: ${message.type} | requestId: ${message.requestId || 'none'} | tabCount: ${tfTabs.length} | size: ${payloadSize}B | timestamp: ${Date.now()}`);
+
+  tfTabs.forEach((tab) => {
+    chrome.tabs.sendMessage(tab.id, message, () => {
+      if (chrome.runtime.lastError) {
+        // Suppress expected delivery warning if page unmounted
+      }
+    });
+  });
+}
+
+// ─── Message Handler & Tracing Pipeline ─────────────────────────────────────
 
 async function handleMessage(message, sender, sendResponse, isExternal) {
   const type = message?.type || 'UNKNOWN';
+  const requestId = message?.requestId || `req_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  const timestamp = Date.now();
   const senderOrigin = sender?.url || sender?.origin || sender?.tab?.url || 'unknown';
   const senderType = isExternal ? 'EXTERNAL (website)' : 'INTERNAL (content script)';
+  const payloadSize = JSON.stringify(message || {}).length;
 
-  console.log(`${TAG} ────────────────────────────────────────`);
-  console.log(`${TAG} Received: ${type}`);
-  console.log(`${TAG} Source: ${senderType}`);
-  console.log(`${TAG} Origin: ${senderOrigin}`);
-  console.log(`${TAG} Extension ID: ${chrome.runtime.id}`);
-  console.log(`${TAG} Request ID: ${message?.requestId || 'none'}`);
+  // BUG 4 & BUG 7 Structured Logging
+  console.log(`${TAG} Website → Background | type: ${type} | requestId: ${requestId} | source: ${senderType} | origin: ${senderOrigin} | size: ${payloadSize}B | timestamp: ${timestamp}`);
 
-  // If this is an internal push event from the content script, forward to TradeFourge website tabs
+  // Handle internal push events from Exness content script
   if (!isExternal && message.isPushEvent) {
-    console.log(`${TAG} Processing PUSH event from Exness content script...`);
     await forwardToTradeFourgeTabs(message);
-    sendResponse({ success: true });
+    sendResponse({ status: 'SUCCESS', result: 'Pushed to TradeFourge tabs', timestamp: Date.now() });
     return;
   }
 
   // ── PING / GET_EXTENSION_INFO ──
   if (type === 'PING' || type === 'GET_EXTENSION_INFO') {
     const exnessTabs = await getExnessTabs();
-    console.log(`${TAG} Found ${exnessTabs.length} active Exness tab(s)`);
 
     const pongResponse = {
       source: 'tradefourge-extension',
       type: 'PONG',
-      requestId: message.requestId || `pong_${Date.now()}`,
+      requestId,
       timestamp: Date.now(),
       version: VERSION,
       payload: {
@@ -138,8 +228,7 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
       },
     };
 
-    console.log(`${TAG} Sending PONG → Website`);
-    console.log(`${TAG} ────────────────────────────────────────`);
+    console.log(`${TAG} Background → Website | type: PONG | requestId: ${requestId} | status: SUCCESS | timestamp: ${Date.now()}`);
     sendResponse(pongResponse);
     return;
   }
@@ -149,43 +238,69 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
     const exnessTabs = await getExnessTabs();
     console.log(`${TAG} DISCOVER_ACCOUNTS: Found ${exnessTabs.length} Exness tab(s)`);
 
-    if (exnessTabs.length > 0) {
-      const targetTab = exnessTabs[0];
-      console.log(`${TAG} Forwarding DISCOVER_ACCOUNTS → Exness Content Script (Tab ID: ${targetTab.id}, URL: ${targetTab.url})`);
-
-      chrome.tabs.sendMessage(targetTab.id, message, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error(`${TAG} Error forwarding to content script:`, chrome.runtime.lastError.message);
-          sendResponse({
-            source: 'tradefourge-extension',
-            type: 'ACCOUNT_LIST',
-            requestId: message.requestId,
-            version: VERSION,
-            payload: [],
-            error: { code: 'EXNESS_NOT_OPEN', message: chrome.runtime.lastError.message },
-          });
-          return;
-        }
-        console.log(`${TAG} Received ACCOUNT_LIST from Exness Content Script. Forwarding → Website`);
-        sendResponse(response || {
-          source: 'tradefourge-extension',
-          type: 'ACCOUNT_LIST',
-          requestId: message.requestId,
-          version: VERSION,
-          payload: [],
-        });
+    if (exnessTabs.length === 0) {
+      console.warn(`${TAG} FAILED: No Exness tab detected.`);
+      sendResponse({
+        source: 'tradefourge-extension',
+        type: 'ACCOUNT_LIST',
+        requestId,
+        version: VERSION,
+        payload: [],
+        error: {
+          code: 'EXNESS_NOT_OPEN',
+          message: 'No Exness trading tab is open in browser.',
+          stage: 'DISCOVERING',
+          reason: 'Zero Exness tabs returned by tab query',
+          suggestedAction: 'Open my.exness.com in your browser and log into your trading account.',
+        },
       });
       return;
     }
 
-    // No Exness tabs — respond with empty or demo data
-    console.log(`${TAG} No Exness tabs open. Returning empty account list.`);
-    sendResponse({
-      source: 'tradefourge-extension',
-      type: 'ACCOUNT_LIST',
-      requestId: message.requestId,
-      version: VERSION,
-      payload: [],
+    const targetTab = exnessTabs[0];
+    console.log(`${TAG} Background → Content Script | tabId: ${targetTab.id} | type: DISCOVER_ACCOUNTS | requestId: ${requestId} | timestamp: ${Date.now()}`);
+
+    const isReady = await ensureContentScriptReady(targetTab.id);
+    if (!isReady) {
+      console.error(`${TAG} FAILED: Content script on tab ${targetTab.id} unreachable after retries.`);
+      sendResponse({
+        source: 'tradefourge-extension',
+        type: 'ACCOUNT_LIST',
+        requestId,
+        version: VERSION,
+        payload: [],
+        error: {
+          code: 'CONTENT_SCRIPT_UNREACHABLE',
+          message: 'Could not establish connection with Exness content script.',
+          stage: 'DISCOVERING',
+          reason: 'Receiving end does not exist after retries',
+          suggestedAction: 'Reload your Exness tab (my.exness.com) and click Refresh Discovery.',
+        },
+      });
+      return;
+    }
+
+    chrome.tabs.sendMessage(targetTab.id, message, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error(`${TAG} Error sending DISCOVER_ACCOUNTS to tab ${targetTab.id}:`, chrome.runtime.lastError.message);
+        sendResponse({
+          source: 'tradefourge-extension',
+          type: 'ACCOUNT_LIST',
+          requestId,
+          version: VERSION,
+          payload: [],
+          error: {
+            code: 'CONTENT_SCRIPT_UNREACHABLE',
+            message: chrome.runtime.lastError.message,
+            stage: 'DISCOVERING',
+            suggestedAction: 'Reload your Exness tab and retry.',
+          },
+        });
+        return;
+      }
+
+      console.log(`${TAG} Content Script → Background → Website | type: ACCOUNT_LIST | requestId: ${requestId} | accountsCount: ${response?.payload?.length || 0} | timestamp: ${Date.now()}`);
+      sendResponse(response);
     });
     return;
   }
@@ -195,48 +310,78 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
     const exnessTabs = await getExnessTabs();
     console.log(`${TAG} IMPORT_SELECTED_ACCOUNTS: Found ${exnessTabs.length} Exness tab(s)`);
 
-    if (exnessTabs.length > 0) {
-      const targetTab = exnessTabs[0];
-      console.log(`${TAG} Forwarding IMPORT_SELECTED_ACCOUNTS → Exness Content Script (Tab ID: ${targetTab.id})`);
-
-      chrome.tabs.sendMessage(targetTab.id, message, (response) => {
-        if (chrome.runtime.lastError) {
-          console.error(`${TAG} Error forwarding to content script:`, chrome.runtime.lastError.message);
-          sendResponse({
-            source: 'tradefourge-extension',
-            type: 'IMPORT_STARTED',
-            requestId: message.requestId,
-            version: VERSION,
-            payload: { stage: 'error', fetchedTrades: 0, totalTrades: 0, percentage: 0 },
-            error: { code: 'IMPORT_FAILED', message: chrome.runtime.lastError.message },
-          });
-          return;
-        }
-        console.log(`${TAG} Received IMPORT response from Content Script. Forwarding → Website`);
-        sendResponse(response);
+    if (exnessTabs.length === 0) {
+      console.warn(`${TAG} FAILED: No Exness tab detected for history import.`);
+      sendResponse({
+        source: 'tradefourge-extension',
+        type: 'IMPORT_STARTED',
+        requestId,
+        version: VERSION,
+        payload: { stage: 'connecting', fetchedTrades: 0, totalTrades: 0, percentage: 0 },
+        error: {
+          code: 'EXNESS_NOT_OPEN',
+          message: 'No Exness trading tab is open for history import.',
+          stage: 'CONNECTING',
+          suggestedAction: 'Open my.exness.com in your browser.',
+        },
       });
       return;
     }
 
-    console.log(`${TAG} No Exness tabs open. Cannot import.`);
-    sendResponse({
-      source: 'tradefourge-extension',
-      type: 'IMPORT_STARTED',
-      requestId: message.requestId,
-      version: VERSION,
-      payload: { stage: 'error', fetchedTrades: 0, totalTrades: 0, percentage: 0 },
-      error: { code: 'EXNESS_NOT_OPEN', message: 'No Exness tab is open. Please log into Exness first.' },
+    const targetTab = exnessTabs[0];
+    const accountStr = (message.payload?.accountIds || []).join(',');
+    console.log(`${TAG} Background → Content Script | tabId: ${targetTab.id} | type: IMPORT_SELECTED_ACCOUNTS | requestId: ${requestId} | account: ${accountStr} | timestamp: ${Date.now()}`);
+
+    const isReady = await ensureContentScriptReady(targetTab.id);
+    if (!isReady) {
+      console.error(`${TAG} FAILED: Content script on tab ${targetTab.id} unreachable for history import.`);
+      sendResponse({
+        source: 'tradefourge-extension',
+        type: 'IMPORT_STARTED',
+        requestId,
+        version: VERSION,
+        payload: { stage: 'connecting', fetchedTrades: 0, totalTrades: 0, percentage: 0 },
+        error: {
+          code: 'CONTENT_SCRIPT_UNREACHABLE',
+          message: 'Could not establish connection with Exness content script.',
+          stage: 'CONNECTING',
+          suggestedAction: 'Reload your Exness tab and retry import.',
+        },
+      });
+      return;
+    }
+
+    chrome.tabs.sendMessage(targetTab.id, message, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error(`${TAG} Error sending IMPORT_SELECTED_ACCOUNTS to tab ${targetTab.id}:`, chrome.runtime.lastError.message);
+        sendResponse({
+          source: 'tradefourge-extension',
+          type: 'IMPORT_STARTED',
+          requestId,
+          version: VERSION,
+          payload: { stage: 'connecting', fetchedTrades: 0, totalTrades: 0, percentage: 0 },
+          error: {
+            code: 'IMPORT_FAILED',
+            message: chrome.runtime.lastError.message,
+            stage: 'CONNECTING',
+            suggestedAction: 'Reload your Exness tab and try again.',
+          },
+        });
+        return;
+      }
+
+      console.log(`${TAG} Content Script → Background → Website | type: IMPORT_STARTED | requestId: ${requestId} | timestamp: ${Date.now()}`);
+      sendResponse(response);
     });
     return;
   }
 
   // ── HEARTBEAT ──
   if (type === 'HEARTBEAT') {
-    console.log(`${TAG} HEARTBEAT received. Responding alive.`);
     sendResponse({
       source: 'tradefourge-extension',
       type: 'PONG',
-      requestId: message.requestId,
+      requestId,
       version: VERSION,
       payload: { status: 'alive', latency: 0 },
     });
@@ -244,11 +389,10 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
   }
 
   // ── DEFAULT ──
-  console.log(`${TAG} Unhandled message type: ${type}. Sending generic PONG.`);
   sendResponse({
     source: 'tradefourge-extension',
     type: 'PONG',
-    requestId: message.requestId,
+    requestId,
     version: VERSION,
     payload: { isInstalled: true, status: 'active' },
   });
@@ -257,17 +401,17 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
 // ─── Listener Registration ──────────────────────────────────────────────────
 
 if (typeof chrome !== 'undefined' && chrome.runtime) {
-  // External messages from web pages (via externally_connectable)
+  // External messages from web pages
   chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
     handleMessage(message, sender, sendResponse, true);
-    return true; // Keep sendResponse channel open for async
+    return true; // Keep channel open for async sendResponse
   });
 
   // Internal messages from content scripts
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     handleMessage(message, sender, sendResponse, false);
-    return true; // Keep sendResponse channel open for async
+    return true; // Keep channel open for async sendResponse
   });
 
-  console.log(`${TAG} Listeners registered: onMessageExternal + onMessage`);
+  console.log(`${TAG} Registered onMessageExternal + onMessage listeners.`);
 }
