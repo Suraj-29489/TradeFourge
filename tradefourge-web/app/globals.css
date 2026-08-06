@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── TradeFourge Design System — Dual Dark/Light Institutional Theme ─── */
+/* ─── TradeFourge Design System — Dual Dark/Light Institutional Theme Engine ─── */
 
 :root, [data-theme="dark"] {
   --body-bg: #080B11;
@@ -130,4 +130,138 @@
     border: 1px solid var(--input-border);
     color: var(--body-text);
   }
+}
+
+/* ─── Global Light Theme Overrides Engine (No Exceptions / Zero Dark Patches) ─── */
+
+[data-theme="light"] body {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+/* Background canvas overrides */
+[data-theme="light"] .bg-\[\#080B11\],
+[data-theme="light"] .bg-\[\#080b11\],
+[data-theme="light"] .bg-\[\#090D14\],
+[data-theme="light"] .bg-\[\#090d14\],
+[data-theme="light"] .bg-\[\#080B11\]\/80,
+[data-theme="light"] .bg-\[\#0B0D13\],
+[data-theme="light"] .bg-\[\#080B11\]\/70,
+[data-theme="light"] .bg-\[\#080B11\]\/90,
+[data-theme="light"] .bg-\[\#0B0F19\],
+[data-theme="light"] .bg-\[\#090c15\],
+[data-theme="light"] .bg-\[\#080B11\],
+[data-theme="light"] .bg-\[\#090D14\],
+[data-theme="light"] .bg-\[\#0B0D13\] {
+  background-color: #F8FAFC !important;
+}
+
+/* Card, modal, dropdown & container surface overrides */
+[data-theme="light"] .bg-\[\#0F141C\],
+[data-theme="light"] .bg-\[\#0f141c\],
+[data-theme="light"] .bg-\[\#0F1420\],
+[data-theme="light"] .bg-\[\#0f1420\],
+[data-theme="light"] .bg-\[\#111726\],
+[data-theme="light"] .bg-\[\#182238\],
+[data-theme="light"] .bg-\[\#151C28\],
+[data-theme="light"] .bg-\[\#0F141C\]\/95,
+[data-theme="light"] .bg-\[\#0f141c\]\/95,
+[data-theme="light"] .bg-\[\#080B11\]\/95,
+[data-theme="light"] .bg-dark-card,
+[data-theme="light"] .bg-dark-subtle,
+[data-theme="light"] .dropdown-menu,
+[data-theme="light"] .glass-card,
+[data-theme="light"] .bg-\[\#0F141C\],
+[data-theme="light"] .bg-\[\#0F1420\],
+[data-theme="light"] .bg-\[\#111726\] {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+/* Sub-surfaces, subtle containers & hover states */
+[data-theme="light"] .hover\:bg-white\/\[0\.04\]:hover,
+[data-theme="light"] .hover\:bg-white\/\[0\.05\]:hover,
+[data-theme="light"] .hover\:bg-white\/\[0\.06\]:hover,
+[data-theme="light"] .hover\:bg-white\/\[0\.08\]:hover,
+[data-theme="light"] .hover\:bg-white\/5:hover,
+[data-theme="light"] .hover\:bg-white\/10:hover,
+[data-theme="light"] .bg-white\/\[0\.02\],
+[data-theme="light"] .bg-white\/\[0\.03\],
+[data-theme="light"] .bg-white\/\[0\.04\],
+[data-theme="light"] .bg-white\/\[0\.05\],
+[data-theme="light"] .bg-white\/5,
+[data-theme="light"] .bg-white\/10 {
+  background-color: #F1F5F9 !important;
+}
+
+/* Border overrides */
+[data-theme="light"] .border-white\/10,
+[data-theme="light"] .border-white\/\[0\.08\],
+[data-theme="light"] .border-white\/\[0\.07\],
+[data-theme="light"] .border-white\/\[0\.06\],
+[data-theme="light"] .border-white\/20,
+[data-theme="light"] .border-white\/5,
+[data-theme="light"] .border-dark-border {
+  border-color: #E2E8F0 !important;
+}
+
+/* Text color overrides */
+[data-theme="light"] .text-white,
+[data-theme="light"] .text-gray-100,
+[data-theme="light"] .text-gray-200 {
+  color: #0F172A !important;
+}
+
+[data-theme="light"] .text-gray-300,
+[data-theme="light"] .text-gray-400 {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .text-gray-500 {
+  color: #64748B !important;
+}
+
+/* Primary Accent & Button Overrides (Blue -> Institutional Green #16A34A) */
+[data-theme="light"] .bg-blue-600 {
+  background-color: #16A34A !important;
+  color: #FFFFFF !important;
+}
+
+[data-theme="light"] .hover\:bg-blue-500:hover,
+[data-theme="light"] .hover\:bg-blue-600:hover {
+  background-color: #15803D !important;
+  color: #FFFFFF !important;
+}
+
+[data-theme="light"] .text-blue-400,
+[data-theme="light"] .text-blue-500 {
+  color: #16A34A !important;
+}
+
+[data-theme="light"] .text-blue-300 {
+  color: #15803D !important;
+}
+
+[data-theme="light"] .bg-blue-500\/10,
+[data-theme="light"] .bg-blue-600\/10,
+[data-theme="light"] .bg-blue-600\/20,
+[data-theme="light"] .bg-blue-500\/20 {
+  background-color: rgba(22, 163, 74, 0.10) !important;
+  color: #15803D !important;
+}
+
+[data-theme="light"] .border-blue-500\/20,
+[data-theme="light"] .border-blue-500\/30,
+[data-theme="light"] .border-blue-500\/40,
+[data-theme="light"] .border-blue-500\/60,
+[data-theme="light"] .border-blue-500 {
+  border-color: rgba(22, 163, 74, 0.3) !important;
+}
+
+[data-theme="light"] .focus\:border-blue-500:focus {
+  border-color: #16A34A !important;
+}
+
+[data-theme="light"] .focus\:ring-blue-500\/50:focus {
+  --tw-ring-color: rgba(22, 163, 74, 0.5) !important;
 }

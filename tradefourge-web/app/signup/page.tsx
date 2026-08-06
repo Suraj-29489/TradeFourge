@@ -2,36 +2,45 @@
 
 import React from "react";
 import Link from "next/link";
-import { Zap } from "lucide-react";
 import { SignupForm } from "@/components/auth/SignupForm";
+import { useTheme } from "@/context/ThemeContext";
 
 export default function SignupPage() {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+
   return (
-    <div className="min-h-screen bg-[#080B11] text-gray-100 flex flex-col justify-center items-center p-6 font-mono selection:bg-blue-600 selection:text-white">
+    <div className={`min-h-screen flex flex-col justify-center items-center p-6 font-mono selection:bg-emerald-600 selection:text-white transition-colors duration-250 ${
+      isLight ? "bg-[#F8FAFC] text-slate-900" : "bg-[#080B11] text-gray-100"
+    }`}>
       <div className="w-full max-w-md space-y-6 text-center my-auto">
         {/* Brand Logo Header */}
         <div className="space-y-3">
           <Link href="/" className="inline-block group">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logo_full.png"
+              src={isLight ? "/logo_full_light.png" : "/logo_full.png"}
               alt="TradeFourge Logo"
               className="h-9 w-auto object-contain mx-auto transition-transform group-hover:scale-105"
             />
           </Link>
 
-          <h1 className="text-2xl font-extrabold text-white tracking-tight font-sans">
+          <h1 className={`text-2xl font-extrabold tracking-tight font-sans ${
+            isLight ? "text-slate-900" : "text-white"
+          }`}>
             Create your TradeFourge Account
           </h1>
         </div>
 
-        {/* Centered Dark Auth Card */}
-        <div className="p-8 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-2xl space-y-6 text-left">
+        {/* Centered Auth Card */}
+        <div className={`p-8 rounded-2xl border shadow-2xl space-y-6 text-left ${
+          isLight ? "bg-white border-slate-200 shadow-sm text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"
+        }`}>
           <SignupForm />
         </div>
 
         {/* Footer */}
-        <p className="text-xs text-gray-500 font-mono">
+        <p className={`text-xs font-mono ${isLight ? "text-slate-500" : "text-gray-500"}`}>
           © {new Date().getFullYear()} TradeFourge Inc. All rights reserved.
         </p>
       </div>
