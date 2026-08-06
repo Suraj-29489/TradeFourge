@@ -4,16 +4,18 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useAccounts } from "@/context/AccountsContext";
 import type { TradingAccount } from "@/types/database";
 
+export type WorkspaceMode = "csv" | "tfc" | "mt5" | "none";
+
 interface ActiveAccountContextType {
   activeAccount: TradingAccount | null;
   activeAccountId: string | null;
   setActiveAccountId: (id: string) => void;
-  workspaceMode: "csv" | "mt5" | "none";
-  setWorkspaceMode: (mode: "csv" | "mt5" | "none") => void;
+  workspaceMode: WorkspaceMode;
+  setWorkspaceMode: (mode: WorkspaceMode) => void;
   isAccountTypeModalOpen: boolean;
   openAccountTypeModal: () => void;
   closeAccountTypeModal: () => void;
-  selectAccountType: (type: "csv" | "mt5") => void;
+  selectAccountType: (type: "csv" | "tfc" | "mt5") => void;
 }
 
 const STORAGE_ACTIVE_ACC_KEY = "tf_active_csv_account_id";
@@ -34,13 +36,13 @@ const ActiveAccountContext = createContext<ActiveAccountContextType>({
 export const ActiveAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { accounts, selectedAccountIds, setSelectedAccountIds } = useAccounts();
   const [activeAccountIdState, setActiveAccountIdState] = useState<string | null>(null);
-  const [workspaceMode, setWorkspaceModeState] = useState<"csv" | "mt5" | "none">("csv");
+  const [workspaceMode, setWorkspaceModeState] = useState<WorkspaceMode>("csv");
   const [isAccountTypeModalOpen, setIsAccountTypeModalOpen] = useState(false);
 
   // Restore workspace mode & active account from localStorage on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const savedMode = localStorage.getItem(STORAGE_WORKSPACE_MODE_KEY) as "csv" | "mt5" | "none" | null;
+    const savedMode = localStorage.getItem(STORAGE_WORKSPACE_MODE_KEY) as WorkspaceMode | null;
     if (savedMode) {
       setWorkspaceModeState(savedMode);
     }
@@ -60,10 +62,8 @@ export const ActiveAccountProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    // Check if current activeAccountId still exists in accounts
     const exists = accounts.some((a) => a.id === activeAccountIdState);
     if (!exists) {
-      // Pick first available account
       const firstAcc = accounts[0];
       setActiveAccountIdState(firstAcc.id);
       setSelectedAccountIds([firstAcc.id]);
@@ -71,7 +71,6 @@ export const ActiveAccountProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorage.setItem(STORAGE_ACTIVE_ACC_KEY, firstAcc.id);
       }
     } else if (activeAccountIdState) {
-      // Sync selectedAccountIds in AccountsContext if needed
       if (selectedAccountIds.length !== 1 || selectedAccountIds[0] !== activeAccountIdState) {
         setSelectedAccountIds([activeAccountIdState]);
       }
@@ -86,7 +85,7 @@ export const ActiveAccountProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [setSelectedAccountIds]);
 
-  const setWorkspaceMode = useCallback((mode: "csv" | "mt5" | "none") => {
+  const setWorkspaceMode = useCallback((mode: WorkspaceMode) => {
     setWorkspaceModeState(mode);
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_WORKSPACE_MODE_KEY, mode);
@@ -96,9 +95,9 @@ export const ActiveAccountProvider: React.FC<{ children: React.ReactNode }> = ({
   const openAccountTypeModal = useCallback(() => setIsAccountTypeModalOpen(true), []);
   const closeAccountTypeModal = useCallback(() => setIsAccountTypeModalOpen(false), []);
 
-  const selectAccountType = useCallback((type: "csv" | "mt5") => {
-    if (type === "csv") {
-      setWorkspaceMode("csv");
+  const selectAccountType = useCallback((type: "csv" | "tfc" | "mt5") => {
+    if (type === "csv" || type === "tfc") {
+      setWorkspaceMode(type);
       setIsAccountTypeModalOpen(false);
     }
   }, [setWorkspaceMode]);

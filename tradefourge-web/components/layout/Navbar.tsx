@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { useActiveAccount } from "@/context/ActiveAccountContext";
-import { Menu, LogOut, User, Settings, FileSpreadsheet, ChevronDown, Layers } from "lucide-react";
+import { useCompanionAccount } from "@/context/CompanionAccountContext";
+import { Menu, LogOut, User, Settings, FileSpreadsheet, ChevronDown, Layers, Zap, RefreshCw, Radio, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 interface NavbarProps {
@@ -18,12 +19,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
   const init = useJournalStore((s) => s.init);
 
   const { profile } = useUserProfile();
-  const { activeAccount, openAccountTypeModal } = useActiveAccount();
+  const { activeAccount, workspaceMode, openAccountTypeModal } = useActiveAccount();
+  const {
+    currentAccount: tfcAccount,
+    connectionStatus,
+    extensionInfo,
+    reconnect,
+    disconnect,
+    refreshConnection,
+  } = useCompanionAccount();
 
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [connectionDropdownOpen, setConnectionDropdownOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>("");
 
   const userRef = useRef<HTMLDivElement>(null);
+  const connectionRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -40,6 +51,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
     function handleClickOutside(event: MouseEvent) {
       if (userRef.current && !userRef.current.contains(event.target as Node)) {
         setUserDropdownOpen(false);
+      }
+      if (connectionRef.current && !connectionRef.current.contains(event.target as Node)) {
+        setConnectionDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -59,13 +73,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
     ? `@${profile.username}`
     : profile?.full_name || "Trader";
 
-  const accountDisplayName = activeAccount?.account_name
-    ? `CSV • ${activeAccount.account_name}`
-    : "CSV • Personal Account";
+  const isTfc = workspaceMode === "tfc";
+
+  const accountDisplayName = isTfc
+    ? tfcAccount ? `${tfcAccount.broker} • ${tfcAccount.accountNumber}` : "TradeForge Companion Account"
+    : activeAccount?.account_name ? `CSV • ${activeAccount.account_name}` : "CSV • Personal Account";
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 bg-[#090D14]/90 backdrop-blur-md border-b border-white/[0.08] select-none font-mono">
-      {/* LEFT: Mobile hamburger + CSV Workspace Badge & Current Account Name */}
+      {/* LEFT: Mobile hamburger + Workspace Badge & Current Account Name */}
       <div className="flex items-center gap-3">
         <button
           onClick={onOpenMobileNav}
@@ -76,10 +92,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
         </button>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs font-mono text-blue-400 font-bold">
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>CSV WORKSPACE</span>
-          </div>
+          {isTfc ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 border border-blue-500/40 text-xs font-mono text-blue-300 font-bold">
+              <Zap className="w-3.5 h-3.5 fill-blue-300" />
+              <span>TRADEFORGE COMPANION</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs font-mono text-blue-400 font-bold">
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>CSV WORKSPACE</span>
+            </div>
+          )}
+
           <span className="text-xs font-bold text-gray-200 hidden sm:inline-block font-sans">
             {accountDisplayName}
           </span>
@@ -89,8 +113,90 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
       {/* CENTER: Nothing */}
       <div className="hidden md:block" />
 
-      {/* RIGHT: Change Workspace Button + User Profile Dropdown (Theme Switcher Removed) */}
+      {/* RIGHT: Connection Dropdown (if TFC) + Change Workspace + User Profile Dropdown */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* TFC Connection Status Dropdown */}
+        {isTfc && (
+          <div className="relative" ref={connectionRef}>
+            <button
+              onClick={() => setConnectionDropdownOpen(!connectionDropdownOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-blue-500/40 text-xs font-mono transition-all"
+            >
+              <span className={`w-2 h-2 rounded-full ${connectionStatus === "Connected" ? "bg-emerald-400 animate-pulse" : "bg-rose-500"}`} />
+              <span className={`font-bold text-[11px] ${connectionStatus === "Connected" ? "text-emerald-400" : "text-rose-400"}`}>
+                ● {connectionStatus}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+            </button>
+
+            {connectionDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-72 p-3.5 rounded-2xl z-50 space-y-3 shadow-2xl bg-[#0F141C] border border-white/[0.08] text-xs font-mono">
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-2">
+                  <span className="font-bold text-white flex items-center gap-1.5 font-sans">
+                    <Radio className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Connection Status</span>
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${connectionStatus === "Connected" ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"}`}>
+                    {connectionStatus}
+                  </span>
+                </div>
+
+                {/* Details */}
+                <div className="space-y-1.5 text-[11px] text-gray-400 bg-white/[0.02] p-2.5 rounded-xl border border-white/[0.06]">
+                  <div className="flex justify-between">
+                    <span>Browser:</span>
+                    <strong className="text-white">{extensionInfo.browser}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Runtime:</span>
+                    <strong className="text-white">{extensionInfo.version}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Last Scan:</span>
+                    <strong className="text-emerald-400">{extensionInfo.lastScan}</strong>
+                  </div>
+                </div>
+
+                {/* Dropdown Action Items */}
+                <div className="space-y-1 pt-1 border-t border-white/[0.08]">
+                  <button
+                    onClick={() => {
+                      refreshConnection();
+                      setConnectionDropdownOpen(false);
+                    }}
+                    className="flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-xs text-gray-200 hover:bg-white/[0.05] transition-colors"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Refresh Connection</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      reconnect();
+                      setConnectionDropdownOpen(false);
+                    }}
+                    className="flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-xs text-gray-200 hover:bg-white/[0.05] transition-colors"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Reconnect Engine</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      disconnect();
+                      setConnectionDropdownOpen(false);
+                    }}
+                    className="flex items-center gap-2 w-full px-2.5 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Disconnect</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Change Workspace Button */}
         <button
           onClick={openAccountTypeModal}

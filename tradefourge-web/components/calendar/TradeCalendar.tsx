@@ -32,9 +32,15 @@ import {
 } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { useActiveAccount } from "@/context/ActiveAccountContext";
+import { useCompanionAccount } from "@/context/CompanionAccountContext";
+
 type MainViewMode = "calendar" | "timeline";
 
 export const TradeCalendar: React.FC = () => {
+  const { workspaceMode } = useActiveAccount();
+  const { currentAccount } = useCompanionAccount();
+
   const router = useRouter();
   const theme = useJournalStore((s) => s.theme);
   const { format: formatCurrency, formatSigned, mixedCurrency } = useCurrencyFormatter();
@@ -66,6 +72,41 @@ export const TradeCalendar: React.FC = () => {
 
   const loadTrades = async () => {
     setLoading(true);
+    if (workspaceMode === "tfc") {
+      if (currentAccount) {
+        const mappedTrades = currentAccount.trades.map((tr) => ({
+          id: tr.ticket,
+          ticket: tr.ticket,
+          user_id: "demo",
+          account_id: currentAccount.id,
+          symbol: tr.symbol,
+          side: tr.type,
+          size: tr.lots,
+          volume: tr.lots,
+          open_price: tr.openPrice,
+          close_price: tr.closePrice,
+          net_pnl: tr.profit,
+          open_time: tr.openTime,
+          close_time: tr.closeTime,
+          status: tr.status === "CLOSED" ? "closed" : "open",
+          pips: tr.pips,
+          commission: 0,
+          swap: 0,
+          gross_pnl: tr.profit,
+          stop_loss: null,
+          take_profit: null,
+          notes: `Synchronized execution #${tr.ticket}`,
+          setup: "Live Terminal Sync",
+          created_at: tr.openTime,
+          updated_at: tr.closeTime,
+        })) as unknown as CloudTradeWithRelations[];
+        setTrades(mappedTrades);
+      } else {
+        setTrades([]);
+      }
+      setLoading(false);
+      return;
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {

@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { UserProfileProvider } from "@/context/UserProfileContext";
 import { AccountsProvider } from "@/context/AccountsContext";
 import { ActiveAccountProvider } from "@/context/ActiveAccountContext";
+import { CompanionAccountProvider } from "@/context/CompanionAccountContext";
 import { CompanionProvider } from "@/lib/companion/provider";
 import { PersistenceErrorBoundary } from "@/components/common/PersistenceErrorBoundary";
 
@@ -18,9 +19,11 @@ export default function AuthenticatedAppLayout({
       <UserProfileProvider>
         <AccountsProvider>
           <ActiveAccountProvider>
-            <CompanionProvider>
-              <AppLayout>{children}</AppLayout>
-            </CompanionProvider>
+            <CompanionAccountProvider>
+              <CompanionProvider>
+                <AppLayout>{children}</AppLayout>
+              </CompanionProvider>
+            </CompanionAccountProvider>
           </ActiveAccountProvider>
         </AccountsProvider>
       </UserProfileProvider>

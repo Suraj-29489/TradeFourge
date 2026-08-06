@@ -2,19 +2,23 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   Wallet,
   TableProperties,
+  Activity,
   CalendarDays,
+  BarChart3,
   BookOpen,
   Settings,
   FileSpreadsheet,
+  Zap,
   X,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { useActiveAccount } from "@/context/ActiveAccountContext";
 
 interface NavItem {
   name: string;
@@ -27,6 +31,17 @@ const CSV_NAV_ITEMS: NavItem[] = [
   { name: "Accounts", href: "/accounts", icon: Wallet },
   { name: "Journal", href: "/journal", icon: TableProperties },
   { name: "Calendar", href: "/calendar", icon: CalendarDays },
+  { name: "Reports", href: "/reports", icon: BookOpen },
+  { name: "Settings", href: "/settings", icon: Settings },
+];
+
+const TFC_NAV_ITEMS: NavItem[] = [
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Accounts", href: "/accounts", icon: Wallet },
+  { name: "Journal", href: "/journal", icon: TableProperties },
+  { name: "Trades", href: "/trades", icon: Activity },
+  { name: "Calendar", href: "/calendar", icon: CalendarDays },
+  { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "Reports", href: "/reports", icon: BookOpen },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
@@ -94,6 +109,10 @@ function NavLink({
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMobile }) => {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const { workspaceMode } = useActiveAccount();
+
+  const isTfc = workspaceMode === "tfc";
+  const navItems = isTfc ? TFC_NAV_ITEMS : CSV_NAV_ITEMS;
 
   const isActive = (href: string) => pathname === href;
 
@@ -126,14 +145,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
             className="fixed inset-y-0 left-0 z-50 w-72 bg-[#090D14] border-r border-white/[0.08] flex flex-col justify-between md:hidden shadow-2xl overflow-y-auto font-mono"
           >
             <div>
-              {/* Top Header - CSV Workspace Branding */}
+              {/* Top Header - Workspace Branding */}
               <div className="flex items-center justify-between h-16 px-4 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold shrink-0">
-                    <FileSpreadsheet className="w-4 h-4" />
+                    {isTfc ? <Zap className="w-4 h-4 text-blue-400 fill-blue-400" /> : <FileSpreadsheet className="w-4 h-4" />}
                   </div>
                   <span className="text-sm font-bold text-white font-sans tracking-tight">
-                    CSV Workspace
+                    {isTfc ? "TradeForge Companion" : "CSV Workspace"}
                   </span>
                 </div>
                 <button
@@ -144,9 +163,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                 </button>
               </div>
 
-              {/* Navigation Items (Only 6 Items) */}
+              {/* Navigation Items */}
               <nav className="px-3 py-4 space-y-1">
-                {CSV_NAV_ITEMS.map((item) => (
+                {navItems.map((item) => (
                   <NavLink
                     key={item.href}
                     item={item}
@@ -170,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
       className="relative z-30 hidden md:flex flex-col h-screen bg-[#090D14] border-r border-white/[0.08] select-none shrink-0 overflow-hidden font-mono"
     >
-      {/* Top Header - CSV Workspace Branding & Toggle */}
+      {/* Top Header - Workspace Branding & Toggle */}
       <div className="flex items-center justify-between h-16 px-3 border-b border-white/[0.08] shrink-0">
         <button
           onClick={() => setCollapsed(!collapsed)}
@@ -178,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 shrink-0">
-            <FileSpreadsheet className="w-4.5 h-4.5" />
+            {isTfc ? <Zap className="w-4.5 h-4.5 text-blue-400 fill-blue-400" /> : <FileSpreadsheet className="w-4.5 h-4.5" />}
           </div>
           <AnimatePresence>
             {!collapsed && (
@@ -189,7 +208,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
                 className="flex flex-col whitespace-nowrap overflow-hidden"
               >
                 <span className="text-sm font-bold tracking-tight text-white font-sans">
-                  CSV Workspace
+                  {isTfc ? "TradeForge Companion" : "CSV Workspace"}
                 </span>
               </motion.div>
             )}
@@ -197,9 +216,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
         </button>
       </div>
 
-      {/* Navigation Items (Only 6 Items) */}
+      {/* Navigation Items */}
       <nav className="flex-1 px-2 py-4 overflow-y-auto space-y-1 scrollbar-thin">
-        {CSV_NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <NavLink
             key={item.href}
             item={item}

@@ -21,7 +21,13 @@ import { deleteAllImports } from "@/lib/supabase/csv-imports";
 import { deleteAllTrades, fetchTrades } from "@/lib/supabase/trades";
 import { SUPPORTED_CURRENCY_CODES, getCurrencyLabel } from "@/lib/config/currencies";
 
+import { useActiveAccount } from "@/context/ActiveAccountContext";
+import { useCompanionAccount } from "@/context/CompanionAccountContext";
+
 export const SettingsTabs: React.FC = () => {
+  const { workspaceMode } = useActiveAccount();
+  const { connectionStatus, reconnect, disconnect, extensionInfo } = useCompanionAccount();
+
   const [activeTab, setActiveTab] = useState<
     "general" | "profile" | "notifications" | "trading" | "privacy" | "danger"
   >("general");
@@ -289,6 +295,42 @@ export const SettingsTabs: React.FC = () => {
               Configure global display currency, date formatting, and application theme.
             </p>
           </div>
+
+          {/* TradeForge Companion Settings (TFC Mode Only) */}
+          {workspaceMode === "tfc" && (
+            <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-3 font-mono">
+              <div className="flex items-center justify-between border-b border-blue-500/20 pb-2">
+                <span className="font-bold text-white font-sans flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-blue-400 fill-blue-400" />
+                  TradeForge Companion Engine
+                </span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  connectionStatus === "Connected" ? "bg-emerald-500/20 text-emerald-300" : "bg-rose-500/20 text-rose-300"
+                }`}>
+                  ● {connectionStatus}
+                </span>
+              </div>
+              <p className="text-xs text-gray-300 font-sans">
+                Extension Runtime: {extensionInfo.version} ({extensionInfo.browser})
+              </p>
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={reconnect}
+                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors"
+                >
+                  Reconnect
+                </button>
+                <button
+                  type="button"
+                  onClick={disconnect}
+                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-rose-500/10 border border-white/10 text-rose-400 font-bold text-xs transition-colors"
+                >
+                  Forget Device
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Theme Quick Toggle */}
           <div className="p-4 rounded-xl bg-dark-card border border-dark-border flex items-center justify-between">

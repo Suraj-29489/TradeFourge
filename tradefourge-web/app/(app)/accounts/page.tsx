@@ -31,7 +31,15 @@ import { useActiveAccount } from "@/context/ActiveAccountContext";
 import type { TradingAccount, NewTradingAccount } from "@/types/database";
 import { getCurrencySymbol, getCurrencyShortLabel } from "@/lib/config/currencies";
 
+import { CompanionAccountsView } from "@/components/companion/CompanionAccountsView";
+
 export default function AccountsPage() {
+  const { workspaceMode } = useActiveAccount();
+
+  if (workspaceMode === "tfc") {
+    return <CompanionAccountsView />;
+  }
+
   const router = useRouter();
   const { refreshAccounts } = useUserProfile();
   const { activeAccountId, setActiveAccountId } = useActiveAccount();

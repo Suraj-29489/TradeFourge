@@ -3,7 +3,15 @@
 import React from "react";
 import { BookOpen, Sparkles, Lock } from "lucide-react";
 
+import { useActiveAccount } from "@/context/ActiveAccountContext";
+import { CompanionReportsView } from "@/components/companion/CompanionReportsView";
+
 export default function ReportsPage() {
+  const { workspaceMode } = useActiveAccount();
+
+  if (workspaceMode === "tfc") {
+    return <CompanionReportsView />;
+  }
   return (
     <div className="space-y-6 font-mono text-gray-200 max-w-7xl mx-auto w-full">
       {/* Header Banner */}

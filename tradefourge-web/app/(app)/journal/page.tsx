@@ -21,8 +21,17 @@ import type {
   TradingAccount,
 } from "@/types/database";
 
+import { useActiveAccount } from "@/context/ActiveAccountContext";
+import { CompanionJournalView } from "@/components/companion/CompanionJournalView";
+
 export default function JournalPage() {
-  const [userId, setUserId]           = useState<string | null>(null);
+  const { workspaceMode } = useActiveAccount();
+
+  if (workspaceMode === "tfc") {
+    return <CompanionJournalView />;
+  }
+
+  const [userId, setUserId] = useState<string | null>(null);
   const [result, setResult]           = useState<PaginatedResult<CloudTradeWithRelations>>({
     data: [],
     total: 0,

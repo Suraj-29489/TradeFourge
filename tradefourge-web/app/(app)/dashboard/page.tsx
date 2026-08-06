@@ -33,9 +33,17 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 
+import { useActiveAccount } from "@/context/ActiveAccountContext";
+import { CompanionDashboard } from "@/components/companion/CompanionDashboard";
+
 type TimeRange = "7D" | "30D" | "90D" | "ALL";
 
 export default function DashboardPage() {
+  const { workspaceMode } = useActiveAccount();
+
+  if (workspaceMode === "tfc") {
+    return <CompanionDashboard />;
+  }
   const router = useRouter();
   const init = useJournalStore((state) => state.init);
   const theme = useJournalStore((state) => state.theme);
