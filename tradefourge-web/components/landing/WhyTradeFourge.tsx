@@ -58,7 +58,7 @@ export const WhyTradeFourge: React.FC = () => {
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
             Stop Guessing. <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-purple-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-blue-400">
               Start Trading With Institutional Clarity.
             </span>
           </h2>
@@ -120,17 +120,17 @@ export const WhyTradeFourge: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="p-8 rounded-2xl bg-[#131622] border border-purple-500/40 relative space-y-6 flex flex-col justify-between shadow-xl"
+            className="p-8 rounded-2xl bg-[#131622] border border-blue-500/40 relative space-y-6 flex flex-col justify-between shadow-xl"
           >
             <div className="space-y-6">
-              <div className="flex items-center justify-between pb-4 border-b border-purple-500/30">
+              <div className="flex items-center justify-between pb-4 border-b border-blue-500/30">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-400">
+                  <div className="p-2.5 rounded-xl bg-blue-600/20 border border-blue-500/30 text-blue-400">
                     <Zap className="w-5 h-5" />
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-white">With TradeFourge</h3>
-                    <span className="text-xs font-mono text-purple-300">Automated Intelligence Platform</span>
+                    <span className="text-xs font-mono text-blue-300">Automated Intelligence Platform</span>
                   </div>
                 </div>
                 <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -154,7 +154,7 @@ export const WhyTradeFourge: React.FC = () => {
               </motion.ul>
             </div>
 
-            <div className="pt-6 border-t border-purple-500/20 text-xs font-mono text-emerald-400">
+            <div className="pt-6 border-t border-blue-500/20 text-xs font-mono text-emerald-400">
               Result: Systematic growth, disciplined execution & scaling edge.
             </div>
           </motion.div>

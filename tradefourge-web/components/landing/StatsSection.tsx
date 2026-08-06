@@ -37,13 +37,13 @@ const StatCardItem: React.FC<StatItemProps> = ({
   return (
     <div
       ref={elementRef}
-      className="p-6 rounded-2xl bg-[#131622] border border-white/10 hover:border-purple-500/30 transition-all duration-300 group flex flex-col justify-between"
+      className="p-6 rounded-2xl bg-[#131622] border border-white/10 hover:border-blue-500/30 transition-all duration-300 group flex flex-col justify-between"
     >
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
           {label}
         </span>
-        <div className="p-2.5 rounded-xl bg-[#0B0D13] border border-white/10 text-gray-300 shrink-0 group-hover:text-purple-400 transition-colors">
+        <div className="p-2.5 rounded-xl bg-[#0B0D13] border border-white/10 text-gray-300 shrink-0 group-hover:text-blue-400 transition-colors">
           <Icon className="w-4 h-4" />
         </div>
       </div>
@@ -54,7 +54,7 @@ const StatCardItem: React.FC<StatItemProps> = ({
             {displayValue}
           </span>
           {badge && (
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30">
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30">
               {badge}
             </span>
           )}

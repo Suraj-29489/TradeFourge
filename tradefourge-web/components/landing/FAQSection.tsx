@@ -59,7 +59,7 @@ export const FAQSection: React.FC = () => {
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
             Got Questions? <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-purple-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-blue-400">
               We Have Answers.
             </span>
           </h2>
@@ -75,14 +75,14 @@ export const FAQSection: React.FC = () => {
             return (
               <div
                 key={faq.q}
-                className="rounded-xl bg-[#131622] border border-white/10 overflow-hidden transition-colors hover:border-purple-500/30"
+                className="rounded-xl bg-[#131622] border border-white/10 overflow-hidden transition-colors hover:border-blue-500/30"
               >
                 <button
                   onClick={() => toggle(index)}
                   className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-white text-base focus:outline-none"
                 >
                   <span className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-purple-400">
+                    <span className="text-xs font-mono text-blue-400">
                       {index + 1 < 10 ? `0${index + 1}` : index + 1}.
                     </span>
                     <span>{faq.q}</span>
@@ -92,7 +92,7 @@ export const FAQSection: React.FC = () => {
                   </span>
                   <div
                     className={`p-1.5 rounded-lg bg-white/5 border border-white/10 text-gray-400 transition-transform duration-200 shrink-0 ${
-                      isOpen ? "rotate-180 text-purple-400 bg-purple-600/20 border-purple-500/30" : ""
+                      isOpen ? "rotate-180 text-blue-400 bg-blue-600/20 border-blue-500/30" : ""
                     }`}
                   >
                     <ChevronDown className="w-4 h-4" />

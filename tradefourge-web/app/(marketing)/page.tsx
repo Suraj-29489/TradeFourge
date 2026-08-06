@@ -45,7 +45,7 @@ function StorytellingWrapper({
 
 export default function MarketingLandingPage() {
   return (
-    <div className="relative bg-[#0B0D13] overflow-clip selection:bg-purple-600 selection:text-white">
+    <div className="relative bg-[#0B0D13] overflow-clip selection:bg-blue-600 selection:text-white">
       {/* Storytelling Section 1: Hero & Stats */}
       <StorytellingWrapper zIndex={10}>
         <div className="flex flex-col justify-between min-h-screen">

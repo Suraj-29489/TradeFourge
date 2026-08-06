@@ -92,21 +92,21 @@ function FeatureCard({ feature }: { feature: typeof FEATURES[0] }) {
     <motion.div
       {...spotlightProps}
       variants={cardVariants}
-      className="group relative p-7 rounded-2xl bg-[#131622] border border-white/10 hover:border-purple-500/40 transition-all duration-300 hover:-translate-y-1.5 shadow-xl overflow-hidden flex flex-col justify-between"
+      className="group relative p-7 rounded-2xl bg-[#131622] border border-white/10 hover:border-blue-500/40 transition-all duration-300 hover:-translate-y-1.5 shadow-xl overflow-hidden flex flex-col justify-between"
     >
       {/* Mouse Spotlight */}
       <div
         className="pointer-events-none absolute -inset-px transition-opacity duration-300 opacity-0 group-hover:opacity-100"
         style={{
           background: isHovered
-            ? `radial-gradient(350px circle at ${mousePos.x}px ${mousePos.y}px, rgba(124, 58, 237, 0.12), transparent 80%)`
+            ? `radial-gradient(350px circle at ${mousePos.x}px ${mousePos.y}px, rgba(37, 99, 235, 0.12), transparent 80%)`
             : "none",
         }}
       />
 
       <div className="space-y-4 relative z-10">
         <div className="flex items-center justify-between font-mono">
-          <div className="p-3 rounded-xl bg-[#0B0D13] border border-white/10 text-gray-300 group-hover:text-purple-400 transition-colors">
+          <div className="p-3 rounded-xl bg-[#0B0D13] border border-white/10 text-gray-300 group-hover:text-blue-400 transition-colors">
             <Icon className="w-5 h-5" />
           </div>
           <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-white/5 border border-white/10 text-gray-400">
@@ -114,7 +114,7 @@ function FeatureCard({ feature }: { feature: typeof FEATURES[0] }) {
           </span>
         </div>
 
-        <h3 className="text-xl font-bold text-white tracking-tight group-hover:text-purple-300 transition-colors">
+        <h3 className="text-xl font-bold text-white tracking-tight group-hover:text-blue-300 transition-colors">
           {feature.title}
         </h3>
 
@@ -126,7 +126,7 @@ function FeatureCard({ feature }: { feature: typeof FEATURES[0] }) {
       <div className="pt-6 relative z-10">
         <Link
           href={feature.href}
-          className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-purple-400 hover:text-purple-300 transition-colors group-hover:translate-x-1 duration-200"
+          className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-blue-400 hover:text-blue-300 transition-colors group-hover:translate-x-1 duration-200"
         >
           <span>Explore Feature</span>
           <ArrowRight className="w-3.5 h-3.5" />
@@ -147,7 +147,7 @@ export const FeaturesSection: React.FC = () => {
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
             Institutional-Grade Analytics. <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-purple-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-blue-400">
               Simplified For Every Strategy.
             </span>
           </h2>

@@ -24,11 +24,11 @@ export const LandingFooter: React.FC = () => {
           {/* Brand Info & Newsletter */}
           <div className="lg:col-span-2 space-y-5">
             <Link href="/" className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-600 text-white shadow-md">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-600 text-white shadow-md">
                 <Zap className="w-5 h-5" />
               </div>
               <span className="text-xl font-extrabold tracking-tight text-white font-mono">
-                TRADE<span className="text-purple-400">FOURGE</span>
+                TRADE<span className="text-blue-400">FOURGE</span>
               </span>
             </Link>
 
@@ -42,18 +42,18 @@ export const LandingFooter: React.FC = () => {
                 Subscribe to Trading Market Insights
               </span>
               {!subscribed ? (
-                <form onSubmit={handleSubscribe} className="flex gap-2">
+                <form onSubmit={handleSubscribe} className="flex gap-2 font-sans">
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="trader@domain.com"
-                    className="flex-1 px-3.5 py-2 rounded-xl bg-[#131622] border border-white/10 text-white placeholder-gray-500 font-mono text-xs focus:outline-none focus:border-purple-500"
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-[#131622] border border-white/10 text-white placeholder-gray-500 font-mono text-xs focus:outline-none focus:border-blue-500"
                   />
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shrink-0"
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shrink-0"
                   >
                     <span>Join</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -72,7 +72,7 @@ export const LandingFooter: React.FC = () => {
                 href="https://github.com"
                 target="_blank"
                 rel="noreferrer"
-                className="p-2 rounded-xl bg-[#131622] hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/30 text-gray-400 hover:text-purple-300 transition-colors"
+                className="p-2 rounded-xl bg-[#131622] hover:bg-blue-600/20 border border-white/10 hover:border-blue-500/30 text-gray-400 hover:text-blue-300 transition-colors"
                 aria-label="GitHub"
               >
                 <Github className="w-4 h-4" />
@@ -81,7 +81,7 @@ export const LandingFooter: React.FC = () => {
                 href="https://discord.com"
                 target="_blank"
                 rel="noreferrer"
-                className="p-2 rounded-xl bg-[#131622] hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/30 text-gray-400 hover:text-purple-300 transition-colors"
+                className="p-2 rounded-xl bg-[#131622] hover:bg-blue-600/20 border border-white/10 hover:border-blue-500/30 text-gray-400 hover:text-blue-300 transition-colors"
                 aria-label="Discord"
               >
                 <MessageSquare className="w-4 h-4" />
@@ -90,7 +90,7 @@ export const LandingFooter: React.FC = () => {
                 href="https://linkedin.com"
                 target="_blank"
                 rel="noreferrer"
-                className="p-2 rounded-xl bg-[#131622] hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/30 text-gray-400 hover:text-purple-300 transition-colors"
+                className="p-2 rounded-xl bg-[#131622] hover:bg-blue-600/20 border border-white/10 hover:border-blue-500/30 text-gray-400 hover:text-blue-300 transition-colors"
                 aria-label="LinkedIn"
               >
                 <Linkedin className="w-4 h-4" />
@@ -99,7 +99,7 @@ export const LandingFooter: React.FC = () => {
                 href="https://x.com"
                 target="_blank"
                 rel="noreferrer"
-                className="p-2 rounded-xl bg-[#131622] hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/30 text-gray-400 hover:text-purple-300 transition-colors"
+                className="p-2 rounded-xl bg-[#131622] hover:bg-blue-600/20 border border-white/10 hover:border-blue-500/30 text-gray-400 hover:text-blue-300 transition-colors"
                 aria-label="X / Twitter"
               >
                 <Twitter className="w-4 h-4" />
@@ -108,43 +108,43 @@ export const LandingFooter: React.FC = () => {
           </div>
 
           {/* Column 1: Product */}
-          <div className="space-y-3">
+          <div className="space-y-3 font-sans">
             <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Product</h4>
             <ul className="space-y-2 text-xs">
-              <li><a href="#features" className="hover:text-purple-300 transition-colors">Features</a></li>
-              <li><a href="#pricing" className="hover:text-purple-300 transition-colors">Pricing</a></li>
-              <li><a href="#ai-showcase" className="hover:text-purple-300 transition-colors">AI Intelligence</a></li>
-              <li><a href="#roadmap" className="hover:text-purple-300 transition-colors">Roadmap</a></li>
+              <li><a href="#features" className="hover:text-blue-300 transition-colors">Features</a></li>
+              <li><a href="#pricing" className="hover:text-blue-300 transition-colors">Pricing</a></li>
+              <li><a href="#ai-showcase" className="hover:text-blue-300 transition-colors">AI Intelligence</a></li>
+              <li><a href="#roadmap" className="hover:text-blue-300 transition-colors">Roadmap</a></li>
             </ul>
           </div>
 
           {/* Column 2: Company */}
-          <div className="space-y-3">
+          <div className="space-y-3 font-sans">
             <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Company</h4>
             <ul className="space-y-2 text-xs">
-              <li><a href="#why-us" className="hover:text-purple-300 transition-colors">About Us</a></li>
-              <li><a href="#faq" className="hover:text-purple-300 transition-colors">Contact</a></li>
-              <li><a href="#roadmap" className="hover:text-purple-300 transition-colors">Careers <span className="text-[9px] font-mono bg-purple-600/20 text-purple-300 px-1 py-0.5 rounded border border-purple-500/30 ml-1">Hiring</span></a></li>
+              <li><a href="#why-us" className="hover:text-blue-300 transition-colors">About Us</a></li>
+              <li><a href="#faq" className="hover:text-blue-300 transition-colors">Contact</a></li>
+              <li><a href="#roadmap" className="hover:text-blue-300 transition-colors">Careers <span className="text-[9px] font-mono bg-blue-600/20 text-blue-300 px-1 py-0.5 rounded border border-blue-500/30 ml-1">Hiring</span></a></li>
             </ul>
           </div>
 
           {/* Column 3: Resources */}
-          <div className="space-y-3">
+          <div className="space-y-3 font-sans">
             <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Resources</h4>
             <ul className="space-y-2 text-xs">
-              <li><a href="#faq" className="hover:text-purple-300 transition-colors">Documentation</a></li>
-              <li><a href="#faq" className="hover:text-purple-300 transition-colors">Blog</a></li>
-              <li><a href="#roadmap" className="hover:text-purple-300 transition-colors">Changelog</a></li>
+              <li><a href="#faq" className="hover:text-blue-300 transition-colors">Documentation</a></li>
+              <li><a href="#faq" className="hover:text-blue-300 transition-colors">Blog</a></li>
+              <li><a href="#roadmap" className="hover:text-blue-300 transition-colors">Changelog</a></li>
             </ul>
           </div>
 
           {/* Column 4: Legal */}
-          <div className="space-y-3">
+          <div className="space-y-3 font-sans">
             <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Legal</h4>
             <ul className="space-y-2 text-xs">
-              <li><a href="#privacy" className="hover:text-purple-300 transition-colors">Privacy Policy</a></li>
-              <li><a href="#terms" className="hover:text-purple-300 transition-colors">Terms of Service</a></li>
-              <li><a href="#cookies" className="hover:text-purple-300 transition-colors">Cookie Policy</a></li>
+              <li><a href="#privacy" className="hover:text-blue-300 transition-colors">Privacy Policy</a></li>
+              <li><a href="#terms" className="hover:text-blue-300 transition-colors">Terms of Service</a></li>
+              <li><a href="#cookies" className="hover:text-blue-300 transition-colors">Cookie Policy</a></li>
             </ul>
           </div>
 

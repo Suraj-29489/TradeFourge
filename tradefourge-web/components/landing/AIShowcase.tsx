@@ -5,13 +5,10 @@ import { motion, Variants } from "framer-motion";
 import {
   Brain,
   Sparkles,
-  ShieldCheck,
   CheckCircle2,
   AlertTriangle,
   Flame,
-  TrendingUp,
   Activity,
-  Terminal,
   ArrowUpRight,
 } from "lucide-react";
 
@@ -44,12 +41,12 @@ export const AIShowcase: React.FC = () => {
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#131622] border border-white/10 text-gray-300 text-xs font-mono font-semibold uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
             <span>AI Coach & Intelligence Engine</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
             Real-Time Edge Analysis. <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-purple-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-blue-400">
               Bloomberg-Style Execution Auditing.
             </span>
           </h2>
@@ -69,13 +66,13 @@ export const AIShowcase: React.FC = () => {
           {/* Header Bar */}
           <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#0B0D13] border border-white/10 text-purple-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[#0B0D13] border border-white/10 text-blue-400 flex items-center justify-center shrink-0">
                 <Brain className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   TradeFourge AI Advisory Terminal
-                  <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30">
+                  <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30">
                     MODEL v2.4
                   </span>
                 </h3>
@@ -130,7 +127,7 @@ export const AIShowcase: React.FC = () => {
                     whileInView={{ width: "94.8%" }}
                     viewport={{ once: true }}
                     transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                    className="bg-gradient-to-r from-purple-500 via-indigo-500 to-emerald-400 h-2.5 rounded-full"
+                    className="bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-400 h-2.5 rounded-full"
                   />
                 </div>
 
@@ -144,9 +141,9 @@ export const AIShowcase: React.FC = () => {
               <motion.div variants={itemVariants} className="p-5 rounded-xl bg-[#0B0D13] border border-white/10 space-y-3">
                 <div className="flex items-center justify-between text-xs font-mono text-gray-300">
                   <span className="flex items-center gap-1.5 font-bold text-white">
-                    <Activity className="w-4 h-4 text-purple-400" /> Trade Analysis & Distribution
+                    <Activity className="w-4 h-4 text-blue-400" /> Trade Analysis & Distribution
                   </span>
-                  <span className="text-[10px] text-purple-300 bg-purple-600/20 px-2 py-0.5 rounded border border-purple-500/30">
+                  <span className="text-[10px] text-blue-300 bg-blue-600/20 px-2 py-0.5 rounded border border-blue-500/30">
                     EV +2.45 R
                   </span>
                 </div>
@@ -155,8 +152,8 @@ export const AIShowcase: React.FC = () => {
                   <svg className="w-full h-full overflow-visible" viewBox="0 0 300 80" preserveAspectRatio="none">
                     <defs>
                       <linearGradient id="aiChartGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.35" />
-                        <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.0" />
+                        <stop offset="0%" stopColor="#2563EB" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="#2563EB" stopOpacity="0.0" />
                       </linearGradient>
                     </defs>
                     <path
@@ -166,7 +163,7 @@ export const AIShowcase: React.FC = () => {
                     <motion.path
                       d="M 0 70 Q 40 60, 80 40 T 160 30 T 240 15 T 300 5"
                       fill="none"
-                      stroke="#8B5CF6"
+                      stroke="#2563EB"
                       strokeWidth="2.5"
                       strokeLinecap="round"
                       initial={{ pathLength: 0 }}
@@ -191,7 +188,7 @@ export const AIShowcase: React.FC = () => {
 
             </div>
 
-            {/* Right Column: AI Coach Cards (Risk Detection, Mistake Detection, Suggested Improvements) */}
+            {/* Right Column: AI Coach Cards */}
             <div className="lg:col-span-7 space-y-4 flex flex-col justify-between">
               
               {/* Risk Detection Card */}
@@ -225,18 +222,18 @@ export const AIShowcase: React.FC = () => {
               </motion.div>
 
               {/* Suggested Improvements Card */}
-              <motion.div variants={itemVariants} className="p-5 rounded-xl bg-[#0B0D13] border border-purple-500/40 space-y-2">
+              <motion.div variants={itemVariants} className="p-5 rounded-xl bg-[#0B0D13] border border-blue-500/40 space-y-2">
                 <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="flex items-center gap-1.5 text-purple-300 font-bold">
+                  <span className="flex items-center gap-1.5 text-blue-300 font-bold">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Suggested Improvements & Action Plan
                   </span>
-                  <span className="text-[10px] text-purple-300 bg-purple-600/20 px-2 py-0.5 rounded border border-purple-500/30">
+                  <span className="text-[10px] text-blue-300 bg-blue-600/20 px-2 py-0.5 rounded border border-blue-500/30">
                     OPTIMIZED EDGE
                   </span>
                 </div>
                 <ul className="text-xs text-gray-200 leading-relaxed font-sans pt-1 space-y-1.5">
                   <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
                     <span>Restrict trading windows strictly to <strong>09:30–11:30 EST</strong> (London / NY overlap).</span>
                   </li>
                   <li className="flex items-center gap-2">

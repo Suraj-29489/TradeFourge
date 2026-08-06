@@ -43,7 +43,7 @@ export const PricingSection: React.FC = () => {
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
             Simple Plans. <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-purple-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-blue-400">
               Unlimited Trading Intelligence.
             </span>
           </h2>
@@ -63,14 +63,14 @@ export const PricingSection: React.FC = () => {
               <motion.div
                 animate={{ x: billingCycle === "yearly" ? 24 : 0 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                className="w-6 h-6 rounded-full bg-purple-600 shadow-md"
+                className="w-6 h-6 rounded-full bg-blue-600 shadow-md"
               />
             </button>
             <div className="flex items-center gap-1.5">
               <span className={`text-sm font-medium ${billingCycle === "yearly" ? "text-white font-bold" : "text-gray-400"}`}>
                 Yearly
               </span>
-              <span className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[10px] font-mono font-bold">
                 SAVE 20%
               </span>
             </div>
@@ -132,15 +132,15 @@ export const PricingSection: React.FC = () => {
           </motion.div>
 
           {/* Pro Plan (Highlighted) */}
-          <motion.div variants={cardVariants} className="p-8 rounded-2xl bg-[#131622] border-2 border-purple-500 relative space-y-8 flex flex-col justify-between shadow-2xl">
+          <motion.div variants={cardVariants} className="p-8 rounded-2xl bg-[#131622] border-2 border-blue-600 relative space-y-8 flex flex-col justify-between shadow-2xl">
             {/* Badge */}
-            <div className="absolute -top-3.5 right-6 px-3 py-0.5 rounded-full bg-purple-600 text-white text-[10px] font-mono font-bold shadow-md flex items-center gap-1">
+            <div className="absolute -top-3.5 right-6 px-3 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-mono font-bold shadow-md flex items-center gap-1">
               <Sparkles className="w-3 h-3" /> MOST POPULAR
             </div>
 
             <div className="space-y-6">
               <div>
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-purple-400">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-blue-400">
                   Pro Trader Tier
                 </span>
                 <h3 className="text-2xl font-bold text-white mt-1">Pro Plan</h3>
@@ -157,29 +157,29 @@ export const PricingSection: React.FC = () => {
                   <span className="text-xs text-gray-400 font-mono">/ month</span>
                 </div>
                 {billingCycle === "yearly" && (
-                  <span className="text-[11px] text-purple-300 font-mono block">Billed annually</span>
+                  <span className="text-[11px] text-blue-300 font-mono block">Billed annually</span>
                 )}
               </div>
 
-              <ul className="space-y-3 text-xs text-gray-200 border-t border-purple-500/20 pt-6 font-sans">
+              <ul className="space-y-3 text-xs text-gray-200 border-t border-blue-500/20 pt-6 font-sans">
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
+                  <Check className="w-4 h-4 text-blue-400 shrink-0" />
                   <span><strong>Unlimited Trading Journals</strong></span>
                 </li>
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
+                  <Check className="w-4 h-4 text-blue-400 shrink-0" />
                   <span><strong>Encrypted Cloud Backup & Sync</strong></span>
                 </li>
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
+                  <Check className="w-4 h-4 text-blue-400 shrink-0" />
                   <span><strong>AI Coach & Behavioral Auditing</strong></span>
                 </li>
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
-                  <span><strong>Live Broker Sync</strong> <span className="text-[10px] font-mono text-purple-300 bg-purple-600/30 px-1.5 py-0.5 rounded ml-1">Coming Soon</span></span>
+                  <Check className="w-4 h-4 text-blue-400 shrink-0" />
+                  <span><strong>Live Broker Sync</strong> <span className="text-[10px] font-mono text-blue-300 bg-blue-600/30 px-1.5 py-0.5 rounded ml-1">Coming Soon</span></span>
                 </li>
                 <li className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
+                  <Check className="w-4 h-4 text-blue-400 shrink-0" />
                   <span><strong>Advanced Performance Analytics</strong></span>
                 </li>
               </ul>
@@ -187,7 +187,7 @@ export const PricingSection: React.FC = () => {
 
             <Link
               href="/signup"
-              className="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-center text-xs shadow-md flex items-center justify-center gap-2 transition-all"
+              className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-center text-xs shadow-md flex items-center justify-center gap-2 transition-all"
             >
               <span>Upgrade to Pro</span>
               <ArrowRight className="w-4 h-4" />
@@ -207,7 +207,7 @@ export const PricingSection: React.FC = () => {
                     Custom prop firm API hooks, dedicated servers & SLA.
                   </p>
                 </div>
-                <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 shrink-0">
+                <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-1 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 shrink-0">
                   Coming Soon
                 </span>
               </div>
@@ -249,10 +249,10 @@ export const PricingSection: React.FC = () => {
         <div className="mt-14 max-w-2xl mx-auto p-6 rounded-2xl bg-[#131622] border border-white/10 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Tag className="w-4 h-4 text-purple-400" />
+              <Tag className="w-4 h-4 text-blue-400" />
               <h4 className="text-sm font-bold text-white">Coupon Preview</h4>
             </div>
-            <span className="text-[10px] font-mono text-purple-300 bg-purple-600/20 px-2 py-0.5 rounded border border-purple-500/30">
+            <span className="text-[10px] font-mono text-blue-300 bg-blue-600/20 px-2 py-0.5 rounded border border-blue-500/30">
               PROMO CODE PREVIEW
             </span>
           </div>
@@ -263,23 +263,23 @@ export const PricingSection: React.FC = () => {
 
           {/* Static Coupon Chips UI */}
           <div className="flex flex-wrap gap-2.5 pt-1">
-            <div className="px-3.5 py-2 rounded-xl bg-[#0B0D13] border border-purple-500/30 flex items-center gap-2">
+            <div className="px-3.5 py-2 rounded-xl bg-[#0B0D13] border border-blue-500/30 flex items-center gap-2">
               <span className="text-xs font-mono font-bold text-white">WELCOME20</span>
               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 20% OFF
               </span>
             </div>
 
-            <div className="px-3.5 py-2 rounded-xl bg-[#0B0D13] border border-purple-500/30 flex items-center gap-2">
+            <div className="px-3.5 py-2 rounded-xl bg-[#0B0D13] border border-blue-500/30 flex items-center gap-2">
               <span className="text-xs font-mono font-bold text-white">EARLYACCESS</span>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">
                 $10 OFF
               </span>
             </div>
 
-            <div className="px-3.5 py-2 rounded-xl bg-[#0B0D13] border border-purple-500/30 flex items-center gap-2">
+            <div className="px-3.5 py-2 rounded-xl bg-[#0B0D13] border border-blue-500/30 flex items-center gap-2">
               <span className="text-xs font-mono font-bold text-white">BETA50</span>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20">
                 50% OFF
               </span>
             </div>
@@ -295,7 +295,7 @@ export const PricingSection: React.FC = () => {
             />
             <button
               disabled
-              className="px-6 py-2.5 rounded-xl bg-purple-600/50 text-white/70 font-bold text-xs cursor-not-allowed shrink-0"
+              className="px-6 py-2.5 rounded-xl bg-blue-600/50 text-white/70 font-bold text-xs cursor-not-allowed shrink-0"
             >
               Apply Coupon
             </button>
