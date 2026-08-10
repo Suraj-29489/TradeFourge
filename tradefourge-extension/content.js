@@ -24,6 +24,28 @@ import { isExtensionContextValid } from './src/utils/contextCheck.js';
 (function () {
   'use strict';
 
+  // ── FrameGuard ─────────────────────────────────────────────────────────────
+  // 1. Must be top-level document (window.top === window.self)
+  // 2. Reject about:blank, chrome://, extension://
+  // 3. Reject Exness internal service-worker & analytics frames (/stats/, /service_worker/)
+  const isTopFrame = typeof window !== 'undefined' && window.top === window.self;
+  const currentHref = (window.location.href || '').toLowerCase();
+
+  if (!isTopFrame) {
+    return;
+  }
+
+  if (
+    currentHref.includes('about:blank') ||
+    currentHref.includes('/stats/') ||
+    currentHref.includes('/service_worker/') ||
+    currentHref.includes('/ns.html') ||
+    currentHref.includes('sw_iframe.html')
+  ) {
+    console.log('[TradeFourge][FrameGuard] Ignored Exness internal/non-top frame:', window.location.href);
+    return;
+  }
+
   // Double-injection guard — prevents re-running if content script is already active
   if (document.documentElement.dataset.tradefourgeV5Injected) {
     return;
@@ -36,8 +58,8 @@ import { isExtensionContextValid } from './src/utils/contextCheck.js';
   }
 
   console.log(
-    '[TradeForge][ExnessHistoryContent]',
-    'CONTENT SCRIPT LOADED',
+    '[TradeForge][ExnessContentScript]',
+    'TOP-LEVEL CONTENT SCRIPT LOADED',
     'href=', window.location.href,
     'origin=', window.location.origin
   );

@@ -60,9 +60,7 @@
         "https://*.exness.cloud/*"
       ],
       "js": ["dist/content.js"],
-      "run_at": "document_start",
-      "all_frames": true,
-      "match_about_blank": true
+      "run_at": "document_start"
     }
   ],
   "host_permissions": [
