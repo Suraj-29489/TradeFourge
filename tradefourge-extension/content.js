@@ -35,7 +35,12 @@ import { isExtensionContextValid } from './src/utils/contextCheck.js';
     return;
   }
 
-  console.log('[TradeFourge Companion] Content Script v5.1.2 loaded on Exness page.');
+  console.log(
+    '[TradeForge][ExnessHistoryContent]',
+    'CONTENT SCRIPT LOADED',
+    'href=', window.location.href,
+    'origin=', window.location.origin
+  );
 
   try {
     BridgeDispatcher.getInstance().init();

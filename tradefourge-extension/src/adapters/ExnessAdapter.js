@@ -244,9 +244,13 @@ export class ExnessAdapter extends BrokerAdapter {
   }
 
   async fetchHistoryPage(accountNumber, offset = 0, limit = 1000) {
-    console.log('[EXNESS DEBUG] fetchHistoryPage called');
-    console.log('[EXNESS DEBUG] Current URL:', window.location.href);
-    console.log('[EXNESS DEBUG] Target account:', accountNumber);
+    console.log(
+      '[TradeForge][ExnessHistoryContent]',
+      'fetchHistoryPage called',
+      'targetAccount=', accountNumber,
+      'href=', window.location.href,
+      'origin=', window.location.origin
+    );
     Logger.info('ExnessAdapter', `Fetching Exness history batch for account ${accountNumber} (${offset}..${offset + limit})`);
 
     const extractedTrades = [];
@@ -277,9 +281,26 @@ export class ExnessAdapter extends BrokerAdapter {
       });
     };
 
+    // Dynamic Wait Strategy: Poll up to 3000ms for history container/rows to render
+    const waitForDOMOrState = async () => {
+      const maxAttempts = 12; // 12 * 250ms = 3000ms
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        const hasContainer = document.querySelector('table, [class*="history"], [class*="order"], [data-testid*="history"], [data-testid*="order"], [data-testid*="deal"]');
+        if (hasContainer) {
+          console.log('[TradeForge][ExnessHistoryContent] History container detected');
+          break;
+        }
+        await new Promise((res) => setTimeout(res, 250));
+      }
+    };
+
+    await waitForDOMOrState();
+
     // Strategy 1: DOM Elements (table rows, list items, history cards)
     try {
       const selectors = [
+        'tbody tr',
+        'table tr',
         'tr[class*="history"]',
         'tr[class*="order"]',
         'tr[class*="deal"]',
@@ -287,35 +308,40 @@ export class ExnessAdapter extends BrokerAdapter {
         '[class*="closed-position"]',
         '[class*="historyRow"]',
         '[class*="orderItem"]',
+        '[class*="ordersHistory"] tr',
         '[data-testid*="deal"]',
         '[data-testid*="order"]',
         '[data-testid*="history"]',
+        '[data-testid*="row"]',
       ];
 
       const historyRows = document.querySelectorAll(selectors.join(', '));
       console.log('[EXNESS DEBUG] History DOM query results:', historyRows.length, 'rows found');
 
       historyRows.forEach((row, idx) => {
+        const textContent = row.textContent || '';
+        if (!textContent || textContent.length < 5) return;
+
         const ticket = row.querySelector('[class*="ticket"], [class*="id"], [class*="number"]')?.textContent?.trim() ||
           row.getAttribute('data-ticket') ||
           row.getAttribute('data-order-id') ||
           `${accountNumber}_ord_${idx + 1}`;
-        const symbol = row.querySelector('[class*="symbol"], [class*="pair"], [class*="instrument"]')?.textContent?.trim() || 'XAU/USD';
-        const sideText = row.querySelector('[class*="type"], [class*="side"], [class*="direction"]')?.textContent?.trim() || 'BUY';
-        const volumeText = row.querySelector('[class*="volume"], [class*="lots"], [class*="size"]')?.textContent;
-        const profitText = row.querySelector('[class*="profit"], [class*="pnl"], [class*="gain"]')?.textContent;
+        const symbol = row.querySelector('[class*="symbol"], [class*="pair"], [class*="instrument"]')?.textContent?.trim() ||
+          (textContent.match(/(XAU\/?USD|BTC\/?USD|EUR\/?USD|GBP\/?USD|USD\/?JPY)/i)?.[1] || 'XAU/USD');
+        const sideText = row.querySelector('[class*="type"], [class*="side"], [class*="direction"]')?.textContent?.trim() ||
+          (textContent.match(/Sell/i) ? 'SELL' : 'BUY');
+        const volumeText = row.querySelector('[class*="volume"], [class*="lots"], [class*="size"]')?.textContent ||
+          (textContent.match(/([0-9.]+)\s*(?:lot|lots)/i)?.[1] || '0.01');
+        const profitText = row.querySelector('[class*="profit"], [class*="pnl"], [class*="gain"]')?.textContent ||
+          (textContent.match(/([+-]?[0-9,]+(?:\.[0-9]+)?)\s*(?:USC|USD|\$)/i)?.[1] || '0');
         const openTimeText = row.querySelector('[class*="openTime"], [class*="open-time"]')?.textContent?.trim();
         const closeTimeText = row.querySelector('[class*="closeTime"], [class*="close-time"]')?.textContent?.trim();
-        const openPriceText = row.querySelector('[class*="openPrice"], [class*="open-price"]')?.textContent;
-        const closePriceText = row.querySelector('[class*="closePrice"], [class*="close-price"]')?.textContent;
 
         addTrade({
           ticket,
           symbol,
           side: sideText,
           volume: volumeText,
-          open_price: openPriceText,
-          close_price: closePriceText,
           profit: profitText,
           open_time: openTimeText ? new Date(openTimeText).toISOString() : null,
           close_time: closeTimeText ? new Date(closeTimeText).toISOString() : null,
@@ -331,9 +357,8 @@ export class ExnessAdapter extends BrokerAdapter {
       if (extractedTrades.length === 0 && document.body) {
         const pageText = document.body.innerText || '';
         console.log('[EXNESS DEBUG] Strategy 2: Scanning page text for order patterns...');
-        
-        // Match symbols like XAU/USD, BTC/USD, EUR/USD
-        const symbolRegex = /(XAU\/USD|BTC\/USD|EUR\/USD|GBP\/USD|USD\/JPY|AUD\/USD)\s+(Buy|Sell)\s+([0-9.]+)\s*lots?/gi;
+
+        const symbolRegex = /(XAU\/?USD|BTC\/?USD|EUR\/?USD|GBP\/?USD|USD\/?JPY|AUD\/?USD|[A-Z0-9]{3,6}\/[A-Z0-9]{3,6})\s*(Buy|Sell|BUY|SELL)\s*([0-9.]+)\s*(?:lots?|lot)?/gi;
         let match;
         let matchIdx = 0;
         while ((match = symbolRegex.exec(pageText)) !== null) {
@@ -341,16 +366,21 @@ export class ExnessAdapter extends BrokerAdapter {
           const sym = match[1];
           const side = match[2];
           const lots = match[3];
-          const snippet = pageText.substring(Math.max(0, match.index - 50), Math.min(pageText.length, match.index + 150));
-          
+          const snippet = pageText.substring(Math.max(0, match.index - 60), Math.min(pageText.length, match.index + 160));
+
           const profitMatch = snippet.match(/([+-]?[0-9,]+(?:\.[0-9]+)?)\s*(?:USC|USD|\$)/i);
           const profitVal = profitMatch ? Number(profitMatch[1].replace(/,/g, '')) : 0;
+
+          const openPriceMatch = snippet.match(/Open(?:ing)?\s*:?\s*([0-9,]+(?:\.[0-9]+)?)/i);
+          const closePriceMatch = snippet.match(/Close(?:ing)?\s*:?\s*([0-9,]+(?:\.[0-9]+)?)/i);
 
           addTrade({
             ticket: `${accountNumber}_tx_${matchIdx}`,
             symbol: sym,
             side: side,
             volume: lots,
+            open_price: openPriceMatch ? Number(openPriceMatch[1].replace(/,/g, '')) : 0,
+            close_price: closePriceMatch ? Number(closePriceMatch[1].replace(/,/g, '')) : 0,
             profit: profitVal,
             currency: 'USC',
           });
@@ -396,9 +426,12 @@ export class ExnessAdapter extends BrokerAdapter {
       Logger.debug('ExnessAdapter', 'History Strategy 3 window scan note:', { error: err });
     }
 
-    console.log('[EXNESS DEBUG] fetchHistoryPage result:', { tradeCount: extractedTrades.length, hasMore: false });
-    if (extractedTrades.length === 0) {
-      console.log('[EXNESS DEBUG] WARNING: 0 trades extracted. Navigate to Exness "History of orders" tab or page to load order records.');
+    // Test output & diagnostics
+    console.log('[ExnessHistoryTest] Rows detected:', extractedTrades.length);
+    if (extractedTrades.length > 0) {
+      console.log('[ExnessHistoryTest] First raw record:', extractedTrades[0]);
+    } else {
+      console.log('[EXNESS DEBUG] HISTORY_ROWS_NOT_RENDERED - 0 history rows detected on page.');
     }
 
     return {
