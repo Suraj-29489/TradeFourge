@@ -220,8 +220,8 @@ export default function AccountsPage() {
             {accounts.map((account) => {
               const isActive = activeAccountId === account.id;
               const isLoading = actionLoading === account.id;
-              const currencySymbol = getCurrencySymbol(account.currency);
-              const pnl = account.current_balance - account.starting_balance;
+              const currencySymbol = getCurrencySymbol(account.currency ?? "USD");
+              const pnl = (account.current_balance ?? 0) - (account.starting_balance ?? 0);
               const isPositive = pnl >= 0;
 
               return (
@@ -266,9 +266,9 @@ export default function AccountsPage() {
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 pt-0.5">
                           <span>Broker: <strong className="text-gray-200">{account.broker || "CSV"}</strong></span>
                           <span>·</span>
-                          <span>Currency: <strong className="text-gray-200">{getCurrencyShortLabel(account.currency)}</strong></span>
+                          <span>Currency: <strong className="text-gray-200">{getCurrencyShortLabel(account.currency ?? "USD")}</strong></span>
                           <span>·</span>
-                          <span>Account Type: <strong className="text-gray-200">{account.account_type}</strong></span>
+                          <span>Account Type: <strong className="text-gray-200">{account.account_type || "Not detected"}</strong></span>
                         </div>
                       </div>
                     </div>
@@ -279,7 +279,7 @@ export default function AccountsPage() {
                         <div className="text-[10px] text-gray-400 uppercase tracking-wider">Current Balance</div>
                         <p className="text-lg font-extrabold text-white font-mono">
                           {currencySymbol}
-                          {account.current_balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          {(account.current_balance ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                         </p>
                       </div>
 

@@ -378,14 +378,16 @@ export default function ConnectionWizardPage() {
                         <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/[0.06] text-xs">
                           <div>
                             <div className="text-[10px] text-gray-400 uppercase">Currency</div>
-                            <div className="font-bold text-gray-200">{acc.currency}</div>
+                            <div className="font-bold text-gray-200">{acc.currency || "Not detected"}</div>
                           </div>
                           <div>
                             <div className="text-[10px] text-gray-400 uppercase">Balance</div>
                             <div className="font-bold text-white">
-                              {acc.currency === "USC"
-                                ? `${acc.balance} USC`
-                                : `$${acc.balance.toLocaleString()}`}
+                              {acc.balance !== null && acc.balance !== undefined
+                                ? acc.currency === "USC"
+                                  ? `${acc.balance} USC`
+                                  : `$${acc.balance.toLocaleString()}`
+                                : "Not detected"}
                             </div>
                           </div>
                           <div>

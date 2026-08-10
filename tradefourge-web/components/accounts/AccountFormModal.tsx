@@ -94,13 +94,13 @@ export function AccountFormModal({
       reset({
         account_name:     account.account_name,
         broker:           account.broker,
-        platform:         account.platform,
+        platform:         account.platform ?? "MetaTrader 5",
         account_number:   account.account_number ?? "",
-        account_type:     account.account_type,
-        currency:         account.currency,
+        account_type:     account.account_type ?? "Live",
+        currency:         account.currency ?? "USD",
         leverage:         account.leverage ?? "",
-        starting_balance: account.starting_balance,
-        current_balance:  account.current_balance,
+        starting_balance: account.starting_balance ?? 0,
+        current_balance:  account.current_balance ?? 0,
         notes:            account.notes ?? "",
       });
     } else {

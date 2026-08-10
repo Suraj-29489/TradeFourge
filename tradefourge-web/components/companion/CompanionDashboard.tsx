@@ -40,7 +40,7 @@ export const CompanionDashboard: React.FC = () => {
   const [timeRange, setTimeRange] = useState<"7D" | "30D" | "90D" | "ALL">("30D");
 
   // Chart data from current TFC account stats — only show actual balance/equity if available
-  const equityData = currentAccount && currentAccount.equity > 0
+  const equityData = currentAccount && currentAccount.equity !== null && currentAccount.equity > 0
     ? [
         { date: "Current", equity: currentAccount.equity },
       ]
@@ -175,7 +175,7 @@ export const CompanionDashboard: React.FC = () => {
                     : `${currentAccount.currency === "EUR" ? "€" : "$"}${currentAccount.balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
                   : "--"}
               </p>
-              <span className="text-[10px] text-gray-500 block">Currency: {currentAccount.currency || "USD"}</span>
+              <span className="text-[10px] text-gray-500 block">Currency: {currentAccount.currency || "Not detected"}</span>
             </div>
 
             {/* Card 2: Equity */}
@@ -227,8 +227,8 @@ export const CompanionDashboard: React.FC = () => {
             {/* Card 6: Account Identity */}
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase tracking-wider block font-bold">Server & Type</span>
-              <p className="text-xs font-bold text-white truncate">{currentAccount.server || "Server unavailable"}</p>
-              <span className="text-[10px] text-blue-400 font-bold block">{currentAccount.accountType || "Standard"} • {currentAccount.leverage || "Unavailable"}</span>
+              <p className="text-xs font-bold text-white truncate">{currentAccount.server || "Not detected"}</p>
+              <span className="text-[10px] text-blue-400 font-bold block">{currentAccount.accountType || "Not detected"} • {currentAccount.leverage || "Not detected"}</span>
             </div>
           </div>
 

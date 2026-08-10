@@ -66,6 +66,7 @@ export class HistoryImportEngine {
       // ── Stage 3: RECEIVING_BATCHES ─────────────────────────────────────────
       const pageResult = await adapter.fetchHistoryPage(activeAccount, 0, 1000);
       const fetched = Array.isArray(pageResult?.trades) ? pageResult.trades : [];
+      console.log('[HISTORY DEBUG] fetchHistoryPage result:', { tradeCount: fetched.length, totalCount: pageResult?.totalCount });
       accumulatedTrades.push(...fetched);
 
       const totalCount = Math.max(pageResult?.totalCount || 0, accumulatedTrades.length);
@@ -116,6 +117,14 @@ export class HistoryImportEngine {
         trades: accumulatedTrades,
         message: `Successfully synchronized ${accumulatedTrades.length} historical trades!`,
       };
+
+      console.log('[HISTORY DEBUG] Import complete:', { accountNumber: activeAccount, tradeCount: accumulatedTrades.length });
+      if (accumulatedTrades.length === 0) {
+        console.log('[HISTORY DEBUG] WARNING: 0 trades extracted. Possible causes:');
+        console.log('[HISTORY DEBUG]   - Content script is not running on the Exness history page');
+        console.log('[HISTORY DEBUG]   - DOM selectors do not match Exness history table elements');
+        console.log('[HISTORY DEBUG]   - Account has no closed positions');
+      }
 
       Logger.success('HistoryImportEngine', `History import completed for ${accumulatedTrades.length} trades.`);
       EventBus.getInstance().emit('HistoryImported', completedPayload);

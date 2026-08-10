@@ -51,6 +51,8 @@ export class ExnessAdapter extends BrokerAdapter {
   }
 
   async discoverAccounts() {
+    console.log('[EXNESS DEBUG] === ACCOUNT DISCOVERY START ===');
+    console.log('[EXNESS DEBUG] Current URL:', window.location.href);
     Logger.info('ExnessAdapter', 'Discovering Exness trading accounts from active session...');
 
     const discoveredMap = new Map();
@@ -60,11 +62,11 @@ export class ExnessAdapter extends BrokerAdapter {
       if (!cleanNum || cleanNum.length < 5 || cleanNum.length > 12) return;
       if (discoveredMap.has(cleanNum)) return;
 
-      const rawType = data.account_type || 'Standard';
-      const cleanType = String(rawType).trim();
-      const serverVal = data.server ? String(data.server).trim() : 'Server unavailable';
-      const leverageVal = data.leverage ? (String(data.leverage).startsWith('1:') ? String(data.leverage) : `1:${data.leverage}`) : 'Unavailable';
-      const currencyVal = data.currency ? String(data.currency).trim().toUpperCase() : 'USD';
+      const rawType = data.account_type || null;
+      const cleanType = rawType ? String(rawType).trim() : '';
+      const serverVal = data.server ? String(data.server).trim() : null;
+      const leverageVal = data.leverage ? (String(data.leverage).startsWith('1:') ? String(data.leverage) : '1:' + data.leverage) : null;
+      const currencyVal = data.currency ? String(data.currency).trim().toUpperCase() : null;
       const platformVal = data.platform || (cleanType.toLowerCase().includes('mt4') ? 'MetaTrader 4' : 'MetaTrader 5');
       const balanceVal = typeof data.balance === 'number' ? data.balance : Number(String(data.balance || 0).replace(/[^0-9.]/g, '')) || 0;
       const equityVal = typeof data.equity === 'number' ? data.equity : Number(String(data.equity || balanceVal).replace(/[^0-9.]/g, '')) || balanceVal;
@@ -80,7 +82,7 @@ export class ExnessAdapter extends BrokerAdapter {
         balance: balanceVal,
         equity: equityVal,
         server: serverVal,
-        account_type: cleanType,
+        account_type: cleanType || null,
         account_type_raw: cleanType,
         leverage: leverageVal,
         history_count: 0,
@@ -103,7 +105,9 @@ export class ExnessAdapter extends BrokerAdapter {
       ];
 
       selectors.forEach((selector) => {
-        document.querySelectorAll(selector).forEach((card) => {
+        const cards = document.querySelectorAll(selector);
+        console.log(`[EXNESS DEBUG] Strategy 1: Selector '${selector}' matched ${cards.length} elements`);
+        cards.forEach((card) => {
           const accNum = card.getAttribute('data-account-number') ||
             card.getAttribute('data-account-id') ||
             card.querySelector('[class*="accountNumber"], [class*="account-number"]')?.textContent?.trim();
@@ -113,6 +117,8 @@ export class ExnessAdapter extends BrokerAdapter {
           const currencyText = card.querySelector('[class*="currency"]')?.textContent?.trim();
           const serverText = card.querySelector('[class*="server"], [class*="Server"]')?.textContent?.trim();
           const leverageText = card.querySelector('[class*="leverage"], [class*="Leverage"]')?.textContent?.trim();
+
+          console.log('[EXNESS DEBUG] Strategy 1 card:', { accNum, balanceText, typeText, currencyText, serverText, leverageText });
 
           if (accNum) {
             addDiscovered({
@@ -157,24 +163,24 @@ export class ExnessAdapter extends BrokerAdapter {
           else if (/\bUSD\b/i.test(snippet)) currency = 'USD';
 
           // Determine leverage
-          let leverage = '1:2000';
+          let leverage = null;
           const levMatch = snippet.match(/1:(\d+|unlimited)/i);
           if (levMatch) {
             leverage = `1:${levMatch[1]}`;
           }
 
           // Determine server
-          let server = 'Exness-MT5Real';
+          let server = null;
           const serverMatch = snippet.match(/(Exness-[A-Za-z0-9]+)/i);
           if (serverMatch) {
             server = serverMatch[1];
-          } else if (type === 'Standard Cent') {
-            server = 'Exness-MT5Cent';
           }
 
           // Extract numerical balance
           const balMatch = snippet.match(/([0-9]{1,3}(?:[,\s][0-9]{3})*(?:\.[0-9]{2})?)\s*(?:USD|USC|EUR|INR|\$|\€)?/);
           const balance = balMatch ? Number(balMatch[1].replace(/[^0-9.]/g, '')) : 0;
+
+          console.log('[EXNESS DEBUG] Strategy 2 account:', accNum, { type, currency, balance, server, leverage, snippetPreview: snippet.substring(0, 100) });
 
           addDiscovered({
             account_number: accNum,
@@ -204,13 +210,9 @@ export class ExnessAdapter extends BrokerAdapter {
               matches.forEach((m) => {
                 const digits = m.match(/\d{7,10}/);
                 if (digits) {
+                  console.log('[EXNESS DEBUG] Strategy 3: Found account number in window state:', digits[0], 'key:', key);
                   addDiscovered({
                     account_number: digits[0],
-                    account_type: 'Standard',
-                    currency: 'USD',
-                    balance: 0,
-                    server: 'Exness-MT5Real',
-                    leverage: '1:2000',
                   });
                 }
               });
@@ -224,10 +226,27 @@ export class ExnessAdapter extends BrokerAdapter {
 
     const discoveredList = Array.from(discoveredMap.values());
     Logger.info('ExnessAdapter', `Discovered ${discoveredList.length} live Exness account(s).`);
+
+    console.log('[EXNESS DEBUG] === DISCOVERY COMPLETE ===');
+    console.log('[EXNESS DEBUG] Total accounts found:', discoveredList.length);
+    discoveredList.forEach((acc, i) => {
+      console.log(`[EXNESS DEBUG] Account ${i + 1}:`, {
+        account_number: acc.account_number,
+        account_type: acc.account_type,
+        server: acc.server,
+        currency: acc.currency,
+        balance: acc.balance,
+        leverage: acc.leverage,
+      });
+    });
+
     return JSON.parse(JSON.stringify(discoveredList));
   }
 
   async fetchHistoryPage(accountNumber, offset = 0, limit = 1000) {
+    console.log('[EXNESS DEBUG] fetchHistoryPage called');
+    console.log('[EXNESS DEBUG] Current URL:', window.location.href);
+    console.log('[EXNESS DEBUG] Target account:', accountNumber);
     Logger.info('ExnessAdapter', `Fetching Exness history batch for account ${accountNumber} (${offset}..${offset + limit})`);
 
     const extractedTrades = [];
@@ -235,6 +254,10 @@ export class ExnessAdapter extends BrokerAdapter {
     // Parse real history rows from DOM if available
     try {
       const historyRows = document.querySelectorAll('[class*="history-row"], [class*="closed-position"], [data-testid*="deal"]');
+      console.log('[EXNESS DEBUG] History DOM query results:', historyRows.length, 'rows found');
+      if (historyRows.length === 0) {
+        console.log('[EXNESS DEBUG] WARNING: No history rows found. This is expected if the content script is running on the accounts page instead of the history page.');
+      }
       historyRows.forEach((row, idx) => {
         const ticket = row.querySelector('[class*="ticket"]')?.textContent?.trim() || `${accountNumber}_${Date.now()}_${idx}`;
         const symbol = row.querySelector('[class*="symbol"]')?.textContent?.trim() || 'EURUSD';
@@ -267,6 +290,8 @@ export class ExnessAdapter extends BrokerAdapter {
     } catch (err) {
       Logger.debug('ExnessAdapter', 'History DOM extraction note:', { error: err });
     }
+
+    console.log('[EXNESS DEBUG] fetchHistoryPage result:', { tradeCount: extractedTrades.length, hasMore: false });
 
     return {
       trades: extractedTrades,

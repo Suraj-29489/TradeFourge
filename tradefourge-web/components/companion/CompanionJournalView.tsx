@@ -28,7 +28,7 @@ export const CompanionJournalView: React.FC = () => {
             <span>Trade Journal</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            Synchronized trade records for {currentAccount?.broker || "Companion"} (${currentAccount?.balance.toLocaleString()})
+            Synchronized trade records for {currentAccount?.broker || "Companion"} ({currentAccount?.balance !== undefined && currentAccount?.balance !== null ? `$${currentAccount.balance.toLocaleString()}` : "Not detected"})
           </p>
         </div>
 

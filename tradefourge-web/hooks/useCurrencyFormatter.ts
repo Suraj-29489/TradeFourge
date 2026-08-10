@@ -32,22 +32,22 @@ export function useCurrencyFormatter() {
         selectedAccountIds.includes(a.id)
       );
       if (selectedAccounts.length > 0) {
-        const currencies = new Set(selectedAccounts.map((a) => a.currency));
+        const currencies = new Set(selectedAccounts.map((a) => a.currency ?? "USD"));
         if (currencies.size === 1) {
-          activeCurrency = selectedAccounts[0].currency;
+          activeCurrency = selectedAccounts[0].currency ?? "USD";
         } else if (currencies.size > 1) {
           mixedCurrency = true;
           // Use first selected account's currency for display (user will see banner)
-          activeCurrency = selectedAccounts[0].currency;
+          activeCurrency = selectedAccounts[0].currency ?? "USD";
         }
       }
     } else if (selectedAccountIds.includes("ALL") && accounts.length > 0) {
-      const currencies = new Set(accounts.map((a) => a.currency));
+      const currencies = new Set(accounts.map((a) => a.currency ?? "USD"));
       if (currencies.size === 1) {
-        activeCurrency = accounts[0].currency;
+        activeCurrency = accounts[0].currency ?? "USD";
       } else if (currencies.size > 1) {
         mixedCurrency = true;
-        activeCurrency = accounts[0].currency;
+        activeCurrency = accounts[0].currency ?? "USD";
       }
     }
 

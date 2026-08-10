@@ -145,13 +145,13 @@ export const CompanionAccountsView: React.FC = () => {
 
                     {/* Metadata */}
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 pt-0.5">
-                      <span>Server: <strong className="text-gray-200">{account.server}</strong></span>
+                      <span>Server: <strong className="text-gray-200">{account.server || "Not detected"}</strong></span>
                       <span>·</span>
                       <span>Account Number: <strong className="text-gray-200">#{account.accountNumber}</strong></span>
                       <span>·</span>
-                      <span>Account Type: <strong className="text-gray-200">{account.accountType}</strong></span>
+                      <span>Account Type: <strong className="text-gray-200">{account.accountType || "Not detected"}</strong></span>
                       <span>·</span>
-                      <span>Leverage: <strong className="text-gray-200">{account.leverage}</strong></span>
+                      <span>Leverage: <strong className="text-gray-200">{account.leverage || "Not detected"}</strong></span>
                     </div>
                   </div>
                 </div>
@@ -161,7 +161,9 @@ export const CompanionAccountsView: React.FC = () => {
                   <div className="text-right">
                     <div className="text-[10px] text-gray-400 uppercase tracking-wider">Current Balance</div>
                     <p className="text-lg font-extrabold text-white font-mono">
-                      ${account.balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      {account.balance !== undefined && account.balance !== null
+                        ? `${account.currency === "USC" ? "" : "$"}${account.balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}${account.currency === "USC" ? " USC" : ""}`
+                        : "Not detected"}
                     </p>
                   </div>
 

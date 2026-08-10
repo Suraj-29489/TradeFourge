@@ -151,12 +151,12 @@ export const MultiAccountFilter: React.FC<MultiAccountFilterProps> = ({
                       <div className="text-[10px] text-gray-400 flex items-center gap-1.5 font-mono">
                         <span>{acc.broker}</span>
                         <span>•</span>
-                        <span className="text-blue-300 font-bold">{getCurrencyShortLabel(acc.currency)}</span>
+                        <span className="text-blue-300 font-bold">{getCurrencyShortLabel(acc.currency ?? "USD")}</span>
                       </div>
                     </div>
                   </div>
                   <span className="text-[10px] text-emerald-400 font-bold shrink-0 font-mono">
-                    {getCurrencySymbol(acc.currency)}{acc.current_balance.toLocaleString()}
+                    {getCurrencySymbol(acc.currency ?? "USD")}{(acc.current_balance ?? 0).toLocaleString()}
                   </span>
                 </button>
               );

@@ -26,6 +26,8 @@ export class DiscoveryEngine {
     try {
       const rawAccounts = await adapter.discoverAccounts();
       
+      console.log('[DISCOVERY DEBUG] Raw adapter output:', JSON.stringify(rawAccounts, null, 2));
+
       // Ensure each account is deep-cloned with a unique internal ID and pristine properties
       const accounts = (rawAccounts || []).map((acc) => ({
         id: acc.id || `exness_${acc.account_number}`,
@@ -34,17 +36,21 @@ export class DiscoveryEngine {
         nickname: String(acc.nickname || acc.account_name || 'Trading Account'),
         broker: String(acc.broker || 'Exness'),
         platform: String(acc.platform || 'MetaTrader 5'),
-        currency: String(acc.currency || 'USD'),
-        balance: Number(acc.balance) || 0,
-        equity: Number(acc.equity) || Number(acc.balance) || 0,
-        server: String(acc.server || 'Exness-Real'),
-        account_type: acc.account_type || 'Standard',
+        currency: acc.currency || null,
+        balance: acc.balance !== undefined && acc.balance !== null ? Number(acc.balance) : null,
+        equity: acc.equity !== undefined && acc.equity !== null ? Number(acc.equity) : (acc.balance !== undefined && acc.balance !== null ? Number(acc.balance) : null),
+        server: acc.server || null,
+        account_type: acc.account_type || null,
+        account_type_raw: acc.account_type_raw || acc.account_type || null,
+        leverage: acc.leverage || null,
         history_count: Number(acc.history_count) || 0,
         status: acc.status || 'Ready',
         is_archived: Boolean(acc.is_archived),
         is_live: Boolean(acc.is_live !== false),
         is_demo: Boolean(acc.is_demo),
       }));
+
+      console.log('[DISCOVERY DEBUG] Normalized accounts:', JSON.stringify(accounts, null, 2));
 
       // Store isolated copy in cache
       await LocalCache.set('tf_discovered_accounts', JSON.parse(JSON.stringify(accounts)));

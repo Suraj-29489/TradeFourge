@@ -180,7 +180,7 @@ export const CsvUploader: React.FC = () => {
       const report = generateValidationReport(
         fileText,
         selectedAccount.account_name,
-        selectedAccount.currency,
+        selectedAccount.currency ?? undefined,
         selectedAccount.id
       );
 
@@ -400,9 +400,9 @@ export const CsvUploader: React.FC = () => {
       const reportData: FinalImportReportData = {
         filename: stagedFile.name,
         accountName: selectedAccount.account_name,
-        currency: selectedAccount.currency,
+        currency: selectedAccount.currency ?? "USD",
         broker: validationReport.brokerDetected,
-        platform: selectedAccount.platform,
+        platform: selectedAccount.platform ?? "MetaTrader 5",
         totalRows: validationReport.totalRows,
         importedRows: totalInserted,
         skippedRows: totalSkipped,
@@ -635,7 +635,7 @@ export const CsvUploader: React.FC = () => {
 
                   <div className="flex items-center justify-between text-[10px] pt-1">
                     <span className="text-blue-300 font-bold px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
-                      {getCurrencyShortLabel(acc.currency)}
+                      {getCurrencyShortLabel(acc.currency ?? "USD")}
                     </span>
                     <span className="text-gray-400 font-bold">
                       ${acc.current_balance?.toLocaleString() || "0"}
@@ -675,7 +675,7 @@ export const CsvUploader: React.FC = () => {
                   <div className="text-xs font-extrabold text-white truncate flex items-center gap-2">
                     <span>{selectedAccount.account_name}</span>
                     <span className="text-gray-400 font-normal">
-                      ({selectedAccount.broker} · {selectedAccount.platform} · {getCurrencyShortLabel(selectedAccount.currency)})
+                      ({selectedAccount.broker} · {selectedAccount.platform ?? "MetaTrader 5"} · {getCurrencyShortLabel(selectedAccount.currency ?? "USD")})
                     </span>
                   </div>
                 </div>
