@@ -43,32 +43,77 @@ if (typeof chrome !== 'undefined' && chrome.runtime) {
   }
 }
 
-// ─── Tab Discovery & Tracking ───────────────────────────────────────────────
+// ─── Tab Router & Centralized Targeting ───────────────────────────────────
+
+async function findExnessTab() {
+  if (typeof chrome === 'undefined' || !chrome.tabs) return null;
+
+  console.log('[EXNESS TAB ROUTER] Scanning browser tabs...');
+
+  return new Promise((resolve) => {
+    chrome.tabs.query({}, (tabs) => {
+      if (chrome.runtime.lastError || !tabs) {
+        console.log('[EXNESS TAB ROUTER] Tab query error:', chrome.runtime.lastError?.message);
+        resolve(null);
+        return;
+      }
+
+      const candidates = tabs.filter((t) => {
+        if (!t.url) return false;
+        try {
+          const u = new URL(t.url);
+          if (u.protocol !== 'https:') return false;
+          const host = u.hostname.toLowerCase();
+          const isExness = host.includes('exness') || host.includes('exness-trade') || host.includes('exness.cloud');
+          if (!isExness) return false;
+
+          const path = u.pathname.toLowerCase();
+          if (
+            path.includes('/stats/') ||
+            path.includes('/service_worker/') ||
+            path.includes('/ns.html') ||
+            u.href.includes('about:blank') ||
+            u.href.includes('sw_iframe.html')
+          ) {
+            return false;
+          }
+          return true;
+        } catch {
+          return false;
+        }
+      });
+
+      if (candidates.length === 0) {
+        console.log('[EXNESS TAB ROUTER] No candidate Exness tabs found.');
+        resolve(null);
+        return;
+      }
+
+      candidates.forEach((t) => {
+        console.log(`[EXNESS TAB ROUTER] Candidate: tabId=${t.id} url=${t.url}`);
+      });
+
+      // Priority ranking:
+      // 1. /pa/trading/accounts
+      // 2. /pa/trading/ordersHistory
+      // 3. /pa/trading/
+      // 4. Any other /pa/...
+      const selectedTab = candidates.find((t) => t.url.includes('/pa/trading/accounts')) ||
+        candidates.find((t) => t.url.includes('/pa/trading/ordersHistory')) ||
+        candidates.find((t) => t.url.includes('/pa/trading')) ||
+        candidates.find((t) => t.url.includes('/pa/')) ||
+        candidates[0];
+
+      console.log(`[EXNESS TAB ROUTER] Selected Exness tab: tabId=${selectedTab.id}`);
+      console.log(`[EXNESS TAB ROUTER] Target URL: ${selectedTab.url}`);
+      resolve(selectedTab);
+    });
+  });
+}
 
 async function getExnessTabs() {
-  if (typeof chrome === 'undefined' || !chrome.tabs) return [];
-  return new Promise((resolve) => {
-    chrome.tabs.query(
-      {
-        url: [
-          'https://*.exness.com/*',
-          'https://*.exness.org/*',
-          'https://*.exness.me/*',
-          'https://*.exness.link/*',
-          'https://*.exness-trade.com/*',
-          'https://*.exness-trade.pro/*',
-          'https://*.exness.cloud/*',
-        ],
-      },
-      (tabs) => {
-        if (chrome.runtime.lastError) {
-          resolve([]);
-        } else {
-          resolve(tabs || []);
-        }
-      }
-    );
-  });
+  const tab = await findExnessTab();
+  return tab ? [tab] : [];
 }
 
 async function getTradeFourgeTabs() {
@@ -186,7 +231,7 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
   }
 
   if (type === 'PING' || type === 'GET_EXTENSION_INFO') {
-    const exnessTabs = await getExnessTabs();
+    const targetTab = await findExnessTab();
     sendResponse({
       source: 'tradefourge-extension',
       type: 'PONG',
@@ -199,7 +244,7 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
         browser: 'Chrome',
         status: 'connected',
         latency: 0,
-        exnessTabsCount: exnessTabs.length,
+        exnessTabsCount: targetTab ? 1 : 0,
         extensionId: chrome.runtime.id,
       },
     });
@@ -207,8 +252,8 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
   }
 
   if (type === 'DISCOVER_ACCOUNTS') {
-    const exnessTabs = await getExnessTabs();
-    if (exnessTabs.length === 0) {
+    const targetTab = await findExnessTab();
+    if (!targetTab) {
       sendResponse({
         source: 'tradefourge-extension',
         type: 'ACCOUNT_LIST',
@@ -216,8 +261,8 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
         version: VERSION,
         payload: [],
         error: {
-          code: 'EXNESS_NOT_OPEN',
-          message: 'No Exness trading tab is open in browser.',
+          code: 'EXNESS_TAB_NOT_FOUND',
+          message: 'No authenticated Exness tab found.',
           stage: 'DISCOVERING',
           suggestedAction: 'Open my.exness.com in your browser.',
         },
@@ -225,9 +270,9 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
       return;
     }
 
-    const targetTab = exnessTabs[0];
     const isReady = await ensureContentScriptReady(targetTab.id);
     if (!isReady) {
+      console.log('[EXNESS TAB ROUTER] Content script not reachable in selected Exness tab.');
       sendResponse({
         source: 'tradefourge-extension',
         type: 'ACCOUNT_LIST',
@@ -235,8 +280,8 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
         version: VERSION,
         payload: [],
         error: {
-          code: 'CONTENT_SCRIPT_UNREACHABLE',
-          message: 'Could not establish connection with Exness content script.',
+          code: 'EXNESS_CONTENT_SCRIPT_UNREACHABLE',
+          message: 'Content script not reachable in selected Exness tab.',
           stage: 'DISCOVERING',
           suggestedAction: 'Reload your Exness tab (my.exness.com).',
         },
@@ -253,7 +298,7 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
           version: VERSION,
           payload: [],
           error: {
-            code: 'CONTENT_SCRIPT_UNREACHABLE',
+            code: 'EXNESS_CONTENT_SCRIPT_UNREACHABLE',
             message: chrome.runtime.lastError.message,
             stage: 'DISCOVERING',
           },
@@ -266,8 +311,8 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
   }
 
   if (type === 'IMPORT_SELECTED_ACCOUNTS') {
-    const exnessTabs = await getExnessTabs();
-    if (exnessTabs.length === 0) {
+    const targetTab = await findExnessTab();
+    if (!targetTab) {
       sendResponse({
         source: 'tradefourge-extension',
         type: 'IMPORT_STARTED',
@@ -275,15 +320,14 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
         version: VERSION,
         payload: { stage: 'connecting', fetchedTrades: 0, totalTrades: 0, percentage: 0 },
         error: {
-          code: 'EXNESS_NOT_OPEN',
-          message: 'No Exness trading tab is open.',
+          code: 'EXNESS_TAB_NOT_FOUND',
+          message: 'No authenticated Exness tab found.',
           stage: 'CONNECTING',
         },
       });
       return;
     }
 
-    const targetTab = exnessTabs[0];
     const isReady = await ensureContentScriptReady(targetTab.id);
     if (!isReady) {
       sendResponse({
@@ -293,7 +337,7 @@ async function handleMessage(message, sender, sendResponse, isExternal) {
         version: VERSION,
         payload: { stage: 'connecting', fetchedTrades: 0, totalTrades: 0, percentage: 0 },
         error: {
-          code: 'CONTENT_SCRIPT_UNREACHABLE',
+          code: 'EXNESS_CONTENT_SCRIPT_UNREACHABLE',
           message: 'Could not establish connection with Exness content script.',
           stage: 'CONNECTING',
         },

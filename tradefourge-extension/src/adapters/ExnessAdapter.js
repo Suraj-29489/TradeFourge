@@ -51,8 +51,16 @@ export class ExnessAdapter extends BrokerAdapter {
   }
 
   async discoverAccounts() {
+    const isTopLevel = typeof window !== 'undefined' && window.top === window.self;
     console.log('[EXNESS DEBUG] === ACCOUNT DISCOVERY START ===');
     console.log('[EXNESS DEBUG] Current URL:', window.location.href);
+    console.log('[EXNESS DEBUG] Top-level document:', isTopLevel);
+
+    if (!isTopLevel) {
+      console.log('[EXNESS DEBUG] Account discovery skipped in non-top iframe context.');
+      return [];
+    }
+
     Logger.info('ExnessAdapter', 'Discovering Exness trading accounts from active session...');
 
     const discoveredMap = new Map();
@@ -68,8 +76,8 @@ export class ExnessAdapter extends BrokerAdapter {
       const leverageVal = data.leverage ? (String(data.leverage).startsWith('1:') ? String(data.leverage) : '1:' + data.leverage) : null;
       const currencyVal = data.currency ? String(data.currency).trim().toUpperCase() : null;
       const platformVal = data.platform || (cleanType.toLowerCase().includes('mt4') ? 'MetaTrader 4' : 'MetaTrader 5');
-      const balanceVal = typeof data.balance === 'number' ? data.balance : Number(String(data.balance || 0).replace(/[^0-9.]/g, '')) || 0;
-      const equityVal = typeof data.equity === 'number' ? data.equity : Number(String(data.equity || balanceVal).replace(/[^0-9.]/g, '')) || balanceVal;
+      const balanceVal = typeof data.balance === 'number' ? data.balance : (data.balance !== null && data.balance !== undefined ? Number(String(data.balance).replace(/[^0-9.]/g, '')) : null);
+      const equityVal = typeof data.equity === 'number' ? data.equity : (data.equity !== null && data.equity !== undefined ? Number(String(data.equity).replace(/[^0-9.]/g, '')) : balanceVal);
 
       discoveredMap.set(cleanNum, {
         id: `exness_${cleanNum}`,
@@ -92,22 +100,13 @@ export class ExnessAdapter extends BrokerAdapter {
       });
     };
 
-    // Strategy 1: Explicit DOM elements & Attributes
+    // Strategy 1: Primary Selector Priority (`[data-account-number]`)
     try {
-      const selectors = [
-        '[data-account-number]',
-        '[data-testid*="account"]',
-        '[class*="accountCard"]',
-        '[class*="account-card"]',
-        '[class*="AccountCard"]',
-        '[class*="account-item"]',
-        '[class*="pa-account"]',
-      ];
+      const primaryCards = document.querySelectorAll('[data-account-number]');
+      console.log(`[EXNESS DEBUG] Primary selector '[data-account-number]' matched ${primaryCards.length} elements`);
 
-      selectors.forEach((selector) => {
-        const cards = document.querySelectorAll(selector);
-        console.log(`[EXNESS DEBUG] Strategy 1: Selector '${selector}' matched ${cards.length} elements`);
-        cards.forEach((card) => {
+      if (primaryCards.length > 0) {
+        primaryCards.forEach((card) => {
           const accNum = card.getAttribute('data-account-number') ||
             card.getAttribute('data-account-id') ||
             card.querySelector('[class*="accountNumber"], [class*="account-number"]')?.textContent?.trim();
@@ -117,8 +116,6 @@ export class ExnessAdapter extends BrokerAdapter {
           const currencyText = card.querySelector('[class*="currency"]')?.textContent?.trim();
           const serverText = card.querySelector('[class*="server"], [class*="Server"]')?.textContent?.trim();
           const leverageText = card.querySelector('[class*="leverage"], [class*="Leverage"]')?.textContent?.trim();
-
-          console.log('[EXNESS DEBUG] Strategy 1 card:', { accNum, balanceText, typeText, currencyText, serverText, leverageText });
 
           if (accNum) {
             addDiscovered({
@@ -131,75 +128,100 @@ export class ExnessAdapter extends BrokerAdapter {
             });
           }
         });
-      });
+      } else {
+        // Fallback card selectors if primary selector is absent
+        const fallbackSelectors = [
+          '[data-testid*="account"]',
+          '[class*="accountCard"]',
+          '[class*="account-card"]',
+          '[class*="AccountCard"]',
+        ];
+        fallbackSelectors.forEach((selector) => {
+          const cards = document.querySelectorAll(selector);
+          console.log(`[EXNESS DEBUG] Fallback selector '${selector}' matched ${cards.length} elements`);
+          cards.forEach((card) => {
+            const accNum = card.getAttribute('data-account-number') ||
+              card.getAttribute('data-account-id') ||
+              card.querySelector('[class*="accountNumber"], [class*="account-number"]')?.textContent?.trim();
+
+            const balanceText = card.querySelector('[class*="balance"], [class*="Balance"]')?.textContent?.replace(/[^0-9.]/g, '');
+            const typeText = card.querySelector('[class*="type"], [class*="Type"], [class*="badge"]')?.textContent?.trim();
+            const currencyText = card.querySelector('[class*="currency"]')?.textContent?.trim();
+            const serverText = card.querySelector('[class*="server"], [class*="Server"]')?.textContent?.trim();
+            const leverageText = card.querySelector('[class*="leverage"], [class*="Leverage"]')?.textContent?.trim();
+
+            if (accNum) {
+              addDiscovered({
+                account_number: accNum,
+                account_type: typeText,
+                currency: currencyText,
+                balance: balanceText,
+                server: serverText,
+                leverage: leverageText,
+              });
+            }
+          });
+        });
+      }
     } catch (err) {
       Logger.debug('ExnessAdapter', 'Strategy 1 DOM scan note:', { error: err });
     }
 
-    // Strategy 2: Text pattern scanning across page body for Exness account numbers
+    // Strategy 2: Text pattern scanning as fallback if no cards found
     try {
-      const pageText = document.body ? document.body.innerText : '';
-      const accMatches = pageText.match(/\b\d{7,10}\b/g);
-      if (accMatches && accMatches.length > 0) {
-        const uniqueAccs = Array.from(new Set(accMatches)).filter(num => !num.startsWith('202') && num.length >= 7);
-        uniqueAccs.forEach((accNum) => {
-          const idx = pageText.indexOf(accNum);
-          const snippet = pageText.substring(Math.max(0, idx - 80), Math.min(pageText.length, idx + 120));
+      if (discoveredMap.size === 0 && document.body) {
+        const pageText = document.body.innerText || '';
+        const accMatches = pageText.match(/\b\d{7,10}\b/g);
+        if (accMatches && accMatches.length > 0) {
+          const uniqueAccs = Array.from(new Set(accMatches)).filter(num => !num.startsWith('202') && num.length >= 7);
+          uniqueAccs.forEach((accNum) => {
+            const idx = pageText.indexOf(accNum);
+            const snippet = pageText.substring(Math.max(0, idx - 80), Math.min(pageText.length, idx + 120));
 
-          // Determine exact account type from snippet
-          let type = 'Standard';
-          if (/standard cent|cent/i.test(snippet)) type = 'Standard Cent';
-          else if (/pro/i.test(snippet)) type = 'Pro';
-          else if (/raw spread/i.test(snippet)) type = 'Raw Spread';
-          else if (/zero/i.test(snippet)) type = 'Zero';
-          else if (/mt5 standard/i.test(snippet)) type = 'MT5 Standard';
-          else if (/standard/i.test(snippet)) type = 'Standard';
+            let type = 'Standard';
+            if (/standard cent|cent/i.test(snippet)) type = 'Standard Cent';
+            else if (/pro/i.test(snippet)) type = 'Pro';
+            else if (/raw spread/i.test(snippet)) type = 'Raw Spread';
+            else if (/zero/i.test(snippet)) type = 'Zero';
+            else if (/mt5 standard/i.test(snippet)) type = 'MT5 Standard';
+            else if (/standard/i.test(snippet)) type = 'Standard';
 
-          // Determine currency (USC for Cent, USD, EUR, INR)
-          let currency = type === 'Standard Cent' ? 'USC' : 'USD';
-          if (/\bUSC\b/i.test(snippet)) currency = 'USC';
-          else if (/\bEUR\b/i.test(snippet)) currency = 'EUR';
-          else if (/\bINR\b/i.test(snippet)) currency = 'INR';
-          else if (/\bUSD\b/i.test(snippet)) currency = 'USD';
+            let currency = type === 'Standard Cent' ? 'USC' : 'USD';
+            if (/\bUSC\b/i.test(snippet)) currency = 'USC';
+            else if (/\bEUR\b/i.test(snippet)) currency = 'EUR';
+            else if (/\bINR\b/i.test(snippet)) currency = 'INR';
+            else if (/\bUSD\b/i.test(snippet)) currency = 'USD';
 
-          // Determine leverage
-          let leverage = null;
-          const levMatch = snippet.match(/1:(\d+|unlimited)/i);
-          if (levMatch) {
-            leverage = `1:${levMatch[1]}`;
-          }
+            let leverage = null;
+            const levMatch = snippet.match(/1:(\d+|unlimited)/i);
+            if (levMatch) leverage = `1:${levMatch[1]}`;
 
-          // Determine server
-          let server = null;
-          const serverMatch = snippet.match(/(Exness-[A-Za-z0-9]+)/i);
-          if (serverMatch) {
-            server = serverMatch[1];
-          }
+            let server = null;
+            const serverMatch = snippet.match(/(Exness-[A-Za-z0-9]+)/i);
+            if (serverMatch) server = serverMatch[1];
 
-          // Extract numerical balance
-          const balMatch = snippet.match(/([0-9]{1,3}(?:[,\s][0-9]{3})*(?:\.[0-9]{2})?)\s*(?:USD|USC|EUR|INR|\$|\€)?/);
-          const balance = balMatch ? Number(balMatch[1].replace(/[^0-9.]/g, '')) : 0;
+            const balMatch = snippet.match(/([0-9]{1,3}(?:[,\s][0-9]{3})*(?:\.[0-9]{2})?)\s*(?:USD|USC|EUR|INR|\$|\€)?/);
+            const balance = balMatch ? Number(balMatch[1].replace(/[^0-9.]/g, '')) : null;
 
-          console.log('[EXNESS DEBUG] Strategy 2 account:', accNum, { type, currency, balance, server, leverage, snippetPreview: snippet.substring(0, 100) });
-
-          addDiscovered({
-            account_number: accNum,
-            account_type: type,
-            currency,
-            balance,
-            server,
-            leverage,
-            is_demo: /demo|trial/i.test(snippet),
+            addDiscovered({
+              account_number: accNum,
+              account_type: type,
+              currency,
+              balance,
+              server,
+              leverage,
+              is_demo: /demo|trial/i.test(snippet),
+            });
           });
-        });
+        }
       }
     } catch (err) {
       Logger.debug('ExnessAdapter', 'Strategy 2 text scan note:', { error: err });
     }
 
-    // Strategy 3: Global Window state inspection (e.g. Next.js / React state objects)
+    // Strategy 3: Global Window state inspection
     try {
-      if (typeof window !== 'undefined') {
+      if (discoveredMap.size === 0 && typeof window !== 'undefined') {
         const globalKeys = ['__NEXT_DATA__', '__INITIAL_STATE__', 'exness', '__APOLLO_STATE__'];
         globalKeys.forEach((key) => {
           const stateObj = window[key];
@@ -210,7 +232,6 @@ export class ExnessAdapter extends BrokerAdapter {
               matches.forEach((m) => {
                 const digits = m.match(/\d{7,10}/);
                 if (digits) {
-                  console.log('[EXNESS DEBUG] Strategy 3: Found account number in window state:', digits[0], 'key:', key);
                   addDiscovered({
                     account_number: digits[0],
                   });
@@ -225,8 +246,7 @@ export class ExnessAdapter extends BrokerAdapter {
     }
 
     const discoveredList = Array.from(discoveredMap.values());
-    Logger.info('ExnessAdapter', `Discovered ${discoveredList.length} live Exness account(s).`);
-
+    console.log('[EXNESS DEBUG] Unique account numbers:', discoveredList.length);
     console.log('[EXNESS DEBUG] === DISCOVERY COMPLETE ===');
     console.log('[EXNESS DEBUG] Total accounts found:', discoveredList.length);
     discoveredList.forEach((acc, i) => {
