@@ -107,6 +107,26 @@ export class HistoryImportEngine {
       await new Promise((res) => setTimeout(res, 200));
 
       // ── Stage 6: COMPLETE (100%) ──────────────────────────────────────────
+      console.log('[HISTORY DEBUG] Import complete:', { accountNumber: activeAccount, tradeCount: accumulatedTrades.length });
+
+      if (accumulatedTrades.length === 0) {
+        console.log('[HISTORY DEBUG] EXNESS_HISTORY_RECORDS_NOT_DETECTED - 0 trades extracted.');
+        const failedPayload = {
+          account_number: activeAccount,
+          fetchedTrades: 0,
+          totalTrades: 0,
+          offset: 0,
+          percentage: 100,
+          stage: 'failed',
+          trades: [],
+          error: 'EXNESS_HISTORY_RECORDS_NOT_DETECTED',
+          message: 'HISTORY DATA NOT FOUND. No order records detected on Exness page.',
+        };
+        EventBus.getInstance().emit('HistoryImported', failedPayload);
+        if (onCompleted) onCompleted(failedPayload);
+        return;
+      }
+
       const completedPayload = {
         account_number: activeAccount,
         fetchedTrades: accumulatedTrades.length,
@@ -117,14 +137,6 @@ export class HistoryImportEngine {
         trades: accumulatedTrades,
         message: `Successfully synchronized ${accumulatedTrades.length} historical trades!`,
       };
-
-      console.log('[HISTORY DEBUG] Import complete:', { accountNumber: activeAccount, tradeCount: accumulatedTrades.length });
-      if (accumulatedTrades.length === 0) {
-        console.log('[HISTORY DEBUG] WARNING: 0 trades extracted. Possible causes:');
-        console.log('[HISTORY DEBUG]   - Content script is not running on the Exness history page');
-        console.log('[HISTORY DEBUG]   - DOM selectors do not match Exness history table elements');
-        console.log('[HISTORY DEBUG]   - Account has no closed positions');
-      }
 
       Logger.success('HistoryImportEngine', `History import completed for ${accumulatedTrades.length} trades.`);
       EventBus.getInstance().emit('HistoryImported', completedPayload);

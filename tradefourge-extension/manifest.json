@@ -60,8 +60,24 @@
         "https://*.exness.cloud/*"
       ],
       "js": ["dist/content.js"],
-      "run_at": "document_start"
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
     }
+  ],
+  "host_permissions": [
+    "https://my.exness.com/*",
+    "https://my.exness.org/*",
+    "https://my.exness.link/*",
+    "https://my.exness.me/*",
+    "https://terminal.exness.com/*",
+    "https://terminal.exness.org/*",
+    "https://terminal.exness.link/*",
+    "https://terminal.exness.me/*",
+    "https://*.exness.com/*",
+    "https://*.exness.org/*",
+    "https://*.exness.link/*",
+    "https://*.exness.me/*"
   ],
   "web_accessible_resources": [
     {
