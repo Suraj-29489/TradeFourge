@@ -353,7 +353,7 @@ export const CompanionDashboard: React.FC = () => {
                     <th className="py-2.5 px-3">Type</th>
                     <th className="py-2.5 px-3">Lots</th>
                     <th className="py-2.5 px-3">Open / Close</th>
-                    <th className="py-2.5 px-3 text-right">Profit ($)</th>
+                    <th className="py-2.5 px-3 text-right">Profit ({currentAccount.currency || "USC"})</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">
@@ -370,7 +370,7 @@ export const CompanionDashboard: React.FC = () => {
                         <td className="py-3 px-3 text-gray-200">{tr.lots}</td>
                         <td className="py-3 px-3 text-gray-400">{tr.openPrice} → {tr.closePrice}</td>
                         <td className={`py-3 px-3 text-right font-extrabold ${tr.profit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                          {tr.profit >= 0 ? "+" : ""}${tr.profit.toFixed(2)}
+                          {tr.profit >= 0 ? "+" : ""}{currentAccount.currency === "USC" ? `${tr.profit.toFixed(2)} USC` : `$${tr.profit.toFixed(2)}`}
                         </td>
                       </tr>
                     ))

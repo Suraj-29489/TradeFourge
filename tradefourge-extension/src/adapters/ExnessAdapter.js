@@ -392,9 +392,12 @@ export class ExnessAdapter extends BrokerAdapter {
               const textContent = row.textContent || '';
               if (!textContent || textContent.length < 5) return;
 
+              const rawTicketMatch = textContent.match(/#?(\d{6,12})/);
+              const extractedTicket = rawTicketMatch ? rawTicketMatch[1] : null;
               const ticket = row.querySelector('[class*="ticket"], [class*="id"], [class*="number"]')?.textContent?.trim() ||
                 row.getAttribute('data-ticket') ||
                 row.getAttribute('data-order-id') ||
+                extractedTicket ||
                 `${accountNumber}_ord_${idx + 1}`;
               const symbol = row.querySelector('[class*="symbol"], [class*="pair"], [class*="instrument"]')?.textContent?.trim() ||
                 (textContent.match(/(XAU\/?USD|BTC\/?USD|EUR\/?USD|GBP\/?USD|USD\/?JPY)/i)?.[1] || 'XAU/USD');

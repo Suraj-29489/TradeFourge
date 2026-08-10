@@ -20,6 +20,7 @@ export interface SyncResult {
   imported: number;
   newTrades: number;
   duplicatesSkipped: number;
+  totalStoredAfterSync?: number;
   lastSyncedAt: string;
   error?: string;
 }
@@ -404,9 +405,24 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
         const insertResult = await bulkInsertTrades(userId, normalizedTrades);
         const newCount = insertResult.inserted ?? 0;
         const dupCount = insertResult.skippedDuplicates ?? 0;
+        const totalStored = (insertResult as any).totalStored ?? (rawTrades.length);
 
-        console.log(`[HISTORY_SYNC] Sync result: totalReceived=${totalReceived}, imported=${normalizedTrades.length}, newTrades=${newCount}, duplicatesSkipped=${dupCount}`);
+        console.log(`[HISTORY_SYNC] Sync result: totalReceived=${totalReceived}, newTrades=${newCount}, duplicatesSkipped=${dupCount}, totalStoredAfterSync=${totalStored}`);
         await loadSavedAccounts();
+
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("tradeforge:data-sync-completed", {
+              detail: {
+                accountNumber: cleanNum || accountNumber,
+                recordsReceived: totalReceived,
+                newTradesAdded: newCount,
+                duplicatesSkipped: dupCount,
+                totalStoredAfterSync: totalStored,
+              },
+            })
+          );
+        }
         emitAppEvent("tradefourge:trade-created", { count: newCount });
 
         return {
@@ -415,9 +431,10 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
           currency: curr,
           balance: bal,
           totalReceived,
-          imported: normalizedTrades.length,
+          imported: newCount,
           newTrades: newCount,
           duplicatesSkipped: dupCount,
+          totalStoredAfterSync: totalStored,
           lastSyncedAt: nowStr,
         };
       } catch (err: any) {

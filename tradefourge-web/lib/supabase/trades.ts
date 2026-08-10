@@ -339,7 +339,7 @@ export async function createTrade(
 export async function bulkInsertTrades(
   userId: string,
   trades: NewCloudTrade[]
-): Promise<{ inserted: number; skippedDuplicates: number; errors: string[] }> {
+): Promise<{ inserted: number; skippedDuplicates: number; totalStored?: number; errors: string[] }> {
   if (isFrontendOnly()) {
     return bulkInsertFrontendTrades(userId, trades);
   }

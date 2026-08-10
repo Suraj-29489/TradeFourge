@@ -334,7 +334,7 @@ export async function createFrontendTrade(
 export async function bulkInsertFrontendTrades(
   userId: string,
   tradesToInsert: NewCloudTrade[]
-): Promise<{ inserted: number; skippedDuplicates: number; errors: string[] }> {
+): Promise<{ inserted: number; skippedDuplicates: number; totalStored?: number; errors: string[] }> {
   const { uniqueTrades, skippedDuplicates } = await deduplicateFrontendTrades(userId, tradesToInsert);
 
   if (uniqueTrades.length === 0) {
@@ -392,6 +392,7 @@ export async function bulkInsertFrontendTrades(
   return {
     inserted: formattedNewTrades.length,
     skippedDuplicates,
+    totalStored: updatedTradesList.length,
     errors: [],
   };
 }

@@ -86,13 +86,25 @@ export function SyncDiagnosticsModal({
             {!isSyncing && result && (
               <div className="space-y-5">
                 {/* Status Banner */}
-                {isSuccess && (
+                {isSuccess && result.newTrades > 0 && (
                   <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3">
                     <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
                     <div>
                       <h3 className="text-sm font-bold text-emerald-400">Data Sync Complete</h3>
                       <p className="text-xs text-gray-300">
-                        Historical trade records successfully ingested and normalized into TradeForge store.
+                        Historical trade records successfully synchronized into TradeForge store.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {isSuccess && result.newTrades === 0 && result.duplicatesSkipped > 0 && (
+                  <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center gap-3">
+                    <CheckCircle2 className="w-6 h-6 text-blue-400 shrink-0" />
+                    <div>
+                      <h3 className="text-sm font-bold text-blue-400">Already Synchronized</h3>
+                      <p className="text-xs text-gray-300">
+                        Already synchronized. No new trades were found.
                       </p>
                     </div>
                   </div>
@@ -159,18 +171,10 @@ export function SyncDiagnosticsModal({
 
                   <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-1">
                     <div className="flex items-center justify-between text-gray-400 text-[10px] uppercase font-bold">
-                      <span>Trades Imported</span>
-                      <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    </div>
-                    <p className="text-lg font-extrabold text-emerald-400">{result.imported}</p>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-1">
-                    <div className="flex items-center justify-between text-gray-400 text-[10px] uppercase font-bold">
                       <span>New Trades Added</span>
-                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     </div>
-                    <p className="text-lg font-extrabold text-blue-400">{result.newTrades}</p>
+                    <p className="text-lg font-extrabold text-emerald-400">{result.newTrades}</p>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-1">
@@ -179,6 +183,16 @@ export function SyncDiagnosticsModal({
                       <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
                     </div>
                     <p className="text-lg font-extrabold text-amber-400">{result.duplicatesSkipped}</p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-1">
+                    <div className="flex items-center justify-between text-gray-400 text-[10px] uppercase font-bold">
+                      <span>Total Stored</span>
+                      <FileCheck className="w-3.5 h-3.5 text-blue-400" />
+                    </div>
+                    <p className="text-lg font-extrabold text-blue-400">
+                      {result.totalStoredAfterSync ?? result.totalReceived}
+                    </p>
                   </div>
                 </div>
 
