@@ -1,7 +1,7 @@
 /**
  * TradeFourge Companion Extension v5.1.2 — Production Exness Broker Adapter
  * Handles network interception, DOM state observation, account discovery, and history page fetching for Exness terminals.
- * Implements clean live monitoring without fabricated demo data.
+ * Implements resilient multi-strategy live account discovery for my.exness.com.
  */
 
 import { BrokerAdapter } from './BrokerAdapter.js';
@@ -40,6 +40,7 @@ export class ExnessAdapter extends BrokerAdapter {
       document.querySelector('#app') ||
       document.querySelector('.terminal-container') ||
       document.querySelector('[data-testid="account-selector"]') ||
+      document.querySelector('[class*="account"]') ||
       document.cookie.includes('exness')
     );
 
@@ -52,50 +53,120 @@ export class ExnessAdapter extends BrokerAdapter {
   async discoverAccounts() {
     Logger.info('ExnessAdapter', 'Discovering Exness trading accounts from active session...');
 
-    const discovered = [];
+    const discoveredMap = new Map();
 
-    // Attempt to discover real account elements on active Exness page DOM
+    const addDiscovered = (accNum, name, type, currency, balance, server) => {
+      const cleanNum = String(accNum).replace(/\D/g, '');
+      if (!cleanNum || cleanNum.length < 5 || cleanNum.length > 12) return;
+      if (discoveredMap.has(cleanNum)) return;
+
+      discoveredMap.set(cleanNum, {
+        id: `exness_${cleanNum}`,
+        account_number: cleanNum,
+        account_name: name || `Exness ${type || 'Standard'} ${cleanNum}`,
+        nickname: `Exness Account #${cleanNum}`,
+        broker: 'Exness',
+        platform: 'MetaTrader 5',
+        currency: currency || 'USD',
+        balance: Number(balance) || 0,
+        equity: Number(balance) || 0,
+        server: server || 'Exness-Real',
+        account_type: type || 'Standard',
+        history_count: 0,
+        status: 'Ready',
+        is_live: true,
+        is_demo: false,
+      });
+    };
+
+    // Strategy 1: Explicit DOM elements & Attributes
     try {
-      const accountSelector = document.querySelector('[data-testid="account-selector"]');
-      const accountCards = document.querySelectorAll('.account-card, [data-account-number]');
+      const selectors = [
+        '[data-account-number]',
+        '[data-testid*="account"]',
+        '[class*="accountCard"]',
+        '[class*="account-card"]',
+        '[class*="AccountCard"]',
+        '[class*="account-item"]',
+        '[class*="pa-account"]',
+      ];
 
-      if (accountSelector || accountCards.length > 0) {
-        accountCards.forEach((card, i) => {
-          const accNum = card.getAttribute('data-account-number') || card.querySelector('.account-number')?.textContent?.trim();
-          const balanceText = card.querySelector('.account-balance')?.textContent?.replace(/[^0-9.]/g, '');
+      selectors.forEach((selector) => {
+        document.querySelectorAll(selector).forEach((card) => {
+          const accNum = card.getAttribute('data-account-number') ||
+            card.getAttribute('data-account-id') ||
+            card.querySelector('[class*="accountNumber"], [class*="account-number"]')?.textContent?.trim();
+
+          const balanceText = card.querySelector('[class*="balance"], [class*="Balance"]')?.textContent?.replace(/[^0-9.]/g, '');
+          const typeText = card.querySelector('[class*="type"], [class*="Type"]')?.textContent?.trim();
+          const currencyText = card.querySelector('[class*="currency"]')?.textContent?.trim();
+
           if (accNum) {
-            discovered.push({
-              id: `exness_${accNum}`,
-              account_number: accNum,
-              account_name: `Exness Real ${accNum}`,
-              nickname: `Exness Account #${accNum}`,
-              broker: 'Exness',
-              platform: 'MetaTrader 5',
-              currency: 'USD',
-              balance: Number(balanceText) || 0,
-              equity: Number(balanceText) || 0,
-              server: 'Exness-Real',
-              account_type: 'Standard',
-              history_count: 0,
-              status: 'Ready',
-              is_live: true,
-              is_demo: false,
-            });
+            addDiscovered(accNum, null, typeText, currencyText, balanceText, null);
+          }
+        });
+      });
+    } catch (err) {
+      Logger.debug('ExnessAdapter', 'Strategy 1 DOM scan note:', { error: err });
+    }
+
+    // Strategy 2: Text pattern scanning across page body for Exness account numbers
+    try {
+      const pageText = document.body ? document.body.innerText : '';
+      // Match patterns like "MT5 Real 2200009441" or "2200009441 USD" or "Account # 2200009441"
+      const accMatches = pageText.match(/\b\d{7,10}\b/g);
+      if (accMatches && accMatches.length > 0) {
+        // Filter out dates/timestamps/common numbers
+        const uniqueAccs = Array.from(new Set(accMatches)).filter(num => !num.startsWith('202') && num.length >= 7);
+        uniqueAccs.forEach((accNum) => {
+          // Look around the number in text for context
+          const idx = pageText.indexOf(accNum);
+          const snippet = pageText.substring(Math.max(0, idx - 50), Math.min(pageText.length, idx + 80));
+
+          const isCent = /cent/i.test(snippet);
+          const isPro = /pro/i.test(snippet);
+          const isDemo = /demo|trial/i.test(snippet);
+          const type = isCent ? 'Cent' : isPro ? 'Pro' : 'Standard';
+
+          const balMatch = snippet.match(/[\$\€\£]?\s*([0-9]{1,3}(?:[,\s][0-9]{3})*(?:\.[0-9]{2})?)/);
+          const balance = balMatch ? balMatch[1].replace(/[^0-9.]/g, '') : 0;
+
+          addDiscovered(accNum, null, type, 'USD', balance, null);
+        });
+      }
+    } catch (err) {
+      Logger.debug('ExnessAdapter', 'Strategy 2 text scan note:', { error: err });
+    }
+
+    // Strategy 3: Global Window state inspection (e.g. Next.js / React state objects)
+    try {
+      if (typeof window !== 'undefined') {
+        const globalKeys = ['__NEXT_DATA__', '__INITIAL_STATE__', 'exness', '__APOLLO_STATE__'];
+        globalKeys.forEach((key) => {
+          const stateObj = window[key];
+          if (stateObj) {
+            const rawJson = JSON.stringify(stateObj);
+            const matches = rawJson.match(/"account_?number"\s*:\s*"?(\d{7,10})"?/gi);
+            if (matches) {
+              matches.forEach((m) => {
+                const digits = m.match(/\d{7,10}/);
+                if (digits) addDiscovered(digits[0], null, 'Standard', 'USD', 0, null);
+              });
+            }
           }
         });
       }
     } catch (err) {
-      Logger.debug('ExnessAdapter', 'DOM account discovery note:', { error: err });
+      Logger.debug('ExnessAdapter', 'Strategy 3 window scan note:', { error: err });
     }
 
-    Logger.info('ExnessAdapter', `Discovered ${discovered.length} live Exness account(s).`);
-    return JSON.parse(JSON.stringify(discovered));
+    const discoveredList = Array.from(discoveredMap.values());
+    Logger.info('ExnessAdapter', `Discovered ${discoveredList.length} live Exness account(s).`);
+    return JSON.parse(JSON.stringify(discoveredList));
   }
 
   async fetchHistoryPage(accountNumber, offset = 0, limit = 1000) {
     Logger.info('ExnessAdapter', `Fetching Exness history batch for account ${accountNumber} (${offset}..${offset + limit})`);
-
-    // In clean test mode: returns actual trades parsed from terminal network/DOM, or empty array if none received yet
     return {
       trades: [],
       totalCount: 0,
@@ -140,10 +211,6 @@ export class ExnessAdapter extends BrokerAdapter {
     }
   }
 
-  /**
-   * Idempotent live monitoring cleanup.
-   * Safe to call multiple times.
-   */
   stopLiveMonitoring() {
     this.monitoringActive = false;
     this.eventCallback = null;

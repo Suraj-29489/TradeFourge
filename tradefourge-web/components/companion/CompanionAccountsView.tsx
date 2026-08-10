@@ -12,6 +12,7 @@ import {
   Radio,
   Plus,
   ShieldCheck,
+  AlertCircle,
 } from "lucide-react";
 
 export const CompanionAccountsView: React.FC = () => {
@@ -24,6 +25,7 @@ export const CompanionAccountsView: React.FC = () => {
     refreshConnection,
     discoverAccounts,
     isDiscovering,
+    discoveryError,
   } = useCompanionAccount();
 
   return (
@@ -50,9 +52,41 @@ export const CompanionAccountsView: React.FC = () => {
         </button>
       </div>
 
+      {/* Discovery Error Alert Banner */}
+      {discoveryError && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-3 shadow-inner font-mono">
+          <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <strong className="block text-white font-bold">Discovery Notice</strong>
+            <p className="leading-relaxed text-[11px] text-amber-200/90">{discoveryError}</p>
+          </div>
+        </div>
+      )}
+
       {/* Account Cards List */}
-      <div className="grid grid-cols-1 gap-4">
-        {accounts.map((account) => {
+      {accounts.length === 0 ? (
+        <div className="p-12 rounded-2xl bg-[#0F141C] border border-white/[0.08] text-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
+            <Radio className="w-8 h-8" />
+          </div>
+          <div className="space-y-2 max-w-md mx-auto">
+            <h3 className="text-xl font-bold font-sans text-white">No Companion Accounts Discovered</h3>
+            <p className="text-xs text-gray-400 font-sans">
+              Click &quot;Scan & Discover Accounts&quot; to detect your active Exness trading accounts. Ensure you are logged into my.exness.com in another browser tab.
+            </p>
+          </div>
+          <button
+            onClick={() => discoverAccounts()}
+            disabled={isDiscovering}
+            className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2 disabled:opacity-50 font-mono"
+          >
+            <Zap className="w-4 h-4 fill-white" />
+            <span>{isDiscovering ? "Discovering..." : "Scan & Discover Accounts"}</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4">
+          {accounts.map((account) => {
           const isCurrent = currentAccount?.id === account.id;
 
           return (
@@ -164,6 +198,7 @@ export const CompanionAccountsView: React.FC = () => {
           );
         })}
       </div>
+      )}
     </div>
   );
 };

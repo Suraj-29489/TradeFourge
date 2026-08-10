@@ -10,6 +10,7 @@ import {
   Loader2,
   Inbox,
   Clock,
+  AlertCircle,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -19,6 +20,7 @@ export const CompanionDashboard: React.FC = () => {
     currentAccount,
     connectionStatus,
     isDiscovering,
+    discoveryError,
     extensionInfo,
     switchAccount,
     discoverAccounts,
@@ -94,6 +96,17 @@ export const CompanionDashboard: React.FC = () => {
               Waiting for live trading data. Open your Exness terminal page to stream live account balance, equity, and order history.
             </p>
           </div>
+
+          {/* Discovery Error Alert Banner */}
+          {discoveryError && (
+            <div className="max-w-xl mx-auto p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs text-left flex items-start gap-3 shadow-inner">
+              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <strong className="block text-white font-bold">Discovery Notice</strong>
+                <p className="leading-relaxed text-[11px] text-amber-200/90">{discoveryError}</p>
+              </div>
+            </div>
+          )}
 
           {/* Extension Status Box */}
           <div className="max-w-xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3 text-left text-xs bg-white/[0.02] p-4 rounded-2xl border border-white/[0.06]">

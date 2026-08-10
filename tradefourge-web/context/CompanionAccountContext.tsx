@@ -9,6 +9,7 @@ interface CompanionAccountContextType {
   currentAccount: CompanionAccount | null;
   connectionStatus: "Connected" | "Disconnected";
   isDiscovering: boolean;
+  discoveryError: string | null;
   extensionInfo: {
     browser: string;
     version: string;
@@ -23,6 +24,7 @@ interface CompanionAccountContextType {
   removeAccount: (id: string) => void;
   setDefaultAccount: (id: string) => void;
   resetTFCState: () => void;
+  clearDiscoveryError: () => void;
 }
 
 const STORAGE_COMPANION_ACC_KEY = "tf_selected_companion_account_id";
@@ -32,6 +34,7 @@ const CompanionAccountContext = createContext<CompanionAccountContextType>({
   currentAccount: null,
   connectionStatus: "Disconnected",
   isDiscovering: false,
+  discoveryError: null,
   extensionInfo: {
     browser: "Chrome / Chromium",
     version: "v5.5.3 Manifest V3",
@@ -46,6 +49,7 @@ const CompanionAccountContext = createContext<CompanionAccountContextType>({
   removeAccount: () => {},
   setDefaultAccount: () => {},
   resetTFCState: () => {},
+  clearDiscoveryError: () => {},
 });
 
 export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -126,11 +130,18 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
     }
   }, []);
 
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+
   const discoverAccounts = useCallback(async (): Promise<CompanionAccount[]> => {
     setIsDiscovering(true);
+    setDiscoveryError(null);
     try {
       const liveDiscovered = companion ? await companion.discoverAccounts() : [];
       setLastScanTime(new Date().toLocaleTimeString());
+
+      if (companion?.lastError) {
+        setDiscoveryError(companion.lastError.message);
+      }
 
       if (liveDiscovered.length > 0) {
         const mapped: CompanionAccount[] = liveDiscovered.map((da, index) => ({
@@ -165,21 +176,30 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
 
         setAccounts(mapped);
         setConnectionStatus("Connected");
+        setDiscoveryError(null);
         if (mapped.length > 0) {
           switchAccount(mapped[0].id);
         }
         return mapped;
       } else {
         setAccounts([]);
+        if (!companion?.isConnected) {
+          setDiscoveryError("TradeFourge Companion Extension is not connected. Please ensure the extension is installed and active.");
+        } else if (!discoveryError) {
+          setDiscoveryError("No Exness accounts detected on the active page. Please ensure you are logged into my.exness.com.");
+        }
         return [];
       }
-    } catch (err) {
+    } catch (err: any) {
       setAccounts([]);
+      setDiscoveryError(err?.message || "Account discovery failed. Ensure Exness is open in your browser.");
       return [];
     } finally {
       setIsDiscovering(false);
     }
-  }, [companion, switchAccount]);
+  }, [companion, switchAccount, discoveryError]);
+
+  const clearDiscoveryError = useCallback(() => setDiscoveryError(null), []);
 
   const reconnect = useCallback(() => {
     companion?.reconnect();
@@ -243,6 +263,7 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
         currentAccount,
         connectionStatus,
         isDiscovering,
+        discoveryError,
         extensionInfo: {
           browser: companion?.browser || "Chrome / Chromium",
           version: companion?.version || "v5.5.3 Manifest V3",
@@ -257,6 +278,7 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
         removeAccount,
         setDefaultAccount,
         resetTFCState,
+        clearDiscoveryError,
       }}
     >
       {children}
