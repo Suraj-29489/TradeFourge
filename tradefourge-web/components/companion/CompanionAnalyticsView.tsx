@@ -1,12 +1,39 @@
 "use client";
 
-import React from "react";
-import { useCompanionAccount } from "@/context/CompanionAccountContext";
-import { BarChart3, TrendingUp, Award, Target, Zap, ShieldCheck } from "lucide-react";
+import React, { useState } from "react";
+import { useCompanionAccount, type SyncResult } from "@/context/CompanionAccountContext";
+import { SyncDiagnosticsModal } from "@/components/companion/SyncDiagnosticsModal";
+import { BarChart3, TrendingUp, Award, Target, Zap, ShieldCheck, Database } from "lucide-react";
 
 export const CompanionAnalyticsView: React.FC = () => {
-  const { currentAccount } = useCompanionAccount();
+  const { currentAccount, syncAccountHistory } = useCompanionAccount();
   const stats = currentAccount?.stats;
+
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStage, setSyncStage] = useState("Connecting to Exness...");
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+
+  const handleFetchData = async () => {
+    if (!currentAccount) return;
+    setIsSyncModalOpen(true);
+    setIsSyncing(true);
+    setSyncResult(null);
+
+    setSyncStage("Connecting to Exness...");
+    await new Promise((res) => setTimeout(res, 200));
+
+    setSyncStage("Fetching historical orders...");
+    await new Promise((res) => setTimeout(res, 300));
+
+    const res = await syncAccountHistory(currentAccount.accountNumber);
+
+    setSyncStage("Processing records & updating analytics...");
+    await new Promise((res) => setTimeout(res, 200));
+
+    setSyncResult(res);
+    setIsSyncing(false);
+  };
 
   return (
     <div className="space-y-6 font-mono text-xs max-w-7xl mx-auto w-full text-gray-200 pb-12">
@@ -22,9 +49,16 @@ export const CompanionAnalyticsView: React.FC = () => {
           </p>
         </div>
 
-        <div className="px-3.5 py-2 rounded-xl bg-blue-600/10 border border-blue-500/30 text-blue-400 font-bold text-xs">
-          ● Synced Metrics
-        </div>
+        {currentAccount && (
+          <button
+            onClick={handleFetchData}
+            disabled={isSyncing}
+            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono font-bold text-xs transition-colors flex items-center gap-1.5 shadow-lg shadow-blue-500/20 disabled:opacity-50"
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span>{isSyncing ? "FETCHING..." : "FETCH DATA"}</span>
+          </button>
+        )}
       </div>
 
       {/* KPI Cards Grid */}
@@ -44,7 +78,10 @@ export const CompanionAnalyticsView: React.FC = () => {
         <div className="p-5 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1 shadow-sm">
           <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Net PnL</span>
           <p className={`text-xl font-extrabold font-mono ${(stats?.netPnL ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-            {(stats?.netPnL ?? 0) >= 0 ? "+" : ""}${(stats?.netPnL ?? 0).toFixed(2)}
+            {(stats?.netPnL ?? 0) >= 0 ? "+" : ""}
+            {currentAccount?.currency === "USC"
+              ? `${(stats?.netPnL ?? 0).toFixed(2)} USC`
+              : `$${(stats?.netPnL ?? 0).toFixed(2)}`}
           </p>
           <span className="text-[10px] text-gray-500 block">Realized Growth</span>
         </div>
@@ -76,6 +113,14 @@ export const CompanionAnalyticsView: React.FC = () => {
           <span className="text-[10px] text-gray-500 block">Expectancy Multiplier</span>
         </div>
       </div>
+
+      <SyncDiagnosticsModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        isSyncing={isSyncing}
+        syncStage={syncStage}
+        result={syncResult}
+      />
     </div>
   );
 };

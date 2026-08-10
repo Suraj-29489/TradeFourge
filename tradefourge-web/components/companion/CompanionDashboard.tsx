@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { useCompanionAccount } from "@/context/CompanionAccountContext";
+import { useCompanionAccount, type SyncResult } from "@/context/CompanionAccountContext";
 import { useAccounts } from "@/context/AccountsContext";
 import { AccountImportWizardModal } from "@/components/accounts/AccountImportWizardModal";
+import { SyncDiagnosticsModal } from "@/components/companion/SyncDiagnosticsModal";
 import {
   Zap,
   Radio,
@@ -11,6 +12,7 @@ import {
   Inbox,
   Clock,
   AlertCircle,
+  Database,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -26,15 +28,42 @@ export const CompanionDashboard: React.FC = () => {
     switchAccount,
     discoverAccounts,
     importSelectedAccounts,
+    syncAccountHistory,
     reconnect,
   } = useCompanionAccount();
 
   const { accounts: existingDbAccounts } = useAccounts();
   const [isWizardOpen, setIsWizardOpen] = useState(false);
 
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStage, setSyncStage] = useState("Connecting to Exness...");
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+
   const handleOpenDiscoveryWizard = async () => {
     setIsWizardOpen(true);
     await discoverAccounts();
+  };
+
+  const handleFetchData = async () => {
+    if (!currentAccount) return;
+    setIsSyncModalOpen(true);
+    setIsSyncing(true);
+    setSyncResult(null);
+
+    setSyncStage("Connecting to Exness...");
+    await new Promise((res) => setTimeout(res, 200));
+
+    setSyncStage("Fetching historical orders...");
+    await new Promise((res) => setTimeout(res, 300));
+
+    const res = await syncAccountHistory(currentAccount.accountNumber);
+
+    setSyncStage("Processing records & updating store...");
+    await new Promise((res) => setTimeout(res, 200));
+
+    setSyncResult(res);
+    setIsSyncing(false);
   };
 
   const [timeRange, setTimeRange] = useState<"7D" | "30D" | "90D" | "ALL">("30D");
@@ -48,15 +77,12 @@ export const CompanionDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 font-mono text-gray-200 max-w-7xl mx-auto w-full pb-12">
-      {/* ── TOP ACCOUNT SELECTOR BAR ────────────────────────────────────────── */}
-      <div className="p-5 rounded-2xl bg-[#0F141C] border border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-blue-600/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold flex items-center gap-1 font-mono">
-              <Zap className="w-3 h-3 fill-blue-300" />
-              <span>LIVE TFC WORKSPACE</span>
-            </span>
-            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 font-mono ${
+      {/* ── TOP CONTROLS & DASHBOARD HEADER ───────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] shadow-sm">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] uppercase font-bold text-gray-400">TradeForge Companion v5.5</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
               connectionStatus === "Connected" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
             }`}>
               ● {connectionStatus === "Connected" ? "Connected" : "Waiting for live data"}
@@ -68,21 +94,34 @@ export const CompanionDashboard: React.FC = () => {
           </h1>
         </div>
 
-        {/* Account Switcher */}
+        {/* Account Switcher & FETCH DATA Action Button */}
         {accounts.length > 0 && (
-          <div className="flex items-center gap-3 shrink-0">
-            <label className="text-xs text-gray-400 font-mono">Account:</label>
-            <select
-              value={currentAccount?.id ?? ""}
-              onChange={(e) => switchAccount(e.target.value)}
-              className="px-3.5 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white font-mono font-bold text-xs focus:outline-none focus:border-blue-500 transition-colors"
-            >
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id} className="bg-[#0F141C] text-white">
-                  {acc.broker} • #{acc.accountNumber} (${acc.balance ? acc.balance.toLocaleString() : "--"})
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-3 shrink-0 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-400 font-mono">Account:</label>
+              <select
+                value={currentAccount?.id ?? ""}
+                onChange={(e) => switchAccount(e.target.value)}
+                className="px-3.5 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white font-mono font-bold text-xs focus:outline-none focus:border-blue-500 transition-colors"
+              >
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id} className="bg-[#0F141C] text-white">
+                    {acc.broker} • #{acc.accountNumber} ({acc.balance !== null ? `${acc.balance} ${acc.currency || "USC"}` : "Not detected"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {currentAccount && (
+              <button
+                onClick={handleFetchData}
+                disabled={isSyncing}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-mono font-bold text-xs transition-colors flex items-center gap-1.5 shadow-lg shadow-blue-500/20 disabled:opacity-50"
+              >
+                <Database className="w-3.5 h-3.5" />
+                <span>{isSyncing ? "FETCHING..." : "FETCH DATA"}</span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -364,6 +403,15 @@ export const CompanionDashboard: React.FC = () => {
         onImportSelected={async (selectedList) => {
           await importSelectedAccounts(selectedList);
         }}
+      />
+
+      {/* Sync Diagnostics & Progress Modal */}
+      <SyncDiagnosticsModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        isSyncing={isSyncing}
+        syncStage={syncStage}
+        result={syncResult}
       />
     </div>
   );

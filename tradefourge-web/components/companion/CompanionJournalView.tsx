@@ -28,7 +28,7 @@ export const CompanionJournalView: React.FC = () => {
             <span>Trade Journal</span>
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            Synchronized trade records for {currentAccount?.broker || "Companion"} ({currentAccount?.balance !== undefined && currentAccount?.balance !== null ? `$${currentAccount.balance.toLocaleString()}` : "Not detected"})
+            Synchronized trade records for {currentAccount?.broker || "Companion"} ({currentAccount?.balance !== undefined && currentAccount?.balance !== null ? `${currentAccount.balance.toLocaleString()} ${currentAccount.currency || "USC"}` : "Not detected"})
           </p>
         </div>
 
@@ -37,7 +37,7 @@ export const CompanionJournalView: React.FC = () => {
         </div>
       </div>
 
-      {/* Demo Table */}
+      {/* Trade Table */}
       <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-4 shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs font-mono">
@@ -51,7 +51,7 @@ export const CompanionJournalView: React.FC = () => {
                 <th className="py-3 px-4">Close Price</th>
                 <th className="py-3 px-4">Pips</th>
                 <th className="py-3 px-4">Close Time</th>
-                <th className="py-3 px-4 text-right">Net PnL ($)</th>
+                <th className="py-3 px-4 text-right">Net PnL ({currentAccount?.currency || "USC"})</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.04]">
@@ -72,7 +72,7 @@ export const CompanionJournalView: React.FC = () => {
                   <td className="py-3.5 px-4 text-gray-400">{t.pips > 0 ? `+${t.pips}` : t.pips}</td>
                   <td className="py-3.5 px-4 text-gray-400 text-[11px]">{t.closeTime}</td>
                   <td className={`py-3.5 px-4 text-right font-extrabold ${t.profit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                    {t.profit >= 0 ? "+" : ""}${t.profit.toFixed(2)}
+                    {t.profit >= 0 ? "+" : ""}{currentAccount?.currency === "USC" ? `${t.profit.toFixed(2)} USC` : `$${t.profit.toFixed(2)}`}
                   </td>
                 </tr>
               ))}

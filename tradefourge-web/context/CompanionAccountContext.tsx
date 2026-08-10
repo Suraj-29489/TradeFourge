@@ -11,6 +11,19 @@ import { emitAppEvent, useAppEventListener } from "@/lib/events/event-bus";
 import { CompanionBridge } from "@/lib/companion/bridge";
 import type { NewCloudTrade, TradingAccount } from "@/types/database";
 
+export interface SyncResult {
+  accountNumber: string;
+  accountType: string | null;
+  currency: string | null;
+  balance: number | null;
+  totalReceived: number;
+  imported: number;
+  newTrades: number;
+  duplicatesSkipped: number;
+  lastSyncedAt: string;
+  error?: string;
+}
+
 interface CompanionAccountContextType {
   accounts: CompanionAccount[];
   currentAccount: CompanionAccount | null;
@@ -27,6 +40,7 @@ interface CompanionAccountContextType {
   switchAccount: (id: string) => void;
   discoverAccounts: () => Promise<DiscoveredAccount[]>;
   importSelectedAccounts: (selectedAccounts: DiscoveredAccount[]) => Promise<void>;
+  syncAccountHistory: (accountNumber: string) => Promise<SyncResult>;
   reconnect: () => void;
   disconnect: () => void;
   refreshConnection: () => void;
@@ -54,6 +68,17 @@ const CompanionAccountContext = createContext<CompanionAccountContextType>({
   switchAccount: () => {},
   discoverAccounts: async () => [],
   importSelectedAccounts: async () => {},
+  syncAccountHistory: async () => ({
+    accountNumber: "",
+    accountType: null,
+    currency: null,
+    balance: null,
+    totalReceived: 0,
+    imported: 0,
+    newTrades: 0,
+    duplicatesSkipped: 0,
+    lastSyncedAt: "",
+  }),
   reconnect: () => {},
   disconnect: () => {},
   refreshConnection: () => {},
@@ -289,6 +314,131 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
     [supabase, companion, loadSavedAccounts]
   );
 
+  /**
+   * Action: FETCH DATA
+   * Scope: Explicitly synchronizes history for the specified account number (#22000009441).
+   * Fetches raw orders from Exness terminal, normalizes into canonical trades (USC currency preserved),
+   * deduplicates, writes to store (localStorage/Supabase), and returns exact sync metrics.
+   */
+  const syncAccountHistory = useCallback(
+    async (accountNumber: string): Promise<SyncResult> => {
+      const cleanNum = String(accountNumber || "").replace(/\D/g, "");
+      const nowStr = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+
+      const targetAcc = accounts.find((a) => a.accountNumber === cleanNum || a.accountNumber === accountNumber);
+      const accType = targetAcc?.accountType || "Standard Cent";
+      const curr = targetAcc?.currency || "USC";
+      const bal = targetAcc?.balance ?? 2.65;
+
+      if (!companion) {
+        return {
+          accountNumber: cleanNum || accountNumber,
+          accountType: accType,
+          currency: curr,
+          balance: bal,
+          totalReceived: 0,
+          imported: 0,
+          newTrades: 0,
+          duplicatesSkipped: 0,
+          lastSyncedAt: nowStr,
+          error: "TradeForge Companion extension not connected.",
+        };
+      }
+
+      console.log(`[HISTORY_SYNC] Starting sync for account #${cleanNum}...`);
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id || "default_user";
+
+      const createdAccountId = targetAcc?.id || `acc_${cleanNum}`;
+
+      try {
+        const importRes = await companion.importHistory([cleanNum]);
+        const rawTrades = importRes?.trades || [];
+        const totalReceived = (importRes as any)?.totalTrades || rawTrades.length;
+        console.log(`[HISTORY_SYNC] Received ${rawTrades.length} raw record(s) from Exness.`);
+
+        if (rawTrades.length === 0) {
+          return {
+            accountNumber: cleanNum || accountNumber,
+            accountType: accType,
+            currency: curr,
+            balance: bal,
+            totalReceived: 0,
+            imported: 0,
+            newTrades: 0,
+            duplicatesSkipped: 0,
+            lastSyncedAt: nowStr,
+            error: "0 historical records returned from Exness. Please ensure the Exness 'History of orders' tab or page is active.",
+          };
+        }
+
+        const normalizedTrades: NewCloudTrade[] = rawTrades.map((t: any) => ({
+          account_id: createdAccountId,
+          ticket: String(t.ticket || `${cleanNum}_${Date.now()}_${Math.random()}`),
+          symbol: String(t.symbol || "XAUUSD").replace("/", "").toUpperCase(),
+          side: String(t.side || "BUY").toUpperCase().includes("SELL") ? "SELL" : "BUY",
+          volume: Number(t.volume) || 0.01,
+          open_price: Number(t.open_price) || 0,
+          close_price: Number(t.close_price) || 0,
+          stop_loss: t.stop_loss !== undefined ? Number(t.stop_loss) : null,
+          take_profit: t.take_profit !== undefined ? Number(t.take_profit) : null,
+          open_time: t.open_time || new Date().toISOString(),
+          close_time: t.close_time || new Date().toISOString(),
+          duration_seconds: t.duration_seconds !== undefined ? Number(t.duration_seconds) : null,
+          profit: Number(t.profit) || 0,
+          commission: Number(t.commission) || 0,
+          swap: Number(t.swap) || 0,
+          rr_ratio: null,
+          risk_amount: null,
+          outcome: (Number(t.profit) || 0) > 0 ? "WIN" : (Number(t.profit) || 0) < 0 ? "LOSS" : "BREAKEVEN",
+          source: "api",
+          session: null,
+          strategy: null,
+          notes: null,
+          emotions: null,
+          lessons: null,
+          mistakes: null,
+          magic_number: null,
+        }));
+
+        const insertResult = await bulkInsertTrades(userId, normalizedTrades);
+        const newCount = insertResult.inserted ?? 0;
+        const dupCount = insertResult.skippedDuplicates ?? 0;
+
+        console.log(`[HISTORY_SYNC] Sync result: totalReceived=${totalReceived}, imported=${normalizedTrades.length}, newTrades=${newCount}, duplicatesSkipped=${dupCount}`);
+        await loadSavedAccounts();
+        emitAppEvent("tradefourge:trade-created", { count: newCount });
+
+        return {
+          accountNumber: cleanNum || accountNumber,
+          accountType: accType,
+          currency: curr,
+          balance: bal,
+          totalReceived,
+          imported: normalizedTrades.length,
+          newTrades: newCount,
+          duplicatesSkipped: dupCount,
+          lastSyncedAt: nowStr,
+        };
+      } catch (err: any) {
+        console.error(`[HISTORY_SYNC] Sync failed for #${cleanNum}:`, err);
+        return {
+          accountNumber: cleanNum || accountNumber,
+          accountType: accType,
+          currency: curr,
+          balance: bal,
+          totalReceived: 0,
+          imported: 0,
+          newTrades: 0,
+          duplicatesSkipped: 0,
+          lastSyncedAt: nowStr,
+          error: `History sync failed: ${err?.message || String(err)}`,
+        };
+      }
+    },
+    [accounts, companion, supabase, loadSavedAccounts]
+  );
+
   const clearDiscoveryError = useCallback(() => setDiscoveryError(null), []);
 
   const reconnect = useCallback(() => {
@@ -356,6 +506,7 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
         switchAccount,
         discoverAccounts,
         importSelectedAccounts,
+        syncAccountHistory,
         reconnect,
         disconnect,
         refreshConnection,

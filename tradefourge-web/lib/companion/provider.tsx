@@ -180,35 +180,50 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [bridge, addLog]);
 
   const importHistory = useCallback(
-    async (accountIds: string[]): Promise<{ account_number?: string; trades: any[] }> => {
+    async (accountIds: string[]): Promise<{ account_number?: string; trades: any[]; totalTrades?: number }> => {
       return new Promise((resolve) => {
         let finished = false;
+
         const cleanup = bridge.subscribe("IMPORT_COMPLETED", (msg: TFMessageEnvelope<any>) => {
           if (!finished) {
             finished = true;
             cleanup();
-            const trades = msg.payload?.trades || [];
-            const accNum = msg.payload?.account_number || accountIds[0];
+            const payloadObj = msg.payload ?? {};
+            const trades = Array.isArray(payloadObj.trades) ? payloadObj.trades : (Array.isArray(payloadObj) ? payloadObj : []);
+            const accNum = payloadObj.account_number || accountIds[0];
+            const totalCount = payloadObj.totalTrades ?? trades.length;
             addLog("SUCCESS", "History Received", `Received ${trades.length} historical trades for account #${accNum}.`);
-            resolve({ account_number: accNum, trades });
+            resolve({ account_number: accNum, trades, totalTrades: totalCount });
           }
         });
 
-        // Set safety timeout of 10s if extension finishes without push event
-        setTimeout(() => {
+        // Set safety timeout of 30s if extension takes longer for multi-batch history
+        const safetyTimer = setTimeout(() => {
           if (!finished) {
             finished = true;
             cleanup();
-            resolve({ account_number: accountIds[0], trades: [] });
+            addLog("WARNING", "History Timeout", `History sync safety timeout reached (30s). Resolving with available data.`);
+            resolve({ account_number: accountIds[0], trades: [], totalTrades: 0 });
           }
-        }, 10000);
+        }, 30000);
 
-        bridge.send("IMPORT_SELECTED_ACCOUNTS", { accountIds }, 10000).catch((err) => {
+        bridge.send("IMPORT_SELECTED_ACCOUNTS", { accountIds }, 30000).then((res: any) => {
+          const resPayload = res?.payload ?? res;
+          if (resPayload && Array.isArray(resPayload.trades) && resPayload.trades.length > 0 && !finished) {
+            finished = true;
+            clearTimeout(safetyTimer);
+            cleanup();
+            const trades = resPayload.trades;
+            const accNum = resPayload.account_number || accountIds[0];
+            resolve({ account_number: accNum, trades, totalTrades: resPayload.totalTrades ?? trades.length });
+          }
+        }).catch((err) => {
           if (!finished) {
             finished = true;
+            clearTimeout(safetyTimer);
             cleanup();
             addLog("WARNING", "History Request Note", `Import request note: ${err?.message || err}`);
-            resolve({ account_number: accountIds[0], trades: [] });
+            resolve({ account_number: accountIds[0], trades: [], totalTrades: 0 });
           }
         });
       });

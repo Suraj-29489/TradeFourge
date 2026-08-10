@@ -49,8 +49,17 @@ function generateUUID(): string {
 function loadSessionData<T>(key: string, defaultValue: T): T {
   if (typeof window === "undefined") return defaultValue;
   try {
-    const raw = sessionStorage.getItem(key);
-    return raw ? JSON.parse(raw) : defaultValue;
+    const localRaw = localStorage.getItem(key);
+    if (localRaw) return JSON.parse(localRaw);
+
+    // Fallback & automatic migration from legacy sessionStorage
+    const sessionRaw = sessionStorage.getItem(key);
+    if (sessionRaw) {
+      const parsed = JSON.parse(sessionRaw);
+      localStorage.setItem(key, sessionRaw);
+      return parsed;
+    }
+    return defaultValue;
   } catch {
     return defaultValue;
   }
@@ -59,7 +68,9 @@ function loadSessionData<T>(key: string, defaultValue: T): T {
 function saveSessionData<T>(key: string, value: T): void {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.setItem(key, JSON.stringify(value));
+    const jsonStr = JSON.stringify(value);
+    localStorage.setItem(key, jsonStr);
+    sessionStorage.setItem(key, jsonStr);
   } catch {}
 }
 

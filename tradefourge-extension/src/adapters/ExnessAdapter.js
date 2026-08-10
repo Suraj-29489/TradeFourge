@@ -250,48 +250,156 @@ export class ExnessAdapter extends BrokerAdapter {
     Logger.info('ExnessAdapter', `Fetching Exness history batch for account ${accountNumber} (${offset}..${offset + limit})`);
 
     const extractedTrades = [];
+    const seenTickets = new Set();
 
-    // Parse real history rows from DOM if available
+    const addTrade = (t) => {
+      const ticketStr = String(t.ticket || '').trim();
+      if (!ticketStr || seenTickets.has(ticketStr)) return;
+      seenTickets.add(ticketStr);
+
+      extractedTrades.push({
+        ticket: ticketStr,
+        account_number: String(accountNumber),
+        symbol: String(t.symbol || 'EURUSD').replace('/', '').toUpperCase(),
+        side: String(t.side || 'BUY').toUpperCase().includes('SELL') ? 'SELL' : 'BUY',
+        volume: typeof t.volume === 'number' ? t.volume : Number(String(t.volume || '0.01').replace(/[^0-9.]/g, '')) || 0.01,
+        open_price: typeof t.open_price === 'number' ? t.open_price : Number(String(t.open_price || '0').replace(/[^0-9.]/g, '')) || 0,
+        close_price: typeof t.close_price === 'number' ? t.close_price : Number(String(t.close_price || '0').replace(/[^0-9.]/g, '')) || 0,
+        profit: typeof t.profit === 'number' ? t.profit : Number(String(t.profit || '0').replace(/[^0-9.-]/g, '')) || 0,
+        net_profit: typeof t.profit === 'number' ? t.profit : Number(String(t.profit || '0').replace(/[^0-9.-]/g, '')) || 0,
+        commission: Number(t.commission) || 0,
+        swap: Number(t.swap) || 0,
+        open_time: t.open_time || new Date().toISOString(),
+        close_time: t.close_time || new Date().toISOString(),
+        status: 'CLOSED',
+        currency: t.currency || 'USC',
+        source: 'companion',
+      });
+    };
+
+    // Strategy 1: DOM Elements (table rows, list items, history cards)
     try {
-      const historyRows = document.querySelectorAll('[class*="history-row"], [class*="closed-position"], [data-testid*="deal"]');
-      console.log('[EXNESS DEBUG] History DOM query results:', historyRows.length, 'rows found');
-      if (historyRows.length === 0) {
-        console.log('[EXNESS DEBUG] WARNING: No history rows found. This is expected if the content script is running on the accounts page instead of the history page.');
-      }
-      historyRows.forEach((row, idx) => {
-        const ticket = row.querySelector('[class*="ticket"]')?.textContent?.trim() || `${accountNumber}_${Date.now()}_${idx}`;
-        const symbol = row.querySelector('[class*="symbol"]')?.textContent?.trim() || 'EURUSD';
-        const sideText = row.querySelector('[class*="type"], [class*="side"]')?.textContent?.trim() || 'BUY';
-        const side = sideText.toUpperCase().includes('SELL') ? 'SELL' : 'BUY';
-        const volumeText = row.querySelector('[class*="volume"], [class*="lots"]')?.textContent?.replace(/[^0-9.]/g, '');
-        const volume = Number(volumeText) || 0.1;
-        const profitText = row.querySelector('[class*="profit"], [class*="pnl"]')?.textContent?.replace(/[^0-9.-]/g, '');
-        const profit = Number(profitText) || 0;
-        const openTimeText = row.querySelector('[class*="openTime"]')?.textContent?.trim();
-        const closeTimeText = row.querySelector('[class*="closeTime"]')?.textContent?.trim();
+      const selectors = [
+        'tr[class*="history"]',
+        'tr[class*="order"]',
+        'tr[class*="deal"]',
+        '[class*="history-row"]',
+        '[class*="closed-position"]',
+        '[class*="historyRow"]',
+        '[class*="orderItem"]',
+        '[data-testid*="deal"]',
+        '[data-testid*="order"]',
+        '[data-testid*="history"]',
+      ];
 
-        extractedTrades.push({
+      const historyRows = document.querySelectorAll(selectors.join(', '));
+      console.log('[EXNESS DEBUG] History DOM query results:', historyRows.length, 'rows found');
+
+      historyRows.forEach((row, idx) => {
+        const ticket = row.querySelector('[class*="ticket"], [class*="id"], [class*="number"]')?.textContent?.trim() ||
+          row.getAttribute('data-ticket') ||
+          row.getAttribute('data-order-id') ||
+          `${accountNumber}_ord_${idx + 1}`;
+        const symbol = row.querySelector('[class*="symbol"], [class*="pair"], [class*="instrument"]')?.textContent?.trim() || 'XAU/USD';
+        const sideText = row.querySelector('[class*="type"], [class*="side"], [class*="direction"]')?.textContent?.trim() || 'BUY';
+        const volumeText = row.querySelector('[class*="volume"], [class*="lots"], [class*="size"]')?.textContent;
+        const profitText = row.querySelector('[class*="profit"], [class*="pnl"], [class*="gain"]')?.textContent;
+        const openTimeText = row.querySelector('[class*="openTime"], [class*="open-time"]')?.textContent?.trim();
+        const closeTimeText = row.querySelector('[class*="closeTime"], [class*="close-time"]')?.textContent?.trim();
+        const openPriceText = row.querySelector('[class*="openPrice"], [class*="open-price"]')?.textContent;
+        const closePriceText = row.querySelector('[class*="closePrice"], [class*="close-price"]')?.textContent;
+
+        addTrade({
           ticket,
           symbol,
-          side,
-          volume,
-          open_price: 1.0,
-          close_price: 1.0,
-          profit,
-          net_profit: profit,
-          commission: 0,
-          swap: 0,
-          open_time: openTimeText ? new Date(openTimeText).toISOString() : new Date().toISOString(),
-          close_time: closeTimeText ? new Date(closeTimeText).toISOString() : new Date().toISOString(),
-          status: 'CLOSED',
-          source: 'companion',
+          side: sideText,
+          volume: volumeText,
+          open_price: openPriceText,
+          close_price: closePriceText,
+          profit: profitText,
+          open_time: openTimeText ? new Date(openTimeText).toISOString() : null,
+          close_time: closeTimeText ? new Date(closeTimeText).toISOString() : null,
+          currency: 'USC',
         });
       });
     } catch (err) {
       Logger.debug('ExnessAdapter', 'History DOM extraction note:', { error: err });
     }
 
+    // Strategy 2: Text Pattern Scanning for Closed Order snippets (e.g. XAU/USD Buy 0.01)
+    try {
+      if (extractedTrades.length === 0 && document.body) {
+        const pageText = document.body.innerText || '';
+        console.log('[EXNESS DEBUG] Strategy 2: Scanning page text for order patterns...');
+        
+        // Match symbols like XAU/USD, BTC/USD, EUR/USD
+        const symbolRegex = /(XAU\/USD|BTC\/USD|EUR\/USD|GBP\/USD|USD\/JPY|AUD\/USD)\s+(Buy|Sell)\s+([0-9.]+)\s*lots?/gi;
+        let match;
+        let matchIdx = 0;
+        while ((match = symbolRegex.exec(pageText)) !== null) {
+          matchIdx++;
+          const sym = match[1];
+          const side = match[2];
+          const lots = match[3];
+          const snippet = pageText.substring(Math.max(0, match.index - 50), Math.min(pageText.length, match.index + 150));
+          
+          const profitMatch = snippet.match(/([+-]?[0-9,]+(?:\.[0-9]+)?)\s*(?:USC|USD|\$)/i);
+          const profitVal = profitMatch ? Number(profitMatch[1].replace(/,/g, '')) : 0;
+
+          addTrade({
+            ticket: `${accountNumber}_tx_${matchIdx}`,
+            symbol: sym,
+            side: side,
+            volume: lots,
+            profit: profitVal,
+            currency: 'USC',
+          });
+        }
+      }
+    } catch (err) {
+      Logger.debug('ExnessAdapter', 'History Strategy 2 text scan note:', { error: err });
+    }
+
+    // Strategy 3: Global Window state inspection for history arrays
+    try {
+      if (extractedTrades.length === 0 && typeof window !== 'undefined') {
+        console.log('[EXNESS DEBUG] Strategy 3: Inspecting window state for history data...');
+        const globalKeys = ['__NEXT_DATA__', '__INITIAL_STATE__', 'exness', '__APOLLO_STATE__'];
+        globalKeys.forEach((key) => {
+          const stateObj = window[key];
+          if (stateObj) {
+            const rawJson = JSON.stringify(stateObj);
+            const orderMatches = rawJson.match(/{"id":\s*"?\d+"?,[^}]*"(?:symbol|pair)":[^}]*}/gi);
+            if (orderMatches) {
+              orderMatches.forEach((matchStr, i) => {
+                try {
+                  const parsed = JSON.parse(matchStr);
+                  if (parsed.symbol || parsed.pair) {
+                    addTrade({
+                      ticket: String(parsed.id || parsed.ticket || `${accountNumber}_win_${i}`),
+                      symbol: parsed.symbol || parsed.pair,
+                      side: parsed.side || parsed.type || 'BUY',
+                      volume: parsed.volume || parsed.lots || 0.01,
+                      open_price: parsed.open_price || parsed.openPrice,
+                      close_price: parsed.close_price || parsed.closePrice,
+                      profit: parsed.profit || parsed.pnl || 0,
+                      currency: 'USC',
+                    });
+                  }
+                } catch (e) {}
+              });
+            }
+          }
+        });
+      }
+    } catch (err) {
+      Logger.debug('ExnessAdapter', 'History Strategy 3 window scan note:', { error: err });
+    }
+
     console.log('[EXNESS DEBUG] fetchHistoryPage result:', { tradeCount: extractedTrades.length, hasMore: false });
+    if (extractedTrades.length === 0) {
+      console.log('[EXNESS DEBUG] WARNING: 0 trades extracted. Navigate to Exness "History of orders" tab or page to load order records.');
+    }
 
     return {
       trades: extractedTrades,
