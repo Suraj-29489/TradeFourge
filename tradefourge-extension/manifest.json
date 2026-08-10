@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "TradeFourge Companion",
-  "version": "5.1.0",
-  "description": "Official TradeFourge Companion Extension v5.1 — Multi-Broker Adapter & Runtime Intelligence Engine",
+  "version": "5.1.2",
+  "description": "Official TradeFourge Companion Extension v5.1.2 — Definitive Context Recovery & Heartbeat Stabilization",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -38,7 +38,7 @@
         "https://*.vercel.app/*",
         "https://tradefourge.vercel.app/*"
       ],
-      "js": ["injector.js"],
+      "js": ["dist/injector.js"],
       "run_at": "document_start"
     },
     {
@@ -68,7 +68,7 @@
       "resources": [
         "dist/content.js",
         "dist/background.js",
-        "injector.js"
+        "dist/injector.js"
       ],
       "matches": ["<all_urls>"]
     }

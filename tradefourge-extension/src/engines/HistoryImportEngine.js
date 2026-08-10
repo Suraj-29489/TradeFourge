@@ -31,8 +31,8 @@ export class HistoryImportEngine {
     }
 
     this.isImporting = true;
-    const targetAccounts = Array.isArray(accountIds) && accountIds.length > 0 ? accountIds : ['2200009441'];
-    const activeAccount = targetAccounts[0];
+    const targetAccounts = Array.isArray(accountIds) && accountIds.length > 0 ? accountIds : [];
+    const activeAccount = targetAccounts[0] || 'Unknown';
     Logger.info('HistoryImportEngine', `Starting history import for accounts: ${targetAccounts.join(', ')} (requestId: ${requestId})`);
 
     const adapter = AdapterManager.getInstance().getActiveAdapter();
@@ -42,7 +42,7 @@ export class HistoryImportEngine {
       this.emitProgress(onProgress, {
         account_number: activeAccount,
         fetchedTrades: 0,
-        totalTrades: 4862,
+        totalTrades: 0,
         offset: 0,
         percentage: 0,
         stage: 'connecting',
@@ -54,7 +54,7 @@ export class HistoryImportEngine {
       this.emitProgress(onProgress, {
         account_number: activeAccount,
         fetchedTrades: 0,
-        totalTrades: 4862,
+        totalTrades: 0,
         offset: 0,
         percentage: 10,
         stage: 'request_history',
@@ -62,9 +62,9 @@ export class HistoryImportEngine {
       });
       await new Promise((res) => setTimeout(res, 500));
 
-      // ── Stage 3: RECEIVING_BATCHES (20% -> 35% -> 50% -> 65%) ──────────────
+      // ── Stage 3: RECEIVING_BATCHES ─────────────────────────────────────────
       const batch1 = await adapter.fetchHistoryPage(activeAccount, 0, 1000);
-      const totalCount = batch1.totalCount || 4862;
+      const totalCount = batch1.totalCount || 0;
 
       // Batch 1 (20%)
       this.emitProgress(onProgress, {

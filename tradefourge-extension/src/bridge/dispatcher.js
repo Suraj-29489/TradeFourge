@@ -1,19 +1,35 @@
 /**
- * TradeFourge Companion Extension v5.1 — Bridge Dispatcher
- * Runs in the Exness tab content script.
- * Handles messages from the Background Service Worker via chrome.runtime.onMessage
- * and sends messages to background using chrome.runtime.sendMessage.
+ * TradeFourge Companion Extension v5.1.2 — Bridge Dispatcher
+ * Runs in broker tab content script.
+ * Manages background worker communication, named EventBus handlers,
+ * double-initialization guards, and idempotent destroyTradeForgeContext cleanup.
+ *
+ * Lifecycle state machine:
+ *   NOT_INITIALIZED → INITIALIZING → CONNECTED
+ *                                   ↓
+ *                             destroyTradeForgeContext()
+ *                                   ↓
+ *                             NOT_INITIALIZED  (ready for clean reinjection)
  */
 
-import { TF_SOURCE_EXTENSION, TF_SOURCE_WEB, createMessageEnvelope } from '../types/protocol.js';
+import { TF_SOURCE_WEB, createMessageEnvelope } from '../types/protocol.js';
 import { DiscoveryEngine } from '../engines/DiscoveryEngine.js';
 import { HistoryImportEngine } from '../engines/HistoryImportEngine.js';
 import { LiveRuntimeMonitor } from '../engines/LiveRuntimeMonitor.js';
 import { HeartbeatSystem } from '../heartbeat/HeartbeatSystem.js';
 import { EventBus } from '../eventBus/EventBus.js';
 import { Logger } from '../logger/Logger.js';
+import { ConnectionManager } from '../connection/ConnectionManager.js';
+import { isExtensionContextValid, isExpectedLifecycleError } from '../utils/contextCheck.js';
 
-const TAG = '[ContentScript]';
+const TAG = 'Bridge';
+const VERSION = '5.1.2';
+
+export const InitStates = {
+  NOT_INITIALIZED: 'NOT_INITIALIZED',
+  INITIALIZING: 'INITIALIZING',
+  CONNECTED: 'CONNECTED',
+};
 
 export class BridgeDispatcher {
   static instance = null;
@@ -25,28 +41,66 @@ export class BridgeDispatcher {
     return BridgeDispatcher.instance;
   }
 
+  /**
+   * Reset the singleton so a fresh injection creates a clean instance.
+   * Called during destroyTradeForgeContext so the next content-script run starts fresh.
+   */
+  static resetInstance() {
+    BridgeDispatcher.instance = null;
+  }
+
   constructor() {
-    this.isListening = false;
+    this.initState = InitStates.NOT_INITIALIZED;
+    this.connectionManager = ConnectionManager.getInstance();
+    this.unsubscribers = [];
+    this.boundHandlers = {};
   }
 
   init() {
-    if (this.isListening) return;
-    this.isListening = true;
+    // Prevent duplicate initialization
+    if (this.initState !== InitStates.NOT_INITIALIZED) {
+      Logger.debug(TAG, `Initialization suppressed: already in state ${this.initState}`);
+      return;
+    }
+    this.initState = InitStates.INITIALIZING;
 
-    Logger.success('BridgeDispatcher', 'Initializing Exness ↔ Extension Bridge Dispatcher v5.1...');
+    Logger.success(TAG, `Initializing Bridge Dispatcher v${VERSION}...`);
 
-    // Start broker engines
-    HeartbeatSystem.getInstance().start();
-    LiveRuntimeMonitor.getInstance().start();
+    // Connect runtime port safely
+    this.connectionManager.connect();
 
-    // Listen for EventBus emissions
-    EventBus.getInstance().on('HistoryImported', (payload) => {
+    // Start runtime engines
+    try {
+      HeartbeatSystem.getInstance().start();
+      LiveRuntimeMonitor.getInstance().start();
+    } catch (err) {
+      if (!isExpectedLifecycleError(err)) {
+        Logger.debug(TAG, 'Engine initialization error:', { error: err });
+      }
+    }
+
+    // ── Named handlers for EventBus subscriptions ──
+    this.boundHandlers.onHistoryImported = (payload) => {
+      if (!isExtensionContextValid()) return;
       this.sendToBackground('IMPORT_COMPLETED', payload);
-    });
+    };
 
-    EventBus.getInstance().on('Heartbeat', (payload) => {
+    this.boundHandlers.onHeartbeat = (payload) => {
+      if (!isExtensionContextValid()) return;
       this.sendToBackground('PONG', payload);
-    });
+    };
+
+    this.boundHandlers.onLiveEvent = (eventType) => (payload) => {
+      if (!isExtensionContextValid()) return;
+      this.sendToBackground(eventType, payload);
+    };
+
+    // ── Register subscriptions and save unsubscribe handles ──
+    const unsubImport = EventBus.getInstance().on('HistoryImported', this.boundHandlers.onHistoryImported);
+    this.unsubscribers.push(unsubImport);
+
+    const unsubHeartbeat = EventBus.getInstance().on('Heartbeat', this.boundHandlers.onHeartbeat);
+    this.unsubscribers.push(unsubHeartbeat);
 
     const liveEvents = [
       'LIVE_EVENT',
@@ -58,44 +112,72 @@ export class BridgeDispatcher {
       'POSITION_CLOSED',
     ];
     liveEvents.forEach((eventType) => {
-      EventBus.getInstance().on(eventType, (payload) => {
-        this.sendToBackground(eventType, payload);
-      });
+      const handler = this.boundHandlers.onLiveEvent(eventType);
+      const unsub = EventBus.getInstance().on(eventType, handler);
+      this.unsubscribers.push(unsub);
     });
 
-    // ── PRIMARY: Listen for messages from Background Service Worker ──
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onMessage) {
-      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // ── chrome.runtime.onMessage listener ──
+    if (isExtensionContextValid() && chrome.runtime.onMessage) {
+      const onMessageHandler = (message, sender, sendResponse) => {
+        if (!isExtensionContextValid()) return false;
         const type = message?.type || 'UNKNOWN';
         const requestId = message?.requestId || 'none';
-        const timestamp = Date.now();
 
-        console.log(`${TAG} Background → Content Script | type: ${type} | requestId: ${requestId} | timestamp: ${timestamp}`);
-
+        Logger.debug(TAG, `Received from Background: ${type} (${requestId})`);
         this.handleMessage(message, sendResponse);
-        return true; // Keep sendResponse channel open for async
-      });
+        return true;
+      };
 
-      console.log(`${TAG} Registered chrome.runtime.onMessage listener.`);
+      try {
+        chrome.runtime.onMessage.addListener(onMessageHandler);
+      } catch (err) {}
+
+      this.unsubscribers.push(() => {
+        try {
+          if (isExtensionContextValid()) {
+            chrome.runtime.onMessage.removeListener(onMessageHandler);
+          }
+        } catch (err) {}
+      });
     }
 
-    // ── FALLBACK: Listen for same-tab postMessages ──
+    // ── window.postMessage listener + page lifecycle teardown ──
+    // NOTE: Do NOT use 'unload' or 'beforeunload' — Exness pages set
+    // Permissions-Policy: unload=(), which makes those events throw.
+    // Use 'pagehide' (fires on navigation/tab close) and
+    // 'visibilitychange' (fires when tab goes hidden) instead.
     if (typeof window !== 'undefined') {
-      window.addEventListener('message', (event) => {
+      const windowPostMessageHandler = (event) => {
         if (!event.data || typeof event.data !== 'object') return;
         const data = event.data;
         if (data.source !== TF_SOURCE_WEB) return;
 
-        console.log(`${TAG} Received via window.postMessage: ${data.type}`);
+        Logger.debug(TAG, `Received via window.postMessage: ${data.type}`);
         this.handleMessage(data, null);
+      };
+      window.addEventListener('message', windowPostMessageHandler);
+      this.unsubscribers.push(() => window.removeEventListener('message', windowPostMessageHandler));
+
+      const lifecycleTeardown = () => {
+        this.destroyTradeForgeContext();
+      };
+
+      // pagehide fires on page navigation, tab close, and bfcache entry
+      window.addEventListener('pagehide', lifecycleTeardown);
+      this.unsubscribers.push(() => {
+        window.removeEventListener('pagehide', lifecycleTeardown);
       });
     }
+
+    this.initState = InitStates.CONNECTED;
   }
 
   async handleMessage(message, sendResponse) {
+    if (!isExtensionContextValid()) return;
+
     const { type, requestId, payload } = message;
-    const timestamp = Date.now();
-    Logger.info('BridgeDispatcher', `Processing: ${type} (${requestId})`, payload);
+    Logger.debug(TAG, `Processing: ${type} (${requestId})`);
 
     switch (type) {
       case 'PING':
@@ -104,15 +186,15 @@ export class BridgeDispatcher {
           'PONG',
           {
             isInstalled: true,
-            version: '5.1.0',
+            version: VERSION,
             browser: 'Chrome',
             status: 'connected',
+            state: this.connectionManager.getState(),
             latency: 0,
           },
           requestId
         );
 
-        console.log(`${TAG} Content Script → Background | type: PONG | requestId: ${requestId} | result: SUCCESS | timestamp: ${Date.now()}`);
         if (sendResponse) {
           sendResponse(response);
         } else {
@@ -122,20 +204,18 @@ export class BridgeDispatcher {
       }
 
       case 'DISCOVER_ACCOUNTS': {
-        console.log(`${TAG} Running account discovery on Exness page... (requestId: ${requestId})`);
         try {
           const accounts = await DiscoveryEngine.getInstance().discoverAccounts();
-          console.log(`${TAG} Discovered ${accounts?.length || 0} distinct accounts`);
-
           const response = this.createResponse('ACCOUNT_LIST', accounts, requestId);
-          console.log(`${TAG} Content Script → Background | type: ACCOUNT_LIST | requestId: ${requestId} | accountsCount: ${accounts?.length || 0} | timestamp: ${Date.now()}`);
           if (sendResponse) {
             sendResponse(response);
           } else {
             this.sendToBackground('ACCOUNT_LIST', accounts, requestId);
           }
         } catch (err) {
-          console.error(`${TAG} Account discovery failed:`, err);
+          if (!isExpectedLifecycleError(err)) {
+            Logger.debug(TAG, 'Discovery error:', { error: err });
+          }
           const response = this.createResponse('ERROR', null, requestId, {
             code: 'NO_ACCOUNTS_FOUND',
             message: 'Unable to discover Exness trading accounts.',
@@ -154,36 +234,24 @@ export class BridgeDispatcher {
 
       case 'IMPORT_SELECTED_ACCOUNTS': {
         const accountIds = payload?.accountIds || [];
-        const accountStr = accountIds.join(',');
-        console.log(`${TAG} Starting import for accounts: ${accountStr} (requestId: ${requestId})`);
-
         const startedResponse = this.createResponse(
           'IMPORT_STARTED',
-          {
-            stage: 'connecting',
-            fetchedTrades: 0,
-            totalTrades: 4862,
-            percentage: 0,
-          },
+          { stage: 'connecting', fetchedTrades: 0, totalTrades: 0, percentage: 0 },
           requestId
         );
 
-        console.log(`${TAG} Content Script → Background | type: IMPORT_STARTED | requestId: ${requestId} | account: ${accountStr} | timestamp: ${Date.now()}`);
         if (sendResponse) {
           sendResponse(startedResponse);
         } else {
           this.sendToBackground('IMPORT_STARTED', startedResponse.payload, requestId);
         }
 
-        // Trigger History Import Engine with granular progress callbacks
         HistoryImportEngine.getInstance().importSelectedAccounts(
           accountIds,
           (progress) => {
-            console.log(`${TAG} Content Script → Background | type: IMPORT_PROGRESS | requestId: ${requestId} | stage: ${progress.stage} | pct: ${progress.percentage}%`);
             this.sendToBackground('IMPORT_PROGRESS', progress, requestId);
           },
           (completed) => {
-            console.log(`${TAG} Content Script → Background | type: IMPORT_COMPLETED | requestId: ${requestId} | totalTrades: ${completed.totalTrades}`);
             this.sendToBackground('IMPORT_COMPLETED', completed, requestId);
           },
           requestId
@@ -192,7 +260,7 @@ export class BridgeDispatcher {
       }
 
       case 'HEARTBEAT': {
-        const response = this.createResponse('PONG', { status: 'alive', latency: 0 }, requestId);
+        const response = this.createResponse('PONG', { status: 'alive', state: this.connectionManager.getState() }, requestId);
         if (sendResponse) {
           sendResponse(response);
         } else {
@@ -202,7 +270,6 @@ export class BridgeDispatcher {
       }
 
       default:
-        Logger.warn('BridgeDispatcher', `Unhandled message type: ${type}`);
         break;
     }
   }
@@ -212,17 +279,82 @@ export class BridgeDispatcher {
   }
 
   sendToBackground(type, payload = null, requestId = null, error = null) {
-    if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) return;
+    if (!isExtensionContextValid()) return;
+
     const envelope = createMessageEnvelope(type, payload, requestId, error);
     envelope.isPushEvent = true;
 
-    const payloadSize = JSON.stringify(envelope).length;
-    console.log(`${TAG} Content Script → Background | type: ${type} | requestId: ${envelope.requestId} | size: ${payloadSize}B | timestamp: ${Date.now()}`);
-
-    chrome.runtime.sendMessage(envelope, () => {
-      if (chrome.runtime.lastError) {
-        // Suppress expected delivery warning
+    this.connectionManager.sendMessage(envelope).catch((err) => {
+      if (!isExpectedLifecycleError(err)) {
+        Logger.debug(TAG, `sendToBackground error for ${type}:`, { error: err });
       }
     });
+  }
+
+  /**
+   * Single, idempotent context cleanup routine.
+   * Safe to invoke multiple times without throwing exceptions.
+   * Resets singleton instances so the next content-script injection starts fresh.
+   */
+  destroyTradeForgeContext() {
+    if (this.initState === InitStates.NOT_INITIALIZED) return;
+
+    Logger.debug(TAG, 'destroyTradeForgeContext: tearing down all subscriptions and timers...');
+
+    // 1. Stop Heartbeat timer (idempotent)
+    try {
+      HeartbeatSystem.getInstance().stopHeartbeat();
+    } catch (err) {}
+
+    // 2. Stop LiveRuntimeMonitor / ExnessAdapter live timer (idempotent)
+    try {
+      LiveRuntimeMonitor.getInstance().stop();
+    } catch (err) {}
+
+    // 3. Unsubscribe all EventBus listeners
+    this.unsubscribers.forEach((unsub) => {
+      try {
+        unsub();
+      } catch (err) {}
+    });
+    this.unsubscribers = [];
+
+    // 4. Disconnect runtime connection port
+    try {
+      this.connectionManager.disconnect();
+    } catch (err) {}
+
+    // 5. Reset init state
+    this.initState = InitStates.NOT_INITIALIZED;
+
+    // 6. Reset EventBus singleton so reinjected script starts with clean listeners
+    try {
+      EventBus.getInstance().reset();
+      EventBus.instance = null;
+    } catch (err) {}
+
+    // 7. Reset HeartbeatSystem singleton
+    try {
+      HeartbeatSystem.instance = null;
+    } catch (err) {}
+
+    // 8. Reset LiveRuntimeMonitor singleton
+    try {
+      LiveRuntimeMonitor.instance = null;
+    } catch (err) {}
+
+    // 9. Remove injection guard from DOM so reinjection is allowed
+    try {
+      delete document.documentElement.dataset.tradefourgeV5Injected;
+    } catch (err) {}
+
+    // 10. Reset BridgeDispatcher singleton last
+    BridgeDispatcher.resetInstance();
+
+    Logger.debug(TAG, 'destroyTradeForgeContext: complete.');
+  }
+
+  dispose() {
+    this.destroyTradeForgeContext();
   }
 }

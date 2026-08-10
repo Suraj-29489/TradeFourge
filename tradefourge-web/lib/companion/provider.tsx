@@ -2,16 +2,18 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { CompanionBridge } from "./bridge";
+import { WebConnectionStateMachine } from "./state-machine";
+import { HealthMonitor } from "./health-monitor";
 import {
   DiscoveredAccount,
   ImportProgressPayload,
-  LiveTradeEventPayload,
   TFMessageEnvelope,
   TFMessageError,
 } from "./protocol";
 import { CompanionContextValue, CompanionHealth, CompanionLogEntry, CompanionState } from "./types";
 
 const TAG = "[CompanionProvider]";
+const VERSION = "5.5.3";
 
 const CompanionContext = createContext<CompanionContextValue | null>(null);
 
@@ -19,7 +21,7 @@ const INITIAL_STATE: CompanionState = {
   isInstalled: false,
   isConnected: false,
   browser: "Unknown",
-  version: "",
+  version: VERSION,
   lastHeartbeat: null,
   latency: 0,
   connectionState: "waiting",
@@ -36,10 +38,9 @@ const INITIAL_STATE: CompanionState = {
   lastError: null,
 };
 
-// ─── Heartbeat / Auto-Reconnect Config ──────────────────────────────────────
-const HEARTBEAT_INTERVAL_MS = 15000; // 15 seconds
-const RECONNECT_INTERVAL_MS = 5000; // 5 seconds when disconnected
-const MAX_RECONNECT_ATTEMPTS = 60; // Stop after 5 minutes
+const HEARTBEAT_INTERVAL_MS = 15000;
+const RECONNECT_INTERVAL_MS = 5000;
+const MAX_RECONNECT_ATTEMPTS = 60;
 
 export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<CompanionState>({
@@ -48,15 +49,39 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   });
 
   const bridge = CompanionBridge.getInstance();
+  const stateMachine = WebConnectionStateMachine.getInstance();
+  const healthMonitor = HealthMonitor.getInstance();
+
   const heartbeatTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const isConnectedRef = useRef(false);
 
-  // Keep ref in sync with state for use in intervals
   useEffect(() => {
     isConnectedRef.current = state.isConnected;
   }, [state.isConnected]);
+
+  // Subscribe to connection state machine transitions
+  useEffect(() => {
+    const unsubState = stateMachine.onChange((currentState, _prev, details) => {
+      const isConn = currentState === "Connected" || currentState === "Streaming" || currentState === "Authenticated";
+      setState((prev) => ({
+        ...prev,
+        isConnected: isConn,
+        connectionState: currentState.toLowerCase() as any,
+        health: isConn ? "Excellent" : currentState === "Recovering" ? "Warning" : "Disconnected",
+        lastError: details?.reason ? { code: "CONNECTION_LOST", message: details.reason } : prev.lastError,
+      }));
+    });
+
+    // Start 30s automatic health monitor
+    healthMonitor.start(30000);
+
+    return () => {
+      unsubState();
+      healthMonitor.stop();
+    };
+  }, [stateMachine, healthMonitor]);
 
   const addLog = useCallback((severity: CompanionLogEntry["severity"], event: string, description: string) => {
     const entry: CompanionLogEntry = {
@@ -69,18 +94,17 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     console.log(`${TAG} [${severity}] ${event}: ${description}`);
     setState((prev) => ({
       ...prev,
-      logs: [entry, ...prev.logs].slice(0, 50),
+      logs: [entry, ...prev.logs].slice(0, 100),
     }));
   }, []);
 
-  // ─── Check Extension (PING → PONG) ─────────────────────────────────────────
   const checkExtension = useCallback(async (): Promise<boolean> => {
     try {
       const startTime = Date.now();
       const response = await bridge.send("PING", undefined, 3000);
       const latency = Math.max(1, Date.now() - startTime);
 
-      const version = response?.version || "3.4.0";
+      const version = response?.version || VERSION;
       const browser = bridge.getBrowser();
 
       setState((prev) => ({
@@ -97,9 +121,7 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         lastError: null,
       }));
 
-      // Reset reconnect counter on success
       reconnectAttemptsRef.current = 0;
-
       addLog("SUCCESS", "Extension Detected", `Handshake verified with TradeFourge Companion v${version} (${latency}ms).`);
       return true;
     } catch (err: any) {
@@ -124,7 +146,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [bridge, addLog]);
 
-  // ─── Discover Accounts ────────────────────────────────────────────────────
   const discoverAccounts = useCallback(async (): Promise<DiscoveredAccount[]> => {
     try {
       addLog("INFO", "Discovering Accounts", "Requesting active Exness trading accounts from extension...");
@@ -158,7 +179,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [bridge, addLog]);
 
-  // ─── Import Selected Accounts ─────────────────────────────────────────────
   const importSelectedAccounts = useCallback(
     async (accountIds: string[]): Promise<boolean> => {
       try {
@@ -178,8 +198,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           lastError: null,
         }));
 
-        // This resolves with IMPORT_STARTED. Further IMPORT_PROGRESS and IMPORT_COMPLETED
-        // events arrive via push channel (background → injector → window.postMessage → bridge subscription)
         await bridge.send("IMPORT_SELECTED_ACCOUNTS", { accountIds }, 10000);
         addLog("INFO", "Import Pipeline Active", "Import started. Listening for progress events via push channel.");
         return true;
@@ -198,7 +216,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     [bridge, addLog]
   );
 
-  // ─── Reconnect / Sync / Disconnect ────────────────────────────────────────
   const reconnect = useCallback(async (): Promise<void> => {
     addLog("INFO", "Manual Reconnect", "Re-establishing extension bridge connection...");
     await checkExtension();
@@ -220,7 +237,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [bridge, addLog]);
 
   const disconnect = useCallback((): void => {
-    // Stop heartbeat
     if (heartbeatTimerRef.current) {
       clearInterval(heartbeatTimerRef.current);
       heartbeatTimerRef.current = null;
@@ -237,7 +253,7 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const repairConnection = useCallback(async (): Promise<void> => {
     addLog("INFO", "Repair Connection", "Attempting connection repair protocol...");
-    reconnectAttemptsRef.current = 0; // Reset counter
+    reconnectAttemptsRef.current = 0;
     await reconnect();
   }, [reconnect, addLog]);
 
@@ -255,16 +271,12 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setState((prev) => ({ ...prev, lastError: null }));
   }, []);
 
-  // ─── Push Event Subscriptions ─────────────────────────────────────────────
-  // These fire when the background pushes events through:
-  //   Background → Injector content script → window.postMessage → bridge window listener
+  // Event Push Subscriptions with Cleanup Return (Phase 4)
   useEffect(() => {
     const unsubs: (() => void)[] = [];
 
-    // Import Progress
     unsubs.push(
       bridge.subscribe("IMPORT_PROGRESS", (msg: TFMessageEnvelope<ImportProgressPayload>) => {
-        console.log(`${TAG} Received IMPORT_PROGRESS push event`, msg.payload);
         if (msg.payload) {
           setState((prev) => ({
             ...prev,
@@ -276,10 +288,8 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       })
     );
 
-    // Import Completed
     unsubs.push(
       bridge.subscribe("IMPORT_COMPLETED", (msg: TFMessageEnvelope<ImportProgressPayload>) => {
-        console.log(`${TAG} Received IMPORT_COMPLETED push event`, msg.payload);
         if (msg.payload) {
           const p = msg.payload;
           setState((prev) => ({
@@ -302,7 +312,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       })
     );
 
-    // Live Trade Events (individual types)
     const liveEventTypes = [
       "LIVE_EVENT",
       "POSITION_OPENED",
@@ -316,7 +325,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     for (const eventType of liveEventTypes) {
       unsubs.push(
         bridge.subscribe(eventType, (msg: TFMessageEnvelope) => {
-          console.log(`${TAG} Received ${eventType} push event`, msg.payload);
           setState((prev) => ({
             ...prev,
             realtimeStatus: "Connected",
@@ -327,7 +335,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       );
     }
 
-    // PONG (from heartbeat push events)
     unsubs.push(
       bridge.subscribe("PONG", (msg: TFMessageEnvelope) => {
         if (msg.payload) {
@@ -342,7 +349,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       })
     );
 
-    // Errors
     unsubs.push(
       bridge.subscribe("ERROR", (msg: TFMessageEnvelope<TFMessageError>) => {
         if (msg.error) {
@@ -357,15 +363,11 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, [bridge, addLog]);
 
-  // ─── Initial Detection + Auto-Reconnect ───────────────────────────────────
   useEffect(() => {
-    // Initial check
     checkExtension().then((connected) => {
       if (connected) {
-        // Start heartbeat polling
         startHeartbeat();
       } else {
-        // Start reconnect loop
         startReconnect();
       }
     });
@@ -386,7 +388,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             health: latency < 150 ? "Excellent" : latency < 400 ? "Good" : "Warning",
           }));
         } catch {
-          // Connection lost — switch to reconnect mode
           console.warn(`${TAG} Heartbeat failed. Switching to reconnect mode.`);
           setState((prev) => ({
             ...prev,
@@ -408,7 +409,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       reconnectAttemptsRef.current = 0;
       reconnectTimerRef.current = setInterval(async () => {
         if (isConnectedRef.current) {
-          // Already connected — switch to heartbeat mode
           if (reconnectTimerRef.current) {
             clearInterval(reconnectTimerRef.current);
             reconnectTimerRef.current = null;
@@ -417,7 +417,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return;
         }
         if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
-          console.warn(`${TAG} Max reconnect attempts reached. Stopping.`);
           if (reconnectTimerRef.current) {
             clearInterval(reconnectTimerRef.current);
             reconnectTimerRef.current = null;
@@ -427,7 +426,6 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         reconnectAttemptsRef.current++;
         const result = await checkExtension();
         if (result) {
-          // Connected — switch to heartbeat
           if (reconnectTimerRef.current) {
             clearInterval(reconnectTimerRef.current);
             reconnectTimerRef.current = null;
@@ -471,4 +469,8 @@ export const useCompanion = (): CompanionContextValue => {
     throw new Error("useCompanion must be used within a CompanionProvider");
   }
   return context;
+};
+
+export const useSafeCompanion = (): CompanionContextValue | null => {
+  return useContext(CompanionContext);
 };

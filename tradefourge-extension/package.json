@@ -1,9 +1,9 @@
 {
   "name": "tradefourge-extension",
-  "version": "5.1.0",
+  "version": "5.1.2",
   "private": true,
-  "description": "TradeFourge Companion Extension v5.1 — Production Hybrid Engine Bridge",
+  "description": "TradeFourge Companion Extension v5.1.2 — Definitive Context Recovery & Heartbeat Stabilization Engine",
   "scripts": {
-    "build": "npx esbuild content.js --bundle --outfile=dist/content.js --format=iife && npx esbuild background.js --bundle --outfile=dist/background.js --format=iife"
+    "build": "npx esbuild content.js --bundle --outfile=dist/content.js --format=iife && npx esbuild background.js --bundle --outfile=dist/background.js --format=iife && npx esbuild injector.js --bundle --outfile=dist/injector.js --format=iife"
   }
 }

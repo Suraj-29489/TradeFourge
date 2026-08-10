@@ -6,19 +6,10 @@ import {
   Zap,
   Radio,
   RefreshCw,
-  Wallet,
-  TrendingUp,
-  TrendingDown,
-  ShieldCheck,
-  Globe,
-  Layers,
-  ArrowRight,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
   Activity,
-  ChevronRight,
-  Check,
+  Loader2,
+  Inbox,
+  Clock,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -32,20 +23,14 @@ export const CompanionDashboard: React.FC = () => {
     switchAccount,
     discoverAccounts,
     reconnect,
-    refreshConnection,
   } = useCompanionAccount();
 
   const [timeRange, setTimeRange] = useState<"7D" | "30D" | "90D" | "ALL">("30D");
 
-  // Chart data from current TFC account stats
-  const equityData = currentAccount
+  // Chart data from current TFC account stats — only show actual balance/equity if available
+  const equityData = currentAccount && currentAccount.equity > 0
     ? [
-        { date: "Jul 28", equity: currentAccount.balance * 0.96 },
-        { date: "Jul 30", equity: currentAccount.balance * 0.98 },
-        { date: "Aug 01", equity: currentAccount.balance * 0.97 },
-        { date: "Aug 03", equity: currentAccount.balance * 1.01 },
-        { date: "Aug 05", equity: currentAccount.balance * 1.02 },
-        { date: "Aug 06", equity: currentAccount.equity },
+        { date: "Current", equity: currentAccount.equity },
       ]
     : [];
 
@@ -62,7 +47,7 @@ export const CompanionDashboard: React.FC = () => {
             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 font-mono ${
               connectionStatus === "Connected" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/10 text-rose-400 border border-rose-500/30"
             }`}>
-              ● {connectionStatus}
+              ● {connectionStatus === "Connected" ? "Connected" : "Waiting for live data"}
             </span>
           </div>
 
@@ -82,7 +67,7 @@ export const CompanionDashboard: React.FC = () => {
             >
               {accounts.map((acc) => (
                 <option key={acc.id} value={acc.id} className="bg-[#0F141C] text-white">
-                  {acc.broker} • #{acc.accountNumber} (${acc.balance.toLocaleString()})
+                  {acc.broker} • #{acc.accountNumber} (${acc.balance ? acc.balance.toLocaleString() : "--"})
                 </option>
               ))}
             </select>
@@ -90,8 +75,8 @@ export const CompanionDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* ── DISCONNECTED / INITIAL DETECTION CARD (If disconnected or discovering) ───── */}
-      {!currentAccount || connectionStatus === "Disconnected" ? (
+      {/* ── DISCONNECTED / CLEAN SCANNER STATE (If no account or disconnected) ───── */}
+      {!currentAccount || accounts.length === 0 || connectionStatus === "Disconnected" ? (
         <div className="p-8 sm:p-12 rounded-3xl bg-[#0F141C] border border-white/[0.08] text-center space-y-8 shadow-2xl w-full">
           <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto shadow-inner">
             {isDiscovering ? (
@@ -106,11 +91,11 @@ export const CompanionDashboard: React.FC = () => {
               TradeForge Companion Scanner
             </h2>
             <p className="text-xs text-gray-400 leading-relaxed font-sans">
-              Detect active MetaTrader and broker terminal accounts registered with the TradeForge Companion extension.
+              Waiting for live trading data. Open your Exness terminal page to stream live account balance, equity, and order history.
             </p>
           </div>
 
-          {/* Extension Detection Box */}
+          {/* Extension Status Box */}
           <div className="max-w-xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3 text-left text-xs bg-white/[0.02] p-4 rounded-2xl border border-white/[0.06]">
             <div>
               <span className="text-[10px] text-gray-500 uppercase font-bold block">Browser</span>
@@ -123,7 +108,7 @@ export const CompanionDashboard: React.FC = () => {
             <div>
               <span className="text-[10px] text-gray-500 uppercase font-bold block">Status</span>
               <strong className={connectionStatus === "Connected" ? "text-emerald-400" : "text-amber-400"}>
-                {connectionStatus}
+                {connectionStatus === "Connected" ? "Connected" : "Waiting for live data"}
               </strong>
             </div>
             <div>
@@ -140,7 +125,7 @@ export const CompanionDashboard: React.FC = () => {
               className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/20 inline-flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
             >
               {isDiscovering ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-white" />}
-              <span>{isDiscovering ? "Discovering Accounts..." : "Discover Accounts"}</span>
+              <span>{isDiscovering ? "Discovering Accounts..." : "Scan & Discover Accounts"}</span>
             </button>
 
             <button
@@ -153,24 +138,24 @@ export const CompanionDashboard: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* ── ACTIVE INSTITUTIONAL BLOOMBERG / TRADINGVIEW DASHBOARD ────────────── */
+        /* ── LIVE ACCOUNT METRIC CARDS ────────────── */
         <div className="space-y-6">
-          {/* Top 6 Institutional Metric Cards Grid */}
+          {/* Metric Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {/* Card 1: Balance */}
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Balance</span>
               <p className="text-lg font-extrabold text-white">
-                ${currentAccount.balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                {currentAccount.balance > 0 ? `$${currentAccount.balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "--"}
               </p>
-              <span className="text-[10px] text-gray-500 block">Currency: {currentAccount.currency}</span>
+              <span className="text-[10px] text-gray-500 block">Currency: {currentAccount.currency || "USD"}</span>
             </div>
 
             {/* Card 2: Equity */}
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Equity</span>
               <p className="text-lg font-extrabold text-emerald-400">
-                ${currentAccount.equity.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                {currentAccount.equity > 0 ? `$${currentAccount.equity.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "--"}
               </p>
               <span className="text-[10px] text-emerald-500/80 block">● Live Valuation</span>
             </div>
@@ -179,16 +164,16 @@ export const CompanionDashboard: React.FC = () => {
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Free Margin</span>
               <p className="text-lg font-extrabold text-white">
-                ${currentAccount.freeMargin.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                {currentAccount.freeMargin > 0 ? `$${currentAccount.freeMargin.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "--"}
               </p>
-              <span className="text-[10px] text-gray-500 block">Margin: ${currentAccount.margin}</span>
+              <span className="text-[10px] text-gray-500 block">Margin: {currentAccount.margin > 0 ? `$${currentAccount.margin}` : "--"}</span>
             </div>
 
             {/* Card 4: Profit Today */}
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Profit Today</span>
               <p className={`text-lg font-extrabold ${currentAccount.profitToday >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                {currentAccount.profitToday >= 0 ? "+" : ""}${currentAccount.profitToday.toFixed(2)}
+                {currentAccount.profitToday !== 0 ? `${currentAccount.profitToday >= 0 ? "+" : ""}$${currentAccount.profitToday.toFixed(2)}` : "--"}
               </p>
               <span className="text-[10px] text-gray-500 block">Closed Today</span>
             </div>
@@ -197,7 +182,7 @@ export const CompanionDashboard: React.FC = () => {
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Floating PnL</span>
               <p className={`text-lg font-extrabold ${currentAccount.floatingPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                {currentAccount.floatingPnL >= 0 ? "+" : ""}${currentAccount.floatingPnL.toFixed(2)}
+                {currentAccount.floatingPnL !== 0 ? `${currentAccount.floatingPnL >= 0 ? "+" : ""}$${currentAccount.floatingPnL.toFixed(2)}` : "--"}
               </p>
               <span className="text-[10px] text-gray-500 block">Open Positions</span>
             </div>
@@ -205,12 +190,12 @@ export const CompanionDashboard: React.FC = () => {
             {/* Card 6: Account Identity */}
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Server & Type</span>
-              <p className="text-xs font-bold text-white truncate">{currentAccount.server}</p>
-              <span className="text-[10px] text-blue-400 font-bold block">{currentAccount.accountType} • {currentAccount.leverage}</span>
+              <p className="text-xs font-bold text-white truncate">{currentAccount.server || "--"}</p>
+              <span className="text-[10px] text-blue-400 font-bold block">{currentAccount.accountType || "--"} • {currentAccount.leverage || "--"}</span>
             </div>
           </div>
 
-          {/* Large Institutional Equity Curve Chart */}
+          {/* Equity Trajectory Chart */}
           <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-4 shadow-xl">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/[0.08] pb-4">
               <div>
@@ -239,39 +224,48 @@ export const CompanionDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Recharts Area Chart */}
-            <div className="h-72 w-full pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={equityData}>
-                  <defs>
-                    <linearGradient id="tfcEquityGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563EB" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1F293D" vertical={false} />
-                  <XAxis dataKey="date" stroke="#6B7280" tickLine={false} fontSize={11} />
-                  <YAxis stroke="#6B7280" tickLine={false} fontSize={11} domain={["auto", "auto"]} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#0B0F19",
-                      borderColor: "#1E293B",
-                      borderRadius: "12px",
-                      color: "#FFFFFF",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Area type="monotone" dataKey="equity" stroke="#3B82F6" strokeWidth={2.5} fillOpacity={1} fill="url(#tfcEquityGrad)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            {/* Recharts Area Chart or Empty State */}
+            {equityData.length > 0 ? (
+              <div className="h-72 w-full pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={equityData}>
+                    <defs>
+                      <linearGradient id="tfcEquityGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563EB" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1F293D" vertical={false} />
+                    <XAxis dataKey="date" stroke="#6B7280" tickLine={false} fontSize={11} />
+                    <YAxis stroke="#6B7280" tickLine={false} fontSize={11} domain={["auto", "auto"]} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#0B0F19",
+                        borderColor: "#1E293B",
+                        borderRadius: "12px",
+                        color: "#FFFFFF",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Area type="monotone" dataKey="equity" stroke="#3B82F6" strokeWidth={2.5} fillOpacity={1} fill="url(#tfcEquityGrad)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-48 w-full flex flex-col items-center justify-center text-gray-500 text-xs space-y-2 border border-dashed border-white/[0.08] rounded-xl">
+                <Clock className="w-6 h-6 text-gray-600 animate-pulse" />
+                <span>Waiting for live equity updates from Exness stream...</span>
+              </div>
+            )}
           </div>
 
           {/* Recent Synced Trades Table */}
           <div className="p-6 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-4 shadow-xl">
             <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
               <h3 className="text-sm font-bold text-white font-sans">Recent Terminal Executions</h3>
-              <span className="text-[10px] text-gray-400 font-mono">Showing latest 5 trades</span>
+              <span className="text-[10px] text-gray-400 font-mono">
+                {currentAccount.trades.length > 0 ? `Showing latest ${currentAccount.trades.length} trades` : "No live trades received"}
+              </span>
             </div>
 
             <div className="overflow-x-auto">
@@ -287,22 +281,33 @@ export const CompanionDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">
-                  {currentAccount.trades.map((tr) => (
-                    <tr key={tr.ticket} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-3 px-3 text-gray-400 font-bold">#{tr.ticket}</td>
-                      <td className="py-3 px-3 text-white font-extrabold">{tr.symbol}</td>
-                      <td className="py-3 px-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tr.type === "BUY" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border border-rose-500/20"}`}>
-                          {tr.type}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-gray-200">{tr.lots}</td>
-                      <td className="py-3 px-3 text-gray-400">{tr.openPrice} → {tr.closePrice}</td>
-                      <td className={`py-3 px-3 text-right font-extrabold ${tr.profit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                        {tr.profit >= 0 ? "+" : ""}${tr.profit.toFixed(2)}
+                  {currentAccount.trades.length > 0 ? (
+                    currentAccount.trades.map((tr) => (
+                      <tr key={tr.ticket} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3 px-3 text-gray-400 font-bold">#{tr.ticket}</td>
+                        <td className="py-3 px-3 text-white font-extrabold">{tr.symbol}</td>
+                        <td className="py-3 px-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tr.type === "BUY" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border border-rose-500/20"}`}>
+                            {tr.type}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-gray-200">{tr.lots}</td>
+                        <td className="py-3 px-3 text-gray-400">{tr.openPrice} → {tr.closePrice}</td>
+                        <td className={`py-3 px-3 text-right font-extrabold ${tr.profit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                          {tr.profit >= 0 ? "+" : ""}${tr.profit.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-500">
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <Inbox className="w-5 h-5 text-gray-600" />
+                          <span>No live trades received</span>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>

@@ -21,11 +21,11 @@ export default function AuthenticatedAppLayout({
         <AccountsProvider>
           <WorkspaceProvider>
             <ActiveAccountProvider>
-              <CompanionAccountProvider>
-                <CompanionProvider>
+              <CompanionProvider>
+                <CompanionAccountProvider>
                   <AppLayout>{children}</AppLayout>
-                </CompanionProvider>
-              </CompanionAccountProvider>
+                </CompanionAccountProvider>
+              </CompanionProvider>
             </ActiveAccountProvider>
           </WorkspaceProvider>
         </AccountsProvider>

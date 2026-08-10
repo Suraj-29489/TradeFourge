@@ -1,7 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { INITIAL_DEMO_ACCOUNTS, CompanionAccount } from "@/lib/demo/demoAccounts";
+import { CompanionAccount } from "@/lib/demo/demoAccounts";
+import { useSafeCompanion } from "@/lib/companion/provider";
 
 interface CompanionAccountContextType {
   accounts: CompanionAccount[];
@@ -21,6 +22,7 @@ interface CompanionAccountContextType {
   refreshConnection: () => void;
   removeAccount: (id: string) => void;
   setDefaultAccount: (id: string) => void;
+  resetTFCState: () => void;
 }
 
 const STORAGE_COMPANION_ACC_KEY = "tf_selected_companion_account_id";
@@ -32,9 +34,9 @@ const CompanionAccountContext = createContext<CompanionAccountContextType>({
   isDiscovering: false,
   extensionInfo: {
     browser: "Chrome / Chromium",
-    version: "v5.1.0 Manifest V3",
-    status: "Active Runtime",
-    lastScan: "Just Now",
+    version: "v5.5.3 Manifest V3",
+    status: "Disconnected",
+    lastScan: "Never",
   },
   switchAccount: () => {},
   discoverAccounts: async () => [],
@@ -43,27 +45,78 @@ const CompanionAccountContext = createContext<CompanionAccountContextType>({
   refreshConnection: () => {},
   removeAccount: () => {},
   setDefaultAccount: () => {},
+  resetTFCState: () => {},
 });
 
 export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [accounts, setAccounts] = useState<CompanionAccount[]>(INITIAL_DEMO_ACCOUNTS);
+  const companion = useSafeCompanion();
+  const [accounts, setAccounts] = useState<CompanionAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<"Connected" | "Disconnected">("Connected");
+  const [connectionStatus, setConnectionStatus] = useState<"Connected" | "Disconnected">("Disconnected");
   const [isDiscovering, setIsDiscovering] = useState(false);
-  const [lastScanTime, setLastScanTime] = useState("Just Now");
+  const [lastScanTime, setLastScanTime] = useState("Never");
 
-  // Restore stored active account on mount
+  // Synchronize connection status from CompanionProvider
+  useEffect(() => {
+    setConnectionStatus(companion?.isConnected ? "Connected" : "Disconnected");
+  }, [companion?.isConnected]);
+
+  // Clean stale demo account IDs from localStorage on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem(STORAGE_COMPANION_ACC_KEY);
-    if (saved && INITIAL_DEMO_ACCOUNTS.some((a) => a.id === saved)) {
+    if (saved && (saved.startsWith("tfc_exness_") || saved.startsWith("tfc_icmarkets_"))) {
+      localStorage.removeItem(STORAGE_COMPANION_ACC_KEY);
+      setSelectedAccountId(null);
+    } else if (saved) {
       setSelectedAccountId(saved);
-    } else {
-      setSelectedAccountId(INITIAL_DEMO_ACCOUNTS[0]?.id ?? null);
     }
   }, []);
 
-  // Sync current account
+  // Synchronize discovered accounts from CompanionProvider when live events arrive
+  useEffect(() => {
+    if (companion?.discoveredAccounts && companion.discoveredAccounts.length > 0) {
+      const mapped: CompanionAccount[] = companion.discoveredAccounts.map((da, index) => ({
+        id: da.id || `acc_${da.account_number}`,
+        accountNumber: da.account_number,
+        broker: da.broker || "Exness",
+        server: da.server || "Exness-Real",
+        accountType: (da.account_type as any) || "Live",
+        currency: da.currency || "USD",
+        leverage: "1:500",
+        balance: da.balance || 0,
+        equity: da.equity || da.balance || 0,
+        margin: 0,
+        freeMargin: da.equity || da.balance || 0,
+        profitToday: 0,
+        floatingPnL: 0,
+        isConnected: true,
+        isDefault: index === 0,
+        lastScanTime: "Just Now",
+        stats: {
+          winRate: 0,
+          profitFactor: 0,
+          totalTrades: da.history_count || 0,
+          winningTrades: 0,
+          losingTrades: 0,
+          netPnL: 0,
+          maxDrawdownPct: 0,
+          averageRR: 0,
+        },
+        trades: [],
+      }));
+
+      setAccounts(mapped);
+      setConnectionStatus("Connected");
+      setLastScanTime(new Date().toLocaleTimeString());
+
+      if (!selectedAccountId && mapped.length > 0) {
+        setSelectedAccountId(mapped[0].id);
+      }
+    }
+  }, [companion?.discoveredAccounts, selectedAccountId]);
+
+  // Active account selection
   const currentAccount = accounts.find((a) => a.id === selectedAccountId) ?? accounts[0] ?? null;
 
   const switchAccount = useCallback((id: string) => {
@@ -75,31 +128,73 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
 
   const discoverAccounts = useCallback(async (): Promise<CompanionAccount[]> => {
     setIsDiscovering(true);
-    // Simulate extension scanner latency
-    await new Promise((res) => setTimeout(res, 1200));
-    setAccounts(INITIAL_DEMO_ACCOUNTS);
-    setConnectionStatus("Connected");
-    setLastScanTime(new Date().toLocaleTimeString());
-    setIsDiscovering(false);
-    if (INITIAL_DEMO_ACCOUNTS.length > 0) {
-      switchAccount(INITIAL_DEMO_ACCOUNTS[0].id);
+    try {
+      const liveDiscovered = companion ? await companion.discoverAccounts() : [];
+      setLastScanTime(new Date().toLocaleTimeString());
+
+      if (liveDiscovered.length > 0) {
+        const mapped: CompanionAccount[] = liveDiscovered.map((da, index) => ({
+          id: da.id || `acc_${da.account_number}`,
+          accountNumber: da.account_number,
+          broker: da.broker || "Exness",
+          server: da.server || "Exness-Real",
+          accountType: (da.account_type as any) || "Live",
+          currency: da.currency || "USD",
+          leverage: "1:500",
+          balance: da.balance || 0,
+          equity: da.equity || da.balance || 0,
+          margin: 0,
+          freeMargin: da.equity || da.balance || 0,
+          profitToday: 0,
+          floatingPnL: 0,
+          isConnected: true,
+          isDefault: index === 0,
+          lastScanTime: "Just Now",
+          stats: {
+            winRate: 0,
+            profitFactor: 0,
+            totalTrades: da.history_count || 0,
+            winningTrades: 0,
+            losingTrades: 0,
+            netPnL: 0,
+            maxDrawdownPct: 0,
+            averageRR: 0,
+          },
+          trades: [],
+        }));
+
+        setAccounts(mapped);
+        setConnectionStatus("Connected");
+        if (mapped.length > 0) {
+          switchAccount(mapped[0].id);
+        }
+        return mapped;
+      } else {
+        setAccounts([]);
+        return [];
+      }
+    } catch (err) {
+      setAccounts([]);
+      return [];
+    } finally {
+      setIsDiscovering(false);
     }
-    return INITIAL_DEMO_ACCOUNTS;
-  }, [switchAccount]);
+  }, [companion, switchAccount]);
 
   const reconnect = useCallback(() => {
-    setConnectionStatus("Connected");
+    companion?.reconnect();
     setLastScanTime(new Date().toLocaleTimeString());
-  }, []);
+  }, [companion]);
 
   const disconnect = useCallback(() => {
+    companion?.disconnect();
     setConnectionStatus("Disconnected");
-  }, []);
+  }, [companion]);
 
   const refreshConnection = useCallback(() => {
-    setConnectionStatus("Connected");
+    companion?.checkExtension();
     setLastScanTime(new Date().toLocaleTimeString());
-  }, []);
+  }, [companion]);
 
   const removeAccount = useCallback(
     (id: string) => {
@@ -131,6 +226,16 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
     );
   }, []);
 
+  const resetTFCState = useCallback(() => {
+    setAccounts([]);
+    setSelectedAccountId(null);
+    setConnectionStatus("Disconnected");
+    setLastScanTime("Never");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(STORAGE_COMPANION_ACC_KEY);
+    }
+  }, []);
+
   return (
     <CompanionAccountContext.Provider
       value={{
@@ -139,8 +244,8 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
         connectionStatus,
         isDiscovering,
         extensionInfo: {
-          browser: "Chrome / Chromium",
-          version: "v5.1.0 Manifest V3",
+          browser: companion?.browser || "Chrome / Chromium",
+          version: companion?.version || "v5.5.3 Manifest V3",
           status: connectionStatus === "Connected" ? "Active Stream" : "Disconnected",
           lastScan: lastScanTime,
         },
@@ -151,6 +256,7 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
         refreshConnection,
         removeAccount,
         setDefaultAccount,
+        resetTFCState,
       }}
     >
       {children}

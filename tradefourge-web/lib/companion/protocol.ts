@@ -1,5 +1,5 @@
 /**
- * TradeFourge Companion v5.1 — Message Protocol Definitions
+ * TradeFourge Companion v5.5.3 — Message Protocol Definitions
  * Strongly-typed bidirectional communication envelope for Web ↔ Extension Bridge.
  */
 
@@ -36,6 +36,11 @@ export const TF_MESSAGE_TYPES = {
   POSITION_MODIFIED: "POSITION_MODIFIED",
   POSITION_CLOSED: "POSITION_CLOSED",
 
+  // Lifecycle Recovery & Diagnostics
+  HEALTH_CHECK: "HEALTH_CHECK",
+  RECONNECT: "RECONNECT",
+  STATE_CHANGE: "STATE_CHANGE",
+
   // Error Handling
   ERROR: "ERROR",
 } as const;
@@ -55,6 +60,7 @@ export interface TFMessageError {
     | "IMPORT_FAILED"
     | "HISTORY_INTERRUPTED"
     | "CONNECTION_LOST"
+    | "CONTEXT_INVALIDATED"
     | "TIMEOUT"
     | "PERMISSION_DENIED"
     | "UNKNOWN_ERROR";
@@ -74,6 +80,17 @@ export interface TFMessageEnvelope<T = any> {
   payload?: T;
   error?: TFMessageError;
 }
+
+// Formal Connection Machine States (Phase 8)
+export type ConnectionState =
+  | "Disconnected"
+  | "Connecting"
+  | "Injected"
+  | "Connected"
+  | "Authenticated"
+  | "Streaming"
+  | "Error"
+  | "Recovering";
 
 // Discovered Account Model from Extension
 export interface DiscoveredAccount {
