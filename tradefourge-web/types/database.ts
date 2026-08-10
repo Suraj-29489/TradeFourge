@@ -40,6 +40,7 @@ export interface TradingAccount {
   account_number: string | null;
   account_type: AccountType;
   currency: string;
+  server?: string | null;
   leverage: string | null;
   starting_balance: number;
   current_balance: number;

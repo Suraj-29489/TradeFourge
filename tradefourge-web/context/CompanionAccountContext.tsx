@@ -1,13 +1,15 @@
+"use client";
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { CompanionAccount } from "@/lib/demo/demoAccounts";
 import { useSafeCompanion } from "@/lib/companion/provider";
 import type { DiscoveredAccount } from "@/lib/companion/protocol";
 import { createClient } from "@/lib/supabase/client";
 import { AccountService } from "@/lib/services/AccountService";
-import { bulkInsertTrades } from "@/lib/supabase/trades";
-import { emitAppEvent } from "@/lib/events/event-bus";
+import { bulkInsertTrades, fetchTrades } from "@/lib/supabase/trades";
+import { emitAppEvent, useAppEventListener } from "@/lib/events/event-bus";
 import { CompanionBridge } from "@/lib/companion/bridge";
-import type { NewCloudTrade } from "@/types/database";
+import type { NewCloudTrade, TradingAccount } from "@/types/database";
 
 interface CompanionAccountContextType {
   accounts: CompanionAccount[];
@@ -73,22 +75,81 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
 
   const supabase = createClient();
 
+  // Helper to map TradingAccount from canonical store to CompanionAccount
+  const mapDbToCompanionAccount = (dbAcc: TradingAccount, isDefault = false): CompanionAccount => {
+    return {
+      id: dbAcc.id,
+      accountNumber: dbAcc.account_number || dbAcc.display_id || dbAcc.id,
+      broker: dbAcc.broker || "Exness",
+      server: dbAcc.server || "Server unavailable",
+      accountType: (dbAcc.account_type as any) || "Standard",
+      currency: dbAcc.currency || "USD",
+      leverage: dbAcc.leverage || "1:2000",
+      balance: dbAcc.current_balance ?? dbAcc.starting_balance ?? 0,
+      equity: dbAcc.current_balance ?? dbAcc.starting_balance ?? 0,
+      margin: 0,
+      freeMargin: dbAcc.current_balance ?? dbAcc.starting_balance ?? 0,
+      profitToday: 0,
+      floatingPnL: 0,
+      isConnected: true,
+      isDefault: dbAcc.is_default ?? isDefault,
+      lastScanTime: "Just Now",
+      stats: {
+        winRate: 0,
+        profitFactor: 0,
+        totalTrades: 0,
+        winningTrades: 0,
+        losingTrades: 0,
+        netPnL: 0,
+        maxDrawdownPct: 0,
+        averageRR: 0,
+      },
+      trades: [],
+    };
+  };
+
+  // Load canonical persistent accounts into CompanionAccountContext
+  const loadSavedAccounts = useCallback(async () => {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id || "default_user";
+
+      const res = await AccountService.getAccounts(userId);
+      const dbAccounts = res.data || [];
+
+      if (dbAccounts.length > 0) {
+        const mappedAccounts = dbAccounts.map((a, idx) => mapDbToCompanionAccount(a, idx === 0));
+        setAccounts(mappedAccounts);
+
+        const savedSelected = typeof window !== "undefined" ? localStorage.getItem(STORAGE_COMPANION_ACC_KEY) : null;
+        const validSelected = savedSelected && mappedAccounts.some((a) => a.id === savedSelected) ? savedSelected : mappedAccounts[0].id;
+        setSelectedAccountId(validSelected);
+      } else {
+        setAccounts([]);
+        setSelectedAccountId(null);
+      }
+    } catch (err) {
+      console.warn("[CompanionAccountContext] Failed to load saved accounts:", err);
+    }
+  }, [supabase]);
+
   // Synchronize connection status from CompanionProvider
   useEffect(() => {
     setConnectionStatus(companion?.isConnected ? "Connected" : "Disconnected");
   }, [companion?.isConnected]);
 
-  // Clean stale demo account IDs from localStorage on mount
+  // Hydrate accounts on mount
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = localStorage.getItem(STORAGE_COMPANION_ACC_KEY);
-    if (saved && (saved.startsWith("tfc_exness_") || saved.startsWith("tfc_icmarkets_"))) {
-      localStorage.removeItem(STORAGE_COMPANION_ACC_KEY);
-      setSelectedAccountId(null);
-    } else if (saved) {
-      setSelectedAccountId(saved);
+    loadSavedAccounts();
+  }, [loadSavedAccounts]);
+
+  // Listen for account mutations and reload persistence
+  useAppEventListener(
+    ["tradefourge:account-created", "tradefourge:account-updated", "tradefourge:account-deleted", "tradefourge:data-changed"],
+    () => {
+      loadSavedAccounts();
     }
-  }, []);
+  );
 
   const currentAccount = accounts.find((a) => a.id === selectedAccountId) ?? accounts[0] ?? null;
 
@@ -147,8 +208,6 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
       const { data: authData } = await supabase.auth.getUser();
       const userId = authData?.user?.id || "default_user";
 
-      const newCompanionAccounts: CompanionAccount[] = [];
-
       for (let i = 0; i < selectedAccounts.length; i++) {
         const da = selectedAccounts[i];
         const cleanNum = String(da.account_number).replace(/\D/g, "");
@@ -171,93 +230,62 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
         };
 
         const accRes = await AccountService.createAccount(userId, accPayload);
-        const createdAccountId = accRes.data?.id || `exness_${cleanNum}`;
+        const createdAccountId = accRes.data?.id || `acc_${cleanNum}`;
 
         // 2. Fetch trade history via Companion bridge
         try {
-          const importRes = await CompanionBridge.getInstance().send<any>("IMPORT_SELECTED_ACCOUNTS", { accountIds: [cleanNum] }, 10000);
-          const rawTrades = importRes?.trades || importRes?.payload?.trades || [];
-
-          if (rawTrades.length > 0) {
-              // 3. Normalize trade records into NewCloudTrade model
-              const normalizedTrades: NewCloudTrade[] = rawTrades.map((t: any) => ({
-                account_id: createdAccountId,
-                ticket: String(t.ticket || `${cleanNum}_${Date.now()}`),
-                symbol: String(t.symbol || "EURUSD").toUpperCase(),
-                side: String(t.side || "BUY").toUpperCase().includes("SELL") ? "SELL" : "BUY",
-                volume: Number(t.volume) || 0.1,
-                open_price: Number(t.open_price) || 1.0,
-                close_price: Number(t.close_price) || 1.0,
-                net_profit: Number(t.profit) || 0,
-                profit: Number(t.profit) || 0,
-                commission: Number(t.commission) || 0,
-                swap: Number(t.swap) || 0,
-                open_time: t.open_time || new Date().toISOString(),
-                close_time: t.close_time || new Date().toISOString(),
-                status: "CLOSED",
-                source: "companion",
-                outcome: (Number(t.profit) || 0) > 0 ? "WIN" : (Number(t.profit) || 0) < 0 ? "LOSS" : "BREAKEVEN",
-              }));
-
-              // 4. Bulk insert into canonical trade store
-              await bulkInsertTrades(userId, normalizedTrades);
-            }
-          } catch (err) {
-            console.warn(`Trade history fetch note for ${cleanNum}:`, err);
+          let fetchedTrades: any[] = [];
+          if (companion) {
+            const importRes = await companion.importHistory([cleanNum]);
+            fetchedTrades = importRes?.trades || [];
           }
 
-        // 5. Add to local companion account state
-        newCompanionAccounts.push({
-          id: createdAccountId,
-          accountNumber: cleanNum,
-          broker: da.broker || "Exness",
-          server: da.server || "Server unavailable",
-          accountType: (da.account_type as any) || "Standard",
-          currency: da.currency || "USD",
-          leverage: da.leverage || "1:2000",
-          balance: da.balance || 0,
-          equity: da.equity || da.balance || 0,
-          margin: 0,
-          freeMargin: da.equity || da.balance || 0,
-          profitToday: 0,
-          floatingPnL: 0,
-          isConnected: true,
-          isDefault: i === 0,
-          lastScanTime: "Just Now",
-          stats: {
-            winRate: 0,
-            profitFactor: 0,
-            totalTrades: da.history_count || 0,
-            winningTrades: 0,
-            losingTrades: 0,
-            netPnL: 0,
-            maxDrawdownPct: 0,
-            averageRR: 0,
-          },
-          trades: [],
-        });
-      }
+          if (fetchedTrades.length > 0) {
+            // 3. Normalize trade records into NewCloudTrade model
+            const normalizedTrades: NewCloudTrade[] = fetchedTrades.map((t: any) => ({
+              account_id: createdAccountId,
+              ticket: String(t.ticket || `${cleanNum}_${Date.now()}`),
+              symbol: String(t.symbol || "EURUSD").toUpperCase(),
+              side: String(t.side || "BUY").toUpperCase().includes("SELL") ? "SELL" : "BUY",
+              volume: Number(t.volume) || 0.1,
+              open_price: Number(t.open_price) || 1.0,
+              close_price: Number(t.close_price) || 1.0,
+              stop_loss: t.stop_loss !== undefined ? Number(t.stop_loss) : null,
+              take_profit: t.take_profit !== undefined ? Number(t.take_profit) : null,
+              open_time: t.open_time || new Date().toISOString(),
+              close_time: t.close_time || new Date().toISOString(),
+              duration_seconds: t.duration_seconds !== undefined ? Number(t.duration_seconds) : null,
+              profit: Number(t.profit) || 0,
+              commission: Number(t.commission) || 0,
+              swap: Number(t.swap) || 0,
+              rr_ratio: null,
+              risk_amount: null,
+              outcome: (Number(t.profit) || 0) > 0 ? "WIN" : (Number(t.profit) || 0) < 0 ? "LOSS" : "BREAKEVEN",
+              source: "api",
+              session: null,
+              strategy: null,
+              notes: null,
+              emotions: null,
+              lessons: null,
+              mistakes: null,
+              magic_number: null,
+            }));
 
-      setAccounts((prev) => {
-        const merged = [...prev];
-        newCompanionAccounts.forEach((nA) => {
-          if (!merged.some((m) => m.accountNumber === nA.accountNumber)) {
-            merged.push(nA);
+            // 4. Bulk insert into canonical trade store
+            await bulkInsertTrades(userId, normalizedTrades);
+            console.log(`[CompanionImport] Persisted ${normalizedTrades.length} trades for account #${cleanNum}.`);
+          } else {
+            console.log(`[CompanionImport] No history trades found for account #${cleanNum}. Account ready with 0 trades.`);
           }
-        });
-        return merged;
-      });
-
-      if (newCompanionAccounts.length > 0) {
-        setSelectedAccountId(newCompanionAccounts[0].id);
-        if (typeof window !== "undefined") {
-          localStorage.setItem(STORAGE_COMPANION_ACC_KEY, newCompanionAccounts[0].id);
+        } catch (err) {
+          console.warn(`Trade history fetch note for #${cleanNum}:`, err);
         }
       }
 
-      emitAppEvent("tradefourge:account-created", { count: newCompanionAccounts.length });
+      await loadSavedAccounts();
+      emitAppEvent("tradefourge:account-created", { count: selectedAccounts.length });
     },
-    [supabase, companion]
+    [supabase, companion, loadSavedAccounts]
   );
 
   const clearDiscoveryError = useCallback(() => setDiscoveryError(null), []);
@@ -278,34 +306,26 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
   }, [companion]);
 
   const removeAccount = useCallback(
-    (id: string) => {
-      setAccounts((prev) => {
-        const next = prev.filter((a) => a.id !== id);
-        if (selectedAccountId === id) {
-          const nextAccount = next[0] ?? null;
-          setSelectedAccountId(nextAccount?.id ?? null);
-          if (typeof window !== "undefined") {
-            if (nextAccount) {
-              localStorage.setItem(STORAGE_COMPANION_ACC_KEY, nextAccount.id);
-            } else {
-              localStorage.removeItem(STORAGE_COMPANION_ACC_KEY);
-            }
-          }
-        }
-        return next;
-      });
+    async (id: string) => {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id || "default_user";
+
+      await AccountService.deleteAccount(id, userId);
+      await loadSavedAccounts();
     },
-    [selectedAccountId]
+    [supabase, loadSavedAccounts]
   );
 
-  const setDefaultAccount = useCallback((id: string) => {
-    setAccounts((prev) =>
-      prev.map((a) => ({
-        ...a,
-        isDefault: a.id === id,
-      }))
-    );
-  }, []);
+  const setDefaultAccount = useCallback(
+    async (id: string) => {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id || "default_user";
+
+      await AccountService.updateAccount(id, userId, { is_default: true });
+      await loadSavedAccounts();
+    },
+    [supabase, loadSavedAccounts]
+  );
 
   const resetTFCState = useCallback(() => {
     setAccounts([]);

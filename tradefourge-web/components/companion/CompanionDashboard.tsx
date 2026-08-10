@@ -87,8 +87,8 @@ export const CompanionDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* ── DISCONNECTED / CLEAN SCANNER STATE (If no account or disconnected) ───── */}
-      {!currentAccount || accounts.length === 0 || connectionStatus === "Disconnected" ? (
+      {/* ── DISCONNECTED / CLEAN SCANNER STATE (If no account exists) ───── */}
+      {!currentAccount || accounts.length === 0 ? (
         <div className="p-8 sm:p-12 rounded-3xl bg-[#0F141C] border border-white/[0.08] text-center space-y-8 shadow-2xl w-full">
           <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto shadow-inner">
             {isDiscovering ? (
@@ -169,7 +169,11 @@ export const CompanionDashboard: React.FC = () => {
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Balance</span>
               <p className="text-lg font-extrabold text-white">
-                {currentAccount.balance > 0 ? `$${currentAccount.balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "--"}
+                {currentAccount.balance !== undefined && currentAccount.balance !== null
+                  ? currentAccount.currency === "USC"
+                    ? `${currentAccount.balance.toLocaleString("en-US", { minimumFractionDigits: 2 })} USC`
+                    : `${currentAccount.currency === "EUR" ? "€" : "$"}${currentAccount.balance.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                  : "--"}
               </p>
               <span className="text-[10px] text-gray-500 block">Currency: {currentAccount.currency || "USD"}</span>
             </div>
@@ -178,25 +182,35 @@ export const CompanionDashboard: React.FC = () => {
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Equity</span>
               <p className="text-lg font-extrabold text-emerald-400">
-                {currentAccount.equity > 0 ? `$${currentAccount.equity.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "--"}
+                {currentAccount.equity !== undefined && currentAccount.equity !== null
+                  ? currentAccount.currency === "USC"
+                    ? `${currentAccount.equity.toLocaleString("en-US", { minimumFractionDigits: 2 })} USC`
+                    : `${currentAccount.currency === "EUR" ? "€" : "$"}${currentAccount.equity.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                  : "--"}
               </p>
-              <span className="text-[10px] text-emerald-500/80 block">● Live Valuation</span>
+              <span className="text-[10px] text-emerald-500/80 block">
+                {connectionStatus === "Connected" ? "● Live Stream Active" : "● Last Known Value"}
+              </span>
             </div>
 
             {/* Card 3: Free Margin */}
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Free Margin</span>
               <p className="text-lg font-extrabold text-white">
-                {currentAccount.freeMargin > 0 ? `$${currentAccount.freeMargin.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "--"}
+                {currentAccount.freeMargin !== undefined && currentAccount.freeMargin !== null
+                  ? currentAccount.currency === "USC"
+                    ? `${currentAccount.freeMargin.toLocaleString("en-US", { minimumFractionDigits: 2 })} USC`
+                    : `${currentAccount.currency === "EUR" ? "€" : "$"}${currentAccount.freeMargin.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                  : "--"}
               </p>
-              <span className="text-[10px] text-gray-500 block">Margin: {currentAccount.margin > 0 ? `$${currentAccount.margin}` : "--"}</span>
+              <span className="text-[10px] text-gray-500 block">Margin: {currentAccount.margin > 0 ? `${currentAccount.margin}` : "--"}</span>
             </div>
 
             {/* Card 4: Profit Today */}
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Profit Today</span>
               <p className={`text-lg font-extrabold ${currentAccount.profitToday >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                {currentAccount.profitToday !== 0 ? `${currentAccount.profitToday >= 0 ? "+" : ""}$${currentAccount.profitToday.toFixed(2)}` : "--"}
+                {currentAccount.profitToday !== 0 ? `${currentAccount.profitToday >= 0 ? "+" : ""}${currentAccount.currency === "USC" ? `${currentAccount.profitToday.toFixed(2)} USC` : `$${currentAccount.profitToday.toFixed(2)}`}` : "--"}
               </p>
               <span className="text-[10px] text-gray-500 block">Closed Today</span>
             </div>
@@ -205,16 +219,16 @@ export const CompanionDashboard: React.FC = () => {
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Floating PnL</span>
               <p className={`text-lg font-extrabold ${currentAccount.floatingPnL >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                {currentAccount.floatingPnL !== 0 ? `${currentAccount.floatingPnL >= 0 ? "+" : ""}$${currentAccount.floatingPnL.toFixed(2)}` : "--"}
+                {currentAccount.floatingPnL !== 0 ? `${currentAccount.floatingPnL >= 0 ? "+" : ""}${currentAccount.currency === "USC" ? `${currentAccount.floatingPnL.toFixed(2)} USC` : `$${currentAccount.floatingPnL.toFixed(2)}`}` : "--"}
               </p>
               <span className="text-[10px] text-gray-500 block">Open Positions</span>
             </div>
 
             {/* Card 6: Account Identity */}
             <div className="p-4 rounded-2xl bg-[#0F141C] border border-white/[0.08] space-y-1">
-              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Server & Type</span>
-              <p className="text-xs font-bold text-white truncate">{currentAccount.server || "--"}</p>
-              <span className="text-[10px] text-blue-400 font-bold block">{currentAccount.accountType || "--"} • {currentAccount.leverage || "--"}</span>
+              <span className="text-[10px] text-gray-400 uppercase tracking-wider block font-bold">Server & Type</span>
+              <p className="text-xs font-bold text-white truncate">{currentAccount.server || "Server unavailable"}</p>
+              <span className="text-[10px] text-blue-400 font-bold block">{currentAccount.accountType || "Standard"} • {currentAccount.leverage || "Unavailable"}</span>
             </div>
           </div>
 

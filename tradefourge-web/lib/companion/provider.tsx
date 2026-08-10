@@ -179,6 +179,43 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [bridge, addLog]);
 
+  const importHistory = useCallback(
+    async (accountIds: string[]): Promise<{ account_number?: string; trades: any[] }> => {
+      return new Promise((resolve) => {
+        let finished = false;
+        const cleanup = bridge.subscribe("IMPORT_COMPLETED", (msg: TFMessageEnvelope<any>) => {
+          if (!finished) {
+            finished = true;
+            cleanup();
+            const trades = msg.payload?.trades || [];
+            const accNum = msg.payload?.account_number || accountIds[0];
+            addLog("SUCCESS", "History Received", `Received ${trades.length} historical trades for account #${accNum}.`);
+            resolve({ account_number: accNum, trades });
+          }
+        });
+
+        // Set safety timeout of 10s if extension finishes without push event
+        setTimeout(() => {
+          if (!finished) {
+            finished = true;
+            cleanup();
+            resolve({ account_number: accountIds[0], trades: [] });
+          }
+        }, 10000);
+
+        bridge.send("IMPORT_SELECTED_ACCOUNTS", { accountIds }, 10000).catch((err) => {
+          if (!finished) {
+            finished = true;
+            cleanup();
+            addLog("WARNING", "History Request Note", `Import request note: ${err?.message || err}`);
+            resolve({ account_number: accountIds[0], trades: [] });
+          }
+        });
+      });
+    },
+    [bridge, addLog]
+  );
+
   const importSelectedAccounts = useCallback(
     async (accountIds: string[]): Promise<boolean> => {
       try {
@@ -452,6 +489,7 @@ export const CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     checkExtension,
     discoverAccounts,
     importSelectedAccounts,
+    importHistory,
     reconnect,
     syncNow,
     disconnect,

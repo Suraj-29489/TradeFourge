@@ -37,6 +37,7 @@ export interface CompanionContextValue extends CompanionState {
   checkExtension: () => Promise<boolean>;
   discoverAccounts: () => Promise<DiscoveredAccount[]>;
   importSelectedAccounts: (accountIds: string[]) => Promise<boolean>;
+  importHistory: (accountIds: string[]) => Promise<{ account_number?: string; trades: any[] }>;
   reconnect: () => Promise<void>;
   syncNow: () => Promise<void>;
   disconnect: () => void;

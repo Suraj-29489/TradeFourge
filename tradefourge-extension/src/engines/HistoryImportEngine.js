@@ -36,6 +36,7 @@ export class HistoryImportEngine {
     Logger.info('HistoryImportEngine', `Starting history import for accounts: ${targetAccounts.join(', ')} (requestId: ${requestId})`);
 
     const adapter = AdapterManager.getInstance().getActiveAdapter();
+    const accumulatedTrades = [];
 
     try {
       // ── Stage 1: CONNECTING (0%) ──────────────────────────────────────────
@@ -48,7 +49,7 @@ export class HistoryImportEngine {
         stage: 'connecting',
         message: 'Connecting to Exness history pipeline...',
       });
-      await new Promise((res) => setTimeout(res, 400));
+      await new Promise((res) => setTimeout(res, 200));
 
       // ── Stage 2: REQUEST_HISTORY (10%) ────────────────────────────────────
       this.emitProgress(onProgress, {
@@ -60,99 +61,63 @@ export class HistoryImportEngine {
         stage: 'request_history',
         message: `Account ${activeAccount} verified. Requesting history manifest...`,
       });
-      await new Promise((res) => setTimeout(res, 500));
+      await new Promise((res) => setTimeout(res, 300));
 
       // ── Stage 3: RECEIVING_BATCHES ─────────────────────────────────────────
-      const batch1 = await adapter.fetchHistoryPage(activeAccount, 0, 1000);
-      const totalCount = batch1.totalCount || 0;
+      const pageResult = await adapter.fetchHistoryPage(activeAccount, 0, 1000);
+      const fetched = Array.isArray(pageResult?.trades) ? pageResult.trades : [];
+      accumulatedTrades.push(...fetched);
 
-      // Batch 1 (20%)
+      const totalCount = Math.max(pageResult?.totalCount || 0, accumulatedTrades.length);
+
       this.emitProgress(onProgress, {
         account_number: activeAccount,
-        fetchedTrades: 1000,
+        fetchedTrades: accumulatedTrades.length,
         totalTrades: totalCount,
-        offset: 1000,
-        percentage: 20,
-        stage: 'receiving_batches',
-        message: `Receiving history batch 1 (1000 / ${totalCount} trades)`,
-      });
-      await new Promise((res) => setTimeout(res, 500));
-
-      // Batch 2 (35%)
-      await adapter.fetchHistoryPage(activeAccount, 1000, 1000);
-      this.emitProgress(onProgress, {
-        account_number: activeAccount,
-        fetchedTrades: 2000,
-        totalTrades: totalCount,
-        offset: 2000,
-        percentage: 35,
-        stage: 'receiving_batches',
-        message: `Receiving history batch 2 (2000 / ${totalCount} trades)`,
-      });
-      await new Promise((res) => setTimeout(res, 500));
-
-      // Batch 3 (50%)
-      await adapter.fetchHistoryPage(activeAccount, 2000, 1200);
-      this.emitProgress(onProgress, {
-        account_number: activeAccount,
-        fetchedTrades: 3200,
-        totalTrades: totalCount,
-        offset: 3200,
+        offset: accumulatedTrades.length,
         percentage: 50,
         stage: 'receiving_batches',
-        message: `Receiving history batch 3 (3200 / ${totalCount} trades)`,
+        message: `Received ${accumulatedTrades.length} trade record(s) from Exness terminal`,
       });
-      await new Promise((res) => setTimeout(res, 500));
-
-      // Batch 4 (65%)
-      await adapter.fetchHistoryPage(activeAccount, 3200, 1000);
-      this.emitProgress(onProgress, {
-        account_number: activeAccount,
-        fetchedTrades: 4200,
-        totalTrades: totalCount,
-        offset: 4200,
-        percentage: 65,
-        stage: 'receiving_batches',
-        message: `Receiving history batch 4 (4200 / ${totalCount} trades)`,
-      });
-      await new Promise((res) => setTimeout(res, 500));
+      await new Promise((res) => setTimeout(res, 300));
 
       // ── Stage 4: WRITING_DATABASE (85%) ──────────────────────────────────
       this.emitProgress(onProgress, {
         account_number: activeAccount,
-        fetchedTrades: totalCount,
+        fetchedTrades: accumulatedTrades.length,
         totalTrades: totalCount,
-        offset: totalCount,
+        offset: accumulatedTrades.length,
         percentage: 85,
         stage: 'writing_database',
-        message: `Writing ${totalCount} trades to local database store...`,
+        message: `Writing ${accumulatedTrades.length} trades to TradeForge store...`,
       });
-      await new Promise((res) => setTimeout(res, 600));
+      await new Promise((res) => setTimeout(res, 300));
 
       // ── Stage 5: VERIFYING (95%) ──────────────────────────────────────────
       this.emitProgress(onProgress, {
         account_number: activeAccount,
-        fetchedTrades: totalCount,
+        fetchedTrades: accumulatedTrades.length,
         totalTrades: totalCount,
-        offset: totalCount,
+        offset: accumulatedTrades.length,
         percentage: 95,
         stage: 'verifying',
         message: 'Verifying trade checksums and P&L calculations...',
       });
-      await new Promise((res) => setTimeout(res, 500));
+      await new Promise((res) => setTimeout(res, 200));
 
       // ── Stage 6: COMPLETE (100%) ──────────────────────────────────────────
       const completedPayload = {
         account_number: activeAccount,
-        fetchedTrades: totalCount,
+        fetchedTrades: accumulatedTrades.length,
         totalTrades: totalCount,
-        offset: totalCount,
+        offset: accumulatedTrades.length,
         percentage: 100,
         stage: 'completed',
-        message: `Successfully synchronized ${totalCount} historical trades!`,
+        trades: accumulatedTrades,
+        message: `Successfully synchronized ${accumulatedTrades.length} historical trades!`,
       };
 
-      Logger.success('HistoryImportEngine', `History import completed for ${totalCount} trades.`);
+      Logger.success('HistoryImportEngine', `History import completed for ${accumulatedTrades.length} trades.`);
       EventBus.getInstance().emit('HistoryImported', completedPayload);
       if (onCompleted) onCompleted(completedPayload);
 
@@ -164,6 +129,7 @@ export class HistoryImportEngine {
         totalTrades: 0,
         offset: 0,
         percentage: 0,
+        trades: [],
         stage: 'connecting',
         message: `Import failed: ${err?.message || 'Unknown error'}`,
       };

@@ -39,7 +39,9 @@ import { AccountImportWizardModal } from "@/components/accounts/AccountImportWiz
 import { Zap } from "lucide-react";
 
 export default function AccountsPage() {
-  const { workspaceMode } = useActiveAccount();
+  const router = useRouter();
+  const { workspaceMode, activeAccountId, setActiveAccountId } = useActiveAccount();
+  const { refreshAccounts } = useUserProfile();
   const {
     discoverAccounts,
     importSelectedAccounts,
@@ -47,21 +49,8 @@ export default function AccountsPage() {
     isDiscovering,
     discoveryError,
   } = useCompanionAccount();
+
   const [isWizardOpen, setIsWizardOpen] = useState(false);
-
-  if (workspaceMode === "tfc") {
-    return <CompanionAccountsView />;
-  }
-
-  const handleOpenDiscoveryWizard = async () => {
-    setIsWizardOpen(true);
-    await discoverAccounts();
-  };
-
-  const router = useRouter();
-  const { refreshAccounts } = useUserProfile();
-  const { activeAccountId, setActiveAccountId } = useActiveAccount();
-
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,6 +88,15 @@ export default function AccountsPage() {
       if (userId) loadAccounts(userId);
     }
   );
+
+  const handleOpenDiscoveryWizard = async () => {
+    setIsWizardOpen(true);
+    await discoverAccounts();
+  };
+
+  if (workspaceMode === "tfc") {
+    return <CompanionAccountsView />;
+  }
 
   const handleCreateAccountSubmitted = async (data: NewTradingAccount) => {
     const supabaseClient = createClient();
