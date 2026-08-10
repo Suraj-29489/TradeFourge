@@ -104,7 +104,9 @@ export interface DiscoveredAccount {
   balance: number;
   equity?: number;
   server: string;
-  account_type: "Standard" | "Cent" | "Pro" | "Demo" | "Raw Trading";
+  account_type: string;
+  account_type_raw?: string;
+  leverage?: string;
   history_count: number;
   status: "Ready" | "Syncing" | "Offline";
   is_archived?: boolean;

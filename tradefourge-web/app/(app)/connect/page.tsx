@@ -123,8 +123,8 @@ export default function ConnectionWizardPage() {
                 </p>
               </div>
 
-              {/* 3 Connection Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-left">
+              {/* 2 Connection Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-left max-w-3xl mx-auto">
                 {/* OPTION 1: TradeFourge Companion (RECOMMENDED) */}
                 <div
                   onClick={() => setSelectedMethod("companion")}
@@ -143,7 +143,7 @@ export default function ConnectionWizardPage() {
                       <Zap className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-white font-sans">TradeFourge Companion</h3>
+                      <h3 className="text-sm font-bold text-white font-sans">TradeFourge Companion Extension</h3>
                       <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
                         Automatically discovers your Exness accounts. Imports complete history and keeps trades synchronized live with one-click setup.
                       </p>
@@ -151,36 +151,12 @@ export default function ConnectionWizardPage() {
                   </div>
 
                   <div className="flex items-center text-xs font-bold text-blue-400 gap-1.5">
-                    <span>Selected</span>
+                    <span>Active Integration</span>
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
                 </div>
 
-                {/* OPTION 2: Import CSV */}
-                <div
-                  onClick={() => setSelectedMethod("csv")}
-                  className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-6 ${
-                    selectedMethod === "csv"
-                      ? "bg-[#0F141C] border-blue-500 shadow-xl"
-                      : "bg-[#0F141C]/60 border-white/[0.08] hover:border-white/20"
-                  }`}
-                >
-                  <div className="space-y-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] text-gray-300 flex items-center justify-center">
-                      <Upload className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white font-sans">CSV Import</h3>
-                      <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed">
-                        Upload exported trading history. Good for manual imports from broker statements anytime.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-xs font-medium text-gray-400">Manual Upload</div>
-                </div>
-
-                {/* OPTION 3: Broker API (DISABLED - COMING SOON) */}
+                {/* OPTION 2: Broker API (DISABLED - COMING SOON) */}
                 <div className="p-6 rounded-2xl bg-[#0F141C]/30 border border-white/[0.04] opacity-50 flex flex-col justify-between space-y-6 cursor-not-allowed">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -192,15 +168,23 @@ export default function ConnectionWizardPage() {
                       </span>
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold text-gray-300 font-sans">Broker API</h3>
+                      <h3 className="text-sm font-bold text-gray-300 font-sans">Direct Broker REST API</h3>
                       <p className="text-[11px] text-gray-500 mt-1.5 leading-relaxed">
-                        Direct REST API integration for MT5, cTrader, and Binance servers.
+                        Direct REST API server integration for MT5, cTrader, and Binance institutional accounts.
                       </p>
                     </div>
                   </div>
 
                   <div className="text-[10px] text-gray-500 font-bold uppercase">Disabled</div>
                 </div>
+              </div>
+
+              {/* CSV Upload Link note */}
+              <div className="pt-2 text-center text-xs text-gray-400">
+                Looking to manually import broker CSV statements?{" "}
+                <Link href="/upload" className="text-blue-400 hover:text-blue-300 font-bold underline">
+                  Go to CSV Statement Upload
+                </Link>
               </div>
 
               {/* Navigation Action Footer */}
@@ -214,12 +198,8 @@ export default function ConnectionWizardPage() {
 
                 <button
                   onClick={() => {
-                    if (selectedMethod === "companion") {
-                      setWizardStep(2);
-                      companion.checkExtension();
-                    } else if (selectedMethod === "csv") {
-                      router.push("/upload");
-                    }
+                    setWizardStep(2);
+                    companion.checkExtension();
                   }}
                   className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm flex items-center gap-2 transition-all"
                 >

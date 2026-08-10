@@ -34,12 +34,29 @@ import { getCurrencySymbol, getCurrencyShortLabel } from "@/lib/config/currencie
 
 import { CompanionAccountsView } from "@/components/companion/CompanionAccountsView";
 
+import { useCompanionAccount } from "@/context/CompanionAccountContext";
+import { AccountImportWizardModal } from "@/components/accounts/AccountImportWizardModal";
+import { Zap } from "lucide-react";
+
 export default function AccountsPage() {
   const { workspaceMode } = useActiveAccount();
+  const {
+    discoverAccounts,
+    importSelectedAccounts,
+    rawDiscoveredList,
+    isDiscovering,
+    discoveryError,
+  } = useCompanionAccount();
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
 
   if (workspaceMode === "tfc") {
     return <CompanionAccountsView />;
   }
+
+  const handleOpenDiscoveryWizard = async () => {
+    setIsWizardOpen(true);
+    await discoverAccounts();
+  };
 
   const router = useRouter();
   const { refreshAccounts } = useUserProfile();
@@ -142,16 +159,27 @@ export default function AccountsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setEditAccount(null);
-            setFormOpen(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm transition-all shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Create Account</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleOpenDiscoveryWizard}
+            disabled={isDiscovering}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold text-xs shadow-sm transition-all shrink-0 disabled:opacity-50"
+          >
+            <Zap className="w-4 h-4 fill-blue-400" />
+            <span>{isDiscovering ? "Discovering..." : "Scan & Discover Accounts"}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setEditAccount(null);
+              setFormOpen(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm transition-all shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Account</span>
+          </button>
+        </div>
       </div>
 
       {/* Error Banner */}
@@ -322,6 +350,21 @@ export default function AccountsPage() {
         }}
         onSubmit={editAccount ? handleEditAccountSubmitted : handleCreateAccountSubmitted}
         account={editAccount}
+      />
+
+      {/* Account Discovery & Selection Import Wizard Modal */}
+      <AccountImportWizardModal
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        discoveredAccounts={rawDiscoveredList}
+        existingAccounts={accounts}
+        isDiscovering={isDiscovering}
+        discoveryError={discoveryError}
+        onRunDiscovery={async () => { await discoverAccounts(); }}
+        onImportSelected={async (selectedList) => {
+          await importSelectedAccounts(selectedList);
+          if (userId) loadAccounts(userId);
+        }}
       />
     </div>
   );

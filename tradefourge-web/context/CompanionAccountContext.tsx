@@ -1,8 +1,13 @@
-"use client";
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { CompanionAccount } from "@/lib/demo/demoAccounts";
 import { useSafeCompanion } from "@/lib/companion/provider";
+import type { DiscoveredAccount } from "@/lib/companion/protocol";
+import { createClient } from "@/lib/supabase/client";
+import { AccountService } from "@/lib/services/AccountService";
+import { bulkInsertTrades } from "@/lib/supabase/trades";
+import { emitAppEvent } from "@/lib/events/event-bus";
+import { CompanionBridge } from "@/lib/companion/bridge";
+import type { NewCloudTrade } from "@/types/database";
 
 interface CompanionAccountContextType {
   accounts: CompanionAccount[];
@@ -10,6 +15,7 @@ interface CompanionAccountContextType {
   connectionStatus: "Connected" | "Disconnected";
   isDiscovering: boolean;
   discoveryError: string | null;
+  rawDiscoveredList: DiscoveredAccount[];
   extensionInfo: {
     browser: string;
     version: string;
@@ -17,7 +23,8 @@ interface CompanionAccountContextType {
     lastScan: string;
   };
   switchAccount: (id: string) => void;
-  discoverAccounts: () => Promise<CompanionAccount[]>;
+  discoverAccounts: () => Promise<DiscoveredAccount[]>;
+  importSelectedAccounts: (selectedAccounts: DiscoveredAccount[]) => Promise<void>;
   reconnect: () => void;
   disconnect: () => void;
   refreshConnection: () => void;
@@ -35,6 +42,7 @@ const CompanionAccountContext = createContext<CompanionAccountContextType>({
   connectionStatus: "Disconnected",
   isDiscovering: false,
   discoveryError: null,
+  rawDiscoveredList: [],
   extensionInfo: {
     browser: "Chrome / Chromium",
     version: "v5.5.3 Manifest V3",
@@ -43,6 +51,7 @@ const CompanionAccountContext = createContext<CompanionAccountContextType>({
   },
   switchAccount: () => {},
   discoverAccounts: async () => [],
+  importSelectedAccounts: async () => {},
   reconnect: () => {},
   disconnect: () => {},
   refreshConnection: () => {},
@@ -55,10 +64,14 @@ const CompanionAccountContext = createContext<CompanionAccountContextType>({
 export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const companion = useSafeCompanion();
   const [accounts, setAccounts] = useState<CompanionAccount[]>([]);
+  const [rawDiscoveredList, setRawDiscoveredList] = useState<DiscoveredAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<"Connected" | "Disconnected">("Disconnected");
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [lastScanTime, setLastScanTime] = useState("Never");
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+
+  const supabase = createClient();
 
   // Synchronize connection status from CompanionProvider
   useEffect(() => {
@@ -77,50 +90,6 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
     }
   }, []);
 
-  // Synchronize discovered accounts from CompanionProvider when live events arrive
-  useEffect(() => {
-    if (companion?.discoveredAccounts && companion.discoveredAccounts.length > 0) {
-      const mapped: CompanionAccount[] = companion.discoveredAccounts.map((da, index) => ({
-        id: da.id || `acc_${da.account_number}`,
-        accountNumber: da.account_number,
-        broker: da.broker || "Exness",
-        server: da.server || "Exness-Real",
-        accountType: (da.account_type as any) || "Live",
-        currency: da.currency || "USD",
-        leverage: "1:500",
-        balance: da.balance || 0,
-        equity: da.equity || da.balance || 0,
-        margin: 0,
-        freeMargin: da.equity || da.balance || 0,
-        profitToday: 0,
-        floatingPnL: 0,
-        isConnected: true,
-        isDefault: index === 0,
-        lastScanTime: "Just Now",
-        stats: {
-          winRate: 0,
-          profitFactor: 0,
-          totalTrades: da.history_count || 0,
-          winningTrades: 0,
-          losingTrades: 0,
-          netPnL: 0,
-          maxDrawdownPct: 0,
-          averageRR: 0,
-        },
-        trades: [],
-      }));
-
-      setAccounts(mapped);
-      setConnectionStatus("Connected");
-      setLastScanTime(new Date().toLocaleTimeString());
-
-      if (!selectedAccountId && mapped.length > 0) {
-        setSelectedAccountId(mapped[0].id);
-      }
-    }
-  }, [companion?.discoveredAccounts, selectedAccountId]);
-
-  // Active account selection
   const currentAccount = accounts.find((a) => a.id === selectedAccountId) ?? accounts[0] ?? null;
 
   const switchAccount = useCallback((id: string) => {
@@ -130,28 +99,122 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
     }
   }, []);
 
-  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
-
-  const discoverAccounts = useCallback(async (): Promise<CompanionAccount[]> => {
+  /**
+   * Phase 1 & 3: Run account discovery via Companion extension.
+   * Returns discovered accounts list WITHOUT forcing them directly into account state.
+   */
+  const discoverAccounts = useCallback(async (): Promise<DiscoveredAccount[]> => {
     setIsDiscovering(true);
     setDiscoveryError(null);
     try {
       const liveDiscovered = companion ? await companion.discoverAccounts() : [];
       setLastScanTime(new Date().toLocaleTimeString());
+      setRawDiscoveredList(liveDiscovered);
 
       if (companion?.lastError) {
         setDiscoveryError(companion.lastError.message);
       }
 
-      if (liveDiscovered.length > 0) {
-        const mapped: CompanionAccount[] = liveDiscovered.map((da, index) => ({
-          id: da.id || `acc_${da.account_number}`,
-          accountNumber: da.account_number,
+      if (liveDiscovered.length === 0) {
+        if (!companion?.isConnected) {
+          setDiscoveryError("TradeFourge Companion Extension is not connected. Please ensure the extension is installed and active.");
+        } else if (!discoveryError) {
+          setDiscoveryError("No Exness accounts detected on the active page. Please ensure you are logged into my.exness.com.");
+        }
+      } else {
+        setDiscoveryError(null);
+      }
+
+      return liveDiscovered;
+    } catch (err: any) {
+      setRawDiscoveredList([]);
+      setDiscoveryError(err?.message || "Account discovery failed. Ensure Exness is open in your browser.");
+      return [];
+    } finally {
+      setIsDiscovering(false);
+    }
+  }, [companion, discoveryError]);
+
+  /**
+   * Phase 11 & 12: Import Selected Accounts.
+   * Creates canonical account records, fetches trade history from Exness,
+   * normalizes trade records, and writes to canonical trade store.
+   */
+  const importSelectedAccounts = useCallback(
+    async (selectedAccounts: DiscoveredAccount[]): Promise<void> => {
+      if (!selectedAccounts || selectedAccounts.length === 0) return;
+
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id || "default_user";
+
+      const newCompanionAccounts: CompanionAccount[] = [];
+
+      for (let i = 0; i < selectedAccounts.length; i++) {
+        const da = selectedAccounts[i];
+        const cleanNum = String(da.account_number).replace(/\D/g, "");
+
+        // 1. Create canonical account record in AccountService / AccountsContext
+        const accPayload = {
+          account_name: da.account_name || `Exness ${da.account_type || "Standard"} #${cleanNum}`,
           broker: da.broker || "Exness",
-          server: da.server || "Exness-Real",
-          accountType: (da.account_type as any) || "Live",
+          platform: (da.platform as any) || "MetaTrader 5",
+          account_number: cleanNum,
+          account_type: (da.account_type as any) || "Standard",
           currency: da.currency || "USD",
-          leverage: "1:500",
+          starting_balance: da.balance || 0,
+          current_balance: da.balance || 0,
+          server: da.server || "Server unavailable",
+          leverage: da.leverage || "1:2000",
+          is_default: i === 0,
+          is_active: true,
+          notes: null,
+        };
+
+        const accRes = await AccountService.createAccount(userId, accPayload);
+        const createdAccountId = accRes.data?.id || `exness_${cleanNum}`;
+
+        // 2. Fetch trade history via Companion bridge
+        try {
+          const importRes = await CompanionBridge.getInstance().send<any>("IMPORT_SELECTED_ACCOUNTS", { accountIds: [cleanNum] }, 10000);
+          const rawTrades = importRes?.trades || importRes?.payload?.trades || [];
+
+          if (rawTrades.length > 0) {
+              // 3. Normalize trade records into NewCloudTrade model
+              const normalizedTrades: NewCloudTrade[] = rawTrades.map((t: any) => ({
+                account_id: createdAccountId,
+                ticket: String(t.ticket || `${cleanNum}_${Date.now()}`),
+                symbol: String(t.symbol || "EURUSD").toUpperCase(),
+                side: String(t.side || "BUY").toUpperCase().includes("SELL") ? "SELL" : "BUY",
+                volume: Number(t.volume) || 0.1,
+                open_price: Number(t.open_price) || 1.0,
+                close_price: Number(t.close_price) || 1.0,
+                net_profit: Number(t.profit) || 0,
+                profit: Number(t.profit) || 0,
+                commission: Number(t.commission) || 0,
+                swap: Number(t.swap) || 0,
+                open_time: t.open_time || new Date().toISOString(),
+                close_time: t.close_time || new Date().toISOString(),
+                status: "CLOSED",
+                source: "companion",
+                outcome: (Number(t.profit) || 0) > 0 ? "WIN" : (Number(t.profit) || 0) < 0 ? "LOSS" : "BREAKEVEN",
+              }));
+
+              // 4. Bulk insert into canonical trade store
+              await bulkInsertTrades(userId, normalizedTrades);
+            }
+          } catch (err) {
+            console.warn(`Trade history fetch note for ${cleanNum}:`, err);
+          }
+
+        // 5. Add to local companion account state
+        newCompanionAccounts.push({
+          id: createdAccountId,
+          accountNumber: cleanNum,
+          broker: da.broker || "Exness",
+          server: da.server || "Server unavailable",
+          accountType: (da.account_type as any) || "Standard",
+          currency: da.currency || "USD",
+          leverage: da.leverage || "1:2000",
           balance: da.balance || 0,
           equity: da.equity || da.balance || 0,
           margin: 0,
@@ -159,7 +222,7 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
           profitToday: 0,
           floatingPnL: 0,
           isConnected: true,
-          isDefault: index === 0,
+          isDefault: i === 0,
           lastScanTime: "Just Now",
           stats: {
             winRate: 0,
@@ -172,32 +235,30 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
             averageRR: 0,
           },
           trades: [],
-        }));
-
-        setAccounts(mapped);
-        setConnectionStatus("Connected");
-        setDiscoveryError(null);
-        if (mapped.length > 0) {
-          switchAccount(mapped[0].id);
-        }
-        return mapped;
-      } else {
-        setAccounts([]);
-        if (!companion?.isConnected) {
-          setDiscoveryError("TradeFourge Companion Extension is not connected. Please ensure the extension is installed and active.");
-        } else if (!discoveryError) {
-          setDiscoveryError("No Exness accounts detected on the active page. Please ensure you are logged into my.exness.com.");
-        }
-        return [];
+        });
       }
-    } catch (err: any) {
-      setAccounts([]);
-      setDiscoveryError(err?.message || "Account discovery failed. Ensure Exness is open in your browser.");
-      return [];
-    } finally {
-      setIsDiscovering(false);
-    }
-  }, [companion, switchAccount, discoveryError]);
+
+      setAccounts((prev) => {
+        const merged = [...prev];
+        newCompanionAccounts.forEach((nA) => {
+          if (!merged.some((m) => m.accountNumber === nA.accountNumber)) {
+            merged.push(nA);
+          }
+        });
+        return merged;
+      });
+
+      if (newCompanionAccounts.length > 0) {
+        setSelectedAccountId(newCompanionAccounts[0].id);
+        if (typeof window !== "undefined") {
+          localStorage.setItem(STORAGE_COMPANION_ACC_KEY, newCompanionAccounts[0].id);
+        }
+      }
+
+      emitAppEvent("tradefourge:account-created", { count: newCompanionAccounts.length });
+    },
+    [supabase, companion]
+  );
 
   const clearDiscoveryError = useCallback(() => setDiscoveryError(null), []);
 
@@ -264,6 +325,7 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
         connectionStatus,
         isDiscovering,
         discoveryError,
+        rawDiscoveredList,
         extensionInfo: {
           browser: companion?.browser || "Chrome / Chromium",
           version: companion?.version || "v5.5.3 Manifest V3",
@@ -272,6 +334,7 @@ export const CompanionAccountProvider: React.FC<{ children: React.ReactNode }> =
         },
         switchAccount,
         discoverAccounts,
+        importSelectedAccounts,
         reconnect,
         disconnect,
         refreshConnection,

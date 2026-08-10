@@ -1,7 +1,7 @@
-"use client";
-
-import React from "react";
+import React, { useState } from "react";
 import { useCompanionAccount } from "@/context/CompanionAccountContext";
+import { useAccounts } from "@/context/AccountsContext";
+import { AccountImportWizardModal } from "@/components/accounts/AccountImportWizardModal";
 import {
   Wallet,
   CheckCircle2,
@@ -24,9 +24,19 @@ export const CompanionAccountsView: React.FC = () => {
     setDefaultAccount,
     refreshConnection,
     discoverAccounts,
+    importSelectedAccounts,
+    rawDiscoveredList,
     isDiscovering,
     discoveryError,
   } = useCompanionAccount();
+
+  const { accounts: existingDbAccounts } = useAccounts();
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+
+  const handleOpenDiscoveryWizard = async () => {
+    setIsWizardOpen(true);
+    await discoverAccounts();
+  };
 
   return (
     <div className="space-y-6 font-mono text-xs max-w-7xl mx-auto w-full text-gray-200 pb-12">
@@ -43,7 +53,7 @@ export const CompanionAccountsView: React.FC = () => {
         </div>
 
         <button
-          onClick={() => discoverAccounts()}
+          onClick={handleOpenDiscoveryWizard}
           disabled={isDiscovering}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm transition-all shrink-0 disabled:opacity-50"
         >
@@ -76,7 +86,7 @@ export const CompanionAccountsView: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={() => discoverAccounts()}
+            onClick={handleOpenDiscoveryWizard}
             disabled={isDiscovering}
             className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm inline-flex items-center gap-2 disabled:opacity-50 font-mono"
           >
@@ -199,6 +209,20 @@ export const CompanionAccountsView: React.FC = () => {
         })}
       </div>
       )}
+
+      {/* Account Discovery & Selection Import Wizard Modal */}
+      <AccountImportWizardModal
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        discoveredAccounts={rawDiscoveredList}
+        existingAccounts={existingDbAccounts}
+        isDiscovering={isDiscovering}
+        discoveryError={discoveryError}
+        onRunDiscovery={discoverAccounts}
+        onImportSelected={async (selectedList) => {
+          await importSelectedAccounts(selectedList);
+        }}
+      />
     </div>
   );
 };
