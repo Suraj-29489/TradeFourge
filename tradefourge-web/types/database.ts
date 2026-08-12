@@ -44,13 +44,24 @@ export interface TradingAccount {
   leverage: string | null;
   starting_balance: number | null;
   current_balance: number | null;
+  equity?: number | null;
+  free_margin?: number | null;
+  margin?: number | null;
+  margin_level?: number | null;
   is_default: boolean;
   is_active: boolean;
+  is_connected?: boolean;
   notes: string | null;
   is_live_synced?: boolean;
   live_status?: LiveConnectionStatus;
   last_synced_at?: string | null;
+  last_seen_at?: string | null;
+  last_history_sync_at?: string | null;
   sync_interval?: SyncIntervalSetting;
+  connector_id?: string | null;
+  mt5_server?: string | null;
+  is_mt5_paired?: boolean;
+  mt5_login_number?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -156,6 +167,11 @@ export interface CloudTrade {
   playbook_id?: string | null;
   magic_number: number | null;
   import_id?: string | null;
+  connector_id?: string | null;
+  mt5_deal_id?: string | null;
+  mt5_order_id?: string | null;
+  mt5_position_id?: string | null;
+  sync_batch_id?: string | null;
 
   created_at: string;
   updated_at: string;

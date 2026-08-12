@@ -36,15 +36,20 @@ export const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ open, onSele
   if (!open) return null;
 
   const handleCardClick = (mode: WorkspaceMode) => {
-    if (mode === "mt5") return;
-
     selectWorkspace(mode);
-    selectAccountType(mode as "csv" | "tfc");
+    if (mode === "csv" || mode === "tfc") {
+      selectAccountType(mode);
+    }
+    closeAccountTypeModal();
 
     if (onSelectWorkspace) {
       onSelectWorkspace(mode);
     } else {
-      router.push(mode === "tfc" ? "/dashboard" : "/accounts");
+      if (mode === "mt5") {
+        router.push("/mt5/dashboard");
+      } else {
+        router.push(mode === "tfc" ? "/dashboard" : "/accounts");
+      }
     }
   };
 

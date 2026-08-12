@@ -1,6 +1,6 @@
 -- TradeFourge SaaS — Master Reference Schema
 -- Target: PostgreSQL / Supabase
--- Version: 5.5.2
+-- Version: 5.7.0
 
 -- Enable required PostgreSQL extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -82,9 +82,24 @@ CREATE TABLE IF NOT EXISTS public.trading_accounts (
     notes            TEXT,
     last_synced_at   TIMESTAMPTZ,
     sync_interval    INT DEFAULT 60,
+    connector_id     UUID,
+    mt5_server        TEXT,
+    is_mt5_paired     BOOLEAN DEFAULT false,
+    mt5_login_number TEXT,
+    equity           NUMERIC(15, 2),
+    free_margin      NUMERIC(15, 2),
+    margin           NUMERIC(15, 2),
+    margin_level     NUMERIC(15, 2),
+    is_connected     BOOLEAN DEFAULT false,
+    last_seen_at     TIMESTAMPTZ,
+    last_history_sync_at TIMESTAMPTZ,
     created_at       TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at       TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Account Uniqueness Index
+CREATE UNIQUE INDEX IF NOT EXISTS idx_trading_accounts_mt5_identity ON public.trading_accounts (user_id, account_number, broker) WHERE account_number IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_trading_accounts_user_account_number ON public.trading_accounts (user_id, account_number);
 
 -- 5. TRADE JOURNALS TABLE
 CREATE TABLE IF NOT EXISTS public.trade_journals (
@@ -143,9 +158,23 @@ CREATE TABLE IF NOT EXISTS public.trades (
     source           TEXT DEFAULT 'manual',
     import_id        UUID,
     magic_number     BIGINT DEFAULT NULL,
+    connector_id     UUID,
+    mt5_deal_id      TEXT,
+    mt5_order_id     TEXT,
+    mt5_position_id  TEXT,
+    sync_batch_id    UUID,
     created_at       TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at       TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Partial Unique Index for Idempotent Deal Ingestion
+CREATE UNIQUE INDEX IF NOT EXISTS idx_trades_mt5_dedup ON public.trades (user_id, account_id, mt5_deal_id) WHERE mt5_deal_id IS NOT NULL;
+
+-- Analytics & Workspace Performance Indexes
+CREATE INDEX IF NOT EXISTS idx_trades_account_close_time ON public.trades (account_id, close_time DESC) WHERE close_time IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_trades_account_symbol ON public.trades (account_id, symbol);
+CREATE INDEX IF NOT EXISTS idx_trades_account_outcome ON public.trades (account_id, outcome);
+CREATE INDEX IF NOT EXISTS idx_trades_user_close_time ON public.trades (user_id, close_time DESC) WHERE close_time IS NOT NULL;
 
 -- 7. TRADE TAGS & LINKS
 CREATE TABLE IF NOT EXISTS public.trade_tags (
@@ -192,6 +221,49 @@ CREATE TABLE IF NOT EXISTS public.csv_imports (
     updated_at      TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 9. MT5 CONNECTORS TABLE
+CREATE TABLE IF NOT EXISTS public.mt5_connectors (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    connector_name   TEXT DEFAULT 'Desktop Connector' NOT NULL,
+    api_key_hash     TEXT UNIQUE NOT NULL,
+    api_key_prefix   TEXT NOT NULL,
+    status           TEXT DEFAULT 'active' NOT NULL CHECK (status IN ('active', 'revoked', 'expired')),
+    last_heartbeat   TIMESTAMPTZ,
+    last_ip          TEXT,
+    version          TEXT DEFAULT '1.0.0',
+    paired_accounts  INT DEFAULT 0,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    revoked_at       TIMESTAMPTZ
+);
+
+-- 10. MT5 SYNC BATCHES TABLE
+CREATE TABLE IF NOT EXISTS public.mt5_sync_batches (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id          UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    connector_id     UUID REFERENCES public.mt5_connectors(id) ON DELETE CASCADE NOT NULL,
+    account_id       UUID REFERENCES public.trading_accounts(id) ON DELETE SET NULL,
+    batch_type       TEXT DEFAULT 'closed_trades' NOT NULL CHECK (batch_type IN ('closed_trades', 'account_update', 'full_history')),
+    sync_type        TEXT DEFAULT 'HISTORY' CHECK (sync_type IN ('ACCOUNT', 'HISTORY', 'RECONCILIATION')),
+    total_items      INT DEFAULT 0,
+    inserted_count   INT DEFAULT 0,
+    duplicate_count  INT DEFAULT 0,
+    error_count      INT DEFAULT 0,
+    error_details    JSONB DEFAULT '[]'::jsonb,
+    duration_ms      INT DEFAULT 0,
+    status           TEXT DEFAULT 'success' NOT NULL CHECK (status IN ('success', 'partial', 'failed')),
+    started_at       TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
+    completed_at     TIMESTAMPTZ,
+    request_id       TEXT,
+    error_code       TEXT,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Foreign keys on trading_accounts and trades for connector
+ALTER TABLE public.trading_accounts ADD CONSTRAINT trading_accounts_connector_id_fkey FOREIGN KEY (connector_id) REFERENCES public.mt5_connectors(id) ON DELETE SET NULL;
+ALTER TABLE public.trades ADD CONSTRAINT trades_connector_id_fkey FOREIGN KEY (connector_id) REFERENCES public.mt5_connectors(id) ON DELETE SET NULL;
+ALTER TABLE public.trades ADD CONSTRAINT trades_sync_batch_id_fkey FOREIGN KEY (sync_batch_id) REFERENCES public.mt5_sync_batches(id) ON DELETE SET NULL;
+
 -- -----------------------------------------------------------------------------
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- -----------------------------------------------------------------------------
@@ -206,6 +278,8 @@ ALTER TABLE public.trade_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trade_tag_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.journal_tag_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.csv_imports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mt5_connectors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mt5_sync_batches ENABLE ROW LEVEL SECURITY;
 
 -- Policies
 CREATE POLICY "profiles_select_own" ON public.profiles FOR SELECT USING (auth.uid() = id);
@@ -244,3 +318,11 @@ CREATE POLICY "imports_select_own" ON public.csv_imports FOR SELECT USING (auth.
 CREATE POLICY "imports_insert_own" ON public.csv_imports FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "imports_update_own" ON public.csv_imports FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "imports_delete_own" ON public.csv_imports FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "mt5_connectors_select_own" ON public.mt5_connectors FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "mt5_connectors_insert_own" ON public.mt5_connectors FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "mt5_connectors_update_own" ON public.mt5_connectors FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "mt5_connectors_delete_own" ON public.mt5_connectors FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "mt5_sync_batches_select_own" ON public.mt5_sync_batches FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "mt5_sync_batches_insert_own" ON public.mt5_sync_batches FOR INSERT WITH CHECK (auth.uid() = user_id);

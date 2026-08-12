@@ -45,6 +45,15 @@ const TFC_NAV_ITEMS: NavItem[] = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+const MT5_NAV_ITEMS: NavItem[] = [
+  { name: "Dashboard", href: "/mt5/dashboard", icon: LayoutDashboard },
+  { name: "Accounts", href: "/mt5/accounts", icon: Wallet },
+  { name: "Trades", href: "/mt5/trades", icon: Activity },
+  { name: "Calendar", href: "/mt5/calendar", icon: CalendarDays },
+  { name: "Reports", href: "/mt5/reports", icon: BookOpen },
+  { name: "Settings", href: "/mt5/settings", icon: Settings },
+];
+
 interface SidebarProps {
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
@@ -57,11 +66,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
   const { theme } = useTheme();
   const isLight = theme === "light";
 
-  const isTfc = currentWorkspace === "tfc";
-  const navItems = isTfc ? TFC_NAV_ITEMS : CSV_NAV_ITEMS;
+  const isMt5 = currentWorkspace === "mt5" || pathname.startsWith("/mt5");
+  const isTfc = !isMt5 && currentWorkspace === "tfc";
+
+  const navItems = isMt5 ? MT5_NAV_ITEMS : isTfc ? TFC_NAV_ITEMS : CSV_NAV_ITEMS;
 
   const isActive = (href: string) => {
-    if (href === "/dashboard") return pathname === "/dashboard";
+    if (href === "/dashboard" || href === "/mt5/dashboard") return pathname === href;
     return pathname.startsWith(href);
   };
 

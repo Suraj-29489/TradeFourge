@@ -36,12 +36,12 @@ export const WORKSPACE_LIST: WorkspaceMetadata[] = [
   },
   {
     id: "mt5",
-    name: "MT5 Direct API",
-    badge: "COMING SOON",
-    description: "Direct server-side API bridge for MetaTrader 5 terminals.",
+    name: "MT5 Companion",
+    badge: "MT5 WORKSPACE",
+    description: "Dedicated workspace for connected MetaTrader 5 trading accounts, executions & analytics.",
     icon: Layers,
-    isEnabled: false,
-    statusText: "Disabled",
+    isEnabled: true,
+    statusText: "Active Workspace",
   },
 ];
 
@@ -69,13 +69,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem(STORAGE_WORKSPACE_MODE_KEY) as WorkspaceMode | null;
-    if (saved && (saved === "csv" || saved === "tfc")) {
+    if (saved && (saved === "csv" || saved === "tfc" || saved === "mt5")) {
       setCurrentWorkspace(saved);
     }
   }, []);
 
   const selectWorkspace = useCallback((mode: WorkspaceMode) => {
-    if (mode === "mt5") return; // Disabled
     setCurrentWorkspace(mode);
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_WORKSPACE_MODE_KEY, mode);

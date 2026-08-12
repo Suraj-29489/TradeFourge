@@ -38,7 +38,12 @@ export async function createClient() {
  * Use strictly for server-side administrative background tasks, migrations, and service role queries.
  */
 export async function createAdminClient() {
-  const cookieStore = await cookies();
+  let cookieStore: any = null;
+  try {
+    cookieStore = await cookies();
+  } catch {
+    // Called outside Next.js request context (e.g. background task, CLI script)
+  }
 
   let supabaseUrl = sanitizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
   let serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
@@ -53,9 +58,10 @@ export async function createAdminClient() {
   return createServerClient(supabaseUrl, serviceRoleKey, {
     cookies: {
       getAll() {
-        return cookieStore.getAll();
+        return cookieStore ? cookieStore.getAll() : [];
       },
       setAll(cookiesToSet) {
+        if (!cookieStore) return;
         try {
           cookiesToSet.forEach(({ name, value, options }) =>
             cookieStore.set(name, value, options)

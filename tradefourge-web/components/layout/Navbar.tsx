@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useJournalStore } from "@/lib/store/useJournalStore";
 import { useUserProfile } from "@/context/UserProfileContext";
 import { useActiveAccount } from "@/context/ActiveAccountContext";
 import { useCompanionAccount } from "@/context/CompanionAccountContext";
+import { useMT5Companion } from "@/context/MT5CompanionContext";
 import { Menu, LogOut, User, Settings, ChevronDown, Layers, Zap, RefreshCw, Radio } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -21,13 +22,18 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const init = useJournalStore((s) => s.init);
 
   const { profile } = useUserProfile();
   const { activeAccount, openAccountTypeModal } = useActiveAccount();
   const { currentWorkspace, getWorkspaceMetadata } = useWorkspace();
-  const currentMeta = getWorkspaceMetadata(currentWorkspace);
-  const isTfc = currentWorkspace === "tfc";
+  const { selectedAccount: mt5Account } = useMT5Companion();
+
+  const isMt5 = currentWorkspace === "mt5" || pathname.startsWith("/mt5");
+  const effectiveMode = isMt5 ? "mt5" : currentWorkspace;
+  const currentMeta = getWorkspaceMetadata(effectiveMode);
+  const isTfc = !isMt5 && currentWorkspace === "tfc";
   const { theme } = useTheme();
   const isLight = theme === "light";
 
@@ -84,7 +90,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenMobileNav }) => {
     ? `@${profile.username}`
     : profile?.full_name || "Trader";
 
-  const accountDisplayName = isTfc
+  const accountDisplayName = isMt5
+    ? mt5Account ? `MT5 • ${mt5Account.accountNumber} (${mt5Account.server})` : "MT5 Companion Account"
+    : isTfc
     ? tfcAccount ? `${tfcAccount.broker} • ${tfcAccount.accountNumber}` : "TradeForge Companion Account"
     : activeAccount?.account_name ? `CSV • ${activeAccount.account_name}` : "CSV • Personal Account";
 
