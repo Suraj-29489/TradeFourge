@@ -73,7 +73,7 @@ export default function MT5DashboardPage() {
 
   const recentExecutions = trades.slice(0, 8);
 
-  if (isLoading || !selectedAccount) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="h-28 rounded-2xl bg-slate-200 dark:bg-white/5 animate-pulse" />
@@ -83,6 +83,53 @@ export default function MT5DashboardPage() {
           ))}
         </div>
         <div className="h-80 rounded-2xl bg-slate-200 dark:bg-white/5 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!selectedAccount) {
+    return (
+      <div className="space-y-6 pb-12 font-sans">
+        <MT5Header
+          title="MT5 LIVE WORKSPACE"
+          subtitle="Real-time terminal metrics, open positions & MT5 companion bridge"
+        />
+
+        <div className={`p-8 sm:p-12 rounded-3xl border shadow-xl text-center space-y-5 max-w-3xl mx-auto my-8 ${isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"}`}>
+          <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
+            <Server className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-xl font-extrabold font-sans">No Account Selected</h2>
+            <p className="text-xs text-slate-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
+              No MT5 account is currently connected. Connect an MT5 account to view account metrics and trading activity.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-4 font-mono text-xs text-left">
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200" : "bg-white/[0.02] border-white/[0.06]"}`}>
+              <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">BALANCE</span>
+              <span className="text-sm font-bold text-slate-400">--</span>
+            </div>
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200" : "bg-white/[0.02] border-white/[0.06]"}`}>
+              <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">EQUITY</span>
+              <span className="text-sm font-bold text-slate-400">--</span>
+            </div>
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200" : "bg-white/[0.02] border-white/[0.06]"}`}>
+              <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">FREE MARGIN</span>
+              <span className="text-sm font-bold text-slate-400">--</span>
+            </div>
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200" : "bg-white/[0.02] border-white/[0.06]"}`}>
+              <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">PROFIT TODAY</span>
+              <span className="text-sm font-bold text-slate-400">--</span>
+            </div>
+            <div className={`p-3 rounded-2xl border ${isLight ? "bg-slate-50 border-slate-200" : "bg-white/[0.02] border-white/[0.06]"}`}>
+              <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">FLOATING P/L</span>
+              <span className="text-sm font-bold text-slate-400">--</span>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -299,6 +346,9 @@ export default function MT5DashboardPage() {
           .filter((t) => t.closeTime && t.closeTime.startsWith(todayStr))
           .reduce((sum, t) => sum + (t.profit + (t.commission || 0) + (t.swap || 0)), 0);
 
+        const currentMonthKey = new Date().toISOString().substring(0, 7); // "YYYY-MM"
+        const monthlyTradesCount = closedTrades.filter((t) => t.closeTime && t.closeTime.startsWith(currentMonthKey)).length;
+
         const wins = closedTrades.filter((t) => (t.profit + (t.commission || 0) + (t.swap || 0)) >= 0);
         const losses = closedTrades.filter((t) => (t.profit + (t.commission || 0) + (t.swap || 0)) < 0);
 
@@ -310,32 +360,38 @@ export default function MT5DashboardPage() {
         const currencySymbol = selectedAccount.currency === "USC" ? "USC" : "$";
 
         return (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 font-mono">
-            <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200" : "bg-[#0F141C] border-white/[0.08]"}`}>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 font-mono">
+            <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"}`}>
               <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">HISTORICAL TOTAL P/L</span>
-              <span className={`text-lg font-extrabold ${totalRealizedPnl >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+              <span className={`text-lg font-extrabold ${totalRealizedPnl >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
                 {totalRealizedPnl >= 0 ? "+" : ""}{currencySymbol}{totalRealizedPnl.toFixed(2)}
               </span>
               <span className="text-[10px] text-slate-400 block mt-0.5">{totalClosed} closed trades</span>
             </div>
 
-            <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200" : "bg-[#0F141C] border-white/[0.08]"}`}>
+            <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"}`}>
               <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">PROFIT TODAY</span>
-              <span className={`text-lg font-extrabold ${profitTodayVal >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+              <span className={`text-lg font-extrabold ${profitTodayVal >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
                 {profitTodayVal >= 0 ? "+" : ""}{currencySymbol}{profitTodayVal.toFixed(2)}
               </span>
               <span className="text-[10px] text-slate-400 block mt-0.5">Closed today</span>
             </div>
 
-            <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200" : "bg-[#0F141C] border-white/[0.08]"}`}>
+            <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"}`}>
+              <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">MONTHLY TRADES</span>
+              <span className="text-lg font-extrabold text-white">{monthlyTradesCount}</span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">This month ({currentMonthKey})</span>
+            </div>
+
+            <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"}`}>
               <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">WIN RATE</span>
-              <span className="text-lg font-extrabold text-slate-900 dark:text-white">{winRate}%</span>
+              <span className="text-lg font-extrabold text-white">{winRate}%</span>
               <span className="text-[10px] text-slate-400 block mt-0.5">{wins.length} W / {losses.length} L</span>
             </div>
 
-            <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200" : "bg-[#0F141C] border-white/[0.08]"}`}>
+            <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"}`}>
               <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">PROFIT FACTOR</span>
-              <span className="text-lg font-extrabold text-slate-900 dark:text-white">{profitFactor}</span>
+              <span className="text-lg font-extrabold text-white">{profitFactor}</span>
               <span className="text-[10px] text-slate-400 block mt-0.5">Gross W / Gross L</span>
             </div>
           </div>

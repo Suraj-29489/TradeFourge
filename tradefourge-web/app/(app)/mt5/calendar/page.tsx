@@ -35,7 +35,7 @@ interface DayAggregation {
 }
 
 export default function MT5CalendarPage() {
-  const { trades, isLoading } = useMT5Companion();
+  const { trades, selectedAccount, isLoading } = useMT5Companion();
   const { theme } = useTheme();
   const isLight = theme === "light";
 
@@ -98,51 +98,53 @@ export default function MT5CalendarPage() {
     let totalTrades = 0;
     let winDays = 0;
     let lossDays = 0;
-    let bestDay = -Infinity;
-    let worstDay = Infinity;
+    let bestDay = { dateStr: "N/A", pnl: 0 };
+    let worstDay = { dateStr: "N/A", pnl: 0 };
 
-    tradesByDayMap.forEach((dayData, dayKey) => {
-      if (dayKey.startsWith(currentMonthKey)) {
-        totalPnl += dayData.netPnl;
-        totalTrades += dayData.totalTrades;
-        if (dayData.netPnl >= 0) winDays++;
-        else lossDays++;
+    tradesByDayMap.forEach((agg, dateStr) => {
+      if (dateStr.startsWith(currentMonthKey)) {
+        totalPnl += agg.netPnl;
+        totalTrades += agg.totalTrades;
+        if (agg.netPnl > 0) winDays += 1;
+        if (agg.netPnl < 0) lossDays += 1;
 
-        if (dayData.netPnl > bestDay) bestDay = dayData.netPnl;
-        if (dayData.netPnl < worstDay) worstDay = dayData.netPnl;
+        if (agg.netPnl > bestDay.pnl) bestDay = { dateStr, pnl: agg.netPnl };
+        if (agg.netPnl < worstDay.pnl) worstDay = { dateStr, pnl: agg.netPnl };
       }
     });
 
     const activeDays = winDays + lossDays;
-    const winRate = activeDays > 0 ? (winDays / activeDays) * 100 : 0;
+    const dayWinRate = activeDays > 0 ? ((winDays / activeDays) * 100).toFixed(1) : "0.0";
 
     return {
       totalPnl,
       totalTrades,
-      winRate: winRate.toFixed(1),
-      bestDay: bestDay === -Infinity ? 0 : bestDay,
-      worstDay: worstDay === Infinity ? 0 : worstDay,
+      winDays,
+      lossDays,
+      winRate: dayWinRate,
+      bestDay: bestDay.pnl,
+      worstDay: worstDay.pnl,
     };
   }, [tradesByDayMap, currentDate]);
 
   // Yearly summary calculations
   const yearlySummary = useMemo(() => {
-    const yearKey = year.toString();
+    const currentYearStr = year.toString();
     let totalPnl = 0;
     let totalTrades = 0;
     let winDays = 0;
     let lossDays = 0;
     const monthPnlMap = new Map<string, number>();
 
-    tradesByDayMap.forEach((dayData, dayKey) => {
-      if (dayKey.startsWith(yearKey)) {
-        totalPnl += dayData.netPnl;
-        totalTrades += dayData.totalTrades;
-        if (dayData.netPnl >= 0) winDays++;
+    tradesByDayMap.forEach((agg, dateStr) => {
+      if (dateStr.startsWith(currentYearStr)) {
+        totalPnl += agg.netPnl;
+        totalTrades += agg.totalTrades;
+        if (agg.netPnl >= 0) winDays++;
         else lossDays++;
 
-        const mKey = dayKey.substring(0, 7);
-        monthPnlMap.set(mKey, (monthPnlMap.get(mKey) || 0) + dayData.netPnl);
+        const mKey = dateStr.substring(0, 7);
+        monthPnlMap.set(mKey, (monthPnlMap.get(mKey) || 0) + agg.netPnl);
       }
     });
 
@@ -173,6 +175,30 @@ export default function MT5CalendarPage() {
       <div className="space-y-6">
         <div className="h-28 rounded-2xl bg-slate-200 dark:bg-white/5 animate-pulse" />
         <div className="h-96 rounded-2xl bg-slate-200 dark:bg-white/5 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!selectedAccount) {
+    return (
+      <div className="space-y-6 pb-12 font-sans">
+        <MT5Header
+          title="MT5 TRADING CALENDAR"
+          subtitle="Daily P/L Aggregation, Win Rate Metrics & Monthly / Yearly Performance"
+        />
+
+        <div className={`p-8 sm:p-12 rounded-3xl border shadow-xl text-center space-y-5 max-w-3xl mx-auto my-8 ${isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"}`}>
+          <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
+            <CalendarIcon className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-xl font-extrabold font-sans">No Account Selected</h2>
+            <p className="text-xs text-slate-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
+              No MT5 account is currently connected. Connect an MT5 account to view calendar performance.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

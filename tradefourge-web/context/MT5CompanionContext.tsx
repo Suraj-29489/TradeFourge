@@ -183,9 +183,17 @@ export const MT5CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ 
           const exists = accs.find((a) => a.id === prev || a.accountNumber === prev);
           return exists ? exists.id : accs[0].id;
         });
+      } else {
+        setSelectedAccountId("");
+        setTrades([]);
+        setLiveState(null);
       }
     } catch (e) {
       console.error("Error loading MT5 accounts", e);
+      setAccounts([]);
+      setSelectedAccountId("");
+      setTrades([]);
+      setLiveState(null);
     } finally {
       setIsLoading(false);
     }
@@ -193,12 +201,17 @@ export const MT5CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Load trades whenever selected account changes
   const loadTrades = useCallback(async (accId: string) => {
+    if (!accId || !accId.trim()) {
+      setTrades([]);
+      return;
+    }
     try {
       const t = await defaultMT5DataProvider.getTrades(accId);
       setTrades(t);
       setLastUpdated(new Date());
     } catch (e) {
       console.error("Error loading MT5 trades", e);
+      setTrades([]);
     }
   }, []);
 
@@ -266,7 +279,10 @@ export const MT5CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Fetch Live State from GET /api/mt5/live
   const fetchLiveState = useCallback(async () => {
-    if (!selectedAccountId) return;
+    if (!selectedAccountId) {
+      setLiveState(null);
+      return;
+    }
     try {
       const res = await fetch(`/api/mt5/live?account_id=${selectedAccountId}`);
       if (res.ok) {
@@ -282,7 +298,10 @@ export const MT5CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Fast 2-second polling for Live Workspace when account selected
   useEffect(() => {
-    if (!selectedAccountId) return;
+    if (!selectedAccountId) {
+      setLiveState(null);
+      return;
+    }
 
     fetchLiveState();
     const timer = setInterval(() => {
@@ -296,21 +315,28 @@ export const MT5CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (selectedAccountId) {
       loadTrades(selectedAccountId);
       fetchLiveState();
+    } else {
+      setTrades([]);
+      setLiveState(null);
     }
   }, [selectedAccountId, loadTrades, fetchLiveState]);
 
-
-
-
   const selectAccount = useCallback((accountId: string) => {
     setSelectedAccountId(accountId);
+    setTrades([]);
+    setLiveState(null);
     if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_ACCOUNT_KEY, accountId);
+      if (accountId) {
+        localStorage.setItem(STORAGE_ACCOUNT_KEY, accountId);
+      } else {
+        localStorage.removeItem(STORAGE_ACCOUNT_KEY);
+      }
     }
   }, []);
 
   const selectedAccount = useMemo(() => {
-    return accounts.find((a) => a.id === selectedAccountId || a.accountNumber === selectedAccountId) || accounts[0] || null;
+    if (!selectedAccountId) return null;
+    return accounts.find((a) => a.id === selectedAccountId || a.accountNumber === selectedAccountId) || null;
   }, [accounts, selectedAccountId]);
 
   const connectionStatus: MT5ConnectionStatus = selectedAccount?.connectionStatus || "Disconnected";

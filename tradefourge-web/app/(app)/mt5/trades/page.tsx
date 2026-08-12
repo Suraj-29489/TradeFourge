@@ -169,7 +169,9 @@ export default function MT5TradesPage() {
           {/* Fetch History Button */}
           <button
             onClick={() => setIsFetchHistoryOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
+            disabled={!selectedAccount}
+            title={!selectedAccount ? "Select an MT5 account before fetching historical trades" : "Fetch historical trades for selected account"}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold transition-all bg-blue-600 hover:bg-blue-500 text-white shadow-sm disabled:opacity-40 disabled:pointer-events-none"
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>Fetch Historical Trades</span>

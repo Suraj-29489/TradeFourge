@@ -161,22 +161,21 @@ export class SupabaseMT5DataProvider implements MT5DataProvider {
   }
 
   async getTrades(accountId: string, filter?: MT5TradeFilter): Promise<MT5Trade[]> {
+    if (!accountId || !accountId.trim()) return [];
+
     const { data: { user } } = await this.supabase.auth.getUser();
     if (!user) return [];
+
+    const targetAcc = await this.getAccount(accountId);
+    if (!targetAcc) return [];
 
     let query = this.supabase
       .from("trades")
       .select("*")
       .eq("user_id", user.id)
+      .eq("account_id", targetAcc.id)
+      .or("source.eq.mt5,source.eq.MT5,mt5_deal_id.not.is.null")
       .order("close_time", { ascending: false, nullsFirst: false });
-
-    // If accountId specified, resolve account UUID or account_number
-    if (accountId) {
-      const targetAcc = await this.getAccount(accountId);
-      if (targetAcc) {
-        query = query.eq("account_id", targetAcc.id);
-      }
-    }
 
     if (filter) {
       if (filter.startDate) {
@@ -206,9 +205,7 @@ export class SupabaseMT5DataProvider implements MT5DataProvider {
       return [];
     }
 
-    const targetAcc = accountId ? await this.getAccount(accountId) : null;
-    const accNum = targetAcc?.accountNumber || accountId || "N/A";
-
+    const accNum = targetAcc.accountNumber || accountId || "N/A";
     let result = ((data || []) as CloudTrade[]).map((tr: CloudTrade) => this.mapDbTradeToMT5Trade(tr, accNum));
 
     if (filter?.search && filter.search.trim()) {
@@ -225,7 +222,7 @@ export class SupabaseMT5DataProvider implements MT5DataProvider {
   }
 
   async fetchHistoricalTrades(accountId: string, fromDate: string, toDate: string): Promise<{ addedCount: number }> {
-    // Queries existing trades within date range from Supabase
+    if (!accountId || !accountId.trim()) return { addedCount: 0 };
     const trades = await this.getTrades(accountId, { startDate: fromDate, endDate: toDate });
     return { addedCount: trades.length };
   }
@@ -237,9 +234,29 @@ export class SupabaseMT5DataProvider implements MT5DataProvider {
     high: number;
     low: number;
   }> {
-    const acc = accountId ? await this.getAccount(accountId) : null;
-    const startingBalance = acc ? acc.balance : 0;
-    const currentEquity = acc ? acc.equity : startingBalance;
+    if (!accountId || !accountId.trim()) {
+      return {
+        points: [],
+        startingBalance: 0,
+        currentEquity: 0,
+        high: 0,
+        low: 0,
+      };
+    }
+
+    const acc = await this.getAccount(accountId);
+    if (!acc) {
+      return {
+        points: [],
+        startingBalance: 0,
+        currentEquity: 0,
+        high: 0,
+        low: 0,
+      };
+    }
+
+    const startingBalance = acc.balance;
+    const currentEquity = acc.equity || startingBalance;
 
     const trades = await this.getTrades(accountId);
     const closedTrades = trades

@@ -101,7 +101,41 @@ export default function MT5ReportsPage() {
     return Array.from(map.values()).filter((d) => d.dayName !== "Sunday" && d.dayName !== "Saturday");
   }, [closedTrades]);
 
-  const currencySymbol = selectedAccount?.currency === "USC" ? "USC" : "$";
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-28 rounded-2xl bg-slate-200 dark:bg-white/5 animate-pulse" />
+        <div className="h-24 rounded-2xl bg-slate-200 dark:bg-white/5 animate-pulse" />
+        <div className="h-80 rounded-2xl bg-slate-200 dark:bg-white/5 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!selectedAccount) {
+    return (
+      <div className="space-y-6 pb-12 font-sans">
+        <MT5Header
+          title="MT5 PERFORMANCE REPORTS"
+          subtitle="Canonical closed trade analytical breakdown, symbol matrix & day-of-week performance"
+        />
+
+        <div className={`p-8 sm:p-12 rounded-3xl border shadow-xl text-center space-y-5 max-w-3xl mx-auto my-8 ${isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"}`}>
+          <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
+            <BarChart3 className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-xl font-extrabold font-sans">No Account Selected</h2>
+            <p className="text-xs text-slate-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
+              No MT5 account is currently connected. Connect an MT5 account to view analytical performance reports.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const currencySymbol = selectedAccount.currency === "USC" ? "USC" : "$";
 
   return (
     <div className="space-y-6 pb-12 font-sans">
@@ -112,23 +146,23 @@ export default function MT5ReportsPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 font-mono">
-        <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200" : "bg-[#0F141C] border-white/[0.08]"}`}>
+        <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"}`}>
           <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">REALIZED NET P/L</span>
-          <span className={`text-lg font-extrabold ${stats.netPnl >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+          <span className={`text-lg font-extrabold ${stats.netPnl >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
             {stats.netPnl >= 0 ? "+" : ""}{currencySymbol}{stats.netPnl.toFixed(2)}
           </span>
           <span className="text-[10px] text-slate-400 block mt-0.5">{stats.totalCount} closed trades</span>
         </div>
 
-        <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200" : "bg-[#0F141C] border-white/[0.08]"}`}>
+        <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"}`}>
           <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">WIN RATE</span>
-          <span className="text-lg font-extrabold text-slate-900 dark:text-white">{stats.winRate.toFixed(1)}%</span>
+          <span className="text-lg font-extrabold text-white">{stats.winRate.toFixed(1)}%</span>
           <span className="text-[10px] text-slate-400 block mt-0.5">{stats.winCount} W / {stats.lossCount} L</span>
         </div>
 
-        <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200" : "bg-[#0F141C] border-white/[0.08]"}`}>
+        <div className={`p-4 rounded-2xl border ${isLight ? "bg-white border-slate-200 text-slate-900" : "bg-[#0F141C] border-white/[0.08] text-white"}`}>
           <span className="text-[10px] text-slate-500 dark:text-gray-400 font-bold block">PROFIT FACTOR</span>
-          <span className="text-lg font-extrabold text-slate-900 dark:text-white">{stats.profitFactor > 100 ? "MAX" : stats.profitFactor.toFixed(2)}</span>
+          <span className="text-lg font-extrabold text-white">{stats.profitFactor > 100 ? "MAX" : stats.profitFactor.toFixed(2)}</span>
           <span className="text-[10px] text-slate-400 block mt-0.5">Gross W / Gross L</span>
         </div>
 

@@ -140,7 +140,7 @@ export default function MT5SettingsPage() {
       />
 
       {/* Settings Navigation Tabs */}
-      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/[0.08] font-mono text-xs overflow-x-auto">
+      <div className={`flex items-center gap-2 p-1.5 rounded-2xl border font-mono text-xs overflow-x-auto ${isLight ? "bg-slate-100 border-slate-200" : "bg-[#0F141C] border-white/[0.08]"}`}>
         <button
           onClick={() => setActiveTab("GENERAL")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${
@@ -148,7 +148,7 @@ export default function MT5SettingsPage() {
               ? isLight
                 ? "bg-white text-emerald-800 shadow-sm border border-slate-200"
                 : "bg-blue-600 text-white shadow-md"
-              : "text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
+              : "text-slate-400 hover:text-white"
           }`}
         >
           <SettingsIcon className="w-4 h-4" /> General
@@ -161,7 +161,7 @@ export default function MT5SettingsPage() {
               ? isLight
                 ? "bg-white text-emerald-800 shadow-sm border border-slate-200"
                 : "bg-blue-600 text-white shadow-md"
-              : "text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
+              : "text-slate-400 hover:text-white"
           }`}
         >
           <Cpu className="w-4 h-4" /> API Connectors ({connectors.length})
@@ -174,7 +174,7 @@ export default function MT5SettingsPage() {
               ? isLight
                 ? "bg-white text-emerald-800 shadow-sm border border-slate-200"
                 : "bg-blue-600 text-white shadow-md"
-              : "text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
+              : "text-slate-400 hover:text-white"
           }`}
         >
           <Globe className="w-4 h-4" /> Display
@@ -187,7 +187,7 @@ export default function MT5SettingsPage() {
               ? isLight
                 ? "bg-white text-emerald-800 shadow-sm border border-slate-200"
                 : "bg-blue-600 text-white shadow-md"
-              : "text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
+              : "text-slate-400 hover:text-white"
           }`}
         >
           <Shield className="w-4 h-4" /> Privacy & Disclaimers
