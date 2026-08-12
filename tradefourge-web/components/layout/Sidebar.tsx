@@ -14,6 +14,7 @@ import {
   BookOpen,
   Settings,
   X,
+  Radio,
 } from "lucide-react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
@@ -47,6 +48,7 @@ const TFC_NAV_ITEMS: NavItem[] = [
 
 const MT5_NAV_ITEMS: NavItem[] = [
   { name: "Dashboard", href: "/mt5/dashboard", icon: LayoutDashboard },
+  { name: "Live", href: "/mt5/live", icon: Radio },
   { name: "Accounts", href: "/mt5/accounts", icon: Wallet },
   { name: "Trades", href: "/mt5/trades", icon: Activity },
   { name: "Calendar", href: "/mt5/calendar", icon: CalendarDays },
