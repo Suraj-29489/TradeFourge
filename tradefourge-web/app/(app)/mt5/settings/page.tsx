@@ -633,10 +633,10 @@ export default function MT5SettingsPage() {
               <ShieldAlert className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-base font-bold font-sans text-slate-900 dark:text-white">
+              <h2 className={`text-base font-bold font-sans ${isLight ? "text-slate-900" : "text-white"}`}>
                 MT5 Companion Danger Zone
               </h2>
-              <p className="text-xs text-slate-500 dark:text-gray-400 font-sans">
+              <p className={`text-xs font-sans ${isLight ? "text-slate-500" : "text-gray-400"}`}>
                 Destructive actions are strictly scoped ONLY to MT5 Companion data. CSV Workspace & Supabase records will not be affected.
               </p>
             </div>
@@ -644,12 +644,12 @@ export default function MT5SettingsPage() {
 
           <div className="space-y-4">
             {/* Disconnect All */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0F141C] border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className={`p-4 rounded-2xl border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isLight ? "bg-white" : "bg-[#0F141C]"}`}>
               <div>
-                <strong className="text-slate-900 dark:text-white font-bold block">
+                <strong className={`font-bold block ${isLight ? "text-slate-900" : "text-white"}`}>
                   Disconnect All MT5 Accounts
                 </strong>
-                <span className="text-slate-500 dark:text-gray-400 text-[11px]">
+                <span className={`text-[11px] ${isLight ? "text-slate-500" : "text-gray-400"}`}>
                   Set connection status of all connected MT5 accounts to Disconnected.
                 </span>
               </div>
@@ -662,12 +662,12 @@ export default function MT5SettingsPage() {
             </div>
 
             {/* Clear Cached Data */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0F141C] border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className={`p-4 rounded-2xl border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isLight ? "bg-white" : "bg-[#0F141C]"}`}>
               <div>
-                <strong className="text-slate-900 dark:text-white font-bold block">
+                <strong className={`font-bold block ${isLight ? "text-slate-900" : "text-white"}`}>
                   Clear MT5 Companion Cached Data
                 </strong>
-                <span className="text-slate-500 dark:text-gray-400 text-[11px]">
+                <span className={`text-[11px] ${isLight ? "text-slate-500" : "text-gray-400"}`}>
                   Clear local cache storage for MT5 account selections.
                 </span>
               </div>
@@ -680,12 +680,12 @@ export default function MT5SettingsPage() {
             </div>
 
             {/* Reset Settings */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-[#0F141C] border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className={`p-4 rounded-2xl border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isLight ? "bg-white" : "bg-[#0F141C]"}`}>
               <div>
-                <strong className="text-slate-900 dark:text-white font-bold block">
+                <strong className={`font-bold block ${isLight ? "text-slate-900" : "text-white"}`}>
                   Reset MT5 Companion Settings
                 </strong>
-                <span className="text-slate-500 dark:text-gray-400 text-[11px]">
+                <span className={`text-[11px] ${isLight ? "text-slate-500" : "text-gray-400"}`}>
                   Restore default refresh intervals, formatting preferences & side filters.
                 </span>
               </div>

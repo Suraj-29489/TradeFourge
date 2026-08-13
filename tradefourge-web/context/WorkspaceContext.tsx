@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback } from "react";
 import { FileSpreadsheet, Zap, Layers, LucideIcon } from "lucide-react";
 
 export type WorkspaceMode = "csv" | "tfc" | "mt5";
@@ -64,15 +64,14 @@ const WorkspaceContext = createContext<WorkspaceContextType>({
 });
 
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceMode>("csv");
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  // Read localStorage synchronously on first client render to avoid the
+  // "csv flash" that occurs when useEffect fires after the first paint.
+  const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceMode>(() => {
+    if (typeof window === "undefined") return "csv";
     const saved = localStorage.getItem(STORAGE_WORKSPACE_MODE_KEY) as WorkspaceMode | null;
-    if (saved && (saved === "csv" || saved === "tfc" || saved === "mt5")) {
-      setCurrentWorkspace(saved);
-    }
-  }, []);
+    if (saved === "csv" || saved === "tfc" || saved === "mt5") return saved;
+    return "csv";
+  });
 
   const selectWorkspace = useCallback((mode: WorkspaceMode) => {
     setCurrentWorkspace(mode);
