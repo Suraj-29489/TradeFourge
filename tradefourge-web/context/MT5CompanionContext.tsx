@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   MT5Account,
   MT5Trade,
@@ -172,9 +172,22 @@ export const MT5CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return false;
   }, []);
 
-  // Initial accounts fetch
-  const loadAccounts = useCallback(async () => {
-    setIsLoading(true);
+  // Tracks whether we've completed the very first accounts fetch. Used so
+  // background refreshes (polling / live updates) never re-trigger the
+  // full-page loading skeleton after the initial load — only isRefreshing
+  // toggles for those, which the UI can show subtly rather than by hiding
+  // all the content.
+  const hasLoadedOnceRef = useRef(false);
+
+  // Accounts fetch. Pass isBackgroundRefresh=true for polling/auto-refresh
+  // calls so the dashboard doesn't flash back to skeleton placeholders on
+  // every refresh cycle.
+  const loadAccounts = useCallback(async (isBackgroundRefresh = false) => {
+    if (isBackgroundRefresh && hasLoadedOnceRef.current) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     try {
       const accs = await defaultMT5DataProvider.getAccounts();
       setAccounts(accs);
@@ -190,12 +203,18 @@ export const MT5CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     } catch (e) {
       console.error("Error loading MT5 accounts", e);
-      setAccounts([]);
-      setSelectedAccountId("");
-      setTrades([]);
-      setLiveState(null);
+      // On a background refresh failure, keep showing existing data instead
+      // of wiping the screen — only clear everything on a genuine initial-load failure.
+      if (!isBackgroundRefresh) {
+        setAccounts([]);
+        setSelectedAccountId("");
+        setTrades([]);
+        setLiveState(null);
+      }
     } finally {
+      hasLoadedOnceRef.current = true;
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -226,7 +245,7 @@ export const MT5CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (typeof window === "undefined") return;
 
     const handleDataChanged = () => {
-      loadAccounts();
+      loadAccounts(true);
       if (selectedAccountId) {
         loadTrades(selectedAccountId);
       }
@@ -249,7 +268,7 @@ export const MT5CompanionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     const intervalMs = settings.autoRefreshInterval * 1000;
     const timer = setInterval(() => {
-      loadAccounts();
+      loadAccounts(true);
       if (selectedAccountId) {
         loadTrades(selectedAccountId);
       }
