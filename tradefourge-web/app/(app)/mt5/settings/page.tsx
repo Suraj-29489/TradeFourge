@@ -644,7 +644,11 @@ export default function MT5SettingsPage() {
 
           <div className="space-y-4">
             {/* Disconnect All */}
-            <div className={`p-4 rounded-2xl border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isLight ? "bg-white" : "bg-[#0F141C]"}`}>
+            <div
+              className={`p-4 rounded-2xl border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                isLight ? "bg-white" : "bg-[#0F141C]"
+              }`}
+            >
               <div>
                 <strong className={`font-bold block ${isLight ? "text-slate-900" : "text-white"}`}>
                   Disconnect All MT5 Accounts
@@ -662,7 +666,11 @@ export default function MT5SettingsPage() {
             </div>
 
             {/* Clear Cached Data */}
-            <div className={`p-4 rounded-2xl border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isLight ? "bg-white" : "bg-[#0F141C]"}`}>
+            <div
+              className={`p-4 rounded-2xl border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                isLight ? "bg-white" : "bg-[#0F141C]"
+              }`}
+            >
               <div>
                 <strong className={`font-bold block ${isLight ? "text-slate-900" : "text-white"}`}>
                   Clear MT5 Companion Cached Data
@@ -680,7 +688,11 @@ export default function MT5SettingsPage() {
             </div>
 
             {/* Reset Settings */}
-            <div className={`p-4 rounded-2xl border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isLight ? "bg-white" : "bg-[#0F141C]"}`}>
+            <div
+              className={`p-4 rounded-2xl border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                isLight ? "bg-white" : "bg-[#0F141C]"
+              }`}
+            >
               <div>
                 <strong className={`font-bold block ${isLight ? "text-slate-900" : "text-white"}`}>
                   Reset MT5 Companion Settings

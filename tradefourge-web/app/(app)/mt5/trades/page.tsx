@@ -157,7 +157,11 @@ export default function MT5TradesPage() {
       />
 
       {/* Top Action Bar: Fetch History & Download CSV */}
-      <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-2xl border font-mono text-xs ${isLight ? "bg-slate-50 border-slate-200" : "bg-[#0F141C] border-white/[0.08]"}`}>
+      <div
+        className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-2xl border font-mono text-xs ${
+          isLight ? "bg-slate-50 border-slate-200" : "bg-white/[0.02] border-white/[0.06]"
+        }`}
+      >
         <div className="flex items-center gap-2">
           <span className={isLight ? "text-slate-500" : "text-gray-400"}>Account Trades:</span>
           <strong className={`font-bold ${isLight ? "text-slate-900" : "text-white"}`}>
