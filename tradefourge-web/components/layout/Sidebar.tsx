@@ -15,10 +15,12 @@ import {
   Settings,
   X,
   Radio,
+  ShieldCheck,
 } from "lucide-react";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useTheme } from "@/context/ThemeContext";
+import { useProfile } from "@/context/UserProfileContext";
 
 interface NavItem {
   name: string;
@@ -56,6 +58,16 @@ const MT5_NAV_ITEMS: NavItem[] = [
   { name: "Settings", href: "/mt5/settings", icon: Settings },
 ];
 
+// Shown at the bottom of every workspace's nav list, but only for the
+// owner account (see isOwner check below). Points at the existing
+// /admin-controls page, which middleware already restricts server-side —
+// this just makes the link visible so you can actually reach it.
+const ADMIN_NAV_ITEM: NavItem = {
+  name: "Admin",
+  href: "/admin-controls",
+  icon: ShieldCheck,
+};
+
 interface SidebarProps {
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
@@ -71,7 +83,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onCloseMob
   const isMt5 = currentWorkspace === "mt5" || pathname.startsWith("/mt5");
   const isTfc = !isMt5 && currentWorkspace === "tfc";
 
-  const navItems = isMt5 ? MT5_NAV_ITEMS : isTfc ? TFC_NAV_ITEMS : CSV_NAV_ITEMS;
+  const { isOwner } = useProfile();
+
+  const baseNavItems = isMt5 ? MT5_NAV_ITEMS : isTfc ? TFC_NAV_ITEMS : CSV_NAV_ITEMS;
+  const navItems = isOwner ? [...baseNavItems, ADMIN_NAV_ITEM] : baseNavItems;
 
   const isActive = (href: string) => {
     if (href === "/dashboard" || href === "/mt5/dashboard") return pathname === href;
