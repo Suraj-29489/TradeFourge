@@ -102,8 +102,24 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Owner protection: non-owners accessing owner routes get redirected to /dashboard
+    // NOTE: role is read from the `profiles` table (protected by a DB trigger that
+    // blocks self-updates to this column) instead of `user.user_metadata`, which
+    // any logged-in user can edit on themselves via supabase.auth.updateUser().
+    // Trusting user_metadata for authorization would let a user grant themselves
+    // owner access.
     if (isOwnerRoute) {
-      if (!user || !isOwner({ role: user.user_metadata?.role, email: user.email })) {
+      let profileRole: string | null | undefined = undefined;
+
+      if (user) {
+        const { data: profileRow } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        profileRole = profileRow?.role;
+      }
+
+      if (!user || !isOwner({ role: profileRole, email: user.email })) {
         const dashboardUrl = new URL("/dashboard", request.url);
         return NextResponse.redirect(dashboardUrl);
       }
