@@ -90,7 +90,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
 
     const saved = localStorage.getItem(STORAGE_WORKSPACE_MODE_KEY) as WorkspaceMode | null;
-    const resolved: WorkspaceMode = saved === "csv" || saved === "tfc" ? saved : "csv";
+    // Global routes (for example Admin Controls) do not identify a workspace
+    // in their URL, so restore all valid workspace modes instead of treating
+    // a saved MT5 selection as CSV.
+    const resolved: WorkspaceMode =
+      saved === "csv" || saved === "tfc" || saved === "mt5" ? saved : "csv";
     setCurrentWorkspace((prev) => (prev === resolved ? prev : resolved));
     // Re-run whenever the route changes so navigating between workspaces via
     // a direct link (not just a sidebar click) always keeps state in sync.
