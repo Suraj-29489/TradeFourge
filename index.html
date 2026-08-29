@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradeForge - Professional Trading Journal & Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+  <!-- Chart.js for High Performance Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- ==========================================================================
+         Sidebar Navigation
+         ========================================================================== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="#" class="brand-logo">
+          <div class="brand-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m13 2-2 2.5V8l3-3 1 1-4 4v3.5l6-6 1 1-7 7v4.5l9-9 1 1-10 10H3V2h10Z"/>
+            </svg>
+          </div>
+          <span class="brand-title">TRADE<span>FORGE</span></span>
+        </a>
+        <button class="sidebar-toggle-btn" id="sidebarToggleBtn" title="Toggle Sidebar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Add Trade Action Button -->
+      <div class="sidebar-action-wrap">
+        <button class="btn-add-trade" id="btnAddTradeSidebar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add trade
+        </button>
+      </div>
+
+      <!-- Sidebar Navigation Links -->
+      <nav class="sidebar-nav">
+        <a class="nav-item active" data-view="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          Dashboard
+        </a>
+        <a class="nav-item" data-view="journal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          Daily Journal
+        </a>
+        <a class="nav-item" data-view="tradelog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          Trade Log
+        </a>
+        <a class="nav-item" data-view="reports">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          Reports
+        </a>
+        <a class="nav-item" data-view="insights">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+          </svg>
+          Zella Insights
+        </a>
+        <a class="nav-item" data-view="strategies">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+            <polyline points="17 6 23 6 23 12"></polyline>
+          </svg>
+          Strategies
+        </a>
+        <a class="nav-item" data-view="notebook">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+          Notebook
+        </a>
+      </nav>
+
+      <!-- Storage Status Indicator -->
+      <div class="sidebar-footer">
+        <div class="storage-status">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div class="status-dot"></div>
+            <span id="storageStatusText">Local Browser Storage</span>
+          </div>
+        </div>
+        <button class="btn-sample" id="btnClearData" style="width: 100%; border-color: var(--border-color); font-size: 0.74rem;">
+          Reset / Clear Data
+        </button>
+      </div>
+    </aside>
+
+    <!-- ==========================================================================
+         Main Wrapper & Top Navigation Bar
+         ========================================================================== -->
+    <div class="main-wrapper">
+      <header class="top-header">
+        <div class="header-left">
+          <h1 class="page-title" id="pageTitle">Dashboard</h1>
+          <button class="btn-primary" id="btnImportTrades" style="padding: 6px 14px; font-size: 0.82rem;">
+            + Import trades
+          </button>
+          <div class="header-import-info" id="headerImportInfo">
+            Last import was made: <span class="time-highlight">Loading...</span>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- UPLOAD CSV BUTTON IN PLACE OF "ALL ACCOUNTS" (Explicitly requested by user) -->
+          <button class="btn-upload-csv" id="btnUploadCSVTop" title="Upload Trading CSV File">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Upload CSV
+          </button>
+
+          <!-- Date Range Filter Dropdown -->
+          <select class="form-select" id="headerDateRangeSelect" style="padding: 7px 12px; font-size: 0.82rem;">
+            <option value="all">📅 All Time</option>
+            <option value="august2026">August 2026</option>
+            <option value="july2026">July 2026</option>
+            <option value="last30">Last 30 Days</option>
+          </select>
+
+          <!-- Notification & Profile -->
+          <div class="header-actions">
+            <button class="icon-btn" title="Notifications">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              <span class="notification-badge"></span>
+            </button>
+            <div class="user-avatar" title="Trader Account">SK</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ==========================================================================
+           Views Container
+           ========================================================================== -->
+      <main class="view-container">
+
+        <!-- ==========================================================================
+             VIEW: DASHBOARD (Default / Reference Image Layout)
+             ========================================================================== -->
+        <section class="view-section active" id="view-dashboard">
+          <div class="dashboard-grid">
+
+            <!-- 1. Top KPI Summary Cards Row -->
+            <div class="kpi-row">
+              <!-- Total P&L -->
+              <div class="kpi-card">
+                <div class="kpi-card-header">
+                  <span class="kpi-title">Total P&L <span class="info-tooltip-icon" title="Net profit and loss across all completed trades">ⓘ</span></span>
+                </div>
+                <div class="kpi-value profit" id="kpiTotalPnL">$0.00</div>
+                <div class="kpi-subtext" id="kpiTotalTradesCount">Trades in total: 0</div>
+              </div>
+
+              <!-- Profit Factor -->
+              <div class="kpi-card">
+                <div class="kpi-card-header">
+                  <span class="kpi-title">Profit factor <span class="info-tooltip-icon" title="Gross Profit divided by Gross Loss">ⓘ</span></span>
+                </div>
+                <div class="kpi-value" id="kpiProfitFactor">0.00</div>
+                <div class="kpi-subtext" id="kpiProfitFactorDelta"><span class="delta-pos">+0.12</span></div>
+              </div>
+
+              <!-- Average Winning Trade -->
+              <div class="kpi-card">
+                <div class="kpi-card-header">
+                  <span class="kpi-title">Average winning trade <span class="info-tooltip-icon" title="Average dollar gain on winning trades">ⓘ</span></span>
+                </div>
+                <div class="kpi-value profit" id="kpiAvgWin">$0.00</div>
+                <div class="kpi-subtext" id="kpiAvgWinSub"><span class="delta-pos">▲ +17.25</span></div>
+              </div>
+
+              <!-- Average Losing Trade -->
+              <div class="kpi-card">
+                <div class="kpi-card-header">
+                  <span class="kpi-title">Average losing trade <span class="info-tooltip-icon" title="Average dollar loss on losing trades">ⓘ</span></span>
+                </div>
+                <div class="kpi-value loss" id="kpiAvgLoss">$0.00</div>
+                <div class="kpi-subtext" id="kpiAvgLossSub"><span class="delta-neg">▼ -21.36</span></div>
+              </div>
+            </div>
+
+            <!-- 2. Middle Section: Donut Win Rates + Cumulative P&L Area Chart -->
+            <div class="middle-row">
+              <!-- Left Donut Charts Column -->
+              <div class="donuts-column">
+                <!-- Donut 1: Winning % By Trades -->
+                <div class="donut-card">
+                  <div class="donut-card-header">
+                    <span class="donut-card-title">Winning % By Trades</span>
+                    <span class="info-tooltip-icon">ⓘ</span>
+                  </div>
+                  <div class="donut-body">
+                    <div class="donut-chart-wrapper">
+                      <canvas id="tradesDonutCanvas"></canvas>
+                      <div class="donut-center-label">
+                        <div class="donut-center-val" id="tradesDonutCenterVal">0%</div>
+                        <div class="donut-center-sub">WINRATE</div>
+                      </div>
+                    </div>
+                    <div class="donut-legend">
+                      <div class="legend-item">
+                        <span class="legend-label"><span class="legend-color-box win"></span><span id="donutWinnersCount">0 winners</span></span>
+                      </div>
+                      <div class="legend-item">
+                        <span class="legend-label"><span class="legend-color-box loss"></span><span id="donutLosersCount">0 losers</span></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Donut 2: Winning % By Days -->
+                <div class="donut-card">
+                  <div class="donut-card-header">
+                    <span class="donut-card-title">Winning % By Days</span>
+                    <span class="info-tooltip-icon">ⓘ</span>
+                  </div>
+                  <div class="donut-body">
+                    <div class="donut-chart-wrapper">
+                      <canvas id="daysDonutCanvas"></canvas>
+                      <div class="donut-center-label">
+                        <div class="donut-center-val" id="daysDonutCenterVal">0%</div>
+                        <div class="donut-center-sub">WINRATE</div>
+                      </div>
+                    </div>
+                    <div class="donut-legend">
+                      <div class="legend-item">
+                        <span class="legend-label"><span class="legend-color-box win"></span><span id="donutWinningDaysCount">0 winners</span></span>
+                      </div>
+                      <div class="legend-item">
+                        <span class="legend-label"><span class="legend-color-box loss"></span><span id="donutLosingDaysCount">0 losers</span></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Area Chart Card: Daily Net Cumulative P&L -->
+              <div class="chart-card">
+                <div class="chart-card-header">
+                  <div class="chart-tabs">
+                    <button class="chart-tab-btn active" id="tabCumPnL">Daily Net cumulative P&L</button>
+                    <button class="chart-tab-btn" id="tabDailyPnL">Net daily P&L</button>
+                  </div>
+                  <div style="font-size: 0.8rem; color: var(--text-dim);">Realized Equity Growth</div>
+                </div>
+                <div class="chart-canvas-wrapper">
+                  <canvas id="pnlMainCanvas"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Bottom Section: Recent Trades Table & Monthly Calendar -->
+            <div class="bottom-row">
+              <!-- Left: Recent Trades Table Card -->
+              <div class="table-card">
+                <div class="table-card-header">
+                  <div class="table-tabs">
+                    <button class="table-tab-btn active">Recent trades</button>
+                    <button class="table-tab-btn" onclick="App.switchView('tradelog')">View all</button>
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="trade-table">
+                    <thead>
+                      <tr>
+                        <th>Close date</th>
+                        <th>Symbol</th>
+                        <th>Volume</th>
+                        <th>Execs</th>
+                        <th>P/L</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recentTradesTableBody">
+                      <!-- Dynamically rendered rows -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Right: Monthly Calendar View Card -->
+              <div class="calendar-card">
+                <div class="calendar-header">
+                  <div class="calendar-month-title">
+                    <span id="calendarTitle">August 2026</span>
+                    <div class="calendar-nav-controls">
+                      <button class="calendar-nav-btn" id="calPrevBtn" title="Previous Month">❮</button>
+                      <button class="calendar-nav-btn" id="calNextBtn" title="Next Month">❯</button>
+                    </div>
+                  </div>
+                  <span style="font-size: 0.8rem; color: var(--text-dim);">Click day to inspect trades</span>
+                </div>
+                <div class="calendar-grid" id="calendarGrid">
+                  <!-- Dynamically rendered 7-day grid -->
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ==========================================================================
+             VIEW: DAILY JOURNAL
+             ========================================================================== -->
+        <section class="view-section" id="view-journal">
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="calendar-card" style="padding: 24px;">
+              <div class="calendar-header">
+                <h2 style="font-size: 1.3rem; font-weight: 700;">Trading Journal Calendar</h2>
+                <div class="calendar-nav-controls">
+                  <button class="calendar-nav-btn" onclick="CalendarManager.prevMonth()">❮</button>
+                  <button class="calendar-nav-btn" onclick="CalendarManager.nextMonth()">❯</button>
+                </div>
+              </div>
+              <div class="calendar-grid" id="calendarGridJournal">
+                <!-- Mirrored or standalone large journal calendar -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================================================
+             VIEW: TRADE LOG (Sortable & Filterable Table)
+             ========================================================================== -->
+        <section class="view-section" id="view-tradelog">
+          <div class="filter-bar">
+            <div class="filter-group">
+              <div class="search-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" class="form-input" id="tradeLogSearch" placeholder="Search ticket, symbol...">
+              </div>
+              <select class="form-select" id="tradeLogSymbolFilter">
+                <option value="all">All Symbols</option>
+              </select>
+              <select class="form-select" id="tradeLogTypeFilter">
+                <option value="all">All Types</option>
+                <option value="buy">BUY / LONG</option>
+                <option value="sell">SELL / SHORT</option>
+              </select>
+              <select class="form-select" id="tradeLogOutcomeFilter">
+                <option value="all">All Outcomes</option>
+                <option value="win">Winners Only</option>
+                <option value="loss">Losers Only</option>
+              </select>
+            </div>
+            <button class="btn-upload-csv" onclick="document.getElementById('uploadModal').classList.add('active')" style="padding: 6px 14px; font-size: 0.82rem;">
+              + Import CSV
+            </button>
+          </div>
+
+          <div class="table-card">
+            <div class="table-responsive">
+              <table class="trade-table">
+                <thead>
+                  <tr>
+                    <th>Ticket</th>
+                    <th>Symbol</th>
+                    <th>Type</th>
+                    <th>Lots</th>
+                    <th>Open Price</th>
+                    <th>Close Price</th>
+                    <th>Open Time</th>
+                    <th>Close Time</th>
+                    <th>P/L ($)</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="tradeLogTableBody">
+                  <!-- Dynamically filled -->
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination-controls">
+              <span id="tradeLogPageInfo" style="font-size: 0.8rem; color: var(--text-dim); margin-right: 12px;"></span>
+              <button class="calendar-nav-btn" id="tradeLogPrevPage">❮</button>
+              <button class="calendar-nav-btn" id="tradeLogNextPage">❯</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================================================
+             VIEW: REPORTS
+             ========================================================================== -->
+        <section class="view-section" id="view-reports">
+          <div class="reports-grid">
+            <div class="chart-card">
+              <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 14px;">Net P&L by Instrument / Symbol</h3>
+              <div class="chart-canvas-wrapper" style="min-height: 260px;">
+                <canvas id="symbolBarCanvas"></canvas>
+              </div>
+            </div>
+            <div class="chart-card">
+              <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 14px;">Day of Week Performance</h3>
+              <div class="chart-canvas-wrapper" style="min-height: 260px;">
+                <canvas id="weekdayBarCanvas"></canvas>
+              </div>
+            </div>
+            <div class="table-card" style="grid-column: 1 / -1;">
+              <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 14px;">Symbol Breakdown Matrix</h3>
+              <div id="reportsSymbolList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================================================
+             VIEW: ZELLA INSIGHTS
+             ========================================================================== -->
+        <section class="view-section" id="view-insights">
+          <div class="insights-grid">
+            <div class="insight-card">
+              <div class="insight-card-header">
+                <div class="insight-icon">🏆</div>
+                <div class="insight-title">Top Performing Symbol</div>
+              </div>
+              <div class="insight-metric" id="insightBestSymbol">XAUUSD</div>
+              <div class="insight-desc">Generates the majority of your profitable returns. Maintain strict focus on this setup.</div>
+            </div>
+
+            <div class="insight-card">
+              <div class="insight-card-header">
+                <div class="insight-icon">⚖️</div>
+                <div class="insight-title">Long vs Short Winrate</div>
+              </div>
+              <div class="insight-metric" id="insightLongShort">Long: 52% | Short: 48%</div>
+              <div class="insight-desc">Balanced execution across both directions with minimal directional bias.</div>
+            </div>
+
+            <div class="insight-card">
+              <div class="insight-card-header">
+                <div class="insight-icon">📅</div>
+                <div class="insight-title">Best Trading Day</div>
+              </div>
+              <div class="insight-metric" id="insightBestDay">Thursday</div>
+              <div class="insight-desc">Highest net profit density and consistency during mid-week liquidity.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================================================
+             VIEW: STRATEGIES
+             ========================================================================== -->
+        <section class="view-section" id="view-strategies">
+          <div style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="font-size: 1.2rem; font-weight: 700;">Trading Playbooks & Strategies</h2>
+            <button class="btn-primary" onclick="App.showToast('Strategy creator coming in next update!', 'success')">+ Create Strategy</button>
+          </div>
+          <div class="kpi-row" id="strategiesListContainer" style="grid-template-columns: repeat(3, 1fr);">
+            <!-- Filled dynamically -->
+          </div>
+        </section>
+
+        <!-- ==========================================================================
+             VIEW: NOTEBOOK
+             ========================================================================== -->
+        <section class="view-section" id="view-notebook">
+          <div class="notebook-container">
+            <div class="notebook-editor-card">
+              <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Daily Trading Notes & Review</h3>
+              <textarea class="form-textarea" id="notebookTextarea" rows="16" placeholder="Write down your session reflections, key lessons, psychological observations... (Auto-saved locally in your browser)"></textarea>
+            </div>
+            <div class="rules-checklist-card">
+              <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Trading Rules Checklist</h3>
+              <div style="display: flex; flex-direction: column; gap: 8px;" id="rulesListContainer">
+                <!-- Dynamically filled -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 1: Upload CSV Modal
+       ========================================================================== -->
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          Import Trading History (CSV)
+        </h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display: none;">
+        
+        <!-- Drag and drop zone -->
+        <div class="dropzone" id="csvDropzone">
+          <div class="dropzone-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+          </div>
+          <div class="dropzone-text">
+            <h4>Click to browse or drag & drop CSV file</h4>
+            <p>Compatible with MT4, MT5, cTrader, Tradovate, Prop Firm exports, and standard CSVs</p>
+          </div>
+        </div>
+
+        <!-- Sample CSV Preload Option -->
+        <div class="sample-csv-box">
+          <div class="sample-csv-info">
+            <span style="font-size: 1.3rem;">📊</span>
+            <div>
+              <strong style="font-size: 0.85rem; color: var(--text-main);">Bundled Sample Trades</strong>
+              <p>Load 99+ preloaded reference trades across Gold, BTC, EUR & FX</p>
+            </div>
+          </div>
+          <button class="btn-sample" id="btnLoadSampleInModal">Load Sample</button>
+        </div>
+
+        <div style="font-size: 0.78rem; color: var(--text-dim); line-height: 1.4;">
+          🔒 <strong>Privacy Guarantee:</strong> All trade calculations and CSV parsing happen 100% locally on your machine. No trade data is ever uploaded to any external server.
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary modal-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 2: Add Manual Trade Modal
+       ========================================================================== -->
+  <div class="modal-overlay" id="addTradeModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">+ Add Manual Trade</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="addTradeForm">
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Symbol</label>
+              <input type="text" class="form-input" id="formSymbol" placeholder="e.g. XAUUSD" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Type / Direction</label>
+              <select class="form-select" id="formType">
+                <option value="buy">BUY / LONG</option>
+                <option value="sell">SELL / SHORT</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Volume (Lots)</label>
+              <input type="number" step="0.01" class="form-input" id="formLots" placeholder="0.1" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Net Profit / Loss ($)</label>
+              <input type="number" step="0.01" class="form-input" id="formProfit" placeholder="e.g. 50.00 or -25.00" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Entry Price</label>
+              <input type="number" step="any" class="form-input" id="formOpenPrice" placeholder="4580.50">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Exit Price</label>
+              <input type="number" step="any" class="form-input" id="formClosePrice" placeholder="4585.00">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Stop Loss</label>
+              <input type="number" step="any" class="form-input" id="formStopLoss" placeholder="4575.00">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Take Profit</label>
+              <input type="number" step="any" class="form-input" id="formTakeProfit" placeholder="4595.00">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Opening Time</label>
+              <input type="datetime-local" class="form-input" id="formOpenTime">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Closing Time</label>
+              <input type="datetime-local" class="form-input" id="formCloseTime">
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Close Reason</label>
+              <select class="form-select" id="formCloseReason">
+                <option value="user">Manual Exit (User)</option>
+                <option value="tp">Take Profit (TP Hit)</option>
+                <option value="sl">Stop Loss (SL Hit)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
+          <button type="submit" class="btn-primary">Save Trade</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 3: Trade Details Inspection Modal
+       ========================================================================== -->
+  <div class="modal-overlay" id="tradeDetailModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Trade Details Inspection</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="tradeDetailBody">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-cancel-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 4: Day Trades Modal (Calendar Drilldown)
+       ========================================================================== -->
+  <div class="modal-overlay" id="dayTradesModal">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="dayTradesModalTitle">Trades on Selected Day</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="dayTradesModalBody">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-cancel-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Application Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
