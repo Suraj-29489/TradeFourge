@@ -1,6 +1,6 @@
 /**
- * TradeForge - Storage Manager
- * Handles browser-side persistent storage (localStorage) for trade data, settings & notebook.
+ * TradeForge - in-memory data manager.
+ * Imported data lives only in the current page session and is discarded on reload.
  */
 
 const StorageManager = {
@@ -12,136 +12,83 @@ const StorageManager = {
     USER_SETTINGS: 'tradeforge_settings'
   },
 
-  /**
-   * Check if trades are already stored in localStorage
-   */
+  state: {
+    trades: [],
+    lastImport: null,
+    notes: '',
+    rules: null
+  },
+
+  resetForNewSession() {
+    this.state = { trades: [], lastImport: null, notes: '', rules: null };
+    try {
+      Object.values(this.KEYS).forEach(key => localStorage.removeItem(key));
+    } catch (e) {
+      console.warn('Could not clear legacy browser data:', e);
+    }
+  },
+
   hasTrades() {
-    try {
-      const data = localStorage.getItem(this.KEYS.TRADES);
-      return Boolean(data && JSON.parse(data).length > 0);
-    } catch (e) {
-      return false;
-    }
+    return this.state.trades.length > 0;
   },
 
-  /**
-   * Retrieve all trades from localStorage
-   */
   getTrades() {
-    try {
-      const data = localStorage.getItem(this.KEYS.TRADES);
-      return data ? JSON.parse(data) : [];
-    } catch (e) {
-      console.error('Error reading trades from localStorage:', e);
-      return [];
-    }
+    return [...this.state.trades];
   },
 
-  /**
-   * Save trades list to localStorage
-   */
   saveTrades(trades, importFileName = 'Trade Log CSV') {
-    try {
-      localStorage.setItem(this.KEYS.TRADES, JSON.stringify(trades));
-      this.setLastImportInfo({
-        timestamp: new Date().toISOString(),
-        fileName: importFileName,
-        count: trades.length
-      });
-      return true;
-    } catch (e) {
-      console.error('Error saving trades to localStorage:', e);
-      return false;
-    }
+    this.state.trades = Array.isArray(trades) ? [...trades] : [];
+    this.state.lastImport = {
+      timestamp: new Date().toISOString(),
+      fileName: importFileName,
+      count: this.state.trades.length
+    };
+    return true;
   },
 
-  /**
-   * Append a single manual trade
-   */
   addTrade(trade) {
-    const trades = this.getTrades();
-    trades.unshift(trade);
-    this.saveTrades(trades, 'Manual Trade');
-    return trades;
+    this.state.trades.unshift(trade);
+    this.saveTrades(this.state.trades, 'Manual Trade');
+    return this.getTrades();
   },
 
-  /**
-   * Delete trade by ticket / id
-   */
   deleteTrade(ticket) {
-    const trades = this.getTrades().filter(t => String(t.ticket) !== String(ticket));
-    this.saveTrades(trades);
-    return trades;
+    this.state.trades = this.state.trades.filter(t => String(t.ticket) !== String(ticket));
+    return this.getTrades();
   },
 
-  /**
-   * Clear all trade data
-   */
   clearAll() {
-    localStorage.removeItem(this.KEYS.TRADES);
-    localStorage.removeItem(this.KEYS.LAST_IMPORT);
+    this.state.trades = [];
+    this.state.lastImport = null;
   },
 
-  /**
-   * Get Last Import metadata
-   */
   getLastImportInfo() {
-    try {
-      const info = localStorage.getItem(this.KEYS.LAST_IMPORT);
-      return info ? JSON.parse(info) : null;
-    } catch (e) {
-      return null;
-    }
+    return this.state.lastImport;
   },
 
-  /**
-   * Set Last Import metadata
-   */
   setLastImportInfo(info) {
-    try {
-      localStorage.setItem(this.KEYS.LAST_IMPORT, JSON.stringify(info));
-    } catch (e) {
-      console.error(e);
-    }
+    this.state.lastImport = info;
   },
 
-  /**
-   * Get trading notes
-   */
   getNotes() {
-    return localStorage.getItem(this.KEYS.NOTES) || '';
+    return this.state.notes;
   },
 
-  /**
-   * Save trading notes
-   */
   saveNotes(notes) {
-    localStorage.setItem(this.KEYS.NOTES, notes);
+    this.state.notes = notes || '';
   },
 
-  /**
-   * Get trading rules checklist
-   */
   getRules() {
-    try {
-      const rules = localStorage.getItem(this.KEYS.RULES);
-      return rules ? JSON.parse(rules) : [
-        { id: 1, text: 'Never risk more than 1-2% per trade', checked: true },
-        { id: 2, text: 'Wait for higher timeframe trend confirmation', checked: true },
-        { id: 3, text: 'Always set a stop loss before entering position', checked: true },
-        { id: 4, text: 'Do not revenge trade after a losing streak', checked: false },
-        { id: 5, text: 'Accept take-profit targets without greed', checked: true }
-      ];
-    } catch (e) {
-      return [];
-    }
+    return this.state.rules || [
+      { id: 1, text: 'Never risk more than 1-2% per trade', checked: true },
+      { id: 2, text: 'Wait for higher timeframe trend confirmation', checked: true },
+      { id: 3, text: 'Always set a stop loss before entering position', checked: true },
+      { id: 4, text: 'Do not revenge trade after a losing streak', checked: false },
+      { id: 5, text: 'Accept take-profit targets without greed', checked: true }
+    ];
   },
 
-  /**
-   * Save trading rules checklist
-   */
   saveRules(rules) {
-    localStorage.setItem(this.KEYS.RULES, JSON.stringify(rules));
+    this.state.rules = Array.isArray(rules) ? rules : null;
   }
 };
-

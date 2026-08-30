@@ -26,37 +26,10 @@ const App = {
    */
   async init() {
     this.bindEvents();
+    StorageManager.resetForNewSession();
     this.loadNotesAndRules();
-
-    // Check if trades exist in storage, else load bundled sample CSV
-    if (StorageManager.hasTrades()) {
-      this.trades = StorageManager.getTrades();
-      this.processTrades();
-    } else {
-      await this.loadDefaultSampleCSV();
-    }
-  },
-
-  /**
-   * Load bundled default sample CSV from data/sample_trades.csv
-   */
-  async loadDefaultSampleCSV() {
-    try {
-      const response = await fetch('data/sample_trades.csv');
-      if (response.ok) {
-        const csvText = await response.text();
-        const parsedTrades = TradeParser.parseCSV(csvText);
-        StorageManager.saveTrades(parsedTrades, 'sample_trades.csv');
-        this.trades = parsedTrades;
-        this.processTrades();
-        this.showToast('Sample trading records loaded successfully!', 'success');
-      } else {
-        this.processTrades();
-      }
-    } catch (e) {
-      console.warn('Could not fetch sample CSV, continuing with empty dataset:', e);
-      this.processTrades();
-    }
+    this.trades = [];
+    this.processTrades();
   },
 
   /**
@@ -101,20 +74,6 @@ const App = {
    * Update top navigation bar import info and date label
    */
   updateHeaderInfo() {
-    const importInfoEl = document.getElementById('headerImportInfo');
-    const importMeta = StorageManager.getLastImportInfo();
-    
-    if (importInfoEl) {
-      if (this.currentMetrics.firstTradeDate && this.currentMetrics.lastTradeDate) {
-        const d1 = this.formatDateShort(this.currentMetrics.firstTradeDate);
-        const d2 = this.formatDateShort(this.currentMetrics.lastTradeDate);
-        const timeStr = importMeta ? new Date(importMeta.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
-        importInfoEl.innerHTML = `Last import: <span class="time-highlight">${timeStr}</span> | from <strong>${d1}</strong> to <strong>${d2}</strong>`;
-      } else {
-        importInfoEl.innerHTML = `No trades imported yet`;
-      }
-    }
-
     const dateFilterBtnText = document.getElementById('dateFilterBtnText');
     if (dateFilterBtnText && this.currentMetrics.firstTradeDate && this.currentMetrics.lastTradeDate) {
       dateFilterBtnText.innerText = `${this.formatDateShort(this.currentMetrics.firstTradeDate)} - ${this.formatDateShort(this.currentMetrics.lastTradeDate)}`;
@@ -442,7 +401,7 @@ const App = {
   updateStorageIndicator() {
     const el = document.getElementById('storageStatusText');
     if (el) {
-      el.innerText = `${this.trades.length} trades saved locally`;
+      el.innerText = this.trades.length ? `${this.trades.length} trades in this session` : 'No trades loaded';
     }
   },
 
@@ -734,15 +693,6 @@ const App = {
         if (e.target.files && e.target.files[0]) {
           this.handleCSVFile(e.target.files[0]);
         }
-      });
-    }
-
-    // Load Sample CSV Button inside Modal
-    const loadSampleBtn = document.getElementById('btnLoadSampleInModal');
-    if (loadSampleBtn) {
-      loadSampleBtn.addEventListener('click', () => {
-        this.loadDefaultSampleCSV();
-        if (uploadModal) uploadModal.classList.remove('active');
       });
     }
 

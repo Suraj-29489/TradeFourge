@@ -82,7 +82,7 @@
         <div class="storage-status">
           <div style="display: flex; align-items: center; gap: 6px;">
             <div class="status-dot"></div>
-            <span id="storageStatusText">Local Browser Storage</span>
+            <span id="storageStatusText">No trades loaded</span>
           </div>
         </div>
         <button class="btn-sample" id="btnClearData" style="width: 100%; border-color: var(--border-color); font-size: 0.74rem;">
@@ -104,9 +104,6 @@
       <header class="top-header">
         <div class="header-left">
           <h1 class="page-title" id="pageTitle">Dashboard</h1>
-          <div class="header-import-info" id="headerImportInfo">
-            Last import was made: <span class="time-highlight">Loading...</span>
-          </div>
         </div>
 
         <div class="header-right">
@@ -520,18 +517,6 @@
             <h4>Click to browse or drag & drop CSV file</h4>
             <p>Compatible with MT4, MT5, cTrader, Tradovate, Prop Firm exports, and standard CSVs</p>
           </div>
-        </div>
-
-        <!-- Sample CSV Preload Option -->
-        <div class="sample-csv-box">
-          <div class="sample-csv-info">
-            <span style="font-size: 1.3rem;">📊</span>
-            <div>
-              <strong style="font-size: 0.85rem; color: var(--text-main);">Bundled Sample Trades</strong>
-              <p>Load 99+ preloaded reference trades across Gold, BTC, EUR & FX</p>
-            </div>
-          </div>
-          <button class="btn-sample" id="btnLoadSampleInModal">Load Sample</button>
         </div>
 
         <div style="font-size: 0.78rem; color: var(--text-dim); line-height: 1.4;">

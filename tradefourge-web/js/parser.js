@@ -1,174 +1,166 @@
 /**
- * TradeForge - CSV & Data Parser
- * Parses trading data with intelligent multi-broker column mapping & validation.
+ * TradeForge CSV parser.
+ * One unique ticket is treated as one trade.
  */
 
 const TradeParser = {
-  /**
-   * Parse CSV text string into normalized trade objects
-   */
   parseCSV(csvText) {
     if (!csvText || typeof csvText !== 'string') {
       throw new Error('Invalid CSV data provided.');
     }
 
-    const lines = csvText.trim().split(/\r?\n/);
-    if (lines.length < 2) {
+    const rows = this.parseCSVRecords(csvText);
+    if (rows.length < 2) {
       throw new Error('CSV file is empty or missing data rows.');
     }
 
-    // Parse header row
-    const rawHeaders = this.parseCSVLine(lines[0]);
-    const headerMap = this.mapHeaders(rawHeaders);
+    const headerMap = this.mapHeaders(rows[0]);
+    const requiredFields = ['ticket', 'type', 'lots', 'symbol', 'profit'];
+    const missingFields = requiredFields.filter(field => headerMap[field] === undefined);
+    if (missingFields.length) {
+      throw new Error(`CSV needs these columns: ${missingFields.join(', ')}.`);
+    }
 
+    const tickets = new Set();
     const trades = [];
 
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
+    rows.slice(1).forEach((values, index) => {
+      const trade = this.normalizeTradeRow(values, headerMap, index + 1);
+      if (!trade || tickets.has(trade.ticket)) return;
+      tickets.add(trade.ticket);
+      trades.push(trade);
+    });
 
-      const values = this.parseCSVLine(line);
-      const trade = this.normalizeTradeRow(values, headerMap, i);
-      if (trade) {
-        trades.push(trade);
-      }
+    if (!trades.length) {
+      throw new Error('No valid unique trades could be parsed from this CSV.');
     }
 
-    if (trades.length === 0) {
-      throw new Error('No valid trade records could be parsed from the CSV.');
-    }
-
-    // Sort trades chronologically (oldest to newest by close time or open time)
     trades.sort((a, b) => new Date(a.closeTime || a.openTime) - new Date(b.closeTime || b.openTime));
-
     return trades;
   },
 
-  /**
-   * Split a single CSV line honoring quotes
-   */
-  parseCSVLine(line) {
-    const values = [];
-    let curVal = '';
-    let inQuotes = false;
+  parseCSVRecords(csvText) {
+    const rows = [];
+    let row = [];
+    let value = '';
+    let quoted = false;
 
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"' || char === "'") {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        values.push(curVal.trim().replace(/^["']|["']$/g, ''));
-        curVal = '';
+    for (let i = 0; i < csvText.length; i++) {
+      const char = csvText[i];
+      const next = csvText[i + 1];
+
+      if (char === '"') {
+        if (quoted && next === '"') {
+          value += '"';
+          i++;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (char === ',' && !quoted) {
+        row.push(value.trim());
+        value = '';
+      } else if ((char === '\n' || char === '\r') && !quoted) {
+        if (char === '\r' && next === '\n') i++;
+        row.push(value.trim());
+        if (row.some(cell => cell !== '')) rows.push(row);
+        row = [];
+        value = '';
       } else {
-        curVal += char;
+        value += char;
       }
     }
-    values.push(curVal.trim().replace(/^["']|["']$/g, ''));
-    return values;
+
+    row.push(value.trim());
+    if (row.some(cell => cell !== '')) rows.push(row);
+    return rows;
   },
 
-  /**
-   * Match raw CSV column names to standardized fields
-   */
+  parseCSVLine(line) {
+    return this.parseCSVRecords(line)[0] || [];
+  },
+
   mapHeaders(headers) {
     const map = {};
-    const cleanHeaders = headers.map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
-
-    const dictionary = {
-      ticket: ['ticket', 'order', 'position', 'id', 'tradeid', 'ticketid'],
-      openTime: ['openingtimeutc', 'opentime', 'openingtime', 'entrytime', 'timeopen', 'date', 'datetime', 'opened'],
-      closeTime: ['closingtimeutc', 'closetime', 'closingtime', 'exittime', 'timeclose', 'closed'],
+    const cleanHeaders = headers.map(header => String(header).toLowerCase().replace(/[^a-z0-9]/g, ''));
+    const aliases = {
+      ticket: ['ticket', 'ticketnumber', 'ticketid', 'orderid', 'positionid', 'tradeid'],
+      openTime: ['openingtimeutc', 'openingtime', 'opentime', 'entrytime', 'timeopen', 'opened'],
+      closeTime: ['closingtimeutc', 'closingtime', 'closetime', 'exittime', 'timeclose', 'closed'],
       type: ['type', 'side', 'action', 'direction', 'buysell'],
-      lots: ['lots', 'size', 'volume', 'qty', 'quantity', 'contracts', 'position'],
-      symbol: ['symbol', 'instrument', 'item', 'pair', 'ticker', 'asset', 'market'],
-      openPrice: ['openingprice', 'openprice', 'entryprice', 'priceopen', 'price'],
+      lots: ['lots', 'lot', 'lotsize', 'volume', 'quantity', 'qty', 'contracts'],
+      symbol: ['symbol', 'instrument', 'pair', 'ticker', 'asset', 'market'],
+      openPrice: ['openingprice', 'openprice', 'entryprice', 'priceopen'],
       closePrice: ['closingprice', 'closeprice', 'exitprice', 'priceclose'],
-      stopLoss: ['stoploss', 'sl', 'stop'],
-      takeProfit: ['takeprofit', 'tp', 'target', 'limit'],
+      stopLoss: ['stoploss', 'sl'],
+      takeProfit: ['takeprofit', 'tp'],
       commission: ['commission', 'comm', 'fee', 'fees'],
       swap: ['swap', 'rollover', 'financing'],
-      profit: ['profit', 'pnl', 'pandl', 'netprofit', 'grossprofit', 'realizedpnl', 'amount', 'gainloss'],
+      profit: ['profit', 'pnl', 'pandl', 'netprofit', 'grossprofit', 'realizedpnl', 'gainloss'],
       closeReason: ['closereason', 'reason', 'comment', 'closingcomment', 'notes']
     };
 
-    for (const [standardKey, patterns] of Object.entries(dictionary)) {
-      for (let i = 0; i < cleanHeaders.length; i++) {
-        const h = cleanHeaders[i];
-        if (patterns.includes(h) || patterns.some(p => h.includes(p))) {
-          map[standardKey] = i;
-          break;
-        }
-      }
-    }
-
+    Object.entries(aliases).forEach(([field, names]) => {
+      const index = cleanHeaders.findIndex(header => names.includes(header));
+      if (index !== -1) map[field] = index;
+    });
     return map;
   },
 
-  /**
-   * Build clean, normalized trade object
-   */
-  normalizeTradeRow(values, headerMap, rowIndex) {
-    const getVal = (key) => {
-      const idx = headerMap[key];
-      return (idx !== undefined && values[idx] !== undefined) ? values[idx] : '';
+  parseNumber(value) {
+    const text = String(value ?? '').trim();
+    if (!text) return NaN;
+    const negative = /^\(.*\)$/.test(text);
+    const cleaned = text.replace(/[,$\s]/g, '').replace(/[^0-9.-]/g, '');
+    const number = Number(cleaned);
+    return Number.isFinite(number) ? (negative ? -Math.abs(number) : number) : NaN;
+  },
+
+  normalizeTradeRow(values, headerMap) {
+    const get = field => {
+      const index = headerMap[field];
+      return index === undefined ? '' : (values[index] ?? '').trim();
     };
 
-    const rawProfit = getVal('profit');
-    let profit = parseFloat(rawProfit);
-    if (isNaN(profit)) {
-      profit = 0.0;
+    const ticket = get('ticket');
+    const rawType = get('type').toLowerCase();
+    const lots = this.parseNumber(get('lots'));
+    const symbol = get('symbol').toUpperCase();
+    const profit = this.parseNumber(get('profit'));
+
+    if (!ticket || !symbol || !Number.isFinite(lots) || lots <= 0 || !Number.isFinite(profit)) {
+      return null;
     }
 
-    const rawOpenTime = getVal('openTime');
-    const rawCloseTime = getVal('closeTime') || rawOpenTime;
-    
-    // Parse dates
-    let openTime = rawOpenTime;
-    let closeTime = rawCloseTime;
-    if (!openTime && !closeTime) {
-      openTime = new Date().toISOString();
-      closeTime = openTime;
-    }
+    const type = rawType.includes('sell') || rawType.includes('short')
+      ? 'sell'
+      : (rawType.includes('buy') || rawType.includes('long') ? 'buy' : null);
+    if (!type) return null;
 
-    const rawLots = getVal('lots');
-    const lots = parseFloat(rawLots) || 0.01;
-
-    let type = (getVal('type') || 'buy').toLowerCase();
-    if (type.includes('sell') || type.includes('short')) {
-      type = 'sell';
-    } else {
-      type = 'buy';
-    }
-
-    const symbol = (getVal('symbol') || 'UNKNOWN').toUpperCase().trim();
-    const openPrice = parseFloat(getVal('openPrice')) || 0;
-    const closePrice = parseFloat(getVal('closePrice')) || 0;
-    const stopLoss = parseFloat(getVal('stopLoss')) || null;
-    const takeProfit = parseFloat(getVal('takeProfit')) || null;
-    const commission = parseFloat(getVal('commission')) || 0;
-    const swap = parseFloat(getVal('swap')) || 0;
-    const ticket = getVal('ticket') || `T-${rowIndex}-${Date.now().toString().slice(-4)}`;
-    const closeReason = getVal('closeReason') || (profit >= 0 ? 'tp' : 'user');
+    const openTime = get('openTime') || get('closeTime') || new Date().toISOString();
+    const closeTime = get('closeTime') || openTime;
+    const numberOrNull = field => {
+      const number = this.parseNumber(get(field));
+      return Number.isFinite(number) ? number : null;
+    };
 
     return {
-      ticket: String(ticket),
+      ticket,
       openTime,
       closeTime,
       type,
       lots,
       symbol,
-      openPrice,
-      closePrice,
-      stopLoss,
-      takeProfit,
-      commission,
-      swap,
-      profit: Math.round(profit * 100) / 100, // 2 decimal precision
-      closeReason,
+      openPrice: numberOrNull('openPrice') || 0,
+      closePrice: numberOrNull('closePrice') || 0,
+      stopLoss: numberOrNull('stopLoss'),
+      takeProfit: numberOrNull('takeProfit'),
+      commission: numberOrNull('commission') || 0,
+      swap: numberOrNull('swap') || 0,
+      profit: Math.round(profit * 100) / 100,
+      closeReason: get('closeReason') || (profit >= 0 ? 'tp' : 'user'),
       isWin: profit > 0,
       isLoss: profit < 0,
       isBreakEven: profit === 0
     };
   }
 };
-
