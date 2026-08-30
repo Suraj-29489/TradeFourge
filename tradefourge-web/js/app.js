@@ -26,6 +26,9 @@ const App = {
    */
   async init() {
     this.bindEvents();
+    if (window.BacktestEngine) {
+      BacktestEngine.init();
+    }
     StorageManager.resetForNewSession();
     this.loadNotesAndRules();
     this.trades = [];
@@ -566,6 +569,7 @@ const App = {
       dashboard: 'Dashboard',
       journal: 'Daily Journal',
       tradelog: 'Trade Log',
+      backtesting: 'Backtesting',
       reports: 'Reports & Performance',
       insights: 'AI & Rule Insights',
       strategies: 'Strategies',

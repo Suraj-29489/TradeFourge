@@ -95,7 +95,10 @@ const CalendarManager = {
     for (let i = firstDayIndex - 1; i >= 0; i--) {
       const padCell = document.createElement('div');
       padCell.className = 'calendar-day-cell other-month';
-      padCell.innerHTML = `<span class="day-number">${prevMonthDays - i}</span>`;
+      padCell.innerHTML = `
+        <span class="day-number">${prevMonthDays - i}</span>
+        <div class="day-pnl-wrap"><div class="day-pnl empty-pnl"></div></div>
+      `;
       gridEl.appendChild(padCell);
     }
 
@@ -148,7 +151,10 @@ const CalendarManager = {
           App.openDayTradesModal(dateKey, dayData);
         });
       } else {
-        cell.innerHTML = `<span class="day-number">${day}</span>`;
+        cell.innerHTML = `
+          <span class="day-number">${day}</span>
+          <div class="day-pnl-wrap"><div class="day-pnl empty-pnl"></div></div>
+        `;
       }
 
       gridEl.appendChild(cell);
@@ -161,7 +167,10 @@ const CalendarManager = {
     for (let j = 1; j <= remaining; j++) {
       const padCell = document.createElement('div');
       padCell.className = 'calendar-day-cell other-month';
-      padCell.innerHTML = `<span class="day-number">${j}</span>`;
+      padCell.innerHTML = `
+        <span class="day-number">${j}</span>
+        <div class="day-pnl-wrap"><div class="day-pnl empty-pnl"></div></div>
+      `;
       gridEl.appendChild(padCell);
     }
   }
