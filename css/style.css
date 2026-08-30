@@ -555,18 +555,18 @@ html, body {
   align-items: center;
 }
 
-/* ==========================================================================
-   Middle Section: Donut Charts & Area P&L Chart
+/* ===========================================================================
+   Dashboard flow: win rates, graph, recent trades, then calendar
    ========================================================================== */
 .middle-row {
-  display: grid;
-  grid-template-columns: 340px 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 18px;
 }
 
 .donuts-column {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -791,6 +791,10 @@ body.sidebar-collapsed .sidebar-reveal-btn {
     gap: 12px;
   }
 
+  .donuts-column {
+    grid-template-columns: 1fr;
+  }
+
   .kpi-card,
   .donut-card,
   .chart-card,
@@ -956,8 +960,8 @@ body.sidebar-collapsed .sidebar-reveal-btn {
    Bottom Section: Recent Trades Table & Monthly Calendar
    ========================================================================== */
 .bottom-row {
-  display: grid;
-  grid-template-columns: 1fr 1.35fr;
+  display: flex;
+  flex-direction: column;
   gap: 18px;
 }
 
