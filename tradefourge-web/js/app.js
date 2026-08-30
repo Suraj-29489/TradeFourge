@@ -611,19 +611,24 @@ const App = {
       });
     });
 
-    // Sidebar collapse toggle
-    const toggleBtn = document.getElementById('sidebarToggleBtn');
+    // Sidebar collapse & reveal toggle via brand logo
+    const brandToggleBtn = document.getElementById('sidebarBrandToggle');
     const revealBtn = document.getElementById('sidebarRevealBtn');
     const setSidebarCollapsed = (collapsed) => {
       document.body.classList.toggle('sidebar-collapsed', collapsed);
-      if (toggleBtn) toggleBtn.setAttribute('aria-expanded', String(!collapsed));
     };
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', () => {
+    if (brandToggleBtn) {
+      brandToggleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         setSidebarCollapsed(true);
       });
     }
-    if (revealBtn) revealBtn.addEventListener('click', () => setSidebarCollapsed(false));
+    if (revealBtn) {
+      revealBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        setSidebarCollapsed(false);
+      });
+    }
 
     // Main P&L Chart Tabs (Cumulative vs Daily)
     const tabCum = document.getElementById('tabCumPnL');

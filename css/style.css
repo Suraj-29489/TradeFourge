@@ -118,6 +118,23 @@ html, body {
   gap: 10px;
   text-decoration: none;
   color: var(--text-main);
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  margin: -6px -8px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  width: 100%;
+  font-family: inherit;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+
+.brand-logo:hover {
+  background: var(--bg-sidebar-hover);
+}
+
+.brand-logo:active {
+  transform: scale(0.98);
 }
 
 .brand-icon {
@@ -129,6 +146,7 @@ html, body {
   align-items: center;
   justify-content: center;
   color: white;
+  flex-shrink: 0;
 }
 
 .brand-title {
@@ -136,29 +154,12 @@ html, body {
   font-weight: 700;
   letter-spacing: 0.5px;
   color: var(--text-main);
+  white-space: nowrap;
 }
 
 .brand-title span {
   color: var(--primary);
   -webkit-text-fill-color: var(--primary);
-}
-
-.sidebar-toggle-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-dim);
-  cursor: pointer;
-  padding: 6px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.15s, background 0.15s;
-}
-
-.sidebar-toggle-btn:hover {
-  color: var(--text-main);
-  background: var(--bg-sidebar-hover);
 }
 
 /* Sidebar Action Button */
@@ -653,16 +654,46 @@ html, body {
   top: 14px;
   left: 14px;
   z-index: 120;
-  width: 40px;
   height: 40px;
+  padding: 0 12px;
   display: none;
   align-items: center;
-  justify-content: center;
-  color: #fff;
-  background: var(--primary);
+  gap: 10px;
+  color: var(--text-main);
+  background: var(--bg-sidebar);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.sidebar-reveal-btn:hover {
+  border-color: var(--primary);
+  background: var(--bg-card-alt);
+}
+
+.sidebar-reveal-btn:active {
+  transform: scale(0.98);
+}
+
+.sidebar-reveal-btn .brand-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.sidebar-reveal-btn .brand-title {
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .top-header {
@@ -688,7 +719,7 @@ body.sidebar-collapsed .main-wrapper {
 
 body.sidebar-collapsed .top-header {
   left: 0;
-  padding-left: 70px;
+  padding-left: 210px;
 }
 
 body.sidebar-collapsed .sidebar-reveal-btn {
@@ -814,6 +845,17 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 
   .sidebar-reveal-btn {
     display: flex;
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .sidebar-reveal-btn .brand-title {
+    display: none;
+  }
+
+  body.sidebar-collapsed .top-header {
+    padding-left: 70px;
   }
 
   body:not(.sidebar-collapsed) .sidebar-reveal-btn {
