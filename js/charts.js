@@ -157,13 +157,7 @@ const ChartManager = {
     const values = isCumulative ? timeseries.map(t => t.cumulativePnL) : timeseries.map(t => t.dailyPnL);
 
     if (isCumulative) {
-      // Area Chart for Cumulative P&L
-      const canvasCtx = ctx.getContext('2d');
-      const gradient = canvasCtx.createLinearGradient(0, 0, 0, 240);
-      gradient.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
-      gradient.addColorStop(0.7, 'rgba(16, 185, 129, 0.05)');
-      gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
-
+      // A plain line keeps the chart readable and avoids visual noise.
       this.instances.pnlMain = new Chart(ctx, {
         type: 'line',
         data: {
@@ -173,8 +167,8 @@ const ChartManager = {
             data: values,
             borderColor: '#10b981',
             borderWidth: 2.5,
-            backgroundColor: gradient,
-            fill: true,
+            backgroundColor: 'transparent',
+            fill: false,
             tension: 0.25,
             pointRadius: values.length > 30 ? 0 : 3.5,
             pointHoverRadius: 6,
@@ -397,4 +391,3 @@ const ChartManager = {
     });
   }
 };
-

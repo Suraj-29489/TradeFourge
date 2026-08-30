@@ -75,34 +75,6 @@
           </svg>
           Trade Log
         </a>
-        <a class="nav-item" data-view="reports">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="2" y1="12" x2="22" y2="12"></line>
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-          </svg>
-          Reports
-        </a>
-        <a class="nav-item" data-view="insights">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-          </svg>
-          Zella Insights
-        </a>
-        <a class="nav-item" data-view="strategies">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-            <polyline points="17 6 23 6 23 12"></polyline>
-          </svg>
-          Strategies
-        </a>
-        <a class="nav-item" data-view="notebook">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-          </svg>
-          Notebook
-        </a>
       </nav>
 
       <!-- Storage Status Indicator -->
@@ -119,6 +91,12 @@
       </div>
     </aside>
 
+    <button class="sidebar-reveal-btn" id="sidebarRevealBtn" title="Show navigation" aria-label="Show navigation">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m13 2-2 2.5V8l3-3 1 1-4 4v3.5l6-6 1 1-7 7v4.5l9-9 1 1-10 10H3V2h10Z"/>
+      </svg>
+    </button>
+
     <!-- ==========================================================================
          Main Wrapper & Top Navigation Bar
          ========================================================================== -->
@@ -126,9 +104,6 @@
       <header class="top-header">
         <div class="header-left">
           <h1 class="page-title" id="pageTitle">Dashboard</h1>
-          <button class="btn-primary" id="btnImportTrades" style="padding: 6px 14px; font-size: 0.82rem;">
-            + Import trades
-          </button>
           <div class="header-import-info" id="headerImportInfo">
             Last import was made: <span class="time-highlight">Loading...</span>
           </div>
@@ -691,4 +666,3 @@
   <script src="js/app.js"></script>
 </body>
 </html>
-

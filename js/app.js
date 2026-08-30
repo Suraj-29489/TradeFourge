@@ -654,11 +654,17 @@ const App = {
 
     // Sidebar collapse toggle
     const toggleBtn = document.getElementById('sidebarToggleBtn');
+    const revealBtn = document.getElementById('sidebarRevealBtn');
+    const setSidebarCollapsed = (collapsed) => {
+      document.body.classList.toggle('sidebar-collapsed', collapsed);
+      if (toggleBtn) toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+    };
     if (toggleBtn) {
       toggleBtn.addEventListener('click', () => {
-        document.body.classList.toggle('sidebar-collapsed');
+        setSidebarCollapsed(true);
       });
     }
+    if (revealBtn) revealBtn.addEventListener('click', () => setSidebarCollapsed(false));
 
     // Main P&L Chart Tabs (Cumulative vs Daily)
     const tabCum = document.getElementById('tabCumPnL');
@@ -686,7 +692,6 @@ const App = {
 
     // CSV Upload Modals trigger
     const uploadBtnTop = document.getElementById('btnUploadCSVTop');
-    const importBtnHeader = document.getElementById('btnImportTrades');
     const uploadModal = document.getElementById('uploadModal');
     const fileInput = document.getElementById('csvFileInput');
     const dropzone = document.getElementById('csvDropzone');
@@ -696,7 +701,6 @@ const App = {
     };
 
     if (uploadBtnTop) uploadBtnTop.addEventListener('click', openUploadModal);
-    if (importBtnHeader) importBtnHeader.addEventListener('click', openUploadModal);
 
     // Close Modals
     document.querySelectorAll('.modal-close-btn, .modal-cancel-btn').forEach(btn => {
@@ -894,4 +898,3 @@ const App = {
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
 });
-

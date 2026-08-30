@@ -392,7 +392,7 @@
 
 /* Generic Buttons */
 .btn-primary {
-  background: var(--primary-gradient);
+  background: var(--primary);
   color: white;
   border: none;
   padding: 9px 18px;
@@ -719,3 +719,22 @@
   }
 }
 
+/* This file loads after the base shell, so retain the off-canvas controls here. */
+@media (max-width: 760px) {
+  :root {
+    --sidebar-width: 240px;
+  }
+
+  .sidebar {
+    width: min(280px, calc(100vw - 48px));
+    transform: translateX(-100%);
+  }
+
+  body:not(.sidebar-collapsed) .sidebar {
+    transform: translateX(0);
+  }
+
+  .main-wrapper {
+    margin-left: 0;
+  }
+}
