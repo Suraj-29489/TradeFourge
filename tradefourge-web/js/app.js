@@ -658,6 +658,12 @@ const App = {
     if (prevMonthBtn) prevMonthBtn.addEventListener('click', () => CalendarManager.prevMonth());
     if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => CalendarManager.nextMonth());
 
+    // Export JSON Button
+    const exportJsonBtn = document.getElementById('btnExportJSONTop');
+    if (exportJsonBtn) {
+      exportJsonBtn.addEventListener('click', () => this.exportJSON());
+    }
+
     // CSV Upload Modals trigger
     const uploadBtnTop = document.getElementById('btnUploadCSVTop');
     const uploadModal = document.getElementById('uploadModal');
@@ -818,6 +824,31 @@ const App = {
         }
       });
     }
+  },
+
+  /**
+   * Export trade log data as a downloadable JSON file
+   */
+  exportJSON() {
+    const tradesToExport = (this.trades && this.trades.length > 0) ? this.trades : StorageManager.getTrades();
+    if (!tradesToExport || tradesToExport.length === 0) {
+      this.showToast('No trades found in Trade Log to export.', 'error');
+      return;
+    }
+
+    const dataStr = JSON.stringify(tradesToExport, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    link.download = `tradeforge_trades_${dateStr}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+
+    this.showToast(`Exported ${tradesToExport.length} trades to JSON!`, 'success');
   },
 
   /**
