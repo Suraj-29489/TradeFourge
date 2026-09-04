@@ -141,6 +141,11 @@ const ChartManager = {
 
     if (this.instances.pnlMain) {
       this.instances.pnlMain.destroy();
+      this.instances.pnlMain = null;
+    }
+    const existing = Chart.getChart(ctx);
+    if (existing) {
+      existing.destroy();
     }
 
     const subtextEl = document.getElementById('pnlChartSubtext');
@@ -465,106 +470,6 @@ const ChartManager = {
           y: {
             grid: { color: 'rgba(38, 46, 69, 0.5)' },
             ticks: { color: '#64748b', callback: v => `$${v}` }
-          }
-        }
-      }
-    });
-  },
-
-  /**
-   * Render Floating Intraday Trade-by-Trade Progression Chart
-   */
-  dayIntradayChartInstance: null,
-
-  renderDayIntradayChart(tradeList, dayPnL) {
-    const ctx = document.getElementById('dayIntradayCanvas');
-    if (!ctx) return;
-
-    if (this.dayIntradayChartInstance) {
-      this.dayIntradayChartInstance.destroy();
-      this.dayIntradayChartInstance = null;
-    }
-
-    // Sort trades chronologically
-    const sortedTrades = [...(tradeList || [])].sort((a, b) => {
-      const tA = new Date(a.closeTime || a.openTime || 0).getTime();
-      const tB = new Date(b.closeTime || b.openTime || 0).getTime();
-      return tA - tB;
-    });
-
-    let running = 0;
-    const labels = ['00:00 (Open)'];
-    const values = [0];
-
-    sortedTrades.forEach((t, i) => {
-      running += (t.profit || 0);
-      running = Math.round(running * 100) / 100;
-      const timeStr = (t.closeTime || t.openTime || '').slice(11, 16) || `Trade #${i + 1}`;
-      labels.push(`${timeStr} • ${t.symbol}`);
-      values.push(running);
-    });
-
-    const isProfitable = dayPnL >= 0;
-    const strokeColor = isProfitable ? '#10b981' : '#f43f5e';
-    const bgColor = isProfitable ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)';
-
-    this.dayIntradayChartInstance = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Cumulative Day P&L',
-          data: values,
-          borderColor: strokeColor,
-          borderWidth: 2.2,
-          backgroundColor: bgColor,
-          fill: true,
-          tension: 0.25,
-          pointRadius: values.length > 20 ? 1 : 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: strokeColor,
-          pointBorderColor: '#ffffff',
-          pointBorderWidth: 1.5
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: 'index',
-          intersect: false
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#181d2c',
-            titleColor: '#94a3b8',
-            bodyColor: '#ffffff',
-            borderColor: '#262e45',
-            borderWidth: 1,
-            padding: 10,
-            displayColors: false,
-            callbacks: {
-              label: (context) => {
-                const val = context.raw;
-                const prefix = val >= 0 ? '+$' : '-$';
-                return `Day P&L Progression: ${prefix}${Math.abs(val).toFixed(2)}`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            grid: { color: 'rgba(38, 46, 69, 0.3)', drawBorder: false },
-            ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 7 }
-          },
-          y: {
-            grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
-            ticks: {
-              color: '#64748b',
-              font: { size: 10 },
-              callback: (val) => `$${val}`
-            }
           }
         }
       }

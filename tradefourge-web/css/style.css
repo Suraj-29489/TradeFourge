@@ -467,6 +467,227 @@ html, body {
 }
 
 /* ==========================================================================
+   Custom Date Range Picker Popover & Mini Calendar
+   ========================================================================== */
+.date-filter-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.custom-date-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 310px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.65), 0 4px 10px rgba(0, 0, 0, 0.4);
+  padding: 14px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: fadeInDown 0.15s ease-out;
+}
+
+.custom-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.custom-popover-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.custom-popover-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.custom-popover-close:hover {
+  color: var(--text-main);
+}
+
+.custom-range-info {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  background: var(--bg-card-alt);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  line-height: 1.35;
+}
+
+.custom-inputs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.custom-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.custom-input-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.custom-date-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.76rem;
+  font-family: inherit;
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  outline: none;
+  color-scheme: dark;
+  transition: border-color 0.15s;
+}
+
+.custom-date-input:focus {
+  border-color: var(--primary);
+}
+
+.custom-mini-cal {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 8px;
+}
+
+.mini-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.mini-cal-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.mini-cal-nav {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  transition: all 0.15s;
+}
+
+.mini-cal-nav:hover {
+  border-color: var(--primary);
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mini-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+
+.mini-cal-weekday {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 2px 0;
+  text-transform: uppercase;
+}
+
+.mini-cal-day {
+  font-size: 0.72rem;
+  padding: 4px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.1s, color 0.1s;
+  user-select: none;
+  position: relative;
+}
+
+.mini-cal-day:hover:not(.disabled) {
+  background: rgba(99, 102, 241, 0.3);
+  color: #fff;
+}
+
+.mini-cal-day.disabled {
+  color: var(--text-dim);
+  opacity: 0.22;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.mini-cal-day.other-month {
+  opacity: 0.25;
+}
+
+.mini-cal-day.endpoint {
+  background: var(--primary) !important;
+  color: #fff !important;
+  font-weight: 700;
+}
+
+.mini-cal-day.in-range {
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--text-main);
+  border-radius: 0;
+}
+
+.mini-cal-day.has-trades::after {
+  content: '';
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--profit);
+}
+
+.custom-popover-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.custom-popover-actions .btn-secondary,
+.custom-popover-actions .btn-primary {
+  padding: 5px 12px;
+  font-size: 0.78rem;
+}
+
+/* ==========================================================================
    Views Container
    ========================================================================== */
 .view-container {

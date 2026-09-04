@@ -297,12 +297,10 @@ const TradeAnalytics = {
       dailyTimeseries,
       weeklyTimeseries,
 
-      // Groupings
       // Groupings & Day Performance
       symbolBreakdown: Object.values(symbolMap).sort((a, b) => b.pnl - a.pnl),
       typeBreakdown,
       weekdayMap,
-      weekdayCount
       weekdayCount,
       weekdayWins,
       weekdayLosses,
@@ -360,7 +358,6 @@ const TradeAnalytics = {
       symbolBreakdown: [],
       typeBreakdown: { buy: { count: 0, pnl: 0 }, sell: { count: 0, pnl: 0 } },
       weekdayMap: {},
-      weekdayCount: {}
       weekdayCount: {},
       weekdayWins: {},
       weekdayLosses: {},

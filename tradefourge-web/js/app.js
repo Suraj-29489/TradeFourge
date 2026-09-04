@@ -7,7 +7,13 @@ const App = {
   filteredTrades: [],
   currentMetrics: null,
   activeView: 'dashboard',
-  dateFilter: 'all', // 'all', 'last30', 'august2026', 'july2026'
+  dateFilter: 'all', // 'all', 'last30', 'custom'
+  customStartDate: '',
+  customEndDate: '',
+  customRangeSelectionStep: 0,
+  miniCalYear: new Date().getFullYear(),
+  miniCalMonth: new Date().getMonth(),
+  _miniCalInitialized: false,
 
   // Trade Log Table state
   tradeLogState: {
@@ -43,11 +49,11 @@ const App = {
     this.currentMetrics = TradeAnalytics.calculateMetrics(this.filteredTrades);
 
     this.updateHeaderInfo();
+    this.updateCustomDateBounds();
     this.updateKPICards();
     ChartManager.updateDashboardCharts(this.currentMetrics);
     CalendarManager.init(this.currentMetrics);
     this.renderRecentTradesTable();
-    this.renderDailyJournalBreakdown();
     this.renderTradeLogTable();
     this.renderReportsView();
     this.renderInsightsView();
@@ -62,16 +68,250 @@ const App = {
     if (this.dateFilter === 'all') {
       this.filteredTrades = [...this.trades];
     } else if (this.dateFilter === 'last30') {
-      const now = new Date();
-      const cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      this.filteredTrades = this.trades.filter(t => new Date(t.closeTime || t.openTime) >= cutoff);
-    } else if (this.dateFilter === 'august2026') {
-      this.filteredTrades = this.trades.filter(t => (t.closeTime || t.openTime || '').startsWith('2026-08'));
-    } else if (this.dateFilter === 'july2026') {
-      this.filteredTrades = this.trades.filter(t => (t.closeTime || t.openTime || '').startsWith('2026-07'));
+      const { maxDate } = this.getAvailableDateRange();
+      const baseDate = maxDate ? new Date(maxDate + 'T23:59:59Z') : new Date();
+      const cutoff = new Date(baseDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      this.filteredTrades = this.trades.filter(t => {
+        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+        return dStr && dStr >= cutoffStr;
+      });
+    } else if (this.dateFilter === 'custom') {
+      const start = this.customStartDate;
+      const end = this.customEndDate;
+      this.filteredTrades = this.trades.filter(t => {
+        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+        if (!dStr) return false;
+        if (start && dStr < start) return false;
+        if (end && dStr > end) return false;
+        return true;
+      });
     } else {
       this.filteredTrades = [...this.trades];
     }
+  },
+
+  /**
+   * Determine available date boundaries according to present CSV trade data
+   */
+  getAvailableDateRange() {
+    if (!this.trades || this.trades.length === 0) {
+      return { minDate: '', maxDate: '' };
+    }
+    let minDate = null;
+    let maxDate = null;
+    this.trades.forEach(t => {
+      const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+      if (dStr && dStr.length === 10) {
+        if (!minDate || dStr < minDate) minDate = dStr;
+        if (!maxDate || dStr > maxDate) maxDate = dStr;
+      }
+    });
+    return { minDate: minDate || '', maxDate: maxDate || '' };
+  },
+
+  /**
+   * Update date bounds and mini-calendar according to CSV data
+   */
+  updateCustomDateBounds() {
+    const { minDate, maxDate } = this.getAvailableDateRange();
+    const startInput = document.getElementById('customStartDate');
+    const endInput = document.getElementById('customEndDate');
+    const infoEl = document.getElementById('customRangeInfo');
+
+    if (minDate && maxDate) {
+      if (startInput) {
+        startInput.min = minDate;
+        startInput.max = maxDate;
+        if (!this.customStartDate) {
+          startInput.value = minDate;
+          this.customStartDate = minDate;
+        }
+      }
+      if (endInput) {
+        endInput.min = minDate;
+        endInput.max = maxDate;
+        if (!this.customEndDate) {
+          endInput.value = maxDate;
+          this.customEndDate = maxDate;
+        }
+      }
+      if (infoEl) {
+        if (this.customRangeSelectionStep === 1 && this.customStartDate) {
+          infoEl.innerHTML = `<span style="color: var(--primary); font-weight: 700;">Start: ${this.formatDateShort(this.customStartDate)}</span> — Now click End Date`;
+        } else {
+          infoEl.innerHTML = `Available: ${this.formatDateShort(minDate)} → ${this.formatDateShort(maxDate)} <br><span style="color: var(--text-muted); font-size: 0.72rem;">Click start date, then end date to apply</span>`;
+        }
+      }
+
+      if (!this._miniCalInitialized) {
+        const parts = maxDate.split('-').map(Number);
+        if (parts.length >= 2) {
+          this.miniCalYear = parts[0];
+          this.miniCalMonth = parts[1] - 1;
+          this._miniCalInitialized = true;
+        }
+      }
+    } else {
+      if (infoEl) infoEl.innerText = 'No trade data loaded in CSV yet';
+    }
+    this.renderMiniCalendar();
+  },
+
+  /**
+   * Render Mini Calendar inside custom date popover
+   */
+  renderMiniCalendar() {
+    const grid = document.getElementById('miniCalGrid');
+    const title = document.getElementById('miniCalTitle');
+    if (!grid || !title) return;
+
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    title.innerText = `${monthNames[this.miniCalMonth]} ${this.miniCalYear}`;
+    grid.innerHTML = '';
+
+    const dayHeaders = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    dayHeaders.forEach(d => {
+      const th = document.createElement('div');
+      th.className = 'mini-cal-weekday';
+      th.innerText = d;
+      grid.appendChild(th);
+    });
+
+    const { minDate, maxDate } = this.getAvailableDateRange();
+    const firstDay = new Date(this.miniCalYear, this.miniCalMonth, 1).getDay();
+    const daysInMonth = new Date(this.miniCalYear, this.miniCalMonth + 1, 0).getDate();
+    const prevMonthDays = new Date(this.miniCalYear, this.miniCalMonth, 0).getDate();
+
+    const startVal = this.customStartDate;
+    const endVal = this.customEndDate;
+
+    // Previous month padding
+    for (let i = firstDay - 1; i >= 0; i--) {
+      const pad = document.createElement('div');
+      pad.className = 'mini-cal-day disabled other-month';
+      pad.innerText = prevMonthDays - i;
+      grid.appendChild(pad);
+    }
+
+    // Days in current month
+    const mStr = String(this.miniCalMonth + 1).padStart(2, '0');
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dStr = String(day).padStart(2, '0');
+      const dateKey = `${this.miniCalYear}-${mStr}-${dStr}`;
+      const cell = document.createElement('div');
+      cell.className = 'mini-cal-day';
+      cell.innerText = day;
+
+      const isAvailable = (!minDate || dateKey >= minDate) && (!maxDate || dateKey <= maxDate);
+
+      if (!isAvailable) {
+        cell.classList.add('disabled');
+      } else {
+        if (dateKey === startVal || dateKey === endVal) {
+          cell.classList.add('endpoint');
+        } else if (startVal && endVal && dateKey > startVal && dateKey < endVal) {
+          cell.classList.add('in-range');
+        }
+
+        // Show trade presence dot if day has trades
+        if (this.currentMetrics && this.currentMetrics.dailyMap && this.currentMetrics.dailyMap[dateKey]) {
+          cell.classList.add('has-trades');
+        }
+
+        cell.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.handleMiniCalDayClick(dateKey);
+        });
+      }
+
+      grid.appendChild(cell);
+    }
+
+    // Next month padding to complete grid row
+    const totalCells = firstDay + daysInMonth;
+    const remaining = (totalCells % 7 === 0) ? 0 : 7 - (totalCells % 7);
+    for (let j = 1; j <= remaining; j++) {
+      const pad = document.createElement('div');
+      pad.className = 'mini-cal-day disabled other-month';
+      pad.innerText = j;
+      grid.appendChild(pad);
+    }
+  },
+
+  /**
+   * Handle day clicking in the mini calendar (2-click range flow)
+   */
+  handleMiniCalDayClick(dateKey) {
+    const startInput = document.getElementById('customStartDate');
+    const endInput = document.getElementById('customEndDate');
+    const infoEl = document.getElementById('customRangeInfo');
+
+    if (this.customRangeSelectionStep === 0 || !this.customStartDate) {
+      // Step 1: Start date selected
+      this.customStartDate = dateKey;
+      this.customEndDate = '';
+      this.customRangeSelectionStep = 1;
+
+      if (startInput) startInput.value = dateKey;
+      if (endInput) endInput.value = '';
+
+      if (infoEl) {
+        infoEl.innerHTML = `<span style="color: var(--primary); font-weight: 700;">Start: ${this.formatDateShort(dateKey)}</span> — Now click End Date`;
+      }
+      this.renderMiniCalendar();
+      // Keep open for second click
+    } else {
+      // Step 2: End date selected -> Accept range and close!
+      let start = this.customStartDate;
+      let end = dateKey;
+
+      if (end < start) {
+        const temp = start;
+        start = end;
+        end = temp;
+      }
+
+      this.customStartDate = start;
+      this.customEndDate = end;
+      this.customRangeSelectionStep = 0;
+
+      if (startInput) startInput.value = start;
+      if (endInput) endInput.value = end;
+
+      // Apply range, update UI and close popover!
+      this.applyCustomDateRange(start, end);
+    }
+  },
+
+  /**
+   * Apply custom date range filter to trades and close popover
+   */
+  applyCustomDateRange(start, end) {
+    this.customStartDate = start;
+    this.customEndDate = end;
+    this.dateFilter = 'custom';
+    this.customRangeSelectionStep = 0;
+
+    const dateSelect = document.getElementById('headerDateRangeSelect');
+    if (dateSelect) {
+      dateSelect.value = 'custom';
+      const customOpt = dateSelect.querySelector('option[value="custom"]');
+      if (customOpt) {
+        customOpt.innerText = `Custom (${this.formatDateShort(start)} - ${this.formatDateShort(end)})`;
+      }
+    }
+
+    const customPopover = document.getElementById('customDatePopover');
+    if (customPopover) {
+      customPopover.style.display = 'none';
+    }
+
+    this.processTrades();
+    this.showToast(`Filtered: ${this.formatDateShort(start)} → ${this.formatDateShort(end)}`, 'success');
   },
 
   /**
@@ -86,6 +326,11 @@ const App = {
 
   formatDateShort(dateStr) {
     if (!dateStr) return '';
+    const parts = dateStr.slice(0, 10).split('-').map(Number);
+    if (parts.length === 3) {
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${monthNames[parts[1] - 1]} ${parts[2]}, ${parts[0]}`;
+    }
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   },
@@ -512,237 +757,49 @@ const App = {
   },
 
   /**
-   * Render Daily Journal Breakdown: Good Profit Days vs Loss Days
-   */
-  renderDailyJournalBreakdown() {
-    const profitListEl = document.getElementById('journalProfitList');
-    const lossListEl = document.getElementById('journalLossList');
-    const profitBadgeEl = document.getElementById('journalProfitBadge');
-    const lossBadgeEl = document.getElementById('journalLossBadge');
-    const sortSelect = document.getElementById('journalSortSelect');
-
-    if (!profitListEl || !lossListEl) return;
-
-    const dailyMap = (this.currentMetrics && this.currentMetrics.dailyMap) ? this.currentMetrics.dailyMap : {};
-    const allDays = Object.values(dailyMap);
-
-    const profitDays = allDays.filter(d => d.pnl > 0);
-    const lossDays = allDays.filter(d => d.pnl < 0);
-
-    const sortMode = sortSelect ? sortSelect.value : 'date_desc';
-
-    const sortFn = (a, b) => {
-      if (sortMode === 'pnl_desc') return b.pnl - a.pnl;
-      if (sortMode === 'pnl_asc') return a.pnl - b.pnl;
-      if (sortMode === 'date_asc') return a.date.localeCompare(b.date);
-      return b.date.localeCompare(a.date);
-    };
-
-    profitDays.sort(sortFn);
-    lossDays.sort(sortFn);
-
-    const totalProfitAmount = profitDays.reduce((acc, d) => acc + d.pnl, 0);
-    const totalLossAmount = lossDays.reduce((acc, d) => acc + d.pnl, 0);
-
-    if (profitBadgeEl) {
-      profitBadgeEl.innerText = `${profitDays.length} Days (${TradeAnalytics.formatCurrency(totalProfitAmount)})`;
-    }
-
-    if (lossBadgeEl) {
-      lossBadgeEl.innerText = `${lossDays.length} Days (${TradeAnalytics.formatCurrency(totalLossAmount)})`;
-    }
-
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-    const formatDayCardDate = (dateStr) => {
-      const parts = dateStr.split('-').map(Number);
-      const d = new Date(parts[0], parts[1] - 1, parts[2]);
-      return {
-        dateFormatted: `${parts[2]} ${monthNames[parts[1] - 1]} ${parts[0]}`,
-        weekday: dayNames[d.getDay()]
-      };
-    };
-
-    const renderCard = (day, isProfit) => {
-      const { dateFormatted, weekday } = formatDayCardDate(day.date);
-      const winRate = day.trades > 0 ? Math.round((day.wins / day.trades) * 100) : 0;
-      const pnlFormatted = TradeAnalytics.formatCurrency(day.pnl);
-
-      let bestOrWorstSymbol = '-';
-      let bestOrWorstPnl = 0;
-      if (day.tradeList && day.tradeList.length > 0) {
-        if (isProfit) {
-          const sorted = [...day.tradeList].sort((x, y) => (y.profit || 0) - (x.profit || 0));
-          bestOrWorstSymbol = sorted[0].symbol;
-          bestOrWorstPnl = sorted[0].profit || 0;
-        } else {
-          const sorted = [...day.tradeList].sort((x, y) => (x.profit || 0) - (y.profit || 0));
-          bestOrWorstSymbol = sorted[0].symbol;
-          bestOrWorstPnl = sorted[0].profit || 0;
-        }
-      }
-
-      return `
-        <div class="journal-day-item ${isProfit ? 'profit' : 'loss'}" onclick="App.openDayTradesModal('${day.date}', App.currentMetrics.dailyMap['${day.date}'])">
-          <div class="journal-day-top">
-            <div>
-              <span class="journal-day-date">${dateFormatted}</span>
-              <span style="font-size: 0.76rem; color: var(--text-dim); margin-left: 6px;">• ${weekday}</span>
-            </div>
-            <span class="journal-day-pnl ${isProfit ? 'profit' : 'loss'}">${pnlFormatted}</span>
-          </div>
-          <div class="journal-day-stats">
-            <span class="journal-tag"><strong>${day.trades}</strong> Trades</span>
-            <span class="journal-tag" style="color: ${winRate >= 50 ? 'var(--profit)' : 'var(--loss)'}">
-              ${day.wins}W / ${day.losses}L (${winRate}%)
-            </span>
-            <span class="journal-tag">
-              ${isProfit ? 'Top' : 'Worst'}: ${bestOrWorstSymbol} (${TradeAnalytics.formatCurrency(bestOrWorstPnl)})
-            </span>
-          </div>
-          <div class="journal-day-cta">
-            <span>Inspect Day Chart & Trades</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <line x1="7" y1="17" x2="17" y2="7"></line>
-              <polyline points="7 7 17 7 17 17"></polyline>
-            </svg>
-          </div>
-        </div>
-      `;
-    };
-
-    if (profitDays.length === 0) {
-      profitListEl.innerHTML = `<div class="journal-empty-msg">No profitable trading days recorded yet.</div>`;
-    } else {
-      profitListEl.innerHTML = profitDays.map(d => renderCard(d, true)).join('');
-    }
-
-    if (lossDays.length === 0) {
-      lossListEl.innerHTML = `<div class="journal-empty-msg">No losing trading days recorded. Excellent consistency!</div>`;
-    } else {
-      lossListEl.innerHTML = lossDays.map(d => renderCard(d, false)).join('');
-    }
-  },
-
-  /**
-   * Open Day Performance & Trades Inspection Modal with Floating Intraday Chart
+   * Open Day Trades Modal when clicking a calendar cell
    */
   openDayTradesModal(dateKey, dayData) {
-    if (!dayData) {
-      dayData = (this.currentMetrics && this.currentMetrics.dailyMap) ? this.currentMetrics.dailyMap[dateKey] : null;
-    }
-    if (!dayData) return;
-
     const modal = document.getElementById('dayTradesModal');
     const title = document.getElementById('dayTradesModalTitle');
-    const subtitle = document.getElementById('dayTradesModalSubtitle');
-    const badge = document.getElementById('dayModalNetPnLBadge');
-    const statsBar = document.getElementById('dayStatsBar');
-    const tableContainer = document.getElementById('dayTradesTableContainer');
+    const body = document.getElementById('dayTradesModalBody');
+    if (!modal || !body) return;
 
-    if (!modal) return;
+    title.innerText = `Trades on ${dateKey} (${TradeAnalytics.formatCurrency(dayData.pnl)})`;
 
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const parts = dateKey.split('-').map(Number);
-    const dateFormatted = parts.length === 3 ? `${parts[2]} ${monthNames[parts[1] - 1]} ${parts[0]}` : dateKey;
+    let html = `
+      <table class="trade-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Symbol</th>
+            <th>Type</th>
+            <th>Lots</th>
+            <th>P/L ($)</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
 
-    if (title) title.innerText = `Day Performance: ${dateFormatted}`;
-    if (subtitle) {
-      const winRate = dayData.trades > 0 ? Math.round((dayData.wins / dayData.trades) * 100) : 0;
-      subtitle.innerText = `${dayData.trades} Total Trades • ${dayData.wins} Wins / ${dayData.losses} Losses (${winRate}% Win Rate)`;
-    }
+    dayData.tradeList.forEach(t => {
+      const timeOnly = (t.closeTime || t.openTime || '').slice(11, 16);
+      const pnlFormatted = TradeAnalytics.formatCurrency(t.profit);
+      const pnlClass = t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text');
 
-    const isProfit = dayData.pnl >= 0;
-    if (badge) {
-      badge.className = `day-modal-badge ${isProfit ? 'profit' : 'loss'}`;
-      badge.innerText = TradeAnalytics.formatCurrency(dayData.pnl);
-    }
-
-    // Stats chips
-    let grossWin = 0;
-    let grossLoss = 0;
-    let totalLots = 0;
-    (dayData.tradeList || []).forEach(t => {
-      const p = t.profit || 0;
-      if (p > 0) grossWin += p;
-      if (p < 0) grossLoss += Math.abs(p);
-      totalLots += (t.lots || 0);
+      html += `
+        <tr onclick="App.openTradeDetailModal(${JSON.stringify(t).replace(/"/g, '&quot;')})">
+          <td style="color: var(--text-dim);">${timeOnly}</td>
+          <td><span class="symbol-badge">${t.symbol}</span></td>
+          <td><span class="type-badge ${t.type}">${t.type.toUpperCase()}</span></td>
+          <td>${t.lots}</td>
+          <td class="${pnlClass}">${pnlFormatted}</td>
+        </tr>
+      `;
     });
 
-    if (statsBar) {
-      statsBar.innerHTML = `
-        <div class="day-stat-chip">
-          <span class="day-stat-chip-label">Net P&L</span>
-          <span class="day-stat-chip-val ${isProfit ? 'profit' : 'loss'}">${TradeAnalytics.formatCurrency(dayData.pnl)}</span>
-        </div>
-        <div class="day-stat-chip">
-          <span class="day-stat-chip-label">Win Rate</span>
-          <span class="day-stat-chip-val ${dayData.wins >= dayData.losses ? 'profit' : 'loss'}">
-            ${dayData.trades > 0 ? Math.round((dayData.wins / dayData.trades) * 100) : 0}%
-          </span>
-        </div>
-        <div class="day-stat-chip">
-          <span class="day-stat-chip-label">Gross Profit</span>
-          <span class="day-stat-chip-val profit">+${TradeAnalytics.formatCurrency(grossWin, false)}</span>
-        </div>
-        <div class="day-stat-chip">
-          <span class="day-stat-chip-label">Gross Loss</span>
-          <span class="day-stat-chip-val loss">-${TradeAnalytics.formatCurrency(grossLoss, false)}</span>
-        </div>
-        <div class="day-stat-chip">
-          <span class="day-stat-chip-label">Total Volume</span>
-          <span class="day-stat-chip-val">${totalLots.toFixed(2)} Lots</span>
-        </div>
-      `;
-    }
-
-    // Trades table
-    if (tableContainer) {
-      let html = `
-        <table class="trade-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Symbol</th>
-              <th>Side</th>
-              <th>Lots</th>
-              <th>Entry</th>
-              <th>Exit</th>
-              <th>P/L ($)</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      (dayData.tradeList || []).forEach(t => {
-        const timeOnly = (t.closeTime || t.openTime || '').slice(11, 16);
-        const pnlFormatted = TradeAnalytics.formatCurrency(t.profit);
-        const pnlClass = t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text');
-
-        html += `
-          <tr onclick="App.openTradeDetailModal(${JSON.stringify(t).replace(/"/g, '&quot;')})" style="cursor: pointer;">
-            <td style="color: var(--text-dim);">${timeOnly || '-'}</td>
-            <td><span class="symbol-badge">${t.symbol}</span></td>
-            <td><span class="type-badge ${t.type}">${t.type.toUpperCase()}</span></td>
-            <td>${t.lots}</td>
-            <td style="color: var(--text-muted);">${t.openPrice ? t.openPrice.toFixed(2) : '-'}</td>
-            <td style="color: var(--text-muted);">${t.closePrice ? t.closePrice.toFixed(2) : '-'}</td>
-            <td class="${pnlClass}" style="font-weight: 700;">${pnlFormatted}</td>
-          </tr>
-        `;
-      });
-
-      html += `</tbody></table>`;
-      tableContainer.innerHTML = html;
-    }
-
+    html += `</tbody></table>`;
+    body.innerHTML = html;
     modal.classList.add('active');
-
-    // Render Intraday Floating Chart
-    setTimeout(() => {
-      ChartManager.renderDayIntradayChart(dayData.tradeList, dayData.pnl);
-    }, 60);
   },
 
   /**
@@ -1006,22 +1063,160 @@ const App = {
       });
     }
 
-    // Date Range Presets Dropdown
+    // Date Range Presets Dropdown & Custom Range Handler
     const dateSelect = document.getElementById('headerDateRangeSelect');
-    if (dateSelect) {
-      dateSelect.addEventListener('change', (e) => {
-        this.dateFilter = e.target.value;
-        this.processTrades();
+    const customPopover = document.getElementById('customDatePopover');
+    const closePopoverBtn = document.getElementById('closeCustomDatePopover');
+    const cancelCustomBtn = document.getElementById('btnCancelCustomDate');
+    const applyCustomBtn = document.getElementById('btnApplyCustomDate');
+    const startInput = document.getElementById('customStartDate');
+    const endInput = document.getElementById('customEndDate');
+    const miniPrev = document.getElementById('miniCalPrevBtn');
+    const miniNext = document.getElementById('miniCalNextBtn');
+
+    // Prevent any clicks inside popover from bubbling up to document outside-click handler
+    if (customPopover) {
+      customPopover.addEventListener('click', (e) => {
+        e.stopPropagation();
       });
     }
 
-    // Daily Journal Sort Dropdown
-    const journalSortSelect = document.getElementById('journalSortSelect');
-    if (journalSortSelect) {
-      journalSortSelect.addEventListener('change', () => {
-        this.renderDailyJournalBreakdown();
+    const openCustomPopover = () => {
+      if (customPopover) {
+        customPopover.style.display = 'flex';
+        this.customRangeSelectionStep = 0;
+        this.updateCustomDateBounds();
+      }
+    };
+
+    const closeCustomPopover = () => {
+      if (customPopover) {
+        customPopover.style.display = 'none';
+      }
+      this.customRangeSelectionStep = 0;
+    };
+
+    const cancelCustomSelection = () => {
+      closeCustomPopover();
+      if (this.dateFilter !== 'custom' && dateSelect) {
+        dateSelect.value = this.dateFilter;
+      }
+    };
+
+    if (dateSelect) {
+      dateSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val === 'custom') {
+          openCustomPopover();
+        } else {
+          closeCustomPopover();
+          this.dateFilter = val;
+          const customOpt = dateSelect.querySelector('option[value="custom"]');
+          if (customOpt) customOpt.innerText = 'Custom';
+          this.processTrades();
+        }
+      });
+
+      dateSelect.addEventListener('click', () => {
+        if (dateSelect.value === 'custom') {
+          if (!customPopover || customPopover.style.display === 'none') {
+            openCustomPopover();
+          }
+        }
       });
     }
+
+    if (closePopoverBtn) {
+      closePopoverBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        cancelCustomSelection();
+      });
+    }
+
+    if (cancelCustomBtn) {
+      cancelCustomBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        cancelCustomSelection();
+      });
+    }
+
+    if (startInput) {
+      startInput.addEventListener('change', (e) => {
+        this.customStartDate = e.target.value;
+        const parts = this.customStartDate.split('-').map(Number);
+        if (parts.length >= 2) {
+          this.miniCalYear = parts[0];
+          this.miniCalMonth = parts[1] - 1;
+        }
+        this.renderMiniCalendar();
+      });
+    }
+
+    if (endInput) {
+      endInput.addEventListener('change', (e) => {
+        this.customEndDate = e.target.value;
+        const parts = this.customEndDate.split('-').map(Number);
+        if (parts.length >= 2) {
+          this.miniCalYear = parts[0];
+          this.miniCalMonth = parts[1] - 1;
+        }
+        this.renderMiniCalendar();
+      });
+    }
+
+    if (miniPrev) {
+      miniPrev.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.miniCalMonth--;
+        if (this.miniCalMonth < 0) {
+          this.miniCalMonth = 11;
+          this.miniCalYear--;
+        }
+        this.renderMiniCalendar();
+      });
+    }
+
+    if (miniNext) {
+      miniNext.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.miniCalMonth++;
+        if (this.miniCalMonth > 11) {
+          this.miniCalMonth = 0;
+          this.miniCalYear++;
+        }
+        this.renderMiniCalendar();
+      });
+    }
+
+    if (applyCustomBtn) {
+      applyCustomBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const s = document.getElementById('customStartDate')?.value;
+        const eVal = document.getElementById('customEndDate')?.value;
+        const { minDate, maxDate } = this.getAvailableDateRange();
+
+        let start = s || minDate;
+        let end = eVal || maxDate || start;
+
+        if (start && end && start > end) {
+          const temp = start;
+          start = end;
+          end = temp;
+        }
+
+        this.applyCustomDateRange(start, end);
+      });
+    }
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+      if (customPopover && customPopover.style.display !== 'none') {
+        const wrapper = document.querySelector('.date-filter-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+          cancelCustomSelection();
+        }
+      }
+    });
 
     // Trade Log Table Search & Filters
     const logSearch = document.getElementById('tradeLogSearch');
