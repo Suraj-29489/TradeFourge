@@ -52,13 +52,13 @@
           </svg>
           Dashboard
         </a>
-        <a class="nav-item" data-view="journal">
+        <a class="nav-item" data-view="analytics">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="20" x2="18" y2="10"></line>
             <line x1="12" y1="20" x2="12" y2="4"></line>
             <line x1="6" y1="20" x2="6" y2="14"></line>
           </svg>
-          Daily Journal
+          Analytics
         </a>
         <a class="nav-item" data-view="tradelog">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -377,6 +377,7 @@
 
         <!-- ==========================================================================
              VIEW: DAILY JOURNAL
+             VIEW: ANALYTICS (Trade Duration & Trade Size / Lot Analysis)
              ========================================================================== -->
         <section class="view-section" id="view-journal">
           <div style="display: flex; flex-direction: column; gap: 20px;">
@@ -386,14 +387,215 @@
                 <div class="calendar-nav-controls">
                   <button class="calendar-nav-btn" onclick="CalendarManager.prevMonth()">❮</button>
                   <button class="calendar-nav-btn" onclick="CalendarManager.nextMonth()">❯</button>
+        <section class="view-section" id="view-analytics">
+          <div class="analytics-wrapper">
+
+            <!-- Performance Overview Header Banner -->
+            <div class="analytics-section-card" style="padding: 18px 24px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+                <div>
+                  <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 2px;">Trade Analytics</h2>
+                  <p style="font-size: 0.82rem; color: var(--text-muted);">In-depth trade duration holding behavior, position sizing, and volume performance.</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                  <span class="analytics-section-tag" id="analyticsFilteredRangeBadge">All Data Loaded</span>
+                  <span id="analyticsTradesCountBadge" style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim); background: var(--bg-card-alt); border: 1px solid var(--border-light); padding: 4px 10px; border-radius: 6px;">0 Trades</span>
                 </div>
               </div>
               <div class="calendar-scroll-wrapper">
                 <div class="calendar-grid" id="calendarGridJournal">
                   <!-- Mirrored or standalone large journal calendar -->
-                </div>
+            </div>
+
+            <!-- Empty State (When no data loaded) -->
+            <div class="analytics-section-card" id="analyticsEmptyState" style="display: none;">
+              <div class="analytics-empty-message">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 44px; height: 44px; color: var(--text-dim);">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                <div style="font-weight: 700; font-size: 1rem; color: var(--text-main);">No Trade Data Available</div>
+                <div>Import a CSV or load sample trades to view duration and lot size analytics.</div>
               </div>
             </div>
+
+            <!-- Main Content Container (Visible when data loaded) -->
+            <div id="analyticsMainContent" style="display: flex; flex-direction: column; gap: 24px;">
+
+              <!-- ==========================================================
+                   1. TRADE DURATION ANALYSIS
+                   ========================================================== -->
+              <div class="analytics-section-card">
+                <div class="analytics-section-header">
+                  <div class="analytics-section-title-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: #818cf8;">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <h3 class="analytics-section-title">Trade Duration</h3>
+                  </div>
+                  <span class="analytics-section-tag">Holding Time Analysis</span>
+                </div>
+
+                <!-- Duration Summary 4-KPI Grid -->
+                <div class="analytics-kpi-grid-4">
+                  <div class="analytics-mini-kpi">
+                    <span class="analytics-mini-kpi-label">Average Duration</span>
+                    <span class="analytics-mini-kpi-val" id="durationAvgVal">--</span>
+                    <span class="analytics-mini-kpi-sub">Mean hold time across all trades</span>
+                  </div>
+                  <div class="analytics-mini-kpi">
+                    <span class="analytics-mini-kpi-label">Median Duration</span>
+                    <span class="analytics-mini-kpi-val" id="durationMedianVal">--</span>
+                    <span class="analytics-mini-kpi-sub">Typical middle hold time</span>
+                  </div>
+                  <div class="analytics-mini-kpi">
+                    <span class="analytics-mini-kpi-label">Shortest Trade</span>
+                    <span class="analytics-mini-kpi-val" id="durationShortestVal">--</span>
+                    <span class="analytics-mini-kpi-sub">Quickest scalp / exit</span>
+                  </div>
+                  <div class="analytics-mini-kpi">
+                    <span class="analytics-mini-kpi-label">Longest Trade</span>
+                    <span class="analytics-mini-kpi-val" id="durationLongestVal">--</span>
+                    <span class="analytics-mini-kpi-sub">Longest holding duration</span>
+                  </div>
+                </div>
+
+                <!-- Duration Distribution Chart & Winning vs Losing Comparison -->
+                <div class="analytics-duration-split">
+                  <!-- Duration Distribution Chart -->
+                  <div class="analytics-chart-box">
+                    <div class="analytics-chart-box-header">
+                      <span class="analytics-chart-title">Duration Distribution</span>
+                      <span style="font-size: 0.74rem; color: var(--text-dim);">Trades categorized by hold time</span>
+                    </div>
+                    <div style="position: relative; height: 250px; width: 100%;">
+                      <canvas id="durationDistCanvas"></canvas>
+                    </div>
+                  </div>
+
+                  <!-- Winning vs Losing Duration Comparison -->
+                  <div class="analytics-hold-card">
+                    <div class="analytics-chart-box-header">
+                      <span class="analytics-chart-title">Winning vs Losing Duration</span>
+                    </div>
+
+                    <div class="hold-item-row">
+                      <div class="hold-subbox win">
+                        <div class="hold-subbox-left">
+                          <span class="hold-subbox-label">Winning Trades</span>
+                          <span class="hold-subbox-count" id="durationWinCount">0 trades</span>
+                        </div>
+                        <span class="hold-subbox-val win" id="durationWinAvgVal">--</span>
+                      </div>
+
+                      <div class="hold-subbox loss">
+                        <div class="hold-subbox-left">
+                          <span class="hold-subbox-label">Losing Trades</span>
+                          <span class="hold-subbox-count" id="durationLossCount">0 trades</span>
+                        </div>
+                        <span class="hold-subbox-val loss" id="durationLossAvgVal">--</span>
+                      </div>
+                    </div>
+
+                    <!-- Holding Ratio Banner -->
+                    <div class="hold-ratio-banner" id="durationRatioBanner">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                      </svg>
+                      <span id="durationRatioText">Equal hold times</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ==========================================================
+                   2. TRADE SIZE / LOT ANALYSIS
+                   ========================================================== -->
+              <div class="analytics-section-card">
+                <div class="analytics-section-header">
+                  <div class="analytics-section-title-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: #818cf8;">
+                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                    </svg>
+                    <h3 class="analytics-section-title">Trade Size & Position Sizing</h3>
+                  </div>
+                  <span class="analytics-section-tag">Volume Analysis</span>
+                </div>
+
+                <!-- Lot Summary 5-KPI Grid -->
+                <div class="analytics-kpi-grid-5">
+                  <div class="analytics-mini-kpi">
+                    <span class="analytics-mini-kpi-label">Average Lot</span>
+                    <span class="analytics-mini-kpi-val" id="lotAvgVal">--</span>
+                    <span class="analytics-mini-kpi-sub">Mean position size</span>
+                  </div>
+                  <div class="analytics-mini-kpi">
+                    <span class="analytics-mini-kpi-label">Median Lot</span>
+                    <span class="analytics-mini-kpi-val" id="lotMedianVal">--</span>
+                    <span class="analytics-mini-kpi-sub">Median position size</span>
+                  </div>
+                  <div class="analytics-mini-kpi">
+                    <span class="analytics-mini-kpi-label">Smallest</span>
+                    <span class="analytics-mini-kpi-val" id="lotSmallestVal">--</span>
+                    <span class="analytics-mini-kpi-sub">Minimum trade size</span>
+                  </div>
+                  <div class="analytics-mini-kpi">
+                    <span class="analytics-mini-kpi-label">Largest</span>
+                    <span class="analytics-mini-kpi-val" id="lotLargestVal">--</span>
+                    <span class="analytics-mini-kpi-sub">Maximum trade size</span>
+                  </div>
+                  <div class="analytics-mini-kpi">
+                    <span class="analytics-mini-kpi-label">Total Volume</span>
+                    <span class="analytics-mini-kpi-val" id="lotTotalVolumeVal">--</span>
+                    <span class="analytics-mini-kpi-sub">Sum of all lots traded</span>
+                  </div>
+                </div>
+
+                <!-- Lot Size Chart (with P&L vs Trades toggle tabs) -->
+                <div class="analytics-chart-box">
+                  <div class="analytics-chart-box-header">
+                    <span class="analytics-chart-title">Position Size Performance</span>
+                    <div class="chart-tabs" style="display: flex; gap: 6px;">
+                      <button class="chart-tab-btn active" id="tabLotPnL">P&L by Lot Size</button>
+                      <button class="chart-tab-btn" id="tabLotTrades">Trades by Lot Size</button>
+                    </div>
+                  </div>
+                  <div style="position: relative; height: 260px; width: 100%;">
+                    <canvas id="lotSizeBarCanvas"></canvas>
+                  </div>
+                </div>
+
+                <!-- Performance by Position Size Table -->
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                  <span class="analytics-chart-title">Performance by Position Size</span>
+                  <div class="analytics-table-card">
+                    <div class="table-responsive">
+                      <table class="trade-table">
+                        <thead>
+                          <tr>
+                            <th>Position / Lot Size</th>
+                            <th>Trades</th>
+                            <th>Win Rate</th>
+                            <th>Net P&L ($)</th>
+                            <th>Avg Trade P&L ($)</th>
+                          </tr>
+                        </thead>
+                        <tbody id="lotPerformanceTableBody">
+                          <!-- Filled dynamically -->
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
           </div>
         </section>
 

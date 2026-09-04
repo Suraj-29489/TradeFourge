@@ -306,6 +306,271 @@ const TradeAnalytics = {
       weekdayLosses,
       profitableDay,
       lossingDay
+      lossingDay,
+      durationMetrics: this.calculateDurationMetrics(trades),
+      lotMetrics: this.calculateLotMetrics(trades)
+    };
+  },
+
+  /**
+   * Compute Trade Duration Analysis metrics
+   */
+  calculateDurationMetrics(trades) {
+    if (!trades || trades.length === 0) {
+      return this.getEmptyDurationMetrics();
+    }
+
+    const validTrades = [];
+    trades.forEach(t => {
+      if (!t.openTime || !t.closeTime) return;
+      const o = new Date(t.openTime).getTime();
+      const c = new Date(t.closeTime).getTime();
+      if (Number.isFinite(o) && Number.isFinite(c) && c >= o) {
+        const durationMs = c - o;
+        validTrades.push({
+          ticket: t.ticket,
+          durationMs,
+          profit: Number(t.profit) || 0,
+          isWin: (t.profit || 0) > 0,
+          isLoss: (t.profit || 0) < 0
+        });
+      }
+    });
+
+    if (validTrades.length === 0) {
+      return this.getEmptyDurationMetrics();
+    }
+
+    // Sort ascending by duration
+    validTrades.sort((a, b) => a.durationMs - b.durationMs);
+
+    const totalCount = validTrades.length;
+    const totalDurationMs = validTrades.reduce((sum, item) => sum + item.durationMs, 0);
+    const avgDurationMs = Math.round(totalDurationMs / totalCount);
+
+    // Median
+    const mid = Math.floor(totalCount / 2);
+    const medianDurationMs = totalCount % 2 !== 0
+      ? validTrades[mid].durationMs
+      : Math.round((validTrades[mid - 1].durationMs + validTrades[mid].durationMs) / 2);
+
+    const shortestMs = validTrades[0].durationMs;
+    const longestMs = validTrades[totalCount - 1].durationMs;
+
+    // Winners vs Losers Duration
+    const winTrades = validTrades.filter(t => t.isWin);
+    const lossTrades = validTrades.filter(t => t.isLoss);
+
+    const avgWinDurationMs = winTrades.length > 0
+      ? Math.round(winTrades.reduce((sum, t) => sum + t.durationMs, 0) / winTrades.length)
+      : 0;
+
+    const avgLossDurationMs = lossTrades.length > 0
+      ? Math.round(lossTrades.reduce((sum, t) => sum + t.durationMs, 0) / lossTrades.length)
+      : 0;
+
+    // Holding ratio comparison
+    let holdRatioText = 'Equal hold times';
+    let holdComparisonClass = 'neutral';
+    if (avgWinDurationMs > 0 && avgLossDurationMs > 0) {
+      if (avgWinDurationMs >= avgLossDurationMs) {
+        const ratio = (avgWinDurationMs / avgLossDurationMs).toFixed(1);
+        holdRatioText = `Holding winners ${ratio}x longer than losers`;
+        holdComparisonClass = 'profit';
+      } else {
+        const ratio = (avgLossDurationMs / avgWinDurationMs).toFixed(1);
+        holdRatioText = `Holding losers ${ratio}x longer than winners`;
+        holdComparisonClass = 'loss';
+      }
+    }
+
+    // Adaptive duration ranges
+    const buckets = [
+      { key: '0_5m', label: '0–5m', minSec: 0, maxSec: 300, trades: 0, wins: 0, losses: 0, pnl: 0 },
+      { key: '5_15m', label: '5–15m', minSec: 300, maxSec: 900, trades: 0, wins: 0, losses: 0, pnl: 0 },
+      { key: '15_30m', label: '15–30m', minSec: 900, maxSec: 1800, trades: 0, wins: 0, losses: 0, pnl: 0 },
+      { key: '30_60m', label: '30–60m', minSec: 1800, maxSec: 3600, trades: 0, wins: 0, losses: 0, pnl: 0 },
+      { key: '1_2h', label: '1–2h', minSec: 3600, maxSec: 7200, trades: 0, wins: 0, losses: 0, pnl: 0 },
+      { key: '2_4h', label: '2–4h', minSec: 7200, maxSec: 14400, trades: 0, wins: 0, losses: 0, pnl: 0 },
+      { key: '4h_plus', label: '4h+', minSec: 14400, maxSec: Infinity, trades: 0, wins: 0, losses: 0, pnl: 0 }
+    ];
+
+    validTrades.forEach(item => {
+      const sec = Math.round(item.durationMs / 1000);
+      const bucket = buckets.find(b => sec >= b.minSec && sec < b.maxSec);
+      if (bucket) {
+        bucket.trades++;
+        bucket.pnl += item.profit;
+        if (item.isWin) bucket.wins++;
+        if (item.isLoss) bucket.losses++;
+      }
+    });
+
+    const distribution = buckets.map(b => ({
+      ...b,
+      pnl: Math.round(b.pnl * 100) / 100,
+      winRate: b.trades > 0 ? Math.round((b.wins / b.trades) * 100) : 0
+    }));
+
+    return {
+      hasData: true,
+      validTradeCount: totalCount,
+      avgDurationMs,
+      medianDurationMs,
+      shortestMs,
+      longestMs,
+      avgWinDurationMs,
+      avgLossDurationMs,
+      winCount: winTrades.length,
+      lossCount: lossTrades.length,
+      holdRatioText,
+      holdComparisonClass,
+      distribution
+    };
+  },
+
+  getEmptyDurationMetrics() {
+    return {
+      hasData: false,
+      validTradeCount: 0,
+      avgDurationMs: 0,
+      medianDurationMs: 0,
+      shortestMs: 0,
+      longestMs: 0,
+      avgWinDurationMs: 0,
+      avgLossDurationMs: 0,
+      winCount: 0,
+      lossCount: 0,
+      holdRatioText: 'Not enough data to calculate trade duration.',
+      holdComparisonClass: 'neutral',
+      distribution: []
+    };
+  },
+
+  /**
+   * Intelligently format duration in milliseconds to human-readable string
+   * e.g. 45s, 12m, 4h 18m, 1d 5h
+   */
+  formatDuration(ms) {
+    if (ms === null || ms === undefined || isNaN(ms) || ms < 0) return '--';
+    const totalSec = Math.round(ms / 1000);
+    if (totalSec < 60) return `${totalSec}s`;
+
+    const totalMin = Math.floor(totalSec / 60);
+    const remSec = totalSec % 60;
+    if (totalMin < 60) {
+      return totalMin < 5 && remSec > 0 ? `${totalMin}m ${remSec}s` : `${totalMin}m`;
+    }
+
+    const hours = Math.floor(totalMin / 60);
+    const remMin = totalMin % 60;
+    if (hours < 24) {
+      return remMin > 0 ? `${hours}h ${remMin}m` : `${hours}h`;
+    }
+
+    const days = Math.floor(hours / 24);
+    const remHours = hours % 24;
+    return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`;
+  },
+
+  /**
+   * Compute Trade Size / Lot Analysis metrics
+   */
+  calculateLotMetrics(trades) {
+    if (!trades || trades.length === 0) {
+      return this.getEmptyLotMetrics();
+    }
+
+    const validTrades = trades.filter(t => Number.isFinite(t.lots) && t.lots > 0);
+    if (validTrades.length === 0) {
+      return this.getEmptyLotMetrics();
+    }
+
+    const sortedLots = validTrades.map(t => t.lots).sort((a, b) => a - b);
+    const totalTradesCount = validTrades.length;
+    const totalVolume = validTrades.reduce((sum, t) => sum + t.lots, 0);
+    const avgLot = Math.round((totalVolume / totalTradesCount) * 1000) / 1000;
+
+    const mid = Math.floor(totalTradesCount / 2);
+    const medianLot = totalTradesCount % 2 !== 0
+      ? sortedLots[mid]
+      : Math.round(((sortedLots[mid - 1] + sortedLots[mid]) / 2) * 1000) / 1000;
+
+    const smallestLot = sortedLots[0];
+    const largestLot = sortedLots[totalTradesCount - 1];
+
+    // Group performance by lot size
+    const groupMap = {};
+    validTrades.forEach(t => {
+      const key = String(Math.round(t.lots * 10000) / 10000);
+      if (!groupMap[key]) {
+        groupMap[key] = {
+          lot: t.lots,
+          lotLabel: key,
+          trades: 0,
+          wins: 0,
+          losses: 0,
+          breakEven: 0,
+          netPnL: 0,
+          grossProfit: 0,
+          grossLoss: 0,
+          totalVolume: 0
+        };
+      }
+      const g = groupMap[key];
+      g.trades++;
+      const pnl = Number(t.profit) || 0;
+      g.netPnL += pnl;
+      g.totalVolume += t.lots;
+      if (pnl > 0) {
+        g.wins++;
+        g.grossProfit += pnl;
+      } else if (pnl < 0) {
+        g.losses++;
+        g.grossLoss += Math.abs(pnl);
+      } else {
+        g.breakEven++;
+      }
+    });
+
+    const lotBreakdown = Object.values(groupMap)
+      .sort((a, b) => a.lot - b.lot)
+      .map(g => {
+        const winRate = g.trades > 0 ? Math.round((g.wins / g.trades) * 100) : 0;
+        const avgPnL = g.trades > 0 ? Math.round((g.netPnL / g.trades) * 100) / 100 : 0;
+        return {
+          ...g,
+          netPnL: Math.round(g.netPnL * 100) / 100,
+          grossProfit: Math.round(g.grossProfit * 100) / 100,
+          grossLoss: Math.round(g.grossLoss * 100) / 100,
+          totalVolume: Math.round(g.totalVolume * 1000) / 1000,
+          winRate,
+          avgPnL
+        };
+      });
+
+    return {
+      hasData: true,
+      totalTradesCount,
+      totalVolume: Math.round(totalVolume * 100) / 100,
+      avgLot,
+      medianLot,
+      smallestLot,
+      largestLot,
+      lotBreakdown
+    };
+  },
+
+  getEmptyLotMetrics() {
+    return {
+      hasData: false,
+      totalTradesCount: 0,
+      totalVolume: 0,
+      avgLot: 0,
+      medianLot: 0,
+      smallestLot: 0,
+      largestLot: 0,
+      lotBreakdown: []
     };
   },
 
@@ -363,6 +628,9 @@ const TradeAnalytics = {
       weekdayLosses: {},
       profitableDay: null,
       lossingDay: null
+      lossingDay: null,
+      durationMetrics: this.getEmptyDurationMetrics(),
+      lotMetrics: this.getEmptyLotMetrics()
     };
   }
 };

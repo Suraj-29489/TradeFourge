@@ -9,9 +9,13 @@ const ChartManager = {
     pnlMain: null,
     symbolBar: null,
     weekdayBar: null
+    weekdayBar: null,
+    durationDist: null,
+    lotSizeBar: null
   },
 
   currentPnLView: 'cumulative', // 'cumulative' or 'daily'
+  currentLotView: 'pnl', // 'pnl' or 'trades'
 
   /**
    * Render or update all charts from calculated metrics
@@ -474,5 +478,235 @@ const ChartManager = {
         }
       }
     });
+  },
+
+  /**
+   * Render or update all Analytics charts
+   */
+  updateAnalyticsCharts(metrics) {
+    if (!metrics) return;
+    this.renderDurationChart(metrics.durationMetrics);
+    this.renderLotSizeChart(metrics.lotMetrics, this.currentLotView);
+  },
+
+  /**
+   * Render Trade Duration Distribution Chart
+   */
+  renderDurationChart(durationMetrics) {
+    const ctx = document.getElementById('durationDistCanvas');
+    if (!ctx) return;
+
+    if (this.instances.durationDist) {
+      this.instances.durationDist.destroy();
+      this.instances.durationDist = null;
+    }
+
+    if (!durationMetrics || !durationMetrics.hasData || !durationMetrics.distribution || durationMetrics.distribution.length === 0) {
+      return;
+    }
+
+    const dist = durationMetrics.distribution;
+    const labels = dist.map(d => d.label);
+    const winData = dist.map(d => d.wins);
+    const lossData = dist.map(d => d.losses);
+
+    this.instances.durationDist = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Winners',
+            data: winData,
+            backgroundColor: '#10b981',
+            borderRadius: 4,
+            stack: 'trades'
+          },
+          {
+            label: 'Losers',
+            data: lossData,
+            backgroundColor: '#f43f5e',
+            borderRadius: 4,
+            stack: 'trades'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            align: 'end',
+            labels: {
+              boxWidth: 10,
+              boxHeight: 10,
+              color: '#94a3b8',
+              font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" }
+            }
+          },
+          tooltip: {
+            backgroundColor: '#181d2c',
+            borderColor: '#262e45',
+            borderWidth: 1,
+            titleColor: '#f8fafc',
+            bodyColor: '#94a3b8',
+            padding: 10,
+            callbacks: {
+              afterBody: (tooltipItems) => {
+                const idx = tooltipItems[0]?.dataIndex;
+                if (idx !== undefined && dist[idx]) {
+                  const d = dist[idx];
+                  const sign = d.pnl >= 0 ? '+' : '-';
+                  return `Total: ${d.trades} trades | Win Rate: ${d.winRate}%\nNet P&L: ${sign}$${Math.abs(d.pnl).toFixed(2)}`;
+                }
+                return '';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { display: false },
+            ticks: {
+              color: '#94a3b8',
+              font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" }
+            }
+          },
+          y: {
+            stacked: true,
+            grid: { color: 'rgba(38, 46, 69, 0.4)', drawBorder: false },
+            ticks: {
+              color: '#64748b',
+              font: { size: 11 },
+              precision: 0
+            }
+          }
+        }
+      }
+    });
+  },
+
+  /**
+   * Render Trade Size / Lot Analysis Chart
+   */
+  renderLotSizeChart(lotMetrics, mode = 'pnl') {
+    this.currentLotView = mode;
+    const ctx = document.getElementById('lotSizeBarCanvas');
+    if (!ctx) return;
+
+    if (this.instances.lotSizeBar) {
+      this.instances.lotSizeBar.destroy();
+      this.instances.lotSizeBar = null;
+    }
+
+    if (!lotMetrics || !lotMetrics.hasData || !lotMetrics.lotBreakdown || lotMetrics.lotBreakdown.length === 0) {
+      return;
+    }
+
+    const groups = lotMetrics.lotBreakdown;
+    const labels = groups.map(g => `${g.lotLabel} lots`);
+
+    if (mode === 'trades') {
+      const counts = groups.map(g => g.trades);
+      this.instances.lotSizeBar = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Trade Count',
+            data: counts,
+            backgroundColor: '#6366f1',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#181d2c',
+              borderColor: '#262e45',
+              borderWidth: 1,
+              callbacks: {
+                label: (item) => `Trades: ${item.raw}`,
+                afterLabel: (item) => {
+                  const g = groups[item.dataIndex];
+                  const sign = g.netPnL >= 0 ? '+' : '-';
+                  return `Win Rate: ${g.winRate}% | Net: ${sign}$${Math.abs(g.netPnL).toFixed(2)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#94a3b8', font: { size: 11 } }
+            },
+            y: {
+              grid: { color: 'rgba(38, 46, 69, 0.4)', drawBorder: false },
+              ticks: { color: '#64748b', font: { size: 11 }, precision: 0 }
+            }
+          }
+        }
+      });
+    } else {
+      // Default: P&L by Lot Size
+      const pnls = groups.map(g => g.netPnL);
+      const bgColors = pnls.map(p => p >= 0 ? '#10b981' : '#f43f5e');
+
+      this.instances.lotSizeBar = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Net P&L ($)',
+            data: pnls,
+            backgroundColor: bgColors,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#181d2c',
+              borderColor: '#262e45',
+              borderWidth: 1,
+              callbacks: {
+                label: (item) => {
+                  const val = item.raw;
+                  const sign = val >= 0 ? '+' : '-';
+                  return ` Net P&L: ${sign}$${Math.abs(val).toFixed(2)}`;
+                },
+                afterLabel: (item) => {
+                  const g = groups[item.dataIndex];
+                  return `Trades: ${g.trades} | Win Rate: ${g.winRate}% | Avg: $${g.avgPnL.toFixed(2)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { color: '#94a3b8', font: { size: 11 } }
+            },
+            y: {
+              grid: { color: 'rgba(38, 46, 69, 0.4)', drawBorder: false },
+              ticks: {
+                color: '#64748b',
+                font: { size: 11 },
+                callback: (v) => `$${v}`
+              }
+            }
+          }
+        }
+      });
+    }
   }
 };

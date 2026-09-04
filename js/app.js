@@ -56,6 +56,7 @@ const App = {
     this.renderRecentTradesTable();
     this.renderTradeLogTable();
     this.renderReportsView();
+    this.renderAnalyticsView();
     this.renderInsightsView();
     this.renderStrategiesView();
     this.updateStorageIndicator();
@@ -612,6 +613,147 @@ const App = {
   },
 
   /**
+   * Render Trade Analytics View (Duration & Lot Size analysis)
+   */
+  renderAnalyticsView() {
+    const metrics = this.currentMetrics;
+    const duration = metrics?.durationMetrics;
+    const lot = metrics?.lotMetrics;
+    const hasTrades = this.filteredTrades && this.filteredTrades.length > 0;
+
+    const emptyEl = document.getElementById('analyticsEmptyState');
+    const contentEl = document.getElementById('analyticsMainContent');
+    const tradesBadge = document.getElementById('analyticsTradesCountBadge');
+    const rangeBadge = document.getElementById('analyticsFilteredRangeBadge');
+
+    if (rangeBadge) {
+      if (this.dateFilter === 'all') rangeBadge.innerText = 'All Time';
+      else if (this.dateFilter === 'last30') rangeBadge.innerText = 'Last 30 Days';
+      else if (this.dateFilter === 'custom') rangeBadge.innerText = `${this.customStartDate || '...'} to ${this.customEndDate || '...'}`;
+      else rangeBadge.innerText = 'Active Filter';
+    }
+
+    if (tradesBadge) {
+      tradesBadge.innerText = `${this.filteredTrades ? this.filteredTrades.length : 0} Trades`;
+    }
+
+    if (!hasTrades) {
+      if (emptyEl) emptyEl.style.display = 'block';
+      if (contentEl) contentEl.style.display = 'none';
+      return;
+    }
+
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (contentEl) contentEl.style.display = 'flex';
+
+    // 1. DURATION METRICS
+    const avgEl = document.getElementById('durationAvgVal');
+    const medianEl = document.getElementById('durationMedianVal');
+    const shortestEl = document.getElementById('durationShortestVal');
+    const longestEl = document.getElementById('durationLongestVal');
+
+    const winAvgEl = document.getElementById('durationWinAvgVal');
+    const lossAvgEl = document.getElementById('durationLossAvgVal');
+    const winCountEl = document.getElementById('durationWinCount');
+    const lossCountEl = document.getElementById('durationLossCount');
+    const ratioBanner = document.getElementById('durationRatioBanner');
+    const ratioText = document.getElementById('durationRatioText');
+
+    if (duration && duration.hasData) {
+      if (avgEl) avgEl.innerText = TradeAnalytics.formatDuration(duration.avgDurationMs);
+      if (medianEl) medianEl.innerText = TradeAnalytics.formatDuration(duration.medianDurationMs);
+      if (shortestEl) shortestEl.innerText = TradeAnalytics.formatDuration(duration.shortestMs);
+      if (longestEl) longestEl.innerText = TradeAnalytics.formatDuration(duration.longestMs);
+
+      if (winAvgEl) winAvgEl.innerText = TradeAnalytics.formatDuration(duration.avgWinDurationMs);
+      if (lossAvgEl) lossAvgEl.innerText = TradeAnalytics.formatDuration(duration.avgLossDurationMs);
+      if (winCountEl) winCountEl.innerText = `${duration.winCount} trades`;
+      if (lossCountEl) lossCountEl.innerText = `${duration.lossCount} trades`;
+
+      if (ratioText) ratioText.innerText = duration.holdRatioText;
+      if (ratioBanner) {
+        ratioBanner.className = `hold-ratio-banner ${duration.holdComparisonClass}`;
+      }
+    } else {
+      if (avgEl) avgEl.innerText = '--';
+      if (medianEl) medianEl.innerText = '--';
+      if (shortestEl) shortestEl.innerText = '--';
+      if (longestEl) longestEl.innerText = '--';
+      if (winAvgEl) winAvgEl.innerText = '--';
+      if (lossAvgEl) lossAvgEl.innerText = '--';
+      if (winCountEl) winCountEl.innerText = '0 trades';
+      if (lossCountEl) lossCountEl.innerText = '0 trades';
+      if (ratioText) ratioText.innerText = 'Not enough data to calculate trade duration.';
+      if (ratioBanner) ratioBanner.className = 'hold-ratio-banner neutral';
+    }
+
+    // 2. LOT METRICS
+    const lotAvgEl = document.getElementById('lotAvgVal');
+    const lotMedianEl = document.getElementById('lotMedianVal');
+    const lotSmallestEl = document.getElementById('lotSmallestVal');
+    const lotLargestEl = document.getElementById('lotLargestVal');
+    const lotVolEl = document.getElementById('lotTotalVolumeVal');
+
+    if (lot && lot.hasData) {
+      if (lotAvgEl) lotAvgEl.innerText = `${lot.avgLot} lots`;
+      if (lotMedianEl) lotMedianEl.innerText = `${lot.medianLot} lots`;
+      if (lotSmallestEl) lotSmallestEl.innerText = `${lot.smallestLot} lots`;
+      if (lotLargestEl) lotLargestEl.innerText = `${lot.largestLot} lots`;
+      if (lotVolEl) lotVolEl.innerText = `${lot.totalVolume.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} lots`;
+    } else {
+      if (lotAvgEl) lotAvgEl.innerText = '--';
+      if (lotMedianEl) lotMedianEl.innerText = '--';
+      if (lotSmallestEl) lotSmallestEl.innerText = '--';
+      if (lotLargestEl) lotLargestEl.innerText = '--';
+      if (lotVolEl) lotVolEl.innerText = '--';
+    }
+
+    // Render Charts
+    ChartManager.updateAnalyticsCharts(metrics);
+
+    // Render Performance by Position Size Table
+    this.renderLotPerformanceTable(lot);
+  },
+
+  /**
+   * Render table of performance grouped by position size
+   */
+  renderLotPerformanceTable(lotMetrics) {
+    const tbody = document.getElementById('lotPerformanceTableBody');
+    if (!tbody) return;
+
+    if (!lotMetrics || !lotMetrics.hasData || !lotMetrics.lotBreakdown || lotMetrics.lotBreakdown.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="empty-state-cell" style="text-align: center; color: var(--text-dim); padding: 24px;">No position size data available</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = lotMetrics.lotBreakdown.map(g => {
+      const pnlSign = g.netPnL >= 0 ? '+' : '-';
+      const pnlClass = g.netPnL >= 0 ? 'profit-text' : 'loss-text';
+      const avgSign = g.avgPnL >= 0 ? '+' : '-';
+      const avgClass = g.avgPnL >= 0 ? 'profit-text' : 'loss-text';
+      const winRateColor = g.winRate >= 50 ? 'var(--profit)' : (g.winRate > 0 ? 'var(--loss)' : 'var(--text-dim)');
+
+      return `
+        <tr>
+          <td style="font-weight: 700; font-family: var(--font-mono); color: var(--text-main);">${g.lotLabel} lots</td>
+          <td><span class="analytics-tag" style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 4px; font-weight: 600;">${g.trades}</span></td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-weight: 700; font-family: var(--font-mono); color: ${winRateColor};">${g.winRate}%</span>
+              <div style="width: 48px; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden;">
+                <div style="width: ${Math.min(100, g.winRate)}%; height: 100%; background: ${winRateColor};"></div>
+              </div>
+            </div>
+          </td>
+          <td class="${pnlClass}" style="font-weight: 800; font-family: var(--font-mono);">${pnlSign}$${Math.abs(g.netPnL).toFixed(2)}</td>
+          <td class="${avgClass}" style="font-weight: 700; font-family: var(--font-mono);">${avgSign}$${Math.abs(g.avgPnL).toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  /**
    * Render Insights View
    */
   renderInsightsView() {
@@ -843,17 +985,28 @@ const App = {
     // Update sidebar nav buttons
     document.querySelectorAll('.nav-item').forEach(el => {
       el.classList.toggle('active', el.getAttribute('data-view') === viewName);
+      const v = el.getAttribute('data-view');
+      const isMatch = v === viewName || 
+        (viewName === 'journal' && v === 'analytics') || 
+        (viewName === 'analytics' && v === 'journal');
+      el.classList.toggle('active', isMatch);
     });
 
     // Update view sections
     document.querySelectorAll('.view-section').forEach(el => {
       el.classList.toggle('active', el.id === `view-${viewName}`);
+      const isMatch = el.id === `view-${viewName}` || 
+        (viewName === 'journal' && el.id === 'view-analytics') || 
+        (viewName === 'analytics' && el.id === 'view-journal');
+      el.classList.toggle('active', isMatch);
     });
 
     // Update Header title
     const titleMap = {
       dashboard: 'Dashboard',
       journal: 'Daily Journal',
+      analytics: 'Analytics',
+      journal: 'Analytics',
       tradelog: 'Trade Log',
       backtesting: 'Backtesting',
       reports: 'Reports & Performance',
@@ -867,6 +1020,11 @@ const App = {
     // If switching to reports, re-render charts to fit container
     if (viewName === 'reports') {
       this.renderReportsView();
+    }
+
+    // If switching to analytics, re-render charts to fit container
+    if (viewName === 'analytics' || viewName === 'journal') {
+      this.renderAnalyticsView();
     }
   },
 
@@ -953,6 +1111,22 @@ const App = {
         updateChartTabState(tabWeekly);
         ChartManager.currentPnLView = 'weekly';
         ChartManager.renderMainPnLChart(this.currentMetrics);
+      });
+    }
+
+    // Analytics Lot Size Chart tabs (P&L vs Trades)
+    const tabLotPnL = document.getElementById('tabLotPnL');
+    const tabLotTrades = document.getElementById('tabLotTrades');
+    if (tabLotPnL && tabLotTrades) {
+      tabLotPnL.addEventListener('click', () => {
+        tabLotPnL.classList.add('active');
+        tabLotTrades.classList.remove('active');
+        ChartManager.renderLotSizeChart(this.currentMetrics?.lotMetrics, 'pnl');
+      });
+      tabLotTrades.addEventListener('click', () => {
+        tabLotTrades.classList.add('active');
+        tabLotPnL.classList.remove('active');
+        ChartManager.renderLotSizeChart(this.currentMetrics?.lotMetrics, 'trades');
       });
     }
 
