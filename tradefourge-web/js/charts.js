@@ -8,7 +8,6 @@ const ChartManager = {
     daysDonut: null,
     pnlMain: null,
     symbolBar: null,
-    weekdayBar: null
     weekdayBar: null,
     durationDist: null,
     lotSizeBar: null

@@ -984,7 +984,6 @@ const App = {
 
     // Update sidebar nav buttons
     document.querySelectorAll('.nav-item').forEach(el => {
-      el.classList.toggle('active', el.getAttribute('data-view') === viewName);
       const v = el.getAttribute('data-view');
       const isMatch = v === viewName || 
         (viewName === 'journal' && v === 'analytics') || 
@@ -994,7 +993,6 @@ const App = {
 
     // Update view sections
     document.querySelectorAll('.view-section').forEach(el => {
-      el.classList.toggle('active', el.id === `view-${viewName}`);
       const isMatch = el.id === `view-${viewName}` || 
         (viewName === 'journal' && el.id === 'view-analytics') || 
         (viewName === 'analytics' && el.id === 'view-journal');
@@ -1004,7 +1002,6 @@ const App = {
     // Update Header title
     const titleMap = {
       dashboard: 'Dashboard',
-      journal: 'Daily Journal',
       analytics: 'Analytics',
       journal: 'Analytics',
       tradelog: 'Trade Log',

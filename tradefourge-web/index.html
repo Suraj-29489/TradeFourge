@@ -198,7 +198,7 @@
               <!-- Total P&L -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
-                  <span class="kpi-title">Total P&L <span class="info-tooltip-icon" title="Net profit and loss across all completed trades">ⓘ</span></span>
+                  <span class="kpi-title">Total P&L</span>
                 </div>
                 <div class="kpi-value profit" id="kpiTotalPnL">$0.00</div>
                 <div class="kpi-subtext" id="kpiTotalTradesCount">Trades in total: 0</div>
@@ -207,7 +207,7 @@
               <!-- Profit Factor -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
-                  <span class="kpi-title">Profit factor <span class="info-tooltip-icon" title="Gross Profit divided by Gross Loss">ⓘ</span></span>
+                  <span class="kpi-title">Profit factor</span>
                 </div>
                 <div class="kpi-value" id="kpiProfitFactor">0.00</div>
                 <div class="kpi-subtext" id="kpiProfitFactorDelta"><span class="delta-pos">+0.12</span></div>
@@ -216,7 +216,7 @@
               <!-- Average Winning Trade -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
-                  <span class="kpi-title">Average winning trade <span class="info-tooltip-icon" title="Average dollar gain on winning trades">ⓘ</span></span>
+                  <span class="kpi-title">Average winning trade</span>
                 </div>
                 <div class="kpi-value profit" id="kpiAvgWin">$0.00</div>
                 <div class="kpi-subtext" id="kpiAvgWinSub"><span class="delta-pos">▲ +17.25</span></div>
@@ -225,7 +225,7 @@
               <!-- Average Losing Trade -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
-                  <span class="kpi-title">Average losing trade <span class="info-tooltip-icon" title="Average dollar loss on losing trades">ⓘ</span></span>
+                  <span class="kpi-title">Average losing trade</span>
                 </div>
                 <div class="kpi-value loss" id="kpiAvgLoss">$0.00</div>
                 <div class="kpi-subtext" id="kpiAvgLossSub"><span class="delta-neg">▼ -21.36</span></div>
@@ -237,7 +237,7 @@
               <!-- Profitable Day -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
-                  <span class="kpi-title">Profitable day <span class="info-tooltip-icon" title="Day of the week with the highest net profit based on trading data">ⓘ</span></span>
+                  <span class="kpi-title">Profitable day</span>
                 </div>
                 <div class="kpi-value profit" id="kpiProfitableDay">--</div>
                 <div class="kpi-subtext" id="kpiProfitableDaySub"><span class="delta-pos">▲ +$0.00</span> • 0% win rate</div>
@@ -246,7 +246,7 @@
               <!-- Lossing Day -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
-                  <span class="kpi-title">Lossing day <span class="info-tooltip-icon" title="Day of the week with the worst performance or largest loss based on trading data">ⓘ</span></span>
+                  <span class="kpi-title">Lossing day</span>
                 </div>
                 <div class="kpi-value loss" id="kpiLossingDay">--</div>
                 <div class="kpi-subtext" id="kpiLossingDaySub"><span class="delta-neg">▼ -$0.00</span> • 0% win rate</div>
@@ -261,7 +261,6 @@
                 <div class="donut-card">
                   <div class="donut-card-header">
                     <span class="donut-card-title">Winning % By Trades</span>
-                    <span class="info-tooltip-icon">ⓘ</span>
                   </div>
                   <div class="donut-body">
                     <div class="donut-chart-wrapper">
@@ -286,7 +285,6 @@
                 <div class="donut-card">
                   <div class="donut-card-header">
                     <span class="donut-card-title">Winning % By Days</span>
-                    <span class="info-tooltip-icon">ⓘ</span>
                   </div>
                   <div class="donut-body">
                     <div class="donut-chart-wrapper">
@@ -376,17 +374,8 @@
         </section>
 
         <!-- ==========================================================================
-             VIEW: DAILY JOURNAL
              VIEW: ANALYTICS (Trade Duration & Trade Size / Lot Analysis)
              ========================================================================== -->
-        <section class="view-section" id="view-journal">
-          <div style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="calendar-card" style="padding: 24px;">
-              <div class="calendar-header">
-                <h2 style="font-size: 1.3rem; font-weight: 700;">Trading Journal Calendar</h2>
-                <div class="calendar-nav-controls">
-                  <button class="calendar-nav-btn" onclick="CalendarManager.prevMonth()">❮</button>
-                  <button class="calendar-nav-btn" onclick="CalendarManager.nextMonth()">❯</button>
         <section class="view-section" id="view-analytics">
           <div class="analytics-wrapper">
 
@@ -402,9 +391,6 @@
                   <span id="analyticsTradesCountBadge" style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim); background: var(--bg-card-alt); border: 1px solid var(--border-light); padding: 4px 10px; border-radius: 6px;">0 Trades</span>
                 </div>
               </div>
-              <div class="calendar-scroll-wrapper">
-                <div class="calendar-grid" id="calendarGridJournal">
-                  <!-- Mirrored or standalone large journal calendar -->
             </div>
 
             <!-- Empty State (When no data loaded) -->

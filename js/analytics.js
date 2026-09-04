@@ -305,7 +305,6 @@ const TradeAnalytics = {
       weekdayWins,
       weekdayLosses,
       profitableDay,
-      lossingDay
       lossingDay,
       durationMetrics: this.calculateDurationMetrics(trades),
       lotMetrics: this.calculateLotMetrics(trades)
@@ -627,7 +626,6 @@ const TradeAnalytics = {
       weekdayWins: {},
       weekdayLosses: {},
       profitableDay: null,
-      lossingDay: null
       lossingDay: null,
       durationMetrics: this.getEmptyDurationMetrics(),
       lotMetrics: this.getEmptyLotMetrics()
