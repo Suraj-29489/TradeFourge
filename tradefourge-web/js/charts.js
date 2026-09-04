@@ -133,7 +133,7 @@ const ChartManager = {
   },
 
   /**
-   * Render Main P&L Chart (Cumulative Area or Daily Bar)
+   * Render Main P&L Chart (Cumulative Line, Daily Bar, or Weekly Bar)
    */
   renderMainPnLChart(metrics) {
     const ctx = document.getElementById('pnlMainCanvas');
@@ -143,21 +143,22 @@ const ChartManager = {
       this.instances.pnlMain.destroy();
     }
 
-    const isCumulative = this.currentPnLView === 'cumulative';
-    const timeseries = isCumulative ? metrics.cumulativeTimeseries : metrics.dailyTimeseries;
+    const subtextEl = document.getElementById('pnlChartSubtext');
 
-    const labels = timeseries.map(t => {
-      const parts = t.date.split('-');
-      if (parts.length === 3) {
-        return `${parts[1]}/${parts[2]}/${parts[0].slice(2)}`;
-      }
-      return t.date;
-    });
+    if (this.currentPnLView === 'cumulative') {
+      if (subtextEl) subtextEl.innerText = 'Realized Equity Growth';
+      const timeseries = metrics.cumulativeTimeseries || [];
 
-    const values = isCumulative ? timeseries.map(t => t.cumulativePnL) : timeseries.map(t => t.dailyPnL);
+      const labels = timeseries.map(t => {
+        const parts = t.date.split('-');
+        if (parts.length === 3) {
+          return `${parts[1]}/${parts[2]}/${parts[0].slice(2)}`;
+        }
+        return t.date;
+      });
 
-    if (isCumulative) {
-      // A plain line keeps the chart readable and avoids visual noise.
+      const values = timeseries.map(t => t.cumulativePnL);
+
       this.instances.pnlMain = new Chart(ctx, {
         type: 'line',
         data: {
@@ -220,8 +221,87 @@ const ChartManager = {
           }
         }
       });
+    } else if (this.currentPnLView === 'weekly') {
+      if (subtextEl) subtextEl.innerText = 'Week-by-Week Net Profit / Loss';
+      const timeseries = metrics.weeklyTimeseries || [];
+
+      const labels = timeseries.map(t => t.shortLabel || t.label || t.weekStart);
+      const values = timeseries.map(t => t.weeklyPnL);
+      const barColors = values.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.85)' : 'rgba(244, 63, 94, 0.85)');
+      const borderColors = values.map(v => v >= 0 ? '#10b981' : '#f43f5e');
+
+      this.instances.pnlMain = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Weekly Net P&L',
+            data: values,
+            backgroundColor: barColors,
+            borderColor: borderColors,
+            borderWidth: 1,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#181d2c',
+              titleColor: '#94a3b8',
+              bodyColor: '#ffffff',
+              borderColor: '#262e45',
+              borderWidth: 1,
+              padding: 12,
+              callbacks: {
+                title: (items) => {
+                  const idx = items[0].dataIndex;
+                  const item = timeseries[idx];
+                  return item ? `Week: ${item.label}` : items[0].label;
+                },
+                label: (item) => {
+                  const idx = item.dataIndex;
+                  const tData = timeseries[idx];
+                  const val = item.raw;
+                  const prefix = val >= 0 ? '+$' : '-$';
+                  const tradeInfo = tData ? ` (${tData.trades} trades: ${tData.wins}W / ${tData.losses}L)` : '';
+                  return `Weekly Net P&L: ${prefix}${Math.abs(val).toFixed(2)}${tradeInfo}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(38, 46, 69, 0.3)', drawBorder: false },
+              ticks: { color: '#64748b', font: { size: 11 }, maxTicksLimit: 10 }
+            },
+            y: {
+              grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
+              ticks: {
+                color: '#64748b',
+                font: { size: 11 },
+                callback: (val) => `$${val}`
+              }
+            }
+          }
+        }
+      });
     } else {
       // Bar Chart for Daily P&L
+      if (subtextEl) subtextEl.innerText = 'Day-by-Day Net Profit / Loss';
+      const timeseries = metrics.dailyTimeseries || [];
+
+      const labels = timeseries.map(t => {
+        const parts = t.date.split('-');
+        if (parts.length === 3) {
+          return `${parts[1]}/${parts[2]}/${parts[0].slice(2)}`;
+        }
+        return t.date;
+      });
+
+      const values = timeseries.map(t => t.dailyPnL);
       const barColors = values.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.85)' : 'rgba(244, 63, 94, 0.85)');
       const borderColors = values.map(v => v >= 0 ? '#10b981' : '#f43f5e');
 
@@ -385,6 +465,106 @@ const ChartManager = {
           y: {
             grid: { color: 'rgba(38, 46, 69, 0.5)' },
             ticks: { color: '#64748b', callback: v => `$${v}` }
+          }
+        }
+      }
+    });
+  },
+
+  /**
+   * Render Floating Intraday Trade-by-Trade Progression Chart
+   */
+  dayIntradayChartInstance: null,
+
+  renderDayIntradayChart(tradeList, dayPnL) {
+    const ctx = document.getElementById('dayIntradayCanvas');
+    if (!ctx) return;
+
+    if (this.dayIntradayChartInstance) {
+      this.dayIntradayChartInstance.destroy();
+      this.dayIntradayChartInstance = null;
+    }
+
+    // Sort trades chronologically
+    const sortedTrades = [...(tradeList || [])].sort((a, b) => {
+      const tA = new Date(a.closeTime || a.openTime || 0).getTime();
+      const tB = new Date(b.closeTime || b.openTime || 0).getTime();
+      return tA - tB;
+    });
+
+    let running = 0;
+    const labels = ['00:00 (Open)'];
+    const values = [0];
+
+    sortedTrades.forEach((t, i) => {
+      running += (t.profit || 0);
+      running = Math.round(running * 100) / 100;
+      const timeStr = (t.closeTime || t.openTime || '').slice(11, 16) || `Trade #${i + 1}`;
+      labels.push(`${timeStr} • ${t.symbol}`);
+      values.push(running);
+    });
+
+    const isProfitable = dayPnL >= 0;
+    const strokeColor = isProfitable ? '#10b981' : '#f43f5e';
+    const bgColor = isProfitable ? 'rgba(16, 185, 129, 0.12)' : 'rgba(244, 63, 94, 0.12)';
+
+    this.dayIntradayChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Cumulative Day P&L',
+          data: values,
+          borderColor: strokeColor,
+          borderWidth: 2.2,
+          backgroundColor: bgColor,
+          fill: true,
+          tension: 0.25,
+          pointRadius: values.length > 20 ? 1 : 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: strokeColor,
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 1.5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#181d2c',
+            titleColor: '#94a3b8',
+            bodyColor: '#ffffff',
+            borderColor: '#262e45',
+            borderWidth: 1,
+            padding: 10,
+            displayColors: false,
+            callbacks: {
+              label: (context) => {
+                const val = context.raw;
+                const prefix = val >= 0 ? '+$' : '-$';
+                return `Day P&L Progression: ${prefix}${Math.abs(val).toFixed(2)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(38, 46, 69, 0.3)', drawBorder: false },
+            ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 7 }
+          },
+          y: {
+            grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
+            ticks: {
+              color: '#64748b',
+              font: { size: 10 },
+              callback: (val) => `$${val}`
+            }
           }
         }
       }

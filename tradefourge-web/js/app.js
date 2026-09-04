@@ -47,6 +47,7 @@ const App = {
     ChartManager.updateDashboardCharts(this.currentMetrics);
     CalendarManager.init(this.currentMetrics);
     this.renderRecentTradesTable();
+    this.renderDailyJournalBreakdown();
     this.renderTradeLogTable();
     this.renderReportsView();
     this.renderInsightsView();
@@ -139,6 +140,46 @@ const App = {
     const avgLossSubEl = document.getElementById('kpiAvgLossSub');
     if (avgLossSubEl) {
       avgLossSubEl.innerHTML = `<span class="delta-neg">▼ ${m.losersCount} losing trades</span>`;
+    }
+
+    // Profitable Day (Best Day of Week)
+    const profDayEl = document.getElementById('kpiProfitableDay');
+    const profDaySubEl = document.getElementById('kpiProfitableDaySub');
+    if (profDayEl) {
+      if (m.profitableDay) {
+        profDayEl.innerText = m.profitableDay.dayName;
+        profDayEl.className = `kpi-value ${m.profitableDay.pnl >= 0 ? 'profit' : 'loss'}`;
+        if (profDaySubEl) {
+          const pnlFormatted = TradeAnalytics.formatCurrency(m.profitableDay.pnl);
+          const icon = m.profitableDay.pnl >= 0 ? '▲' : '▼';
+          const pnlClass = m.profitableDay.pnl >= 0 ? 'delta-pos' : 'delta-neg';
+          profDaySubEl.innerHTML = `<span class="${pnlClass}">${icon} ${pnlFormatted}</span> • ${m.profitableDay.winRate}% win rate (${m.profitableDay.trades} trades)`;
+        }
+      } else {
+        profDayEl.innerText = '--';
+        profDayEl.className = 'kpi-value';
+        if (profDaySubEl) profDaySubEl.innerHTML = `<span style="color: var(--text-dim);">No trades recorded</span>`;
+      }
+    }
+
+    // Lossing Day (Worst Day of Week)
+    const lossDayEl = document.getElementById('kpiLossingDay');
+    const lossDaySubEl = document.getElementById('kpiLossingDaySub');
+    if (lossDayEl) {
+      if (m.lossingDay) {
+        lossDayEl.innerText = m.lossingDay.dayName;
+        lossDayEl.className = `kpi-value ${m.lossingDay.pnl <= 0 ? 'loss' : 'profit'}`;
+        if (lossDaySubEl) {
+          const pnlFormatted = TradeAnalytics.formatCurrency(m.lossingDay.pnl);
+          const icon = m.lossingDay.pnl >= 0 ? '▲' : '▼';
+          const pnlClass = m.lossingDay.pnl >= 0 ? 'delta-pos' : 'delta-neg';
+          lossDaySubEl.innerHTML = `<span class="${pnlClass}">${icon} ${pnlFormatted}</span> • ${m.lossingDay.winRate}% win rate (${m.lossingDay.trades} trades)`;
+        }
+      } else {
+        lossDayEl.innerText = '--';
+        lossDayEl.className = 'kpi-value';
+        if (lossDaySubEl) lossDaySubEl.innerHTML = `<span style="color: var(--text-dim);">No trades recorded</span>`;
+      }
     }
 
     // Update Donut legend counts
@@ -471,49 +512,237 @@ const App = {
   },
 
   /**
-   * Open Day Trades Modal when clicking a calendar cell
+   * Render Daily Journal Breakdown: Good Profit Days vs Loss Days
+   */
+  renderDailyJournalBreakdown() {
+    const profitListEl = document.getElementById('journalProfitList');
+    const lossListEl = document.getElementById('journalLossList');
+    const profitBadgeEl = document.getElementById('journalProfitBadge');
+    const lossBadgeEl = document.getElementById('journalLossBadge');
+    const sortSelect = document.getElementById('journalSortSelect');
+
+    if (!profitListEl || !lossListEl) return;
+
+    const dailyMap = (this.currentMetrics && this.currentMetrics.dailyMap) ? this.currentMetrics.dailyMap : {};
+    const allDays = Object.values(dailyMap);
+
+    const profitDays = allDays.filter(d => d.pnl > 0);
+    const lossDays = allDays.filter(d => d.pnl < 0);
+
+    const sortMode = sortSelect ? sortSelect.value : 'date_desc';
+
+    const sortFn = (a, b) => {
+      if (sortMode === 'pnl_desc') return b.pnl - a.pnl;
+      if (sortMode === 'pnl_asc') return a.pnl - b.pnl;
+      if (sortMode === 'date_asc') return a.date.localeCompare(b.date);
+      return b.date.localeCompare(a.date);
+    };
+
+    profitDays.sort(sortFn);
+    lossDays.sort(sortFn);
+
+    const totalProfitAmount = profitDays.reduce((acc, d) => acc + d.pnl, 0);
+    const totalLossAmount = lossDays.reduce((acc, d) => acc + d.pnl, 0);
+
+    if (profitBadgeEl) {
+      profitBadgeEl.innerText = `${profitDays.length} Days (${TradeAnalytics.formatCurrency(totalProfitAmount)})`;
+    }
+
+    if (lossBadgeEl) {
+      lossBadgeEl.innerText = `${lossDays.length} Days (${TradeAnalytics.formatCurrency(totalLossAmount)})`;
+    }
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    const formatDayCardDate = (dateStr) => {
+      const parts = dateStr.split('-').map(Number);
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      return {
+        dateFormatted: `${parts[2]} ${monthNames[parts[1] - 1]} ${parts[0]}`,
+        weekday: dayNames[d.getDay()]
+      };
+    };
+
+    const renderCard = (day, isProfit) => {
+      const { dateFormatted, weekday } = formatDayCardDate(day.date);
+      const winRate = day.trades > 0 ? Math.round((day.wins / day.trades) * 100) : 0;
+      const pnlFormatted = TradeAnalytics.formatCurrency(day.pnl);
+
+      let bestOrWorstSymbol = '-';
+      let bestOrWorstPnl = 0;
+      if (day.tradeList && day.tradeList.length > 0) {
+        if (isProfit) {
+          const sorted = [...day.tradeList].sort((x, y) => (y.profit || 0) - (x.profit || 0));
+          bestOrWorstSymbol = sorted[0].symbol;
+          bestOrWorstPnl = sorted[0].profit || 0;
+        } else {
+          const sorted = [...day.tradeList].sort((x, y) => (x.profit || 0) - (y.profit || 0));
+          bestOrWorstSymbol = sorted[0].symbol;
+          bestOrWorstPnl = sorted[0].profit || 0;
+        }
+      }
+
+      return `
+        <div class="journal-day-item ${isProfit ? 'profit' : 'loss'}" onclick="App.openDayTradesModal('${day.date}', App.currentMetrics.dailyMap['${day.date}'])">
+          <div class="journal-day-top">
+            <div>
+              <span class="journal-day-date">${dateFormatted}</span>
+              <span style="font-size: 0.76rem; color: var(--text-dim); margin-left: 6px;">• ${weekday}</span>
+            </div>
+            <span class="journal-day-pnl ${isProfit ? 'profit' : 'loss'}">${pnlFormatted}</span>
+          </div>
+          <div class="journal-day-stats">
+            <span class="journal-tag"><strong>${day.trades}</strong> Trades</span>
+            <span class="journal-tag" style="color: ${winRate >= 50 ? 'var(--profit)' : 'var(--loss)'}">
+              ${day.wins}W / ${day.losses}L (${winRate}%)
+            </span>
+            <span class="journal-tag">
+              ${isProfit ? 'Top' : 'Worst'}: ${bestOrWorstSymbol} (${TradeAnalytics.formatCurrency(bestOrWorstPnl)})
+            </span>
+          </div>
+          <div class="journal-day-cta">
+            <span>Inspect Day Chart & Trades</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="7" y1="17" x2="17" y2="7"></line>
+              <polyline points="7 7 17 7 17 17"></polyline>
+            </svg>
+          </div>
+        </div>
+      `;
+    };
+
+    if (profitDays.length === 0) {
+      profitListEl.innerHTML = `<div class="journal-empty-msg">No profitable trading days recorded yet.</div>`;
+    } else {
+      profitListEl.innerHTML = profitDays.map(d => renderCard(d, true)).join('');
+    }
+
+    if (lossDays.length === 0) {
+      lossListEl.innerHTML = `<div class="journal-empty-msg">No losing trading days recorded. Excellent consistency!</div>`;
+    } else {
+      lossListEl.innerHTML = lossDays.map(d => renderCard(d, false)).join('');
+    }
+  },
+
+  /**
+   * Open Day Performance & Trades Inspection Modal with Floating Intraday Chart
    */
   openDayTradesModal(dateKey, dayData) {
+    if (!dayData) {
+      dayData = (this.currentMetrics && this.currentMetrics.dailyMap) ? this.currentMetrics.dailyMap[dateKey] : null;
+    }
+    if (!dayData) return;
+
     const modal = document.getElementById('dayTradesModal');
     const title = document.getElementById('dayTradesModalTitle');
-    const body = document.getElementById('dayTradesModalBody');
-    if (!modal || !body) return;
+    const subtitle = document.getElementById('dayTradesModalSubtitle');
+    const badge = document.getElementById('dayModalNetPnLBadge');
+    const statsBar = document.getElementById('dayStatsBar');
+    const tableContainer = document.getElementById('dayTradesTableContainer');
 
-    title.innerText = `Trades on ${dateKey} (${TradeAnalytics.formatCurrency(dayData.pnl)})`;
+    if (!modal) return;
 
-    let html = `
-      <table class="trade-table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Symbol</th>
-            <th>Type</th>
-            <th>Lots</th>
-            <th>P/L ($)</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const parts = dateKey.split('-').map(Number);
+    const dateFormatted = parts.length === 3 ? `${parts[2]} ${monthNames[parts[1] - 1]} ${parts[0]}` : dateKey;
 
-    dayData.tradeList.forEach(t => {
-      const timeOnly = (t.closeTime || t.openTime || '').slice(11, 16);
-      const pnlFormatted = TradeAnalytics.formatCurrency(t.profit);
-      const pnlClass = t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text');
+    if (title) title.innerText = `Day Performance: ${dateFormatted}`;
+    if (subtitle) {
+      const winRate = dayData.trades > 0 ? Math.round((dayData.wins / dayData.trades) * 100) : 0;
+      subtitle.innerText = `${dayData.trades} Total Trades • ${dayData.wins} Wins / ${dayData.losses} Losses (${winRate}% Win Rate)`;
+    }
 
-      html += `
-        <tr onclick="App.openTradeDetailModal(${JSON.stringify(t).replace(/"/g, '&quot;')})">
-          <td style="color: var(--text-dim);">${timeOnly}</td>
-          <td><span class="symbol-badge">${t.symbol}</span></td>
-          <td><span class="type-badge ${t.type}">${t.type.toUpperCase()}</span></td>
-          <td>${t.lots}</td>
-          <td class="${pnlClass}">${pnlFormatted}</td>
-        </tr>
-      `;
+    const isProfit = dayData.pnl >= 0;
+    if (badge) {
+      badge.className = `day-modal-badge ${isProfit ? 'profit' : 'loss'}`;
+      badge.innerText = TradeAnalytics.formatCurrency(dayData.pnl);
+    }
+
+    // Stats chips
+    let grossWin = 0;
+    let grossLoss = 0;
+    let totalLots = 0;
+    (dayData.tradeList || []).forEach(t => {
+      const p = t.profit || 0;
+      if (p > 0) grossWin += p;
+      if (p < 0) grossLoss += Math.abs(p);
+      totalLots += (t.lots || 0);
     });
 
-    html += `</tbody></table>`;
-    body.innerHTML = html;
+    if (statsBar) {
+      statsBar.innerHTML = `
+        <div class="day-stat-chip">
+          <span class="day-stat-chip-label">Net P&L</span>
+          <span class="day-stat-chip-val ${isProfit ? 'profit' : 'loss'}">${TradeAnalytics.formatCurrency(dayData.pnl)}</span>
+        </div>
+        <div class="day-stat-chip">
+          <span class="day-stat-chip-label">Win Rate</span>
+          <span class="day-stat-chip-val ${dayData.wins >= dayData.losses ? 'profit' : 'loss'}">
+            ${dayData.trades > 0 ? Math.round((dayData.wins / dayData.trades) * 100) : 0}%
+          </span>
+        </div>
+        <div class="day-stat-chip">
+          <span class="day-stat-chip-label">Gross Profit</span>
+          <span class="day-stat-chip-val profit">+${TradeAnalytics.formatCurrency(grossWin, false)}</span>
+        </div>
+        <div class="day-stat-chip">
+          <span class="day-stat-chip-label">Gross Loss</span>
+          <span class="day-stat-chip-val loss">-${TradeAnalytics.formatCurrency(grossLoss, false)}</span>
+        </div>
+        <div class="day-stat-chip">
+          <span class="day-stat-chip-label">Total Volume</span>
+          <span class="day-stat-chip-val">${totalLots.toFixed(2)} Lots</span>
+        </div>
+      `;
+    }
+
+    // Trades table
+    if (tableContainer) {
+      let html = `
+        <table class="trade-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Symbol</th>
+              <th>Side</th>
+              <th>Lots</th>
+              <th>Entry</th>
+              <th>Exit</th>
+              <th>P/L ($)</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      (dayData.tradeList || []).forEach(t => {
+        const timeOnly = (t.closeTime || t.openTime || '').slice(11, 16);
+        const pnlFormatted = TradeAnalytics.formatCurrency(t.profit);
+        const pnlClass = t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text');
+
+        html += `
+          <tr onclick="App.openTradeDetailModal(${JSON.stringify(t).replace(/"/g, '&quot;')})" style="cursor: pointer;">
+            <td style="color: var(--text-dim);">${timeOnly || '-'}</td>
+            <td><span class="symbol-badge">${t.symbol}</span></td>
+            <td><span class="type-badge ${t.type}">${t.type.toUpperCase()}</span></td>
+            <td>${t.lots}</td>
+            <td style="color: var(--text-muted);">${t.openPrice ? t.openPrice.toFixed(2) : '-'}</td>
+            <td style="color: var(--text-muted);">${t.closePrice ? t.closePrice.toFixed(2) : '-'}</td>
+            <td class="${pnlClass}" style="font-weight: 700;">${pnlFormatted}</td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      tableContainer.innerHTML = html;
+    }
+
     modal.classList.add('active');
+
+    // Render Intraday Floating Chart
+    setTimeout(() => {
+      ChartManager.renderDayIntradayChart(dayData.tradeList, dayData.pnl);
+    }, 60);
   },
 
   /**
@@ -634,20 +863,38 @@ const App = {
       });
     }
 
-    // Main P&L Chart Tabs (Cumulative vs Daily)
+    // Main Chart Cumulative / Daily / Weekly toggles
     const tabCum = document.getElementById('tabCumPnL');
     const tabDaily = document.getElementById('tabDailyPnL');
-    if (tabCum && tabDaily) {
+    const tabWeekly = document.getElementById('tabWeeklyPnL');
+
+    const updateChartTabState = (activeBtn) => {
+      [tabCum, tabDaily, tabWeekly].forEach(btn => {
+        if (btn) btn.classList.remove('active');
+      });
+      if (activeBtn) activeBtn.classList.add('active');
+    };
+
+    if (tabCum) {
       tabCum.addEventListener('click', () => {
-        tabCum.classList.add('active');
-        tabDaily.classList.remove('active');
+        updateChartTabState(tabCum);
         ChartManager.currentPnLView = 'cumulative';
         ChartManager.renderMainPnLChart(this.currentMetrics);
       });
+    }
+
+    if (tabDaily) {
       tabDaily.addEventListener('click', () => {
-        tabDaily.classList.add('active');
-        tabCum.classList.remove('active');
+        updateChartTabState(tabDaily);
         ChartManager.currentPnLView = 'daily';
+        ChartManager.renderMainPnLChart(this.currentMetrics);
+      });
+    }
+
+    if (tabWeekly) {
+      tabWeekly.addEventListener('click', () => {
+        updateChartTabState(tabWeekly);
+        ChartManager.currentPnLView = 'weekly';
         ChartManager.renderMainPnLChart(this.currentMetrics);
       });
     }
@@ -765,6 +1012,14 @@ const App = {
       dateSelect.addEventListener('change', (e) => {
         this.dateFilter = e.target.value;
         this.processTrades();
+      });
+    }
+
+    // Daily Journal Sort Dropdown
+    const journalSortSelect = document.getElementById('journalSortSelect');
+    if (journalSortSelect) {
+      journalSortSelect.addEventListener('change', () => {
+        this.renderDailyJournalBreakdown();
       });
     }
 

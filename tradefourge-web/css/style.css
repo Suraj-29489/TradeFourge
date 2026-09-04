@@ -504,6 +504,12 @@ html, body {
   gap: 18px;
 }
 
+.kpi-row-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
 .kpi-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -844,7 +850,8 @@ body.sidebar-collapsed .sidebar-reveal-btn {
     padding: 16px;
   }
 
-  .kpi-row {
+  .kpi-row,
+  .kpi-row-2 {
     grid-template-columns: 1fr;
     gap: 12px;
   }

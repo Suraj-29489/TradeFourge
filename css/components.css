@@ -1026,3 +1026,251 @@
   }
 }
 
+/* ==========================================================================
+   Daily Journal Breakdown (Good Profit Days vs Loss Days)
+   ========================================================================== */
+.journal-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .journal-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.journal-box-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.journal-box-card.profit-box {
+  border-top: 3px solid var(--profit);
+}
+
+.journal-box-card.loss-box {
+  border-top: 3px solid var(--loss);
+}
+
+.journal-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 12px;
+}
+
+.journal-box-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.journal-box-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+}
+
+.journal-box-badge.profit {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--profit);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.journal-box-badge.loss {
+  background: rgba(244, 63, 94, 0.15);
+  color: var(--loss);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.journal-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 560px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.journal-day-item {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.journal-day-item:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  background: var(--bg-sidebar-hover);
+}
+
+.journal-day-item.profit:hover {
+  border-color: var(--profit);
+}
+
+.journal-day-item.loss:hover {
+  border-color: var(--loss);
+}
+
+.journal-day-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.journal-day-date {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.journal-day-pnl {
+  font-weight: 800;
+  font-size: 1rem;
+  font-family: var(--font-mono);
+}
+
+.journal-day-pnl.profit {
+  color: var(--profit);
+}
+
+.journal-day-pnl.loss {
+  color: var(--loss);
+}
+
+.journal-day-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.journal-tag {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.journal-day-cta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #818cf8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-end;
+}
+
+.journal-empty-msg {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+/* ==========================================================================
+   Day Modal Intraday Floating Chart & Stats
+   ========================================================================== */
+.day-modal-chart-card {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.day-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.day-modal-badge {
+  font-size: 0.88rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+.day-modal-badge.profit {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--profit);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.day-modal-badge.loss {
+  background: rgba(244, 63, 94, 0.15);
+  color: var(--loss);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.day-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.day-stat-chip {
+  background: var(--bg-card-alt);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.day-stat-chip-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.day-stat-chip-val {
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text-main);
+}
+
+.day-stat-chip-val.profit {
+  color: var(--profit);
+}
+
+.day-stat-chip-val.loss {
+  color: var(--loss);
+}
+
+.day-trades-table-wrap {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  background: var(--bg-card-alt);
+}
+

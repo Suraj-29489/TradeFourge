@@ -203,6 +203,27 @@
               </div>
             </div>
 
+            <!-- 1b. Day Performance KPI Cards (Profitable Day & Lossing Day) -->
+            <div class="kpi-row-2">
+              <!-- Profitable Day -->
+              <div class="kpi-card">
+                <div class="kpi-card-header">
+                  <span class="kpi-title">Profitable day <span class="info-tooltip-icon" title="Day of the week with the highest net profit based on trading data">ⓘ</span></span>
+                </div>
+                <div class="kpi-value profit" id="kpiProfitableDay">--</div>
+                <div class="kpi-subtext" id="kpiProfitableDaySub"><span class="delta-pos">▲ +$0.00</span> • 0% win rate</div>
+              </div>
+
+              <!-- Lossing Day -->
+              <div class="kpi-card">
+                <div class="kpi-card-header">
+                  <span class="kpi-title">Lossing day <span class="info-tooltip-icon" title="Day of the week with the worst performance or largest loss based on trading data">ⓘ</span></span>
+                </div>
+                <div class="kpi-value loss" id="kpiLossingDay">--</div>
+                <div class="kpi-subtext" id="kpiLossingDaySub"><span class="delta-neg">▼ -$0.00</span> • 0% win rate</div>
+              </div>
+            </div>
+
             <!-- 2. Middle Section: Donut Win Rates + Cumulative P&L Area Chart -->
             <div class="middle-row">
               <!-- Left Donut Charts Column -->
@@ -258,14 +279,15 @@
                 </div>
               </div>
 
-              <!-- Right Area Chart Card: Daily Net Cumulative P&L -->
+              <!-- Right Area Chart Card: Daily / Cumulative / Weekly Net P&L -->
               <div class="chart-card">
                 <div class="chart-card-header">
                   <div class="chart-tabs">
                     <button class="chart-tab-btn active" id="tabCumPnL">Daily Net cumulative P&L</button>
                     <button class="chart-tab-btn" id="tabDailyPnL">Net daily P&L</button>
+                    <button class="chart-tab-btn" id="tabWeeklyPnL">Net weekly P&L</button>
                   </div>
-                  <div style="font-size: 0.8rem; color: var(--text-dim);">Realized Equity Growth</div>
+                  <div style="font-size: 0.8rem; color: var(--text-dim);" id="pnlChartSubtext">Realized Equity Growth</div>
                 </div>
                 <div class="chart-canvas-wrapper">
                   <canvas id="pnlMainCanvas"></canvas>
@@ -326,6 +348,7 @@
 
         <!-- ==========================================================================
              VIEW: DAILY JOURNAL
+             VIEW: DAILY JOURNAL (Profit Days vs Loss Days Breakdown)
              ========================================================================== -->
         <section class="view-section" id="view-journal">
           <div style="display: flex; flex-direction: column; gap: 20px;">
@@ -335,14 +358,61 @@
                 <div class="calendar-nav-controls">
                   <button class="calendar-nav-btn" onclick="CalendarManager.prevMonth()">❮</button>
                   <button class="calendar-nav-btn" onclick="CalendarManager.nextMonth()">❯</button>
+            
+            <!-- Journal Overview Header Toolbar -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 16px 20px;">
+              <div>
+                <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                  <span>📖</span> Daily Journal Performance Breakdown
+                </h2>
+                <span style="font-size: 0.82rem; color: var(--text-dim);">Tap any day to inspect its floating trade-by-trade chart & execution logs</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <select class="form-select" id="journalSortSelect" style="padding: 7px 12px; font-size: 0.82rem;">
+                  <option value="pnl_desc">Sort by Highest P&L</option>
+                  <option value="pnl_asc">Sort by Largest Loss</option>
+                  <option value="date_desc" selected>Sort by Newest Date</option>
+                  <option value="date_asc">Sort by Oldest Date</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- 2-Box Container: Good Profit Days (Left) & Loss Days (Right) -->
+            <div class="journal-grid-2">
+              
+              <!-- Box 1: Good Profit Days -->
+              <div class="journal-box-card profit-box">
+                <div class="journal-box-header">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="status-indicator win"></span>
+                    <h3 class="journal-box-title">Good Profit Days</h3>
+                  </div>
+                  <span class="journal-box-badge profit" id="journalProfitBadge">0 Days (+$0.00)</span>
+                </div>
+                <div class="journal-day-list" id="journalProfitList">
+                  <!-- Rendered dynamically -->
                 </div>
               </div>
               <div class="calendar-scroll-wrapper">
                 <div class="calendar-grid" id="calendarGridJournal">
                   <!-- Mirrored or standalone large journal calendar -->
+
+              <!-- Box 2: Loss Days -->
+              <div class="journal-box-card loss-box">
+                <div class="journal-box-header">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="status-indicator loss"></span>
+                    <h3 class="journal-box-title">Loss Days</h3>
+                  </div>
+                  <span class="journal-box-badge loss" id="journalLossBadge">0 Days (-$0.00)</span>
+                </div>
+                <div class="journal-day-list" id="journalLossList">
+                  <!-- Rendered dynamically -->
                 </div>
               </div>
+
             </div>
+
           </div>
         </section>
 
@@ -961,15 +1031,48 @@
 
   <!-- ==========================================================================
        MODAL 4: Day Trades Modal (Calendar Drilldown)
+       MODAL 4: Day Performance & Trades Inspection Modal (Floating Chart & Breakdown)
        ========================================================================== -->
   <div class="modal-overlay" id="dayTradesModal">
     <div class="modal-card" style="max-width: 680px;">
+    <div class="modal-card" style="max-width: 780px;">
       <div class="modal-header">
         <h3 class="modal-title" id="dayTradesModalTitle">Trades on Selected Day</h3>
+        <div>
+          <h3 class="modal-title" id="dayTradesModalTitle">Day Performance Inspection</h3>
+          <span style="font-size: 0.78rem; color: var(--text-dim);" id="dayTradesModalSubtitle">Realized trade-by-trade equity progression</span>
+        </div>
         <button class="modal-close-btn">&times;</button>
       </div>
       <div class="modal-body" id="dayTradesModalBody">
         <!-- Rendered dynamically -->
+      <div class="modal-body" id="dayTradesModalBody" style="padding-top: 14px;">
+        <!-- Floating Day P&L Intraday Chart -->
+        <div class="day-modal-chart-card">
+          <div class="day-chart-header">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Intraday Equity Curve</span>
+            <span id="dayModalNetPnLBadge" class="day-modal-badge">+0.00</span>
+          </div>
+          <div style="height: 180px; position: relative; width: 100%;">
+            <canvas id="dayIntradayCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Day Stats Quick Bar -->
+        <div class="day-stats-bar" id="dayStatsBar">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Day Trades List Table -->
+        <div class="day-trades-table-wrap">
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--text-main); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Executed Trades</span>
+            <span style="font-size: 0.75rem; color: var(--text-dim);">Click trade row for full details</span>
+          </div>
+          <div id="dayTradesTableContainer">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn-secondary modal-cancel-btn">Close</button>
