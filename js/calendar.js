@@ -115,7 +115,8 @@ const CalendarManager = {
 
       if (dayData && dayData.trades > 0) {
         const pnl = dayData.pnl;
-        const tradeWord = dayData.trades === 1 ? '1 trade' : `${dayData.trades} trades`;
+        const tradeWord = `<span class="trade-count-num">${dayData.trades}</span><span class="trade-count-word"> ${dayData.trades === 1 ? 'trade' : 'trades'}</span>`;
+        const tradeTitleWord = dayData.trades === 1 ? '1 trade' : `${dayData.trades} trades`;
 
         if (pnl > 0) {
           cell.classList.add('profit-day');
@@ -146,7 +147,7 @@ const CalendarManager = {
           `;
         }
 
-        cell.setAttribute('title', `${dateKey}: ${TradeAnalytics.formatCurrency(pnl)} (${tradeWord})`);
+        cell.setAttribute('title', `${dateKey}: ${TradeAnalytics.formatCurrency(pnl)} (${tradeTitleWord})`);
         cell.addEventListener('click', () => {
           App.openDayTradesModal(dateKey, dayData);
         });

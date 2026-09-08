@@ -59,36 +59,16 @@
 
 .calendar-scroll-wrapper {
   width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 6px;
-}
-
-.calendar-scroll-wrapper::-webkit-scrollbar {
-  height: 5px;
-}
-
-.calendar-scroll-wrapper::-webkit-scrollbar-track {
-  background: rgba(18, 22, 36, 0.6);
-  border-radius: 4px;
-}
-
-.calendar-scroll-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.35);
-  border-radius: 4px;
-}
-
-.calendar-scroll-wrapper::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+  overflow: visible;
+  min-width: 0;
 }
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(46px, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
-  min-width: 350px;
   width: 100%;
+  min-width: 0;
 }
 
 .calendar-weekday {
@@ -106,7 +86,7 @@
 
 .calendar-day-cell {
   aspect-ratio: 1.15;
-  min-height: 50px;
+  min-height: 48px;
   background-color: var(--bg-card-alt);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
@@ -118,6 +98,8 @@
   transition: all 0.18s ease;
   cursor: pointer;
   box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .calendar-day-cell:hover {
@@ -156,6 +138,9 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .day-pnl {
@@ -163,12 +148,20 @@
   font-weight: 700;
   line-height: 1.1;
   font-family: var(--font-family);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .day-trade-count {
   font-size: 0.65rem;
   color: var(--text-dim);
   line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* Green Profitable Day */
@@ -729,30 +722,116 @@
 }
 
 @media (max-width: 768px) {
-  :root {
-    --sidebar-width: 0px;
+  .calendar-card {
+    padding: 14px 12px;
+    width: 100%;
+    min-width: 0;
   }
-  .sidebar {
-    transform: translateX(-100%);
+
+  .calendar-grid {
+    gap: 4px;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    min-width: 0;
+    width: 100%;
   }
-  .sidebar.mobile-open {
-    transform: translateX(0);
-    width: 240px;
+
+  .calendar-day-cell {
+    padding: 4px 3px;
+    aspect-ratio: 1;
+    min-height: 42px;
+    border-radius: var(--radius-sm);
   }
-  .main-wrapper {
-    margin-left: 0;
+
+  .day-number {
+    font-size: 0.65rem;
   }
-  .top-header {
-    padding: 0 16px;
+
+  .day-pnl {
+    font-size: 0.72rem;
   }
-  .view-container {
-    padding: 16px;
+
+  .day-trade-count {
+    font-size: 0.58rem;
   }
-  .kpi-row {
-    grid-template-columns: 1fr;
+
+  .calendar-weekday {
+    font-size: 0.62rem;
+    padding: 3px 0;
   }
-  .header-import-info {
+}
+
+@media (max-width: 480px) {
+  .calendar-card {
+    padding: 12px 8px;
+  }
+
+  .calendar-grid {
+    gap: 3px;
+  }
+
+  .calendar-day-cell {
+    padding: 3px 2px;
+    min-height: 38px;
+  }
+
+  .day-number {
+    font-size: 0.6rem;
+  }
+
+  .day-pnl {
+    font-size: 0.66rem;
+  }
+
+  .day-trade-count {
+    font-size: 0.52rem;
+  }
+
+  .calendar-weekday {
+    font-size: 0.56rem;
+  }
+
+  .calendar-month-title {
+    font-size: 0.95rem;
+    gap: 8px;
+  }
+
+  .calendar-header {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 360px) {
+  .calendar-card {
+    padding: 10px 6px;
+  }
+
+  .calendar-grid {
+    gap: 2px;
+  }
+
+  .calendar-day-cell {
+    padding: 2px 1px;
+    min-height: 34px;
+  }
+
+  .day-number {
+    font-size: 0.54rem;
+  }
+
+  .day-pnl {
+    font-size: 0.58rem;
+  }
+
+  .day-trade-count {
+    font-size: 0.52rem;
+  }
+
+  .day-trade-count .trade-count-word {
     display: none;
+  }
+
+  .calendar-weekday {
+    font-size: 0.5rem;
   }
 }
 

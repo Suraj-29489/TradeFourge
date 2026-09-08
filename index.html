@@ -4,6 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TradeForge - Professional Trading Journal & Analytics</title>
+
+  <!-- PWA Meta Tags & Web App Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f141f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TradeForge">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -20,7 +32,7 @@
          ========================================================================== -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <button class="brand-logo" id="sidebarBrandToggle" title="Close sidebar" aria-label="Toggle sidebar">
+        <button class="brand-logo" id="sidebarBrandToggle" title="Toggle sidebar" aria-label="Toggle sidebar">
           <div class="brand-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="m13 2-2 2.5V8l3-3 1 1-4 4v3.5l6-6 1 1-7 7v4.5l9-9 1 1-10 10H3V2h10Z"/>
@@ -28,6 +40,7 @@
           </div>
           <span class="brand-title">TRADE<span>FOURGE</span></span>
         </button>
+        <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close sidebar" title="Close sidebar">&times;</button>
       </div>
 
       <!-- Add Trade Action Button -->
@@ -76,6 +89,24 @@
           </svg>
           Backtesting
         </a>
+        <div class="sidebar-divider" style="height: 1px; background: var(--border-light); margin: 8px 0; opacity: 0.6;"></div>
+        <a class="nav-item" data-view="mt5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+          MT5
+        </a>
+        <a class="nav-item nav-item-install" id="sidebarInstallBtn" role="button" tabindex="0" title="Install TradeForge Web App">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span class="nav-label" id="installBtnLabel">Install App</span>
+          <span class="install-pill-badge" id="installStatusBadge">App</span>
+        </a>
       </nav>
 
       <!-- Storage Status Indicator -->
@@ -92,14 +123,8 @@
       </div>
     </aside>
 
-    <button class="sidebar-reveal-btn" id="sidebarRevealBtn" title="Show sidebar" aria-label="Show sidebar">
-      <div class="brand-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m13 2-2 2.5V8l3-3 1 1-4 4v3.5l6-6 1 1-7 7v4.5l9-9 1 1-10 10H3V2h10Z"/>
-        </svg>
-      </div>
-      <span class="brand-title">TRADE<span>FOURGE</span></span>
-    </button>
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
     <!-- ==========================================================================
          Main Wrapper & Top Navigation Bar
@@ -107,6 +132,14 @@
     <div class="main-wrapper">
       <header class="top-header">
         <div class="header-left">
+          <button class="sidebar-reveal-btn" id="sidebarRevealBtn" title="Toggle menu" aria-label="Toggle menu">
+            <div class="brand-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m13 2-2 2.5V8l3-3 1 1-4 4v3.5l6-6 1 1-7 7v4.5l9-9 1 1-10 10H3V2h10Z"/>
+              </svg>
+            </div>
+            <span class="brand-title">TRADE<span>FOURGE</span></span>
+          </button>
           <h1 class="page-title" id="pageTitle">Dashboard</h1>
         </div>
 
@@ -118,7 +151,7 @@
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            Export JSON
+            <span>Export JSON</span>
           </button>
 
           <!-- UPLOAD CSV BUTTON IN PLACE OF "ALL ACCOUNTS" (Explicitly requested by user) -->
@@ -128,7 +161,7 @@
               <polyline points="17 8 12 3 7 8"></polyline>
               <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            Upload CSV
+            <span>Upload CSV</span>
           </button>
 
           <!-- Date Range Filter Dropdown & Custom Calendar Popover -->
@@ -968,6 +1001,272 @@
         </section>
 
         <!-- ==========================================================================
+             VIEW: METATRADER 5 (MT5) INTEGRATION
+             ========================================================================== -->
+        <section class="view-section" id="view-mt5">
+          <!-- Disconnected State: Connect MT5 Account -->
+          <div class="mt5-connect-wrapper" id="mt5ConnectState">
+            <div class="mt5-connect-card">
+              <div class="mt5-card-header">
+                <div class="mt5-header-icon">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="mt5-connect-title">Connect MT5 Account</h2>
+                  <p class="mt5-connect-desc">Enter your MetaTrader 5 broker credentials below for read-only access and live sync.</p>
+                </div>
+              </div>
+
+              <form id="mt5ConnectForm" class="mt5-form">
+                <div class="form-group">
+                  <label class="form-label" for="mt5BrokerSelect">Broker</label>
+                  <select class="form-control" id="mt5BrokerSelect" required>
+                    <option value="Exness" selected>Exness</option>
+                    <option value="FTMO">FTMO</option>
+                    <option value="IC Markets">IC Markets</option>
+                    <option value="XM">XM Global</option>
+                    <option value="Pepperstone">Pepperstone</option>
+                    <option value="Deriv">Deriv</option>
+                    <option value="JustMarkets">JustMarkets</option>
+                    <option value="Other">Other / Custom</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="mt5AccountInput">MT5 Account Number</label>
+                  <input type="text" class="form-control" id="mt5AccountInput" placeholder="12345678" value="12345678" required autocomplete="username" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="mt5ServerInput">Server</label>
+                  <input type="text" class="form-control" id="mt5ServerInput" placeholder="Exness-MT5Real11" value="Exness-MT5Real11" required />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="mt5PasswordInput">Investor Password</label>
+                  <input type="password" class="form-control" id="mt5PasswordInput" placeholder="•••••••••••" value="InvestorDemo2026!" required autocomplete="current-password" />
+                  <span class="mt5-hint-text">Read-only investor password only. Master password is never required.</span>
+                </div>
+
+                <div class="mt5-checkbox-row">
+                  <label class="mt5-checkbox-label">
+                    <input type="checkbox" id="mt5ReadOnlyCheck" checked />
+                    <span>Read-only connection</span>
+                  </label>
+                  <button type="button" class="btn-demo-quickfill" id="btnMT5DemoFill" title="Auto-fill sample credentials">Demo Fill</button>
+                </div>
+
+                <button type="submit" class="btn-primary mt5-connect-btn" id="btnMT5Submit">
+                  Connect MT5
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Connected State: Live MT5 Dashboard -->
+          <div class="mt5-dashboard-wrapper" id="mt5DashboardState" style="display: none;">
+            <!-- Top Status & Actions Banner -->
+            <div class="mt5-top-banner">
+              <div class="mt5-banner-left">
+                <div class="mt5-status-pill">
+                  <span class="status-dot online"></span>
+                  Connected
+                </div>
+                <div>
+                  <h2 class="mt5-live-title">Live MT5 Dashboard</h2>
+                  <div class="mt5-account-meta">
+                    <span>Account: <strong id="mt5ConnectedAccount">12345678</strong></span>
+                    <span class="meta-separator">•</span>
+                    <span>Broker: <strong id="mt5ConnectedBroker">Exness</strong></span>
+                    <span class="meta-separator">•</span>
+                    <span class="server-tag" id="mt5ConnectedServer">Exness-MT5Real11</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt5-banner-actions">
+                <button class="btn-import-tradeforge" id="btnMT5ImportToTradeForge">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  <span>Import to TradeForge</span>
+                  <small class="import-subtext">(moves MT5 trades into your journal)</small>
+                </button>
+
+                <button class="btn-sync-live" id="btnMT5Sync" title="Sync live data with broker">
+                  ↻ Sync Live Data
+                </button>
+
+                <button class="btn-disconnect-mt5" id="btnMT5Disconnect" title="Disconnect MT5 account">
+                  Disconnect
+                </button>
+              </div>
+            </div>
+
+            <!-- KPI Metric Cards Grid -->
+            <div class="mt5-kpi-grid">
+              <div class="mt5-metric-card">
+                <div class="mt5-metric-label">Balance</div>
+                <div class="mt5-metric-val" id="mt5KpiBalance">$1,082.78</div>
+                <div class="mt5-metric-sub">Account capital</div>
+              </div>
+
+              <div class="mt5-metric-card">
+                <div class="mt5-metric-label">Equity</div>
+                <div class="mt5-metric-val" id="mt5KpiEquity">$1,094.32</div>
+                <div class="mt5-metric-sub">Floating balance</div>
+              </div>
+
+              <div class="mt5-metric-card">
+                <div class="mt5-metric-label">Free Margin</div>
+                <div class="mt5-metric-val" id="mt5KpiFreeMargin">$942.18</div>
+                <div class="mt5-metric-sub">Usable liquidity</div>
+              </div>
+
+              <div class="mt5-metric-card">
+                <div class="mt5-metric-label">Margin Level</div>
+                <div class="mt5-metric-val" id="mt5KpiMarginLevel">718.5%</div>
+                <div class="mt5-metric-sub">Safety buffer</div>
+              </div>
+
+              <div class="mt5-metric-card">
+                <div class="mt5-metric-label">Open Positions</div>
+                <div class="mt5-metric-val highlight" id="mt5KpiOpenPositions">2</div>
+                <div class="mt5-metric-sub">Active floating trades</div>
+              </div>
+
+              <div class="mt5-metric-card">
+                <div class="mt5-metric-label">Today P&L</div>
+                <div class="mt5-metric-val profit" id="mt5KpiTodayPnl">+$42.18</div>
+                <div class="mt5-metric-sub">Closed & floating net</div>
+              </div>
+            </div>
+
+            <!-- Sub-Tabs Navigation -->
+            <div class="mt5-tabs-container">
+              <div class="mt5-subtabs-bar">
+                <button class="mt5-subtab-btn active" data-tab="overview">Account Overview</button>
+                <button class="mt5-subtab-btn" data-tab="positions">Open Positions</button>
+                <button class="mt5-subtab-btn" data-tab="history">Trade History</button>
+                <button class="mt5-subtab-btn" data-tab="orders">Orders</button>
+                <button class="mt5-subtab-btn" data-tab="deals">Deals</button>
+                <button class="mt5-subtab-btn" data-tab="sync">Sync</button>
+              </div>
+
+              <!-- Tab 1: Account Overview -->
+              <div class="mt5-tab-pane active" id="mt5TabPane-overview">
+                <!-- Rendered dynamically -->
+              </div>
+
+              <!-- Tab 2: Open Positions -->
+              <div class="mt5-tab-pane" id="mt5TabPane-positions">
+                <div class="table-card">
+                  <div class="table-responsive">
+                    <table class="trade-table">
+                      <thead>
+                        <tr>
+                          <th>Ticket</th>
+                          <th>Symbol</th>
+                          <th>Type</th>
+                          <th>Lots</th>
+                          <th>Open Price</th>
+                          <th>Current Price</th>
+                          <th>S/L</th>
+                          <th>T/P</th>
+                          <th>Time</th>
+                          <th>Floating Profit</th>
+                        </tr>
+                      </thead>
+                      <tbody id="mt5PositionsTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 3: Trade History -->
+              <div class="mt5-tab-pane" id="mt5TabPane-history">
+                <div class="table-card">
+                  <div class="table-responsive">
+                    <table class="trade-table">
+                      <thead>
+                        <tr>
+                          <th>Ticket</th>
+                          <th>Symbol</th>
+                          <th>Type</th>
+                          <th>Lots</th>
+                          <th>Open Price</th>
+                          <th>Close Price</th>
+                          <th>Close Time</th>
+                          <th>Commission</th>
+                          <th>Profit</th>
+                        </tr>
+                      </thead>
+                      <tbody id="mt5HistoryTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 4: Orders -->
+              <div class="mt5-tab-pane" id="mt5TabPane-orders">
+                <div class="table-card">
+                  <div class="table-responsive">
+                    <table class="trade-table">
+                      <thead>
+                        <tr>
+                          <th>Ticket</th>
+                          <th>Symbol</th>
+                          <th>Type</th>
+                          <th>Lots</th>
+                          <th>Price</th>
+                          <th>Market Price</th>
+                          <th>State</th>
+                        </tr>
+                      </thead>
+                      <tbody id="mt5OrdersTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 5: Deals -->
+              <div class="mt5-tab-pane" id="mt5TabPane-deals">
+                <div class="table-card">
+                  <div class="table-responsive">
+                    <table class="trade-table">
+                      <thead>
+                        <tr>
+                          <th>Deal #</th>
+                          <th>Order #</th>
+                          <th>Symbol</th>
+                          <th>Type</th>
+                          <th>Direction</th>
+                          <th>Lots</th>
+                          <th>Price</th>
+                          <th>Profit</th>
+                        </tr>
+                      </thead>
+                      <tbody id="mt5DealsTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab 6: Sync -->
+              <div class="mt5-tab-pane" id="mt5TabPane-sync">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==========================================================================
              VIEW: REPORTS
              ========================================================================== -->
         <section class="view-section" id="view-reports">
@@ -1216,6 +1515,49 @@
     </div>
   </div>
 
+  <!-- ==========================================================================
+       MODAL 5: Install App Modal (PWA Installation & Guidance)
+       ========================================================================== -->
+  <div class="modal-overlay" id="installModal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="brand-icon" style="width: 30px; height: 30px; border-radius: 6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m13 2-2 2.5V8l3-3 1 1-4 4v3.5l6-6 1 1-7 7v4.5l9-9 1 1-10 10H3V2h10Z"/>
+            </svg>
+          </div>
+          <h3 class="modal-title">Install TradeForge App</h3>
+        </div>
+        <button class="modal-close-btn" id="installModalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 18px 22px;">
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5;">
+          Install TradeForge on your device for quick home screen access, distraction-free fullscreen view, and seamless offline performance.
+        </p>
+
+        <!-- Native Prompt Trigger (when browser supports beforeinstallprompt) -->
+        <div id="installNativeAction" style="display: none; margin-bottom: 18px; text-align: center;">
+          <button class="btn-primary" id="btnTriggerPrompt" style="width: 100%; justify-content: center; padding: 12px; font-weight: 700; font-size: 0.95rem; gap: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Install TradeForge App
+          </button>
+        </div>
+
+        <div class="install-instructions" id="installInstructions">
+          <!-- Populated dynamically based on device platform -->
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end;">
+        <button class="btn-secondary modal-cancel-btn" id="installModalCancelBtn">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -1226,6 +1568,7 @@
   <script src="js/charts.js"></script>
   <script src="js/calendar.js"></script>
   <script src="js/backtest.js"></script>
+  <script src="js/mt5.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

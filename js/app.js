@@ -32,8 +32,12 @@ const App = {
    */
   async init() {
     this.bindEvents();
+    this.initPWA();
     if (window.BacktestEngine) {
       BacktestEngine.init();
+    }
+    if (window.MT5Manager) {
+      MT5Manager.init();
     }
     StorageManager.resetForNewSession();
     this.loadNotesAndRules();
@@ -1006,6 +1010,7 @@ const App = {
       journal: 'Analytics',
       tradelog: 'Trade Log',
       backtesting: 'Backtesting',
+      mt5: 'MetaTrader 5 (MT5)',
       reports: 'Reports & Performance',
       insights: 'AI & Rule Insights',
       strategies: 'Strategies',
@@ -1013,6 +1018,11 @@ const App = {
     };
     const titleEl = document.getElementById('pageTitle');
     if (titleEl) titleEl.innerText = titleMap[viewName] || 'Dashboard';
+
+    // If switching to MT5, re-render MT5 view
+    if (viewName === 'mt5' && window.MT5Manager) {
+      MT5Manager.render();
+    }
 
     // If switching to reports, re-render charts to fit container
     if (viewName === 'reports') {
@@ -1048,32 +1058,75 @@ const App = {
    * Bind DOM Event Listeners
    */
   bindEvents() {
-    // Navigation items
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        const view = item.getAttribute('data-view');
-        if (view) this.switchView(view);
-      });
-    });
-
-    // Sidebar collapse & reveal toggle via brand logo
+    // Sidebar interaction: Desktop collapse & Mobile drawer
+    const isMobileViewport = () => window.innerWidth <= 768;
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
     const brandToggleBtn = document.getElementById('sidebarBrandToggle');
     const revealBtn = document.getElementById('sidebarRevealBtn');
-    const setSidebarCollapsed = (collapsed) => {
-      document.body.classList.toggle('sidebar-collapsed', collapsed);
+    const sidebarEl = document.getElementById('sidebar');
+
+    const openMobileSidebar = () => {
+      document.body.classList.add('sidebar-mobile-open');
     };
-    if (brandToggleBtn) {
-      brandToggleBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        setSidebarCollapsed(true);
-      });
-    }
+    const closeMobileSidebar = () => {
+      document.body.classList.remove('sidebar-mobile-open');
+    };
+
     if (revealBtn) {
       revealBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        setSidebarCollapsed(false);
+        if (isMobileViewport()) {
+          openMobileSidebar();
+        } else {
+          document.body.classList.remove('sidebar-collapsed');
+        }
       });
     }
+
+    if (brandToggleBtn) {
+      brandToggleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (isMobileViewport()) {
+          closeMobileSidebar();
+        } else {
+          document.body.classList.add('sidebar-collapsed');
+        }
+      });
+    }
+
+    if (sidebarCloseBtn) {
+      sidebarCloseBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeMobileSidebar();
+      });
+    }
+
+    if (sidebarBackdrop) {
+      sidebarBackdrop.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeMobileSidebar();
+      });
+    }
+
+    // Tapping sidebar itself must NOT close it
+    if (sidebarEl) {
+      sidebarEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    // Navigation items: switch view and close drawer on mobile
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (item.id === 'sidebarInstallBtn') return;
+        const view = item.getAttribute('data-view');
+        if (view) this.switchView(view);
+        if (isMobileViewport()) {
+          closeMobileSidebar();
+        }
+      });
+    });
 
     // Main Chart Cumulative / Daily / Weekly toggles
     const tabCum = document.getElementById('tabCumPnL');
@@ -1502,6 +1555,203 @@ const App = {
     };
 
     reader.readAsText(file);
+  },
+
+  /**
+   * Initialize Progressive Web App (PWA) & Service Worker
+   */
+  initPWA() {
+    // 1. Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => {
+            console.log('[PWA] Service Worker registered with scope:', reg.scope);
+          })
+          .catch((err) => {
+            console.warn('[PWA] Service Worker registration failed:', err);
+          });
+      });
+    }
+
+    // 2. Check if already installed / running in standalone mode
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                         window.navigator.standalone === true ||
+                         (document.referrer && document.referrer.includes('android-app://'));
+
+    const installBtn = document.getElementById('sidebarInstallBtn');
+    const installBadge = document.getElementById('installStatusBadge');
+    const installBtnLabel = document.getElementById('installBtnLabel');
+    const installModal = document.getElementById('installModal');
+    const btnTriggerPrompt = document.getElementById('btnTriggerPrompt');
+    const installNativeAction = document.getElementById('installNativeAction');
+    const installInstructions = document.getElementById('installInstructions');
+
+    if (isStandalone) {
+      if (installBadge) {
+        installBadge.textContent = 'Installed';
+        installBadge.classList.add('installed');
+      }
+      if (installBtnLabel) {
+        installBtnLabel.textContent = 'App Installed';
+      }
+    }
+
+    // 3. Capture beforeinstallprompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.deferredInstallPrompt = e;
+      if (installBadge && !isStandalone) {
+        installBadge.textContent = 'Install';
+        installBadge.style.display = 'inline-block';
+      }
+      if (installNativeAction) {
+        installNativeAction.style.display = 'block';
+      }
+    });
+
+    // 4. Listen for appinstalled
+    window.addEventListener('appinstalled', () => {
+      this.deferredInstallPrompt = null;
+      if (installBadge) {
+        installBadge.textContent = 'Installed';
+        installBadge.classList.add('installed');
+      }
+      if (installBtnLabel) {
+        installBtnLabel.textContent = 'App Installed';
+      }
+      if (installModal) {
+        installModal.classList.remove('active');
+      }
+      this.showToast('TradeForge installed successfully! Welcome to the app! 🎉', 'success');
+    });
+
+    // 5. Render platform-tailored instructions in modal
+    const populateInstallInstructions = () => {
+      if (!installInstructions) return;
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+      const isMacSafari = /^((?!chrome|android).)*safari/i.test(ua) && !isIOS;
+
+      if (isIOS) {
+        installInstructions.innerHTML = `
+          <div class="install-guide-box">
+            <div style="font-weight: 700; color: #818cf8; font-size: 0.82rem; margin-bottom: 4px;">iOS Safari Installation:</div>
+            <div class="install-guide-step">
+              <div class="install-guide-num">1</div>
+              <div>Tap the <strong>Share</strong> button <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="15" x2="12" y2="3"/></svg> in Safari's bottom toolbar.</div>
+            </div>
+            <div class="install-guide-step">
+              <div class="install-guide-num">2</div>
+              <div>Scroll down and tap <strong>"Add to Home Screen"</strong>.</div>
+            </div>
+            <div class="install-guide-step">
+              <div class="install-guide-num">3</div>
+              <div>Tap <strong>"Add"</strong> in the top-right corner to finish.</div>
+            </div>
+          </div>
+        `;
+      } else if (isMacSafari) {
+        installInstructions.innerHTML = `
+          <div class="install-guide-box">
+            <div style="font-weight: 700; color: #818cf8; font-size: 0.82rem; margin-bottom: 4px;">macOS Safari Installation:</div>
+            <div class="install-guide-step">
+              <div class="install-guide-num">1</div>
+              <div>Click <strong>File</strong> in the macOS menu bar (or Share button).</div>
+            </div>
+            <div class="install-guide-step">
+              <div class="install-guide-num">2</div>
+              <div>Select <strong>"Add to Dock..."</strong>.</div>
+            </div>
+            <div class="install-guide-step">
+              <div class="install-guide-num">3</div>
+              <div>Click <strong>"Add"</strong> to launch TradeForge as a standalone application.</div>
+            </div>
+          </div>
+        `;
+      } else {
+        installInstructions.innerHTML = `
+          <div class="install-guide-box">
+            <div style="font-weight: 700; color: #818cf8; font-size: 0.82rem; margin-bottom: 4px;">Chrome / Edge / Android Installation:</div>
+            <div class="install-guide-step">
+              <div class="install-guide-num">1</div>
+              <div>Click the <strong>Install</strong> icon in the address bar (or browser menu <strong>⋮</strong>).</div>
+            </div>
+            <div class="install-guide-step">
+              <div class="install-guide-num">2</div>
+              <div>Select <strong>"Install TradeForge"</strong> or <strong>"Add to Home screen"</strong>.</div>
+            </div>
+            <div class="install-guide-step">
+              <div class="install-guide-num">3</div>
+              <div>Confirm by clicking <strong>"Install"</strong>.</div>
+            </div>
+          </div>
+        `;
+      }
+    };
+
+    // 6. Handle sidebar install button click
+    if (installBtn) {
+      installBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isStandalone) {
+          this.showToast('TradeForge is already running as an installed standalone app! ✓', 'success');
+          return;
+        }
+
+        if (this.deferredInstallPrompt) {
+          this.deferredInstallPrompt.prompt();
+          const choice = await this.deferredInstallPrompt.userChoice;
+          if (choice && choice.outcome === 'accepted') {
+            this.showToast('Installing TradeForge... Welcome! 🎉', 'success');
+            if (installBadge) {
+              installBadge.textContent = 'Installed';
+              installBadge.classList.add('installed');
+            }
+            if (installBtnLabel) installBtnLabel.textContent = 'App Installed';
+            if (installModal) installModal.classList.remove('active');
+          }
+          this.deferredInstallPrompt = null;
+        } else {
+          // Open guidance modal
+          populateInstallInstructions();
+          if (installModal) {
+            installModal.classList.add('active');
+          }
+        }
+      });
+    }
+
+    if (btnTriggerPrompt) {
+      btnTriggerPrompt.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (this.deferredInstallPrompt) {
+          this.deferredInstallPrompt.prompt();
+          const choice = await this.deferredInstallPrompt.userChoice;
+          if (choice && choice.outcome === 'accepted') {
+            this.showToast('Installing TradeForge... Welcome! 🎉', 'success');
+            if (installModal) installModal.classList.remove('active');
+          }
+          this.deferredInstallPrompt = null;
+        }
+      });
+    }
+
+    // Modal close buttons
+    const closeInstallModal = () => {
+      if (installModal) installModal.classList.remove('active');
+    };
+    const installCloseBtn = document.getElementById('installModalCloseBtn');
+    const installCancelBtn = document.getElementById('installModalCancelBtn');
+    if (installCloseBtn) installCloseBtn.addEventListener('click', closeInstallModal);
+    if (installCancelBtn) installCancelBtn.addEventListener('click', closeInstallModal);
+    if (installModal) {
+      installModal.addEventListener('click', (e) => {
+        if (e.target === installModal) closeInstallModal();
+      });
+    }
   }
 };
 
