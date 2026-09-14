@@ -466,13 +466,14 @@ const App = {
       const dateFormatted = trade.closeTime ? trade.closeTime.replace('T', ' ').slice(0, 16) : trade.openTime.replace('T', ' ').slice(0, 16);
       const pnlFormatted = TradeAnalytics.formatCurrency(trade.profit);
       const pnlClass = trade.profit > 0 ? 'profit-text' : (trade.profit < 0 ? 'loss-text' : 'neutral-text');
+      const pnlColor = trade.profit > 0 ? 'var(--profit)' : (trade.profit < 0 ? 'var(--loss)' : 'var(--neutral)');
 
       tr.innerHTML = `
         <td style="color: var(--text-muted); font-size: 0.78rem;">${dateFormatted}</td>
         <td><span class="symbol-badge">${trade.symbol}</span></td>
         <td>${trade.lots}</td>
         <td><span class="type-badge ${trade.type}">${trade.type.toUpperCase()}</span></td>
-        <td class="${pnlClass}">${pnlFormatted}</td>
+        <td class="${pnlClass}" style="color: ${pnlColor}; font-weight: 700; font-family: var(--font-mono);">${pnlFormatted}</td>
       `;
 
       tr.addEventListener('click', () => this.openTradeDetailModal(trade));
@@ -558,6 +559,7 @@ const App = {
       const closeTimeFmt = trade.closeTime ? trade.closeTime.replace('T', ' ').slice(0, 16) : '-';
       const pnlFormatted = TradeAnalytics.formatCurrency(trade.profit);
       const pnlClass = trade.profit > 0 ? 'profit-text' : (trade.profit < 0 ? 'loss-text' : 'neutral-text');
+      const pnlColor = trade.profit > 0 ? 'var(--profit)' : (trade.profit < 0 ? 'var(--loss)' : 'var(--neutral)');
 
       tr.innerHTML = `
         <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim);">${trade.ticket}</td>
@@ -568,7 +570,7 @@ const App = {
         <td>${trade.closePrice || '-'}</td>
         <td style="font-size: 0.78rem; color: var(--text-muted);">${openTimeFmt}</td>
         <td style="font-size: 0.78rem; color: var(--text-muted);">${closeTimeFmt}</td>
-        <td class="${pnlClass}">${pnlFormatted}</td>
+        <td class="${pnlClass}" style="color: ${pnlColor}; font-weight: 700; font-family: var(--font-mono);">${pnlFormatted}</td>
         <td><button class="btn-sample" style="padding: 3px 8px; font-size: 0.72rem;">View</button></td>
       `;
 
@@ -732,10 +734,12 @@ const App = {
     }
 
     tbody.innerHTML = lotMetrics.lotBreakdown.map(g => {
-      const pnlSign = g.netPnL >= 0 ? '+' : '-';
-      const pnlClass = g.netPnL >= 0 ? 'profit-text' : 'loss-text';
-      const avgSign = g.avgPnL >= 0 ? '+' : '-';
-      const avgClass = g.avgPnL >= 0 ? 'profit-text' : 'loss-text';
+      const pnlSign = g.netPnL > 0 ? '+' : (g.netPnL < 0 ? '-' : '');
+      const pnlClass = g.netPnL > 0 ? 'profit-text' : (g.netPnL < 0 ? 'loss-text' : 'neutral-text');
+      const pnlColor = g.netPnL > 0 ? 'var(--profit)' : (g.netPnL < 0 ? 'var(--loss)' : 'var(--neutral)');
+      const avgSign = g.avgPnL > 0 ? '+' : (g.avgPnL < 0 ? '-' : '');
+      const avgClass = g.avgPnL > 0 ? 'profit-text' : (g.avgPnL < 0 ? 'loss-text' : 'neutral-text');
+      const avgColor = g.avgPnL > 0 ? 'var(--profit)' : (g.avgPnL < 0 ? 'var(--loss)' : 'var(--neutral)');
       const winRateColor = g.winRate >= 50 ? 'var(--profit)' : (g.winRate > 0 ? 'var(--loss)' : 'var(--text-dim)');
 
       return `
@@ -750,8 +754,8 @@ const App = {
               </div>
             </div>
           </td>
-          <td class="${pnlClass}" style="font-weight: 800; font-family: var(--font-mono);">${pnlSign}$${Math.abs(g.netPnL).toFixed(2)}</td>
-          <td class="${avgClass}" style="font-weight: 700; font-family: var(--font-mono);">${avgSign}$${Math.abs(g.avgPnL).toFixed(2)}</td>
+          <td class="${pnlClass}" style="font-weight: 800; font-family: var(--font-mono); color: ${pnlColor};">${pnlSign}$${Math.abs(g.netPnL).toFixed(2)}</td>
+          <td class="${avgClass}" style="font-weight: 700; font-family: var(--font-mono); color: ${avgColor};">${avgSign}$${Math.abs(g.avgPnL).toFixed(2)}</td>
         </tr>
       `;
     }).join('');
@@ -931,6 +935,7 @@ const App = {
       const timeOnly = (t.closeTime || t.openTime || '').slice(11, 16);
       const pnlFormatted = TradeAnalytics.formatCurrency(t.profit);
       const pnlClass = t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text');
+      const pnlColor = t.profit > 0 ? 'var(--profit)' : (t.profit < 0 ? 'var(--loss)' : 'var(--neutral)');
 
       html += `
         <tr onclick="App.openTradeDetailModal(${JSON.stringify(t).replace(/"/g, '&quot;')})">
@@ -938,7 +943,7 @@ const App = {
           <td><span class="symbol-badge">${t.symbol}</span></td>
           <td><span class="type-badge ${t.type}">${t.type.toUpperCase()}</span></td>
           <td>${t.lots}</td>
-          <td class="${pnlClass}">${pnlFormatted}</td>
+          <td class="${pnlClass}" style="color: ${pnlColor}; font-weight: 700; font-family: var(--font-mono);">${pnlFormatted}</td>
         </tr>
       `;
     });

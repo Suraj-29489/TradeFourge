@@ -389,8 +389,9 @@ const MT5Manager = {
     }
 
     tbody.innerHTML = positions.map(p => {
-      const pnlSign = p.profit >= 0 ? '+' : '-';
-      const pnlClass = p.profit >= 0 ? 'profit-text' : 'loss-text';
+      const pnlSign = p.profit > 0 ? '+' : (p.profit < 0 ? '-' : '');
+      const pnlClass = p.profit > 0 ? 'profit-text' : (p.profit < 0 ? 'loss-text' : 'neutral-text');
+      const pnlColor = p.profit > 0 ? 'var(--profit)' : (p.profit < 0 ? 'var(--loss)' : 'var(--neutral)');
       return `
         <tr>
           <td style="font-family: var(--font-mono); color: var(--text-dim);">#${p.ticket}</td>
@@ -402,7 +403,7 @@ const MT5Manager = {
           <td style="font-family: var(--font-mono); color: var(--text-dim);">${p.sl || '--'}</td>
           <td style="font-family: var(--font-mono); color: var(--text-dim);">${p.tp || '--'}</td>
           <td style="font-size: 0.8rem; color: var(--text-dim);">${p.openTime.replace('T', ' ')}</td>
-          <td class="${pnlClass}" style="font-family: var(--font-mono); font-weight: 800;">${pnlSign}$${Math.abs(p.profit).toFixed(2)}</td>
+          <td class="${pnlClass}" style="font-family: var(--font-mono); font-weight: 800; color: ${pnlColor};">${pnlSign}$${Math.abs(p.profit).toFixed(2)}</td>
         </tr>
       `;
     }).join('');
@@ -418,8 +419,9 @@ const MT5Manager = {
     }
 
     tbody.innerHTML = trades.map(t => {
-      const pnlSign = t.profit >= 0 ? '+' : '-';
-      const pnlClass = t.profit >= 0 ? 'profit-text' : 'loss-text';
+      const pnlSign = t.profit > 0 ? '+' : (t.profit < 0 ? '-' : '');
+      const pnlClass = t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text');
+      const pnlColor = t.profit > 0 ? 'var(--profit)' : (t.profit < 0 ? 'var(--loss)' : 'var(--neutral)');
       return `
         <tr>
           <td style="font-family: var(--font-mono); color: var(--text-dim);">#${t.ticket}</td>
@@ -430,7 +432,7 @@ const MT5Manager = {
           <td style="font-family: var(--font-mono);">${t.closePrice}</td>
           <td style="font-size: 0.78rem; color: var(--text-dim);">${t.closeTime.replace('T', ' ')}</td>
           <td style="font-family: var(--font-mono); color: var(--text-dim);">${t.commission ? '$' + t.commission : '$0.00'}</td>
-          <td class="${pnlClass}" style="font-family: var(--font-mono); font-weight: 800;">${pnlSign}$${Math.abs(t.profit).toFixed(2)}</td>
+          <td class="${pnlClass}" style="font-family: var(--font-mono); font-weight: 800; color: ${pnlColor};">${pnlSign}$${Math.abs(t.profit).toFixed(2)}</td>
         </tr>
       `;
     }).join('');
@@ -476,7 +478,7 @@ const MT5Manager = {
         <td><span style="font-size:0.75rem; font-weight:700; color:#818cf8;">OUT</span></td>
         <td style="font-family: var(--font-mono);">${t.lots}</td>
         <td style="font-family: var(--font-mono);">${t.closePrice}</td>
-        <td class="${t.profit >= 0 ? 'profit-text' : 'loss-text'}" style="font-family: var(--font-mono); font-weight:700;">${t.profit >= 0 ? '+' : ''}$${t.profit.toFixed(2)}</td>
+        <td class="${t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text')}" style="font-family: var(--font-mono); font-weight:700; color: ${t.profit > 0 ? 'var(--profit)' : (t.profit < 0 ? 'var(--loss)' : 'var(--neutral)')};">${t.profit > 0 ? '+' : (t.profit < 0 ? '-' : '')}$${Math.abs(t.profit).toFixed(2)}</td>
       </tr>
     `).join('');
   },

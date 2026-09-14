@@ -1620,19 +1620,34 @@ html, body {
   border: 1px solid rgba(244, 63, 94, 0.3);
 }
 
-.profit-text {
+.profit-text,
+.trade-table td.profit-text,
+.trade-table tbody td.profit-text,
+table td.profit-text,
+td.profit-text,
+span.profit-text {
   font-weight: 700;
-  color: var(--profit);
+  color: var(--profit) !important;
 }
 
-.loss-text {
+.loss-text,
+.trade-table td.loss-text,
+.trade-table tbody td.loss-text,
+table td.loss-text,
+td.loss-text,
+span.loss-text {
   font-weight: 700;
-  color: var(--loss);
+  color: var(--loss) !important;
 }
 
-.neutral-text {
+.neutral-text,
+.trade-table td.neutral-text,
+.trade-table tbody td.neutral-text,
+table td.neutral-text,
+td.neutral-text,
+span.neutral-text {
   font-weight: 600;
-  color: var(--neutral);
+  color: var(--neutral) !important;
 }
 
 /* ==========================================================================

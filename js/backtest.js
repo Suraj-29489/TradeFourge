@@ -1094,6 +1094,7 @@ const BacktestEngine = {
     displayTrades.forEach((t) => {
       const tr = document.createElement('tr');
       const pnlClass = t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text');
+      const pnlColor = t.profit > 0 ? 'var(--profit)' : (t.profit < 0 ? 'var(--loss)' : 'var(--neutral)');
       const sideClass = t.type === 'buy' ? 'type-badge buy' : 'type-badge sell';
 
       tr.innerHTML = `
@@ -1105,7 +1106,7 @@ const BacktestEngine = {
         <td style="font-family: var(--font-mono);">${t.closePrice}</td>
         <td style="font-family: var(--font-mono); color: var(--loss);">${t.stopLoss}</td>
         <td style="font-family: var(--font-mono); color: var(--profit);">${t.takeProfit}</td>
-        <td class="${pnlClass}" style="font-weight: 700;">${t.profitFormatted}</td>
+        <td class="${pnlClass}" style="font-weight: 700; color: ${pnlColor}; font-family: var(--font-mono);">${t.profitFormatted}</td>
       `;
 
       tbody.appendChild(tr);
