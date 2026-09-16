@@ -573,6 +573,7 @@ const ChartManager = {
                   const d = dist[idx];
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   const sign = d.pnl >= 0 ? '+' : '-';
+                  return `Total: ${d.trades} trades | Win Rate: ${d.winRate}%\nNet P&L: ${sign}$${Math.abs(d.pnl).toFixed(2)}`;
                   return `Total: ${d.trades} trades | Win Rate: ${d.winRate}%\nNet P&L: ${sign}${sym}${Math.abs(d.pnl).toFixed(2)}`;
                 }
                 return '';

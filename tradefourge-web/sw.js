@@ -3,8 +3,7 @@
  * Enables offline capability, instant load caching, and PWA installation.
  */
 
-const CACHE_NAME = 'tradeforge-v1.0.0';
-const CACHE_NAME = 'tradeforge-v1.0.1';
+const CACHE_NAME = 'tradeforge-v1.0.2';
 const PRECACHE_ASSETS = [
   './',
   './index.html',

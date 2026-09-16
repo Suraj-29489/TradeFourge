@@ -120,20 +120,22 @@ const CalendarManager = {
         const tradeTitleWord = dayData.trades === 1 ? '1 trade' : `${dayData.trades} trades`;
 
         if (pnl > 0) {
+          const valFormatted = Math.abs(pnl).toFixed(0) === '0' ? Math.abs(pnl).toFixed(2) : Math.abs(pnl).toFixed(0);
           cell.classList.add('profit-day');
           cell.innerHTML = `
             <span class="day-number">${day}</span>
             <div class="day-pnl-wrap">
-              <div class="day-pnl">+${Math.abs(pnl).toFixed(0) === '0' ? sym + pnl.toFixed(2) : sym + Math.abs(pnl).toFixed(0)}</div>
+              <div class="day-pnl">+${sym}${valFormatted}</div>
               <div class="day-trade-count">${tradeWord}</div>
             </div>
           `;
         } else if (pnl < 0) {
+          const valFormatted = Math.abs(pnl).toFixed(0) === '0' ? Math.abs(pnl).toFixed(2) : Math.abs(pnl).toFixed(0);
           cell.classList.add('loss-day');
           cell.innerHTML = `
             <span class="day-number">${day}</span>
             <div class="day-pnl-wrap">
-              <div class="day-pnl">-${Math.abs(pnl).toFixed(0) === '0' ? sym + Math.abs(pnl).toFixed(2) : sym + Math.abs(pnl).toFixed(0)}</div>
+              <div class="day-pnl">-${sym}${valFormatted}</div>
               <div class="day-trade-count">${tradeWord}</div>
             </div>
           `;

@@ -808,6 +808,8 @@ const App = {
               </div>
             </div>
           </td>
+          <td class="${pnlClass}" style="font-weight: 800; font-family: var(--font-mono); color: ${pnlColor};">${pnlSign}$${Math.abs(g.netPnL).toFixed(2)}</td>
+          <td class="${avgClass}" style="font-weight: 700; font-family: var(--font-mono); color: ${avgColor};">${avgSign}$${Math.abs(g.avgPnL).toFixed(2)}</td>
           <td class="${pnlClass}" style="font-weight: 800; font-family: var(--font-mono); color: ${pnlColor};">${pnlSign}${sym}${Math.abs(g.netPnL).toFixed(2)}</td>
           <td class="${avgClass}" style="font-weight: 700; font-family: var(--font-mono); color: ${avgColor};">${avgSign}${sym}${Math.abs(g.avgPnL).toFixed(2)}</td>
         </tr>
@@ -981,6 +983,7 @@ const App = {
             <th>Symbol</th>
             <th>Type</th>
             <th>Lots</th>
+            <th>P/L ($)</th>
             <th>P/L (${sym})</th>
           </tr>
         </thead>
@@ -1067,8 +1070,12 @@ const App = {
       ChartManager.updateDashboardCharts(this.currentMetrics);
       ChartManager.updateAnalyticsCharts(this.currentMetrics);
     }
-    if (window.CalendarManager && this.currentMetrics) {
-      CalendarManager.init(this.currentMetrics);
+    if (window.CalendarManager) {
+      if (this.currentMetrics) {
+        CalendarManager.update(this.currentMetrics);
+      } else {
+        CalendarManager.render();
+      }
     }
     if (window.MT5Manager && MT5Manager.updateAccountCards) {
       MT5Manager.updateAccountCards();
@@ -1310,6 +1317,7 @@ const App = {
     if (prevMonthBtn) prevMonthBtn.addEventListener('click', () => CalendarManager.prevMonth());
     if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => CalendarManager.nextMonth());
 
+    // Export JSON Button
     // Dynamic Currency Switcher Slider ($ / ₹)
     const btnUSD = document.getElementById('btnCurrUSD');
     const btnINR = document.getElementById('btnCurrINR');

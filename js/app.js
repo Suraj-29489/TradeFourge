@@ -868,9 +868,6 @@ const App = {
 
     const sym = TradeAnalytics.getCurrencySymbol();
     const strategies = [
-      { name: 'XAUUSD Breakout Strategy', symbol: 'XAUUSD', trades: 70, winrate: '54.2%', pnl: '+$342.10', status: 'Profitable' },
-      { name: 'BTCUSD Trend Momentum', symbol: 'BTCUSD', trades: 18, winrate: '61.1%', pnl: '+$94.80', status: 'Profitable' },
-      { name: 'Major FX Mean Reversion', symbol: 'EURUSD', trades: 11, winrate: '45.4%', pnl: '-$180.54', status: 'Reviewing' }
       { name: 'XAUUSD Breakout Strategy', symbol: 'XAUUSD', trades: 70, winrate: '54.2%', pnl: `+${sym}342.10`, status: 'Profitable' },
       { name: 'BTCUSD Trend Momentum', symbol: 'BTCUSD', trades: 18, winrate: '61.1%', pnl: `+${sym}94.80`, status: 'Profitable' },
       { name: 'Major FX Mean Reversion', symbol: 'EURUSD', trades: 11, winrate: '45.4%', pnl: `-${sym}180.54`, status: 'Reviewing' }
@@ -1073,8 +1070,12 @@ const App = {
       ChartManager.updateDashboardCharts(this.currentMetrics);
       ChartManager.updateAnalyticsCharts(this.currentMetrics);
     }
-    if (window.CalendarManager && this.currentMetrics) {
-      CalendarManager.init(this.currentMetrics);
+    if (window.CalendarManager) {
+      if (this.currentMetrics) {
+        CalendarManager.update(this.currentMetrics);
+      } else {
+        CalendarManager.render();
+      }
     }
     if (window.MT5Manager && MT5Manager.updateAccountCards) {
       MT5Manager.updateAccountCards();

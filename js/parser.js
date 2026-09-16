@@ -110,7 +110,6 @@ const TradeParser = {
     const text = String(value ?? '').trim();
     if (!text) return NaN;
     const negative = /^\(.*\)$/.test(text);
-    const cleaned = text.replace(/[,$\s]/g, '').replace(/[^0-9.-]/g, '');
     const cleaned = text.replace(/[,$\s₹]/g, '').replace(/[^0-9.-]/g, '');
     const number = Number(cleaned);
     return Number.isFinite(number) ? (negative ? -Math.abs(number) : number) : NaN;

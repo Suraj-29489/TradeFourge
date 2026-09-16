@@ -505,6 +505,7 @@ const BacktestEngine = {
             commission: Math.round(commissionCost * 100) / 100,
             swap: 0,
             profit: pnl,
+            profitFormatted: `${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl).toFixed(0) === '0' ? Math.abs(pnl).toFixed(2) : Math.abs(pnl).toFixed(0)}`,
             profitFormatted: `${pnl >= 0 ? '+' : '-'}${(typeof TradeAnalytics !== 'undefined' ? TradeAnalytics.getCurrencySymbol() : '$')}${Math.abs(pnl).toFixed(0) === '0' ? Math.abs(pnl).toFixed(2) : Math.abs(pnl).toFixed(0)}`,
             closeReason,
             isWin: pnl > 0,
@@ -693,6 +694,7 @@ const BacktestEngine = {
     if (val === null || val === undefined || isNaN(val)) return '-';
     const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
     const sign = val > 0 && withPlus ? '+' : (val < 0 ? '-' : '');
+    return `${sign}$${Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     return `${sign}${sym}${Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   },
 

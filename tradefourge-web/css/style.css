@@ -444,6 +444,7 @@ html, body {
   gap: 12px;
 }
 
+/* Export JSON Button in Navbar */
 /* Currency Switcher Slider in Navbar ($ / ₹) */
 .currency-slider-toggle {
   position: relative;
@@ -904,9 +905,16 @@ html, body {
 /* ==========================================================================
    KPI Summary Stat Cards (Top Row)
    ========================================================================== */
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
 .kpi-row,
 .kpi-row-2 {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
 }
@@ -1202,6 +1210,7 @@ html, body {
     text-overflow: ellipsis;
   }
 
+  .kpi-row {
   .kpi-row,
   .kpi-row-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
