@@ -207,7 +207,8 @@ const ChartManager = {
                 title: (items) => `Date: ${items[0].label}`,
                 label: (item) => {
                   const val = item.raw;
-                  const prefix = val >= 0 ? '+$' : '-$';
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  const prefix = val >= 0 ? `+${sym}` : `-${sym}`;
                   return `Cumulative P&L: ${prefix}${Math.abs(val).toFixed(2)}`;
                 }
               }
@@ -223,7 +224,10 @@ const ChartManager = {
               ticks: {
                 color: '#64748b',
                 font: { size: 11 },
-                callback: (val) => `$${val}`
+                callback: (val) => {
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  return `${sym}${val}`;
+                }
               }
             }
           }
@@ -273,7 +277,8 @@ const ChartManager = {
                   const idx = item.dataIndex;
                   const tData = timeseries[idx];
                   const val = item.raw;
-                  const prefix = val >= 0 ? '+$' : '-$';
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  const prefix = val >= 0 ? `+${sym}` : `-${sym}`;
                   const tradeInfo = tData ? ` (${tData.trades} trades: ${tData.wins}W / ${tData.losses}L)` : '';
                   return `Weekly Net P&L: ${prefix}${Math.abs(val).toFixed(2)}${tradeInfo}`;
                 }
@@ -290,7 +295,10 @@ const ChartManager = {
               ticks: {
                 color: '#64748b',
                 font: { size: 11 },
-                callback: (val) => `$${val}`
+                callback: (val) => {
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  return `${sym}${val}`;
+                }
               }
             }
           }
@@ -341,7 +349,8 @@ const ChartManager = {
               callbacks: {
                 label: (item) => {
                   const val = item.raw;
-                  const prefix = val >= 0 ? '+$' : '-$';
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  const prefix = val >= 0 ? `+${sym}` : `-${sym}`;
                   return `Daily P&L: ${prefix}${Math.abs(val).toFixed(2)}`;
                 }
               }
@@ -357,7 +366,10 @@ const ChartManager = {
               ticks: {
                 color: '#64748b',
                 font: { size: 11 },
-                callback: (val) => `$${val}`
+                callback: (val) => {
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  return `${sym}${val}`;
+                }
               }
             }
           }
@@ -382,6 +394,7 @@ const ChartManager = {
       this.instances.symbolBar.destroy();
     }
 
+    const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
     const symbols = (metrics.symbolBreakdown || []).slice(0, 8);
     const labels = symbols.map(s => s.symbol);
     const pnls = symbols.map(s => s.pnl);
@@ -392,7 +405,7 @@ const ChartManager = {
       data: {
         labels,
         datasets: [{
-          label: 'Net P&L ($)',
+          label: `Net P&L (${sym})`,
           data: pnls,
           backgroundColor: colors,
           borderRadius: 6
@@ -409,14 +422,14 @@ const ChartManager = {
             borderColor: '#262e45',
             borderWidth: 1,
             callbacks: {
-              label: (item) => `P&L: $${item.raw.toFixed(2)}`
+              label: (item) => `P&L: ${sym}${item.raw.toFixed(2)}`
             }
           }
         },
         scales: {
           x: {
             grid: { color: 'rgba(38, 46, 69, 0.5)' },
-            ticks: { color: '#64748b', callback: v => `$${v}` }
+            ticks: { color: '#64748b', callback: v => `${sym}${v}` }
           },
           y: {
             grid: { display: false },
@@ -435,6 +448,7 @@ const ChartManager = {
       this.instances.weekdayBar.destroy();
     }
 
+    const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     const dayIndices = [1, 2, 3, 4, 5];
     const data = dayIndices.map(idx => Math.round((metrics.weekdayMap[idx] || 0) * 100) / 100);
@@ -445,7 +459,7 @@ const ChartManager = {
       data: {
         labels: dayLabels,
         datasets: [{
-          label: 'Net P&L ($)',
+          label: `Net P&L (${sym})`,
           data,
           backgroundColor: colors,
           borderRadius: 6
@@ -461,7 +475,7 @@ const ChartManager = {
             borderColor: '#262e45',
             borderWidth: 1,
             callbacks: {
-              label: (item) => `Net P&L: $${item.raw.toFixed(2)}`
+              label: (item) => `Net P&L: ${sym}${item.raw.toFixed(2)}`
             }
           }
         },
@@ -472,7 +486,7 @@ const ChartManager = {
           },
           y: {
             grid: { color: 'rgba(38, 46, 69, 0.5)' },
-            ticks: { color: '#64748b', callback: v => `$${v}` }
+            ticks: { color: '#64748b', callback: v => `${sym}${v}` }
           }
         }
       }
@@ -557,8 +571,9 @@ const ChartManager = {
                 const idx = tooltipItems[0]?.dataIndex;
                 if (idx !== undefined && dist[idx]) {
                   const d = dist[idx];
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   const sign = d.pnl >= 0 ? '+' : '-';
-                  return `Total: ${d.trades} trades | Win Rate: ${d.winRate}%\nNet P&L: ${sign}$${Math.abs(d.pnl).toFixed(2)}`;
+                  return `Total: ${d.trades} trades | Win Rate: ${d.winRate}%\nNet P&L: ${sign}${sym}${Math.abs(d.pnl).toFixed(2)}`;
                 }
                 return '';
               }
@@ -634,8 +649,9 @@ const ChartManager = {
                 label: (item) => `Trades: ${item.raw}`,
                 afterLabel: (item) => {
                   const g = groups[item.dataIndex];
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   const sign = g.netPnL >= 0 ? '+' : '-';
-                  return `Win Rate: ${g.winRate}% | Net: ${sign}$${Math.abs(g.netPnL).toFixed(2)}`;
+                  return `Win Rate: ${g.winRate}% | Net: ${sign}${sym}${Math.abs(g.netPnL).toFixed(2)}`;
                 }
               }
             }
@@ -654,6 +670,7 @@ const ChartManager = {
       });
     } else {
       // Default: P&L by Lot Size
+      const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
       const pnls = groups.map(g => g.netPnL);
       const bgColors = pnls.map(p => p >= 0 ? '#10b981' : '#f43f5e');
 
@@ -662,7 +679,7 @@ const ChartManager = {
         data: {
           labels,
           datasets: [{
-            label: 'Net P&L ($)',
+            label: `Net P&L (${sym})`,
             data: pnls,
             backgroundColor: bgColors,
             borderRadius: 6
@@ -680,12 +697,14 @@ const ChartManager = {
               callbacks: {
                 label: (item) => {
                   const val = item.raw;
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   const sign = val >= 0 ? '+' : '-';
-                  return ` Net P&L: ${sign}$${Math.abs(val).toFixed(2)}`;
+                  return ` Net P&L: ${sign}${sym}${Math.abs(val).toFixed(2)}`;
                 },
                 afterLabel: (item) => {
                   const g = groups[item.dataIndex];
-                  return `Trades: ${g.trades} | Win Rate: ${g.winRate}% | Avg: $${g.avgPnL.toFixed(2)}`;
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  return `Trades: ${g.trades} | Win Rate: ${g.winRate}% | Avg: ${sym}${g.avgPnL.toFixed(2)}`;
                 }
               }
             }
@@ -700,7 +719,10 @@ const ChartManager = {
               ticks: {
                 color: '#64748b',
                 font: { size: 11 },
-                callback: (v) => `$${v}`
+                callback: (v) => {
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  return `${sym}${v}`;
+                }
               }
             }
           }

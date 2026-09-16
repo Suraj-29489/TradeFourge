@@ -505,7 +505,7 @@ const BacktestEngine = {
             commission: Math.round(commissionCost * 100) / 100,
             swap: 0,
             profit: pnl,
-            profitFormatted: `${pnl >= 0 ? '+' : '-'}$${Math.abs(pnl).toFixed(0) === '0' ? Math.abs(pnl).toFixed(2) : Math.abs(pnl).toFixed(0)}`,
+            profitFormatted: `${pnl >= 0 ? '+' : '-'}${(typeof TradeAnalytics !== 'undefined' ? TradeAnalytics.getCurrencySymbol() : '$')}${Math.abs(pnl).toFixed(0) === '0' ? Math.abs(pnl).toFixed(2) : Math.abs(pnl).toFixed(0)}`,
             closeReason,
             isWin: pnl > 0,
             isLoss: pnl < 0
@@ -691,8 +691,9 @@ const BacktestEngine = {
    */
   fmtCurr(val, withPlus = false) {
     if (val === null || val === undefined || isNaN(val)) return '-';
+    const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
     const sign = val > 0 && withPlus ? '+' : (val < 0 ? '-' : '');
-    return `${sign}$${Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `${sign}${sym}${Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   },
 
   /**
@@ -811,7 +812,10 @@ const BacktestEngine = {
           x: { display: false },
           y: {
             grid: { color: 'rgba(38, 46, 69, 0.4)' },
-            ticks: { color: '#64748b', callback: (v) => `$${v.toLocaleString()}` }
+            ticks: {
+              color: '#64748b',
+              callback: (v) => `${(typeof TradeAnalytics !== 'undefined' ? TradeAnalytics.getCurrencySymbol() : '$')}${v.toLocaleString()}`
+            }
           }
         }
       }
@@ -829,6 +833,7 @@ const BacktestEngine = {
       this.equityChartInstance.destroy();
     }
 
+    const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
     const labels = curve.map(c => c.date);
     const values = curve.map(c => c.equity);
 
@@ -845,7 +850,7 @@ const BacktestEngine = {
       data: {
         labels,
         datasets: [{
-          label: 'Equity ($)',
+          label: `Equity (${sym})`,
           data: values,
           borderColor: baseColor,
           borderWidth: 2.5,
@@ -868,7 +873,7 @@ const BacktestEngine = {
             borderColor: '#262e45',
             borderWidth: 1,
             callbacks: {
-              label: (item) => `Balance: $${item.raw.toFixed(2)}`
+              label: (item) => `Balance: ${sym}${item.raw.toFixed(2)}`
             }
           }
         },
@@ -881,7 +886,7 @@ const BacktestEngine = {
             grid: { color: 'rgba(38, 46, 69, 0.5)' },
             ticks: {
               color: '#64748b',
-              callback: (v) => `$${v.toLocaleString()}`
+              callback: (v) => `${sym}${v.toLocaleString()}`
             }
           }
         }
@@ -973,12 +978,14 @@ const BacktestEngine = {
     const values = monthlyData.map(m => m.pnl);
     const bgColors = values.map(v => v >= 0 ? '#10b981' : '#f43f5e');
 
+    const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+
     this.monthlyChartInstance = new Chart(ctx, {
       type: 'bar',
       data: {
         labels,
         datasets: [{
-          label: 'Monthly Net P&L ($)',
+          label: `Monthly Net P&L (${sym})`,
           data: values,
           backgroundColor: bgColors,
           borderRadius: 4
@@ -991,7 +998,7 @@ const BacktestEngine = {
           legend: { display: false },
           tooltip: {
             callbacks: {
-              label: (item) => `Net P&L: $${item.raw.toFixed(2)}`
+              label: (item) => `Net P&L: ${sym}${item.raw.toFixed(2)}`
             }
           }
         },
@@ -1002,7 +1009,7 @@ const BacktestEngine = {
           },
           y: {
             grid: { color: 'rgba(38, 46, 69, 0.5)' },
-            ticks: { color: '#64748b', callback: (v) => `$${v}` }
+            ticks: { color: '#64748b', callback: (v) => `${sym}${v}` }
           }
         }
       }
@@ -1015,7 +1022,7 @@ const BacktestEngine = {
         <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--border-color); font-size: 0.84rem;">
           <span style="font-weight: 600; color: var(--text-main);">${m.month}</span>
           <span style="color: var(--text-dim);">${m.trades} trades (${m.winRate}% win)</span>
-          <span style="font-weight: 700; color: ${m.pnl >= 0 ? 'var(--profit)' : 'var(--loss)'};">${m.pnl >= 0 ? '+' : ''}$${m.pnl.toFixed(2)}</span>
+          <span style="font-weight: 700; color: ${m.pnl >= 0 ? 'var(--profit)' : 'var(--loss)'};">${m.pnl >= 0 ? '+' : ''}${sym}${m.pnl.toFixed(2)}</span>
         </div>
       `).join('');
     }
@@ -1059,11 +1066,12 @@ const BacktestEngine = {
     // Additional Analysis Stats
     const statsEl = document.getElementById('btAnalysisDetails');
     if (statsEl) {
+      const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
       statsEl.innerHTML = `
         <div class="stat-item"><span class="stat-label">Long Trades</span><span class="stat-val">${res.longCount} (${res.longWinRate}% win)</span></div>
         <div class="stat-item"><span class="stat-label">Short Trades</span><span class="stat-val">${res.shortCount} (${res.shortWinRate}% win)</span></div>
-        <div class="stat-item"><span class="stat-label">Gross Profit</span><span class="stat-val profit">+$${res.grossProfit.toFixed(2)}</span></div>
-        <div class="stat-item"><span class="stat-label">Gross Loss</span><span class="stat-val loss">-$${res.grossLoss.toFixed(2)}</span></div>
+        <div class="stat-item"><span class="stat-label">Gross Profit</span><span class="stat-val profit">+${sym}${res.grossProfit.toFixed(2)}</span></div>
+        <div class="stat-item"><span class="stat-label">Gross Loss</span><span class="stat-val loss">-${sym}${res.grossLoss.toFixed(2)}</span></div>
         <div class="stat-item"><span class="stat-label">Avg Risk:Reward</span><span class="stat-val">1:${(res.avgLoss ? Math.abs(res.avgWin / res.avgLoss) : 0).toFixed(2)}</span></div>
       `;
     }

@@ -20,6 +20,8 @@ const TradeAnalytics = {
     let totalLots = 0;
     let maxWin = 0;
     let maxLoss = 0;
+    let maxWinTrade = null;
+    let maxLossTrade = null;
 
     let currentWinStreak = 0;
     let maxWinStreak = 0;
@@ -48,8 +50,14 @@ const TradeAnalytics = {
       totalLots += (trade.lots || 0);
 
       // Best / Worst trade
-      if (pnl > maxWin) maxWin = pnl;
-      if (pnl < maxLoss) maxLoss = pnl;
+      if (pnl > maxWin) {
+        maxWin = pnl;
+        maxWinTrade = trade;
+      }
+      if (pnl < maxLoss) {
+        maxLoss = pnl;
+        maxLossTrade = trade;
+      }
 
       // Win / Loss / BE
       if (pnl > 0) {
@@ -278,6 +286,8 @@ const TradeAnalytics = {
       avgLoss: Math.round(avgLoss * 100) / 100,
       maxWin: Math.round(maxWin * 100) / 100,
       maxLoss: Math.round(maxLoss * 100) / 100,
+      maxWinTrade,
+      maxLossTrade,
       maxWinStreak,
       maxLossStreak,
       totalLots: Math.round(totalLots * 100) / 100,
@@ -575,15 +585,38 @@ const TradeAnalytics = {
 
   /**
    * Format currency values nicely (e.g. +$256.36 or -$112.36)
+   * Currency State & Management ($ / ₹)
+   */
+  currentCurrency: (typeof localStorage !== 'undefined' && localStorage.getItem('tradeforge_currency')) || 'USD',
+
+  getCurrencySymbol() {
+    return this.currentCurrency === 'INR' ? '₹' : '$';
+  },
+
+  setCurrency(curr) {
+    this.currentCurrency = curr === 'INR' ? 'INR' : 'USD';
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('tradeforge_currency', this.currentCurrency);
+      } catch (e) {
+        console.warn('Unable to persist currency in localStorage:', e);
+      }
+    }
+    return this.getCurrencySymbol();
+  },
+
+  /**
+   * Format currency values nicely (e.g. +$256.36 or +₹256.36, -$112.36 or -₹112.36)
    */
   formatCurrency(value, withSign = true) {
     const num = Number(value) || 0;
     const sign = num > 0 ? (withSign ? '+' : '') : (num < 0 ? '-' : '');
+    const sym = this.getCurrencySymbol();
     const formatted = Math.abs(num).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
-    return `${sign}$${formatted}`;
+    return `${sign}${sym}${formatted}`;
   },
 
   /**
@@ -605,6 +638,8 @@ const TradeAnalytics = {
       avgLoss: 0,
       maxWin: 0,
       maxLoss: 0,
+      maxWinTrade: null,
+      maxLossTrade: null,
       maxWinStreak: 0,
       maxLossStreak: 0,
       totalLots: 0,

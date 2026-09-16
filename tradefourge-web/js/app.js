@@ -31,6 +31,7 @@ const App = {
    * Application Initialization
    */
   async init() {
+    this.initCurrency();
     this.bindEvents();
     this.initPWA();
     if (window.BacktestEngine) {
@@ -432,6 +433,58 @@ const App = {
       }
     }
 
+    // Largest Profit Trade
+    const largestProfitEl = document.getElementById('kpiLargestProfit');
+    const largestProfitSubEl = document.getElementById('kpiLargestProfitSub');
+    if (largestProfitEl) {
+      if (m.maxWin > 0) {
+        largestProfitEl.innerText = TradeAnalytics.formatCurrency(m.maxWin, false);
+        largestProfitEl.className = 'kpi-value profit';
+        if (largestProfitSubEl) {
+          if (m.maxWinTrade) {
+            const sym = m.maxWinTrade.symbol || 'Trade';
+            const date = m.maxWinTrade.closeTime ? m.maxWinTrade.closeTime.slice(0, 10) : (m.maxWinTrade.openTime ? m.maxWinTrade.openTime.slice(0, 10) : '');
+            const lotsText = m.maxWinTrade.lots ? ` • ${m.maxWinTrade.lots} lot` : '';
+            largestProfitSubEl.innerHTML = `<span class="delta-pos">▲ ${sym}</span> • ${date || 'Winner'}${lotsText}`;
+          } else {
+            largestProfitSubEl.innerHTML = `<span class="delta-pos">▲ Best trade</span>`;
+          }
+        }
+      } else {
+        largestProfitEl.innerText = TradeAnalytics.formatCurrency(0, false);
+        largestProfitEl.className = 'kpi-value';
+        if (largestProfitSubEl) {
+          largestProfitSubEl.innerHTML = `<span style="color: var(--text-dim);">No winning trades</span>`;
+        }
+      }
+    }
+
+    // Largest Loss Trade
+    const largestLossEl = document.getElementById('kpiLargestLoss');
+    const largestLossSubEl = document.getElementById('kpiLargestLossSub');
+    if (largestLossEl) {
+      if (m.maxLoss < 0) {
+        largestLossEl.innerText = TradeAnalytics.formatCurrency(m.maxLoss, false);
+        largestLossEl.className = 'kpi-value loss';
+        if (largestLossSubEl) {
+          if (m.maxLossTrade) {
+            const sym = m.maxLossTrade.symbol || 'Trade';
+            const date = m.maxLossTrade.closeTime ? m.maxLossTrade.closeTime.slice(0, 10) : (m.maxLossTrade.openTime ? m.maxLossTrade.openTime.slice(0, 10) : '');
+            const lotsText = m.maxLossTrade.lots ? ` • ${m.maxLossTrade.lots} lot` : '';
+            largestLossSubEl.innerHTML = `<span class="delta-neg">▼ ${sym}</span> • ${date || 'Worst'}${lotsText}`;
+          } else {
+            largestLossSubEl.innerHTML = `<span class="delta-neg">▼ Worst trade</span>`;
+          }
+        }
+      } else {
+        largestLossEl.innerText = TradeAnalytics.formatCurrency(0, false);
+        largestLossEl.className = 'kpi-value';
+        if (largestLossSubEl) {
+          largestLossSubEl.innerHTML = `<span style="color: var(--text-dim);">No losing trades</span>`;
+        }
+      }
+    }
+
     // Update Donut legend counts
     const winnersCountEl = document.getElementById('donutWinnersCount');
     if (winnersCountEl) winnersCountEl.innerText = `${m.winnersCount} winners`;
@@ -742,6 +795,7 @@ const App = {
       const avgColor = g.avgPnL > 0 ? 'var(--profit)' : (g.avgPnL < 0 ? 'var(--loss)' : 'var(--neutral)');
       const winRateColor = g.winRate >= 50 ? 'var(--profit)' : (g.winRate > 0 ? 'var(--loss)' : 'var(--text-dim)');
 
+      const sym = TradeAnalytics.getCurrencySymbol();
       return `
         <tr>
           <td style="font-weight: 700; font-family: var(--font-mono); color: var(--text-main);">${g.lotLabel} lots</td>
@@ -754,8 +808,8 @@ const App = {
               </div>
             </div>
           </td>
-          <td class="${pnlClass}" style="font-weight: 800; font-family: var(--font-mono); color: ${pnlColor};">${pnlSign}$${Math.abs(g.netPnL).toFixed(2)}</td>
-          <td class="${avgClass}" style="font-weight: 700; font-family: var(--font-mono); color: ${avgColor};">${avgSign}$${Math.abs(g.avgPnL).toFixed(2)}</td>
+          <td class="${pnlClass}" style="font-weight: 800; font-family: var(--font-mono); color: ${pnlColor};">${pnlSign}${sym}${Math.abs(g.netPnL).toFixed(2)}</td>
+          <td class="${avgClass}" style="font-weight: 700; font-family: var(--font-mono); color: ${avgColor};">${avgSign}${sym}${Math.abs(g.avgPnL).toFixed(2)}</td>
         </tr>
       `;
     }).join('');
@@ -810,10 +864,11 @@ const App = {
     if (!container) return;
     container.innerHTML = '';
 
+    const sym = TradeAnalytics.getCurrencySymbol();
     const strategies = [
-      { name: 'XAUUSD Breakout Strategy', symbol: 'XAUUSD', trades: 70, winrate: '54.2%', pnl: '+$342.10', status: 'Profitable' },
-      { name: 'BTCUSD Trend Momentum', symbol: 'BTCUSD', trades: 18, winrate: '61.1%', pnl: '+$94.80', status: 'Profitable' },
-      { name: 'Major FX Mean Reversion', symbol: 'EURUSD', trades: 11, winrate: '45.4%', pnl: '-$180.54', status: 'Reviewing' }
+      { name: 'XAUUSD Breakout Strategy', symbol: 'XAUUSD', trades: 70, winrate: '54.2%', pnl: `+${sym}342.10`, status: 'Profitable' },
+      { name: 'BTCUSD Trend Momentum', symbol: 'BTCUSD', trades: 18, winrate: '61.1%', pnl: `+${sym}94.80`, status: 'Profitable' },
+      { name: 'Major FX Mean Reversion', symbol: 'EURUSD', trades: 11, winrate: '45.4%', pnl: `-${sym}180.54`, status: 'Reviewing' }
     ];
 
     strategies.forEach(st => {
@@ -917,6 +972,7 @@ const App = {
 
     title.innerText = `Trades on ${dateKey} (${TradeAnalytics.formatCurrency(dayData.pnl)})`;
 
+    const sym = TradeAnalytics.getCurrencySymbol();
     let html = `
       <table class="trade-table">
         <thead>
@@ -925,7 +981,7 @@ const App = {
             <th>Symbol</th>
             <th>Type</th>
             <th>Lots</th>
-            <th>P/L ($)</th>
+            <th>P/L (${sym})</th>
           </tr>
         </thead>
         <tbody>
@@ -983,6 +1039,69 @@ const App = {
         rulesListEl.appendChild(item);
       });
     }
+  },
+
+  /**
+   * Currency Switcher Management ($ / ₹)
+   */
+  initCurrency() {
+    const savedCurrency = (typeof localStorage !== 'undefined' && localStorage.getItem('tradeforge_currency')) || 'USD';
+    TradeAnalytics.setCurrency(savedCurrency);
+    this.updateCurrencyUI(savedCurrency);
+  },
+
+  setCurrency(curr) {
+    const sym = TradeAnalytics.setCurrency(curr);
+    this.updateCurrencyUI(curr);
+
+    // Re-render all components with the new currency
+    this.updateKPICards();
+    this.renderRecentTradesTable();
+    this.renderTradeLogTable();
+    this.renderReportsView();
+    this.renderAnalyticsView();
+    this.renderInsightsView();
+    this.renderStrategiesView();
+
+    if (window.ChartManager && this.currentMetrics) {
+      ChartManager.updateDashboardCharts(this.currentMetrics);
+      ChartManager.updateAnalyticsCharts(this.currentMetrics);
+    }
+    if (window.CalendarManager && this.currentMetrics) {
+      CalendarManager.init(this.currentMetrics);
+    }
+    if (window.MT5Manager && MT5Manager.updateAccountCards) {
+      MT5Manager.updateAccountCards();
+      MT5Manager.renderOverview();
+      MT5Manager.renderPositions();
+      MT5Manager.renderHistory();
+    }
+    if (window.BacktestEngine && BacktestEngine.lastResults) {
+      BacktestEngine.displayResults(BacktestEngine.lastResults);
+    }
+    this.showToast(`Currency updated to ${curr === 'INR' ? 'INR (₹)' : 'USD ($)'}`, 'info');
+  },
+
+  updateCurrencyUI(curr) {
+    const toggle = document.getElementById('currencySliderToggle');
+    const btnUSD = document.getElementById('btnCurrUSD');
+    const btnINR = document.getElementById('btnCurrINR');
+    const sym = curr === 'INR' ? '₹' : '$';
+
+    if (toggle) {
+      toggle.setAttribute('data-currency', curr);
+    }
+    if (btnUSD) {
+      btnUSD.classList.toggle('active', curr === 'USD');
+    }
+    if (btnINR) {
+      btnINR.classList.toggle('active', curr === 'INR');
+    }
+
+    // Update all static currency symbol labels across all views/tables
+    document.querySelectorAll('.currency-sym').forEach(el => {
+      el.textContent = sym;
+    });
   },
 
   /**
@@ -1191,7 +1310,17 @@ const App = {
     if (prevMonthBtn) prevMonthBtn.addEventListener('click', () => CalendarManager.prevMonth());
     if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => CalendarManager.nextMonth());
 
-    // Export JSON Button
+    // Dynamic Currency Switcher Slider ($ / ₹)
+    const btnUSD = document.getElementById('btnCurrUSD');
+    const btnINR = document.getElementById('btnCurrINR');
+    if (btnUSD) {
+      btnUSD.addEventListener('click', () => this.setCurrency('USD'));
+    }
+    if (btnINR) {
+      btnINR.addEventListener('click', () => this.setCurrency('INR'));
+    }
+
+    // Export JSON Button (Fallback if present)
     const exportJsonBtn = document.getElementById('btnExportJSONTop');
     if (exportJsonBtn) {
       exportJsonBtn.addEventListener('click', () => this.exportJSON());

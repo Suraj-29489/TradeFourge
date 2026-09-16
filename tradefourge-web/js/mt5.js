@@ -325,15 +325,17 @@ const MT5Manager = {
     const positionsCountEl = document.getElementById('mt5KpiOpenPositions');
     const todayPnlEl = document.getElementById('mt5KpiTodayPnl');
 
-    if (balEl) balEl.innerText = `$${acc.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-    if (eqEl) eqEl.innerText = `$${acc.equity.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-    if (freeMarginEl) freeMarginEl.innerText = `$${acc.freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+
+    if (balEl) balEl.innerText = `${sym}${acc.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    if (eqEl) eqEl.innerText = `${sym}${acc.equity.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    if (freeMarginEl) freeMarginEl.innerText = `${sym}${acc.freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
     if (marginLevelEl) marginLevelEl.innerText = `${acc.marginLevel}%`;
     if (positionsCountEl) positionsCountEl.innerText = acc.openPositions.length;
 
     if (todayPnlEl) {
       const sign = acc.todayPnL >= 0 ? '+' : '-';
-      todayPnlEl.innerText = `${sign}$${Math.abs(acc.todayPnL).toFixed(2)}`;
+      todayPnlEl.innerText = `${sign}${sym}${Math.abs(acc.todayPnL).toFixed(2)}`;
       todayPnlEl.className = `mt5-kpi-value ${acc.todayPnL >= 0 ? 'profit' : 'loss'}`;
     }
 
@@ -388,6 +390,7 @@ const MT5Manager = {
       return;
     }
 
+    const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
     tbody.innerHTML = positions.map(p => {
       const pnlSign = p.profit > 0 ? '+' : (p.profit < 0 ? '-' : '');
       const pnlClass = p.profit > 0 ? 'profit-text' : (p.profit < 0 ? 'loss-text' : 'neutral-text');
@@ -403,7 +406,7 @@ const MT5Manager = {
           <td style="font-family: var(--font-mono); color: var(--text-dim);">${p.sl || '--'}</td>
           <td style="font-family: var(--font-mono); color: var(--text-dim);">${p.tp || '--'}</td>
           <td style="font-size: 0.8rem; color: var(--text-dim);">${p.openTime.replace('T', ' ')}</td>
-          <td class="${pnlClass}" style="font-family: var(--font-mono); font-weight: 800; color: ${pnlColor};">${pnlSign}$${Math.abs(p.profit).toFixed(2)}</td>
+          <td class="${pnlClass}" style="font-family: var(--font-mono); font-weight: 800; color: ${pnlColor};">${pnlSign}${sym}${Math.abs(p.profit).toFixed(2)}</td>
         </tr>
       `;
     }).join('');
@@ -418,6 +421,7 @@ const MT5Manager = {
       return;
     }
 
+    const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
     tbody.innerHTML = trades.map(t => {
       const pnlSign = t.profit > 0 ? '+' : (t.profit < 0 ? '-' : '');
       const pnlClass = t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text');
@@ -431,8 +435,8 @@ const MT5Manager = {
           <td style="font-family: var(--font-mono);">${t.openPrice}</td>
           <td style="font-family: var(--font-mono);">${t.closePrice}</td>
           <td style="font-size: 0.78rem; color: var(--text-dim);">${t.closeTime.replace('T', ' ')}</td>
-          <td style="font-family: var(--font-mono); color: var(--text-dim);">${t.commission ? '$' + t.commission : '$0.00'}</td>
-          <td class="${pnlClass}" style="font-family: var(--font-mono); font-weight: 800; color: ${pnlColor};">${pnlSign}$${Math.abs(t.profit).toFixed(2)}</td>
+          <td style="font-family: var(--font-mono); color: var(--text-dim);">${t.commission ? sym + t.commission : sym + '0.00'}</td>
+          <td class="${pnlClass}" style="font-family: var(--font-mono); font-weight: 800; color: ${pnlColor};">${pnlSign}${sym}${Math.abs(t.profit).toFixed(2)}</td>
         </tr>
       `;
     }).join('');
@@ -469,6 +473,7 @@ const MT5Manager = {
       return;
     }
 
+    const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
     tbody.innerHTML = trades.slice(0, 10).map((t, idx) => `
       <tr>
         <td style="font-family: var(--font-mono); color: var(--text-dim);">#${987100 + idx}</td>
@@ -478,7 +483,7 @@ const MT5Manager = {
         <td><span style="font-size:0.75rem; font-weight:700; color:#818cf8;">OUT</span></td>
         <td style="font-family: var(--font-mono);">${t.lots}</td>
         <td style="font-family: var(--font-mono);">${t.closePrice}</td>
-        <td class="${t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text')}" style="font-family: var(--font-mono); font-weight:700; color: ${t.profit > 0 ? 'var(--profit)' : (t.profit < 0 ? 'var(--loss)' : 'var(--neutral)')};">${t.profit > 0 ? '+' : (t.profit < 0 ? '-' : '')}$${Math.abs(t.profit).toFixed(2)}</td>
+        <td class="${t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text')}" style="font-family: var(--font-mono); font-weight:700; color: ${t.profit > 0 ? 'var(--profit)' : (t.profit < 0 ? 'var(--loss)' : 'var(--neutral)')};">${t.profit > 0 ? '+' : (t.profit < 0 ? '-' : '')}${sym}${Math.abs(t.profit).toFixed(2)}</td>
       </tr>
     `).join('');
   },

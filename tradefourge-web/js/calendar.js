@@ -115,6 +115,7 @@ const CalendarManager = {
 
       if (dayData && dayData.trades > 0) {
         const pnl = dayData.pnl;
+        const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
         const tradeWord = `<span class="trade-count-num">${dayData.trades}</span><span class="trade-count-word"> ${dayData.trades === 1 ? 'trade' : 'trades'}</span>`;
         const tradeTitleWord = dayData.trades === 1 ? '1 trade' : `${dayData.trades} trades`;
 
@@ -123,7 +124,7 @@ const CalendarManager = {
           cell.innerHTML = `
             <span class="day-number">${day}</span>
             <div class="day-pnl-wrap">
-              <div class="day-pnl">+${Math.abs(pnl).toFixed(0) === '0' ? '$' + pnl.toFixed(2) : '$' + Math.abs(pnl).toFixed(0)}</div>
+              <div class="day-pnl">+${Math.abs(pnl).toFixed(0) === '0' ? sym + pnl.toFixed(2) : sym + Math.abs(pnl).toFixed(0)}</div>
               <div class="day-trade-count">${tradeWord}</div>
             </div>
           `;
@@ -132,7 +133,7 @@ const CalendarManager = {
           cell.innerHTML = `
             <span class="day-number">${day}</span>
             <div class="day-pnl-wrap">
-              <div class="day-pnl">-${Math.abs(pnl).toFixed(0) === '0' ? '$' + Math.abs(pnl).toFixed(2) : '$' + Math.abs(pnl).toFixed(0)}</div>
+              <div class="day-pnl">-${Math.abs(pnl).toFixed(0) === '0' ? sym + Math.abs(pnl).toFixed(2) : sym + Math.abs(pnl).toFixed(0)}</div>
               <div class="day-trade-count">${tradeWord}</div>
             </div>
           `;
@@ -141,7 +142,7 @@ const CalendarManager = {
           cell.innerHTML = `
             <span class="day-number">${day}</span>
             <div class="day-pnl-wrap">
-              <div class="day-pnl">$0.00</div>
+              <div class="day-pnl">${sym}0.00</div>
               <div class="day-trade-count">${tradeWord}</div>
             </div>
           `;
