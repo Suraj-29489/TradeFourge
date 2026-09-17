@@ -1,7 +1,7 @@
 {
   "name": "TradeForge - Trading Journal & Analytics",
   "short_name": "TradeForge",
-  "description": "Professional trading journal, performance analytics, MT5 sync, and backtesting suite.",
+  "description": "Professional trading journal, performance analytics, MT5 sync, and AI strategy bot.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

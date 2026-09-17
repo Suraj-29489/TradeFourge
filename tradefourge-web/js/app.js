@@ -34,8 +34,8 @@ const App = {
     this.initCurrency();
     this.bindEvents();
     this.initPWA();
-    if (typeof BacktestEngine !== 'undefined') {
-      BacktestEngine.init();
+    if (typeof StrategyBotManager !== 'undefined') {
+      StrategyBotManager.init();
     }
     if (typeof MT5Manager !== 'undefined') {
       MT5Manager.init();
@@ -64,6 +64,9 @@ const App = {
     this.renderAnalyticsView();
     this.renderInsightsView();
     this.renderStrategiesView();
+    if (typeof StrategyBotManager !== 'undefined') {
+      StrategyBotManager.updateContext();
+    }
     this.updateStorageIndicator();
   },
 
@@ -1080,8 +1083,8 @@ const App = {
       MT5Manager.renderPositions();
       MT5Manager.renderHistory();
     }
-    if (typeof BacktestEngine !== 'undefined' && BacktestEngine.lastResults) {
-      BacktestEngine.displayResults(BacktestEngine.lastResults);
+    if (typeof StrategyBotManager !== 'undefined') {
+      StrategyBotManager.updateContext();
     }
 
     // If day trades modal is open, re-render it with new currency
@@ -1121,6 +1124,12 @@ const App = {
   switchView(viewName) {
     this.activeView = viewName;
 
+    try {
+      if (window.location.hash !== `#${viewName}`) {
+        history.replaceState(null, '', `#${viewName}`);
+      }
+    } catch (e) {}
+
     // Update sidebar nav buttons
     document.querySelectorAll('.nav-item').forEach(el => {
       const v = el.getAttribute('data-view');
@@ -1144,7 +1153,7 @@ const App = {
       analytics: 'Analytics',
       journal: 'Analytics',
       tradelog: 'Trade Log',
-      backtesting: 'Backtesting',
+      'strategy-bot': 'Strategy Bot',
       mt5: 'MetaTrader 5 (MT5)',
       reports: 'Reports & Performance',
       insights: 'AI & Rule Insights',
@@ -1153,6 +1162,11 @@ const App = {
     };
     const titleEl = document.getElementById('pageTitle');
     if (titleEl) titleEl.innerText = titleMap[viewName] || 'Dashboard';
+
+    // If switching to Strategy Bot, notify manager
+    if (viewName === 'strategy-bot' && typeof StrategyBotManager !== 'undefined') {
+      StrategyBotManager.onViewActivated();
+    }
 
     // If switching to MT5, re-render MT5 view
     if (viewName === 'mt5' && typeof MT5Manager !== 'undefined') {
@@ -1262,6 +1276,20 @@ const App = {
         }
       });
     });
+
+    // Handle URL hash changes & deep linking
+    window.addEventListener('hashchange', () => {
+      const hash = (window.location.hash || '').replace('#', '');
+      if (hash && document.querySelector(`.nav-item[data-view="${hash}"]`)) {
+        this.switchView(hash);
+      }
+    });
+    if (window.location.hash) {
+      const initialHash = window.location.hash.replace('#', '');
+      if (initialHash && document.querySelector(`.nav-item[data-view="${initialHash}"]`)) {
+        setTimeout(() => this.switchView(initialHash), 100);
+      }
+    }
 
     // Main Chart Cumulative / Daily / Weekly toggles
     const tabCum = document.getElementById('tabCumPnL');
