@@ -31,7 +31,9 @@ const CalendarManager = {
    * Update metrics and re-render
    */
   update(metrics) {
-    this.metricsData = metrics;
+    if (metrics) {
+      this.metricsData = metrics;
+    }
     this.render();
   },
 
@@ -179,4 +181,8 @@ const CalendarManager = {
     }
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.CalendarManager = CalendarManager;
+}
 

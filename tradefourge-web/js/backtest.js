@@ -1209,3 +1209,7 @@ const BacktestEngine = {
     return atrs;
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.BacktestEngine = BacktestEngine;
+}

@@ -34,10 +34,10 @@ const App = {
     this.initCurrency();
     this.bindEvents();
     this.initPWA();
-    if (window.BacktestEngine) {
+    if (typeof BacktestEngine !== 'undefined') {
       BacktestEngine.init();
     }
-    if (window.MT5Manager) {
+    if (typeof MT5Manager !== 'undefined') {
       MT5Manager.init();
     }
     StorageManager.resetForNewSession();
@@ -967,6 +967,8 @@ const App = {
    * Open Day Trades Modal when clicking a calendar cell
    */
   openDayTradesModal(dateKey, dayData) {
+    this._activeDayKey = dateKey;
+    this._activeDayData = dayData;
     const modal = document.getElementById('dayTradesModal');
     const title = document.getElementById('dayTradesModalTitle');
     const body = document.getElementById('dayTradesModalBody');
@@ -983,7 +985,6 @@ const App = {
             <th>Symbol</th>
             <th>Type</th>
             <th>Lots</th>
-            <th>P/L ($)</th>
             <th>P/L (${sym})</th>
           </tr>
         </thead>
@@ -1066,26 +1067,29 @@ const App = {
     this.renderInsightsView();
     this.renderStrategiesView();
 
-    if (window.ChartManager && this.currentMetrics) {
+    if (typeof ChartManager !== 'undefined' && this.currentMetrics) {
       ChartManager.updateDashboardCharts(this.currentMetrics);
       ChartManager.updateAnalyticsCharts(this.currentMetrics);
     }
-    if (window.CalendarManager) {
-      if (this.currentMetrics) {
-        CalendarManager.update(this.currentMetrics);
-      } else {
-        CalendarManager.render();
-      }
+    if (typeof CalendarManager !== 'undefined') {
+      CalendarManager.update(this.currentMetrics);
     }
-    if (window.MT5Manager && MT5Manager.updateAccountCards) {
+    if (typeof MT5Manager !== 'undefined' && MT5Manager.updateAccountCards) {
       MT5Manager.updateAccountCards();
       MT5Manager.renderOverview();
       MT5Manager.renderPositions();
       MT5Manager.renderHistory();
     }
-    if (window.BacktestEngine && BacktestEngine.lastResults) {
+    if (typeof BacktestEngine !== 'undefined' && BacktestEngine.lastResults) {
       BacktestEngine.displayResults(BacktestEngine.lastResults);
     }
+
+    // If day trades modal is open, re-render it with new currency
+    const dayTradesModal = document.getElementById('dayTradesModal');
+    if (dayTradesModal && dayTradesModal.classList.contains('active') && this._activeDayKey && this._activeDayData) {
+      this.openDayTradesModal(this._activeDayKey, this._activeDayData);
+    }
+
     this.showToast(`Currency updated to ${curr === 'INR' ? 'INR (₹)' : 'USD ($)'}`, 'info');
   },
 
@@ -1151,7 +1155,7 @@ const App = {
     if (titleEl) titleEl.innerText = titleMap[viewName] || 'Dashboard';
 
     // If switching to MT5, re-render MT5 view
-    if (viewName === 'mt5' && window.MT5Manager) {
+    if (viewName === 'mt5' && typeof MT5Manager !== 'undefined') {
       MT5Manager.render();
     }
 
@@ -1901,3 +1905,7 @@ const App = {
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
 });
+
+if (typeof window !== 'undefined') {
+  window.App = App;
+}

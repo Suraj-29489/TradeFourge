@@ -668,3 +668,7 @@ const TradeAnalytics = {
   }
 };
 
+if (typeof window !== 'undefined') {
+  window.TradeAnalytics = TradeAnalytics;
+}
+
