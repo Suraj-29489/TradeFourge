@@ -21,19 +21,55 @@ const TradeParser = {
       throw new Error(`CSV needs these columns: ${missingFields.join(', ')}.`);
     }
 
-    const tickets = new Set();
+    const seenRecords = new Set();
     const trades = [];
 
     rows.slice(1).forEach((values, index) => {
       const trade = this.normalizeTradeRow(values, headerMap, index + 1);
-      if (!trade || tickets.has(trade.ticket)) return;
-      tickets.add(trade.ticket);
+      if (!trade) return;
+
+      // Full execution signature for true duplicate detection
+      const recordKey = [
+        trade.ticket,
+        trade.openTime,
+        trade.closeTime,
+        trade.type,
+        trade.lots,
+        trade.symbol,
+        trade.openPrice,
+        trade.closePrice,
+        trade.profit,
+        trade.closeReason
+      ].join('|');
+
+      if (seenRecords.has(recordKey)) return;
+      seenRecords.add(recordKey);
+
+      // Unique internal record identifier
+      trade.id = `${trade.ticket}_${trade.closeTime || trade.openTime}_${index + 1}`;
+
       trades.push(trade);
     });
 
     if (!trades.length) {
       throw new Error('No valid unique trades could be parsed from this CSV.');
     }
+
+    // Recognize partial-close patterns
+    const ticketCounts = {};
+    trades.forEach(t => {
+      ticketCounts[t.ticket] = (ticketCounts[t.ticket] || 0) + 1;
+    });
+
+    trades.forEach(t => {
+      if (ticketCounts[t.ticket] > 1) {
+        t.closeType = 'partial';
+        t.isPartialClose = true;
+      } else {
+        t.closeType = 'full';
+        t.isPartialClose = false;
+      }
+    });
 
     trades.sort((a, b) => new Date(a.closeTime || a.openTime) - new Date(b.closeTime || b.openTime));
     return trades;
@@ -96,7 +132,8 @@ const TradeParser = {
       commission: ['commission', 'comm', 'fee', 'fees'],
       swap: ['swap', 'rollover', 'financing'],
       profit: ['profit', 'pnl', 'pandl', 'netprofit', 'grossprofit', 'realizedpnl', 'gainloss'],
-      closeReason: ['closereason', 'reason', 'comment', 'closingcomment', 'notes']
+      closeReason: ['closereason', 'reason', 'comment', 'closingcomment', 'notes'],
+      originalPositionSize: ['originalpositionsize', 'origpositionsize', 'initiallots', 'origlots', 'origsize', 'possize']
     };
 
     Object.entries(aliases).forEach(([field, names]) => {
@@ -143,12 +180,17 @@ const TradeParser = {
       return Number.isFinite(number) ? number : null;
     };
 
+    const rawCloseReason = get('closeReason');
+    const closeReason = rawCloseReason ? rawCloseReason.toLowerCase().trim() : (profit >= 0 ? 'tp' : 'user');
+    const originalPositionSize = numberOrNull('originalPositionSize');
+
     return {
       ticket,
       openTime,
       closeTime,
       type,
       lots,
+      originalPositionSize: originalPositionSize !== null ? originalPositionSize : lots,
       symbol,
       openPrice: numberOrNull('openPrice') || 0,
       closePrice: numberOrNull('closePrice') || 0,
@@ -157,7 +199,7 @@ const TradeParser = {
       commission: numberOrNull('commission') || 0,
       swap: numberOrNull('swap') || 0,
       profit: Math.round(profit * 100) / 100,
-      closeReason: get('closeReason') || (profit >= 0 ? 'tp' : 'user'),
+      closeReason,
       isWin: profit > 0,
       isLoss: profit < 0,
       isBreakEven: profit === 0

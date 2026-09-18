@@ -5,7 +5,8 @@
 
 const StrategyBotManager = {
   STORAGE_KEYS: {
-    CHAT_HISTORY: 'tradeforge_bot_chat_history'
+    CHAT_HISTORY: 'tradeforge_bot_chat_history',
+    AI_MODE: 'fourge_ai_mode'
   },
 
   // In-memory conversation state
@@ -13,20 +14,90 @@ const StrategyBotManager = {
   isGenerating: false,
   metricsCache: null,
   lastInteractionId: null,
+  offlineContext: {},
+  aiMode: 'online', // 'online' | 'offline'
 
   /**
    * Initialize Strategy Bot
    */
   init() {
+    this.loadAiMode();
     this.bindEvents();
+    this.updateModeUI();
     this.updateContext();
     this.loadChatHistory();
+  },
+
+  /**
+   * Load AI mode preference from localStorage (online or offline only)
+   */
+  loadAiMode() {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEYS.AI_MODE);
+      if (stored === 'offline' || stored === 'online') {
+        this.aiMode = stored;
+      } else {
+        this.aiMode = 'online';
+      }
+    } catch (e) {
+      this.aiMode = 'online';
+    }
+  },
+
+  /**
+   * Toggle AI mode between Online (Gemini AI) and Offline (Local Engine)
+   */
+  toggleAiMode() {
+    this.aiMode = (this.aiMode === 'online') ? 'offline' : 'online';
+    try {
+      localStorage.setItem(this.STORAGE_KEYS.AI_MODE, this.aiMode);
+    } catch (e) {}
+    this.updateModeUI();
+    if (typeof App !== 'undefined' && App.showToast) {
+      App.showToast(this.aiMode === 'online' ? 'Fourge AI: Online Mode active (Gemini AI).' : 'Fourge AI: Offline Mode active (Local Engine).', 'info');
+    }
+  },
+
+  /**
+   * Update header mode toggle button and live status badge
+   */
+  updateModeUI() {
+    const toggleBtn = document.getElementById('botModeToggleBtn');
+    const toggleText = document.getElementById('botModeToggleText');
+    const headerBadge = document.getElementById('botLiveStatusBadge');
+
+    if (this.aiMode === 'offline') {
+      if (toggleBtn) {
+        toggleBtn.className = 'btn-secondary bot-mode-toggle-btn offline';
+        toggleBtn.setAttribute('title', 'AI is OFF (using Offline Local Engine). Click to enable Online AI.');
+      }
+      if (toggleText) {
+        toggleText.innerHTML = '○ AI OFF';
+      }
+      if (headerBadge) {
+        headerBadge.className = 'bot-status-pill offline';
+        headerBadge.innerHTML = '<span class="pulse-dot" style="background: var(--text-muted);"></span> Offline Mode';
+      }
+    } else {
+      if (toggleBtn) {
+        toggleBtn.className = 'btn-secondary bot-mode-toggle-btn online';
+        toggleBtn.setAttribute('title', 'AI is ON (using Gemini Cloud Router). Click to switch to Offline Mode.');
+      }
+      if (toggleText) {
+        toggleText.innerHTML = '● AI ON';
+      }
+      if (headerBadge) {
+        headerBadge.className = 'bot-status-pill online';
+        headerBadge.innerHTML = '<span class="pulse-dot"></span> Fourge AI Live';
+      }
+    }
   },
 
   /**
    * Called when user switches to the 'strategy-bot' view
    */
   onViewActivated() {
+    this.updateModeUI();
     this.updateContext();
     this.scrollToBottom();
     const input = document.getElementById('botChatInput');
@@ -39,6 +110,12 @@ const StrategyBotManager = {
    * Bind DOM event listeners
    */
   bindEvents() {
+    // Mode toggle button
+    const modeToggleBtn = document.getElementById('botModeToggleBtn');
+    if (modeToggleBtn) {
+      modeToggleBtn.addEventListener('click', () => this.toggleAiMode());
+    }
+
     // Send message on click
     const sendBtn = document.getElementById('botSendBtn');
     if (sendBtn) {
@@ -113,9 +190,9 @@ const StrategyBotManager = {
    * Update the trade context summary banner & cache current metrics
    */
   updateContext() {
-    // Reset conversation interaction ID on any dataset/currency context change
-    // ensuring subsequent Strategy Bot queries seed a fresh interaction with latest metrics
+    // Reset conversation interaction ID and offline context on any dataset/currency context change
     this.lastInteractionId = null;
+    this.offlineContext = {};
     const trades = this.getTrades();
     const bannerText = document.getElementById('botContextText');
     const bannerBadge = document.getElementById('botContextBadge');
@@ -190,7 +267,7 @@ const StrategyBotManager = {
     if (chatInput) {
       chatInput.value = promptText;
     }
-    this.handleSendMessage();
+    return this.handleSendMessage();
   },
 
   /**
@@ -219,24 +296,30 @@ const StrategyBotManager = {
     try {
       let reply = '';
 
-      try {
-        // Try Fourge AI server proxy (Gemini via /api/strategy-bot)
-        reply = await this.callGeminiAPI(text);
-      } catch (serverErr) {
-        // If server is unreachable or not configured, fall back to local engine
-        const isServerDown = serverErr.message && (
-          serverErr.message.includes('Failed to fetch') ||
-          serverErr.message.includes('NetworkError') ||
-          serverErr.message.includes('502') ||
-          serverErr.message.includes('503') ||
-          serverErr.message.includes('GEMINI_API_KEY is not configured')
-        );
+      if (this.aiMode === 'offline') {
+        // AI OFF: strictly local deterministic evaluation without server/network call
+        reply = await this.runLocalSmartEngine(text);
+      } else {
+        // AI ON: try server proxy with multi-project Gemini failover
+        try {
+          reply = await this.callGeminiAPI(text);
+        } catch (serverErr) {
+          // Automatic fallback to local engine on server errors (Failed to fetch, 502/503, GEMINI_API_KEY is not configured)
+          const isServerDown = serverErr.message && (
+            serverErr.message.includes('Failed to fetch') ||
+            serverErr.message.includes('NetworkError') ||
+            serverErr.message.includes('502') ||
+            serverErr.message.includes('503') ||
+            serverErr.message.includes('GEMINI_API_KEY is not configured') ||
+            serverErr.message.includes('Fourge AI error')
+          );
 
-        if (isServerDown) {
-          console.warn('[FourgeAI] Server unavailable, falling back to local engine:', serverErr.message);
-          reply = await this.runLocalSmartEngine(text);
-        } else {
-          throw serverErr;
+          if (isServerDown) {
+            console.warn('[FourgeAI] Server unavailable or failed, falling back to local engine:', serverErr.message);
+            reply = await this.runLocalSmartEngine(text);
+          } else {
+            reply = await this.runLocalSmartEngine(text);
+          }
         }
       }
 
@@ -364,209 +447,25 @@ const StrategyBotManager = {
 
   /**
    * Built-in Local Smart Analytics Engine (Zero API Key required)
-   * Deterministically parses the user's trades and produces deep, data-driven quantitative insights.
+   * Delegates to OfflineStrategyEngine for natural-language deterministic insights.
    */
   async runLocalSmartEngine(query) {
     // Artificial small delay for conversational feel
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 250));
 
-    const q = query.toLowerCase();
     const trades = this.getTrades();
-    const currSym = typeof TradeAnalytics !== 'undefined' ? TradeAnalytics.getCurrencySymbol() : '$';
-    const fmt = (val, withSign = true) => typeof TradeAnalytics !== 'undefined' ? TradeAnalytics.formatCurrency(val, withSign) : `${val >= 0 && withSign ? '+' : ''}${currSym}${val.toFixed(2)}`;
-
-    if (!trades || trades.length === 0) {
-      return `### 📊 No Trades Detected\n\nI don't have any trade data to analyze yet!\n\nPlease upload a CSV trade log on the **Dashboard** (e.g. from MT4, MT5, or your broker), and I'll give you instant statistics, strategy audits, and risk evaluations.\n\n*💡 Tip: You can also configure a **Google AI Studio API Key** in the settings above to unlock free-form conversational reasoning.*`;
-    }
-
     const m = this.metricsCache || (typeof TradeAnalytics !== 'undefined' ? TradeAnalytics.calculateMetrics(trades) : null);
-    if (!m) {
-      return `Unable to calculate metrics from the current trade log. Please check if your CSV is formatted properly.`;
+
+    if (typeof OfflineStrategyEngine !== 'undefined' && typeof OfflineStrategyEngine.evaluate === 'function') {
+      const result = OfflineStrategyEngine.evaluate(query, trades, m, this.offlineContext || {});
+      if (result && result.contextUpdate) {
+        this.offlineContext = result.contextUpdate;
+      }
+      return (result && result.text) ? result.text : 'No analysis generated.';
     }
 
-    const totalTrades = trades.length;
-    const isProfitable = m.totalPnL >= 0;
-    const winRateStr = `${m.winRate.toFixed(1)}%`;
-    const profitFactorStr = m.profitFactor >= 99 ? '∞' : m.profitFactor.toFixed(2);
-    const avgWinStr = fmt(m.avgWin, false);
-    const avgLossStr = fmt(m.avgLoss, false);
-    const rrRatio = m.avgLoss > 0 ? (m.avgWin / m.avgLoss).toFixed(2) : 'N/A';
-
-    // Calculate Drawdown safely
-    let peak = 0;
-    let maxDd = 0;
-    (m.cumulativeTimeseries || []).forEach(pt => {
-      if (pt.cumulativePnL > peak) peak = pt.cumulativePnL;
-      const dd = peak - pt.cumulativePnL;
-      if (dd > maxDd) maxDd = dd;
-    });
-    const maxDrawdown = Math.round(maxDd * 100) / 100;
-    const maxDrawdownPercent = peak > 0 ? (maxDrawdown / peak) * 100 : 0;
-
-    // Symbols & Best Symbol
-    const symbols = m.symbolBreakdown || [];
-    const bestSymbol = symbols.length > 0 ? symbols[0] : null;
-
-    // Durations in minutes
-    const dur = m.durationMetrics || {};
-    const avgHoldMin = dur.avgDurationMs ? Math.round(dur.avgDurationMs / 60000) : 0;
-    const winHoldMin = dur.avgWinDurationMs ? Math.round(dur.avgWinDurationMs / 60000) : 0;
-    const lossHoldMin = dur.avgLossDurationMs ? Math.round(dur.avgLossDurationMs / 60000) : 0;
-
-    // 1. Overall Audit / Summary
-    if (q.includes('audit') || q.includes('summary') || q.includes('overall') || q.includes('performance') || q.includes('overview') || q.includes('report')) {
-      return `### 📋 Comprehensive Strategy Audit\n\n` +
-        `Here is the executive audit of your **${totalTrades} executed trades**:\n\n` +
-        `| Metric | Value | Assessment |\n` +
-        `| :--- | :--- | :--- |\n` +
-        `| **Net P&L** | **${fmt(m.totalPnL)}** | ${isProfitable ? '🟢 Profitable' : '🔴 In Drawdown'} |\n` +
-        `| **Win Rate** | **${winRateStr}** (${m.winnersCount}W / ${m.losersCount}L) | ${m.winRate >= 50 ? '✅ Above 50%' : '⚠️ Below 50%'} |\n` +
-        `| **Profit Factor** | **${profitFactorStr}** | ${m.profitFactor >= 1.5 ? '🏆 Excellent (> 1.5)' : m.profitFactor >= 1.0 ? '🟡 Acceptable (1.0 - 1.5)' : '🔴 Sub-optimal (< 1.0)'} |\n` +
-        `| **Avg Win / Loss** | **${avgWinStr} / ${avgLossStr}** | Risk-Reward: **${rrRatio}:1** |\n` +
-        `| **Max Drawdown** | **${fmt(maxDrawdown, false)}** (${maxDrawdownPercent.toFixed(1)}%) | ${maxDrawdownPercent < 15 ? '🛡️ Conservative' : '⚠️ Elevated Risk'} |\n` +
-        `| **Consecutive Streaks** | **${m.maxWinStreak} Wins / ${m.maxLossStreak} Losses** | Max drawdown streak |\n\n` +
-        `#### 💡 Key Strategy Findings:\n` +
-        (m.profitFactor >= 1.5 
-          ? `- **Strong Edge:** Your edge is statistically validated with a healthy Profit Factor of ${profitFactorStr}.\n` 
-          : `- **Edge Dilution:** Your Profit Factor (${profitFactorStr}) indicates profits are getting surrendered back to the market.\n`) +
-        (m.avgWin < m.avgLoss 
-          ? `- **Asymmetric Risk Warning:** Your average loss (${avgLossStr}) is larger than your average win (${avgWinStr}). You need either a higher win rate or tighter stop losses to scale.\n` 
-          : `- **Positive Expectancy:** Your average win (${avgWinStr}) exceeds your average loss (${avgLossStr}), giving you an edge over the long run.\n`) +
-        `- **Best Instrument:** **${bestSymbol?.symbol || 'N/A'}** generated **${fmt(bestSymbol?.pnl || 0)}**.\n\n` +
-        `*💡 Note: Connect a Google AI Studio API key in the top settings to ask open-ended questions and receive deep AI trading mentoring.*`;
-    }
-
-    // 2. Biggest Losses / Worst Trades
-    if (q.includes('loss') || q.includes('worst') || q.includes('losing') || q.includes('mistake') || q.includes('bleed')) {
-      const worstTrades = [...trades].sort((a, b) => (a.profit || 0) - (b.profit || 0)).slice(0, 5);
-      let list = worstTrades.map((t, idx) => {
-        const pnl = fmt(t.profit);
-        const durStr = this.getTradeHoldTime(t);
-        return `${idx + 1}. **${t.symbol || 'N/A'}** (${(t.type || 'TRADE').toUpperCase()}) &bull; P&L: <span style="color: var(--color-loss); font-weight: 700;">${pnl}</span> &bull; Open: ${t.openTime?.slice(0, 16) || 'N/A'} &bull; Hold Time: ${durStr}`;
-      }).join('\n');
-
-      return `### 📉 Deep-Dive: Your Top Losing Trades\n\n` +
-        `Here are the largest drawdowns recorded in your dataset:\n\n${list}\n\n` +
-        `#### 🔍 Forensic Analysis:\n` +
-        `- **Total Gross Loss:** You surrendered a cumulative **${fmt(m.grossLoss, false)}** across ${m.losersCount} losing positions.\n` +
-        `- **Largest Single Loss:** **${fmt(m.maxLoss, false)}** on **${m.maxLossTrade?.symbol || 'N/A'}**.\n` +
-        `- **Losing Streak:** Your longest losing streak was **${m.maxLossStreak} consecutive trades**.\n\n` +
-        `#### 🎯 Actionable Fixes:\n` +
-        `1. **Hard Stop Loss Rule:** Cap maximum loss per trade at 1.5% - 2.0% of your account.\n` +
-        `2. **Avoid Revenge Trading:** Notice if multiple large losses happened on the same day or within 1 hour of each other.\n` +
-        `3. **Cut Losers Early:** If a trade violates your thesis, exit immediately rather than hoping for break-even.`;
-    }
-
-    // 3. Biggest Winners / Best Trades
-    if (q.includes('win') || q.includes('best') || q.includes('profit') || q.includes('winner')) {
-      const bestTrades = [...trades].sort((a, b) => (b.profit || 0) - (a.profit || 0)).slice(0, 5);
-      let list = bestTrades.map((t, idx) => {
-        const pnl = fmt(t.profit);
-        const durStr = this.getTradeHoldTime(t);
-        return `${idx + 1}. **${t.symbol || 'N/A'}** (${(t.type || 'TRADE').toUpperCase()}) &bull; P&L: <span style="color: var(--color-profit); font-weight: 700;">${pnl}</span> &bull; Open: ${t.openTime?.slice(0, 16) || 'N/A'} &bull; Hold Time: ${durStr}`;
-      }).join('\n');
-
-      return `### 🏆 Top Winning Trades & Alpha Drivers\n\n` +
-        `Here are the highest yielding executions in your trading history:\n\n${list}\n\n` +
-        `#### 🌟 Key Positives:\n` +
-        `- **Gross Profit Generated:** **${fmt(m.grossProfit, false)}** across ${m.winnersCount} winning trades.\n` +
-        `- **Largest Single Win:** **${fmt(m.maxWin, false)}** on **${m.maxWinTrade?.symbol || 'N/A'}**.\n` +
-        `- **Max Winning Streak:** **${m.maxWinStreak} consecutive winners**.\n\n` +
-        `#### 💡 Pro Tip:\n` +
-        `Examine the chart conditions for these top winners. Are they breakout trades, trend continuations, or session opens? Double down on these setups!`;
-    }
-
-    // 4. Symbols / Pairs Breakdown
-    if (q.includes('pair') || q.includes('symbol') || q.includes('asset') || q.includes('instrument') || q.includes('xau') || q.includes('eur') || q.includes('forex') || q.includes('crypto')) {
-      let rows = symbols.map(s => {
-        const winR = s.trades > 0 ? ((s.wins / s.trades) * 100).toFixed(1) + '%' : '0%';
-        const pnlCol = fmt(s.pnl);
-        const status = s.pnl > 0 ? '🟢' : '🔴';
-        return `| ${status} **${s.symbol}** | ${s.trades} | ${s.wins}W / ${s.losses}L | ${winR} | **${pnlCol}** |`;
-      }).join('\n');
-
-      return `### 📊 Symbol & Instrument Breakdown\n\n` +
-        `Here is how each asset class and pair performed in your journal:\n\n` +
-        `| Symbol | Trades | Record | Win Rate | Net P&L |\n` +
-        `| :--- | :--- | :--- | :--- | :--- |\n` +
-        rows + `\n\n` +
-        `#### 🎯 Recommendation:\n` +
-        `- **Focus Asset:** **${symbols[0]?.symbol || 'N/A'}** is your primary breadwinner (${fmt(symbols[0]?.pnl || 0)}).\n` +
-        (symbols.length > 1 && symbols[symbols.length - 1].pnl < 0 
-          ? `- **Eliminate Bleeders:** Consider pausing trades on **${symbols[symbols.length - 1].symbol}** (${fmt(symbols[symbols.length - 1].pnl)}). Dropping your worst pair immediately boosts your overall bottom line!\n` 
-          : '');
-    }
-
-    // 5. Hold Times / Duration
-    if (q.includes('duration') || q.includes('hold') || q.includes('time') || q.includes('hour') || q.includes('minute')) {
-      return `### ⏳ Trade Duration & Hold Time Analysis\n\n` +
-        `- **Average Trade Hold Time:** **${avgHoldMin} minutes**\n` +
-        `- **Average Winning Trade Hold Time:** **${winHoldMin} minutes**\n` +
-        `- **Average Losing Trade Hold Time:** **${lossHoldMin} minutes**\n\n` +
-        `#### 💡 Psychological Diagnostic:\n` +
-        (lossHoldMin > 0 && winHoldMin > 0 && lossHoldMin > winHoldMin * 1.5
-          ? `⚠️ **Warning - Holding Losers Syndrome:** You hold your losing trades **${(lossHoldMin / winHoldMin).toFixed(1)}x longer** than your winners! This is a classic symptom of hope mode. Exit losing positions when the setup fails.`
-          : `✅ **Disciplined Exits:** Your hold times for wins and losses are reasonably balanced, indicating you aren't bag-holding underwater trades.`);
-    }
-
-    // 6. Days of Week / Timing
-    if (q.includes('day') || q.includes('weekday') || q.includes('monday') || q.includes('friday') || q.includes('schedule') || q.includes('calendar')) {
-      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const dayStats = Object.keys(m.weekdayMap || {}).map(idx => ({
-        name: dayNames[idx],
-        pnl: m.weekdayMap[idx] || 0,
-        trades: m.weekdayCount?.[idx] || 0,
-        wins: m.weekdayWins?.[idx] || 0
-      })).filter(d => d.trades > 0).sort((a, b) => b.pnl - a.pnl);
-
-      let dayRows = dayStats.map(d => {
-        const wr = d.trades > 0 ? ((d.wins / d.trades) * 100).toFixed(1) + '%' : '0%';
-        return `| **${d.name}** | ${d.trades} | ${wr} | **${fmt(d.pnl)}** |`;
-      }).join('\n');
-
-      return `### 📅 Performance by Day of the Week\n\n` +
-        `| Day | Total Trades | Win Rate | Net P&L |\n` +
-        `| :--- | :--- | :--- | :--- |\n` +
-        dayRows + `\n\n` +
-        `#### 💡 Schedule Optimization:\n` +
-        `- **Golden Day:** **${dayStats[0]?.name || 'N/A'}** yields your best returns (${fmt(dayStats[0]?.pnl || 0)}).\n` +
-        (dayStats.length > 1 && dayStats[dayStats.length - 1].pnl < 0
-          ? `- **Red Flag Day:** **${dayStats[dayStats.length - 1].name}** has consistently caused drawdowns (${fmt(dayStats[dayStats.length - 1].pnl)}). Consider reducing size on this day.\n`
-          : '');
-    }
-
-    // 7. Risk / Reward / Tips / Advice
-    if (q.includes('risk') || q.includes('reward') || q.includes('improve') || q.includes('tip') || q.includes('advice') || q.includes('strategy')) {
-      return `### 🎯 Strategy Optimization & Risk Playbook\n\n` +
-        `Based on statistical modeling of your **${totalTrades} trades**:\n\n` +
-        `1. **Risk-to-Reward Ratio (${rrRatio}:1):**\n` +
-        `   Your average win is **${avgWinStr}** vs average loss of **${avgLossStr}**.\n` +
-        (m.avgWin > m.avgLoss 
-          ? `   - Great job! Your R:R is positive. To take it to the next level, trail stops on your runners.` 
-          : `   - ⚠️ Attention: Since your average loss exceeds your average win, you must maintain at least a **${(100 / (1 + (m.avgWin / (m.avgLoss || 1)))).toFixed(1)}% win rate** just to break even! Aim to let winners run to at least 1.5R.`) +
-        `\n\n2. **Drawdown Protection:**\n` +
-        `   Your maximum historical drawdown is **${fmt(maxDrawdown, false)}** (${maxDrawdownPercent.toFixed(1)}%). Establish a daily circuit breaker: if you lose 3 consecutive trades in a single session, close the terminal and walk away.\n\n` +
-        `3. **Position Sizing:**\n` +
-        `   Standardize your lot sizing across pairs. Inconsistent sizing on losing trades is often the hidden culprit that damages accounts.\n\n` +
-        `*💡 Tip: Connect your free **Google AI Studio API Key** above to unlock deep, natural AI strategy discussions tailored to any trading methodology (ICT, SMC, Price Action, Scalping).*`;
-    }
-
-    // Default Fallback Response
-    return `### Fourge AI Analysis\n\n` +
-      `Here is a quick snapshot of your active trade log:\n\n` +
-      `- **Total Executions:** ${totalTrades} trades\n` +
-      `- **Net P&L:** **${fmt(m.totalPnL)}**\n` +
-      `- **Win Rate:** **${winRateStr}** (${m.winnersCount} Wins / ${m.losersCount} Losses)\n` +
-      `- **Profit Factor:** **${profitFactorStr}**\n` +
-      `- **Best Instrument:** **${bestSymbol?.symbol || 'N/A'}** (${fmt(bestSymbol?.pnl || 0)})\n` +
-      `- **Max Drawdown:** **${fmt(maxDrawdown, false)}**\n\n` +
-      `You can ask me about:\n` +
-      `- *"What are my biggest losing trades?"*\n` +
-      `- *"Which symbols are most profitable?"*\n` +
-      `- *"Analyze my trade hold times"*\n` +
-      `- *"Evaluate my risk to reward ratio"*\n` +
-      `- *"Give me a complete strategy audit"*\n\n` +
-      `*💡 Want free-form conversations with full AI reasoning? Add your **Google AI Studio API Key** in the settings above!*`;
+    // Fallback if offline engine not yet loaded
+    return 'Offline Strategy Engine unavailable.';
   },
 
   /**
@@ -1077,11 +976,15 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
       ? `Analyzing <strong>${tradeCount} loaded trades</strong>. Ask questions about your performance, risk metrics, or trade execution.`
       : `No trades loaded yet. Upload your CSV to unlock full performance diagnostics, or ask general trading questions.`;
 
+    const subdescText = (this.aiMode === 'offline')
+      ? 'Running in Offline Mode — instant local trade calculations without cloud AI.'
+      : 'Powered by Gemini AI — cloud intelligence with local offline fallback.';
+
     welcomeCard.innerHTML = `
       <div class="bot-welcome-header">
         <h3 class="bot-welcome-title">Fourge AI</h3>
         <p class="bot-welcome-desc">${tradeStatusText}</p>
-        <p class="bot-welcome-subdesc">Powered by Gemini AI — your trading performance co-pilot.</p>
+        <p class="bot-welcome-subdesc">${subdescText}</p>
       </div>
       <div class="bot-suggested-wrap">
         <div class="bot-suggested-title">Suggested Inquiries</div>

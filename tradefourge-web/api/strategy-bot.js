@@ -1,9 +1,15 @@
 /**
- * TradeForge - Fourge AI Server-Side Gemini Proxy
+ * TradeForge - Fourge AI Server-Side Gemini Router & Failover Proxy
  *
  * Secure serverless endpoint for Google Gemini Interactions API (gemini-3.8-flash).
- * Reads GEMINI_API_KEY strictly from server environment variables.
- * Never exposes credentials to client browsers.
+ * Supports up to 5 separately configured Gemini API projects with automatic failover:
+ * - Primary: GEMINI_API_KEY_PRIMARY (or fallback GEMINI_API_KEY) & optional GEMINI_PROJECT_PRIMARY
+ * - Backup 1: GEMINI_API_KEY_BACKUP_1 & optional GEMINI_PROJECT_BACKUP_1
+ * - Backup 2: GEMINI_API_KEY_BACKUP_2 & optional GEMINI_PROJECT_BACKUP_2
+ * - Backup 3: GEMINI_API_KEY_BACKUP_3 & optional GEMINI_PROJECT_BACKUP_3
+ * - Backup 4: GEMINI_API_KEY_BACKUP_4 & optional GEMINI_PROJECT_BACKUP_4
+ *
+ * Credentials strictly remain on the server and are NEVER sent or exposed to clients.
  */
 
 const fs = require('fs');
@@ -11,16 +17,14 @@ const path = require('path');
 
 // Lightweight local .env.local loader for development environments
 function loadLocalEnv() {
-  if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY') {
-    return;
-  }
-    const cwd = (typeof process !== 'undefined' && typeof process.cwd === 'function') ? process.cwd() : '.';
-    const baseDir = (typeof __dirname !== 'undefined') ? __dirname : '.';
-    const candidates = [
-      path.resolve(cwd, '.env.local'),
-      path.resolve(baseDir, '../.env.local'),
-      path.resolve(baseDir, '.env.local')
-    ];
+  const cwd = (typeof process !== 'undefined' && typeof process.cwd === 'function') ? process.cwd() : '.';
+  const baseDir = (typeof __dirname !== 'undefined') ? __dirname : '.';
+  const candidates = [
+    path.resolve(cwd, '.env.local'),
+    path.resolve(baseDir, '../.env.local'),
+    path.resolve(baseDir, '.env.local')
+  ];
+
   for (const file of candidates) {
     try {
       if (fs.existsSync(file)) {
@@ -32,17 +36,54 @@ function loadLocalEnv() {
           if (eqIdx !== -1) {
             const key = trimmed.slice(0, eqIdx).trim();
             const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
-            if (key === 'GEMINI_API_KEY' && val && val !== 'YOUR_GEMINI_API_KEY' && !process.env.GEMINI_API_KEY) {
-              process.env.GEMINI_API_KEY = val;
+            if (key.startsWith('GEMINI_') && val && !val.includes('YOUR_GEMINI_API_KEY') && !process.env[key]) {
+              process.env[key] = val;
             }
           }
         }
-        if (process.env.GEMINI_API_KEY) break;
       }
     } catch (e) {
-      // Ignore filesystem read errors in constrained environments
+      // Ignore filesystem read errors in constrained serverless environments
     }
   }
+}
+
+// Retrieve configured Gemini project slots in priority order
+function getConfiguredProjects() {
+  const slots = [
+    {
+      slot: 0,
+      name: 'PRIMARY',
+      key: process.env.GEMINI_API_KEY_PRIMARY || process.env.GEMINI_API_KEY,
+      project: process.env.GEMINI_PROJECT_PRIMARY || 'Primary Project'
+    },
+    {
+      slot: 1,
+      name: 'BACKUP_1',
+      key: process.env.GEMINI_API_KEY_BACKUP_1,
+      project: process.env.GEMINI_PROJECT_BACKUP_1 || 'Backup Project 1'
+    },
+    {
+      slot: 2,
+      name: 'BACKUP_2',
+      key: process.env.GEMINI_API_KEY_BACKUP_2,
+      project: process.env.GEMINI_PROJECT_BACKUP_2 || 'Backup Project 2'
+    },
+    {
+      slot: 3,
+      name: 'BACKUP_3',
+      key: process.env.GEMINI_API_KEY_BACKUP_3,
+      project: process.env.GEMINI_PROJECT_BACKUP_3 || 'Backup Project 3'
+    },
+    {
+      slot: 4,
+      name: 'BACKUP_4',
+      key: process.env.GEMINI_API_KEY_BACKUP_4,
+      project: process.env.GEMINI_PROJECT_BACKUP_4 || 'Backup Project 4'
+    }
+  ];
+
+  return slots.filter(s => s.key && typeof s.key === 'string' && s.key.trim() && s.key !== 'YOUR_GEMINI_API_KEY');
 }
 
 // Sanitize messages so no API keys, credentials, or internal patterns leak
@@ -53,6 +94,31 @@ function sanitizeError(msg) {
     .replace(/key=[^&\s]+/gi, 'key=[REDACTED]')
     .replace(/x-goog-api-key:[^\n\r]+/gi, 'x-goog-api-key: [REDACTED]')
     .replace(/bearer\s+[a-zA-Z0-9._-]+/gi, 'Bearer [REDACTED]');
+}
+
+// Helper to make an upstream Interactions API call
+async function callGeminiEndpoint(apiKey, input, previousInteractionId) {
+  const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/interactions';
+  const geminiPayload = {
+    model: 'gemini-3.8-flash',
+    input: input.trim()
+  };
+
+  if (previousInteractionId && typeof previousInteractionId === 'string' && previousInteractionId.trim()) {
+    geminiPayload.previous_interaction_id = previousInteractionId.trim();
+  }
+
+  const response = await fetch(geminiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey.trim()
+    },
+    body: JSON.stringify(geminiPayload)
+  });
+
+  const data = await response.json().catch(() => null);
+  return { ok: response.ok, status: response.status, data };
 }
 
 module.exports = async function handler(req, res) {
@@ -133,67 +199,83 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  // 4. Verify Server-Side API Key from process.env
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY' || !apiKey.trim()) {
+  // 4. Get configured Gemini project slots
+  const projects = getConfiguredProjects();
+  if (projects.length === 0) {
     return res.status(500).json({
       error: {
-        message: 'GEMINI_API_KEY is not configured on the server. Please configure it in your Vercel/hosting environment variables.',
+        message: 'GEMINI_API_KEY_PRIMARY (or GEMINI_API_KEY) is not configured on the server. Please configure it in your Vercel/hosting environment variables.',
         status: 500
       }
     });
   }
 
-  // 5. Construct upstream Google Gemini Interactions request
-  const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/interactions';
-  const geminiPayload = {
-    model: 'gemini-3.8-flash',
-    input: input.trim()
-  };
+  let lastError = null;
+  let lastStatus = 500;
 
-  if (previous_interaction_id && previous_interaction_id.trim()) {
-    geminiPayload.previous_interaction_id = previous_interaction_id.trim();
-  }
+  // 5. Multi-Project Failover Router Loop
+  // Primary (index 0) is always attempted first (Primary Recovery).
+  // If Primary fails with retryable error (429, 5xx), seamlessly failover to Backup 1..4.
+  for (let i = 0; i < projects.length; i++) {
+    const currentProj = projects[i];
 
-  // 6. Execute request to Google Gemini API
-  try {
-    const response = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey.trim()
-      },
-      body: JSON.stringify(geminiPayload)
-    });
+    try {
+      let result = await callGeminiEndpoint(currentProj.key, input, previous_interaction_id);
 
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      let errorMsg = 'Google Gemini service error.';
-      if (data && data.error && data.error.message) {
-        errorMsg = data.error.message;
-      } else if (data && typeof data === 'string') {
-        errorMsg = data;
-      }
-      return res.status(response.status).json({
-        error: {
-          message: sanitizeError(errorMsg),
-          status: response.status
+      // Safe cross-project / invalid interaction ID handling:
+      // If a stateful request returns 400 or 404 (invalid interaction ID), retry ONCE statelessly on this project
+      if (!result.ok && previous_interaction_id && (result.status === 400 || result.status === 404)) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(`[FourgeAI Router] Interaction ID rejected by ${currentProj.name} (${result.status}). Retrying statelessly...`);
         }
-      });
-    }
-
-    // 7. Return sanitized response to client
-    return res.status(200).json({
-      id: data.id || null,
-      output_text: data.output_text || ''
-    });
-  } catch (err) {
-    return res.status(502).json({
-      error: {
-        message: sanitizeError(err.message || 'Failed to communicate with Google AI service.'),
-        status: 502
+        result = await callGeminiEndpoint(currentProj.key, input, null);
       }
-    });
+
+      if (result.ok && result.data) {
+        // Success! Return sanitized output
+        return res.status(200).json({
+          id: result.data.id || null,
+          output_text: result.data.output_text || ''
+        });
+      }
+
+      // Record error
+      lastStatus = result.status;
+      if (result.data && result.data.error && result.data.error.message) {
+        lastError = result.data.error.message;
+      } else {
+        lastError = `Google Gemini service returned status ${result.status}`;
+      }
+
+      // Check if we should failover to next project
+      const isRetryable = [429, 500, 502, 503, 504].includes(result.status);
+      const hasNext = i < projects.length - 1;
+
+      if (hasNext) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(`[FourgeAI Router] ${currentProj.name} returned status ${result.status}. Failing over to ${projects[i + 1].name}...`);
+        }
+        continue; // Try next backup project
+      }
+    } catch (netErr) {
+      lastStatus = 502;
+      lastError = netErr.message || 'Network error communicating with Google AI service.';
+      const hasNext = i < projects.length - 1;
+
+      if (hasNext) {
+        if (typeof console !== 'undefined' && console.warn) {
+          console.warn(`[FourgeAI Router] ${currentProj.name} network exception. Failing over to ${projects[i + 1].name}...`);
+        }
+        continue;
+      }
+    }
   }
+
+  // 6. If all configured projects failed, return sanitized error
+  return res.status(lastStatus || 500).json({
+    error: {
+      message: sanitizeError(lastError || 'All configured Gemini AI projects failed to process request.'),
+      status: lastStatus || 500
+    }
+  });
 };

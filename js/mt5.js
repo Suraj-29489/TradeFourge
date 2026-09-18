@@ -235,13 +235,14 @@ const MT5Manager = {
 
     if (!window.App) return;
 
-    const mt5Trades = this.accountData.historyTrades.map(t => ({
+    const mt5Trades = (this.accountData.history || this.accountData.historyTrades).map((t, index) => ({
+      id: `${t.ticket}_${t.closeTime || t.openTime}_${index + 1}`,
       ticket: String(t.ticket),
-      openTime: t.openTime,
-      closeTime: t.closeTime,
-      type: t.type,
+      openTime: t.openTime || new Date().toISOString(),
+      closeTime: t.closeTime || t.openTime || new Date().toISOString(),
+      type: (t.type || 'buy').toLowerCase().includes('sell') ? 'sell' : 'buy',
       lots: Number(t.lots) || 0.01,
-      symbol: t.symbol,
+      symbol: (t.symbol || 'UNKNOWN').toUpperCase(),
       openPrice: Number(t.openPrice) || 0,
       closePrice: Number(t.closePrice) || 0,
       stopLoss: t.stopLoss ? Number(t.stopLoss) : null,
@@ -255,13 +256,15 @@ const MT5Manager = {
       isBreakEven: Number(t.profit) === 0
     }));
 
-    const existingTickets = new Set((App.trades || []).map(t => String(t.ticket)));
+    const getTradeSig = t => `${t.ticket}|${t.openTime}|${t.closeTime}|${t.type}|${t.lots}|${t.symbol}|${t.openPrice}|${t.closePrice}|${t.profit}|${t.closeReason}`;
+    const existingSignatures = new Set((App.trades || []).map(getTradeSig));
     let addedCount = 0;
 
     mt5Trades.forEach(t => {
-      if (!existingTickets.has(t.ticket)) {
+      const sig = getTradeSig(t);
+      if (!existingSignatures.has(sig)) {
         App.trades.push(t);
-        existingTickets.add(t.ticket);
+        existingSignatures.add(sig);
         addedCount++;
       }
     });
