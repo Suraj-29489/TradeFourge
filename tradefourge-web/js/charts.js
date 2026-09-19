@@ -304,6 +304,85 @@ const ChartManager = {
           }
         }
       });
+    } else if (this.currentPnLView === 'monthly') {
+      if (subtextEl) subtextEl.innerText = 'Month-by-Month Net Profit / Loss';
+      const timeseries = metrics.monthlyTimeseries || [];
+
+      const labels = timeseries.map(t => t.label);
+      const values = timeseries.map(t => t.monthlyPnL);
+      const barColors = values.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.85)' : 'rgba(244, 63, 94, 0.85)');
+      const borderColors = values.map(v => v >= 0 ? '#10b981' : '#f43f5e');
+
+      this.instances.pnlMain = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Monthly Net P&L',
+            data: values,
+            backgroundColor: barColors,
+            borderColor: borderColors,
+            borderWidth: 1,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#181d2c',
+              titleColor: '#94a3b8',
+              bodyColor: '#ffffff',
+              borderColor: '#262e45',
+              borderWidth: 1,
+              padding: 12,
+              callbacks: {
+                title: (items) => {
+                  const idx = items[0].dataIndex;
+                  const item = timeseries[idx];
+                  return item ? (item.fullLabel || item.label) : items[0].label;
+                },
+                label: (item) => {
+                  const idx = item.dataIndex;
+                  const tData = timeseries[idx];
+                  const val = item.raw;
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  const prefix = val >= 0 ? `+${sym}` : `-${sym}`;
+                  const lines = [
+                    `Net P&L: ${prefix}${Math.abs(val).toFixed(2)}`
+                  ];
+                  if (tData) {
+                    lines.push(`Trades: ${tData.trades}`);
+                    lines.push(`Wins: ${tData.wins}`);
+                    lines.push(`Losses: ${tData.losses}`);
+                    lines.push(`Win rate: ${tData.winRate}%`);
+                  }
+                  return lines;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(38, 46, 69, 0.3)', drawBorder: false },
+              ticks: { color: '#64748b', font: { size: 11 }, maxTicksLimit: 12 }
+            },
+            y: {
+              grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
+              ticks: {
+                color: '#64748b',
+                font: { size: 11 },
+                callback: (val) => {
+                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  return `${sym}${val}`;
+                }
+              }
+            }
+          }
+        }
+      });
     } else {
       // Bar Chart for Daily P&L
       if (subtextEl) subtextEl.innerText = 'Day-by-Day Net Profit / Loss';

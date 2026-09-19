@@ -122,8 +122,12 @@
             <span id="storageStatusText">No trades loaded</span>
           </div>
         </div>
-        <button class="btn-sample" id="btnClearData" style="width: 100%; border-color: var(--border-color); font-size: 0.74rem;">
-          Reset / Clear Data
+        <button class="btn-clear-session" id="btnClearData" title="Reset all stored trades and start fresh">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          <span>Reset / Clear Data</span>
         </button>
       </div>
     </aside>
@@ -234,18 +238,42 @@
         <section class="view-section active" id="view-dashboard">
           <div class="dashboard-grid">
 
-            <!-- 1. Top KPI Summary Cards Row -->
-            <div class="kpi-row">
-              <!-- Total P&L -->
+            <!-- 1. Performance KPI Cards (12 Cards: 4x3 desktop, 2 col tablet, 1 col mobile) -->
+            <div class="kpi-grid">
+              <!-- 1. Total P&L -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
                   <span class="kpi-title">Total P&L</span>
                 </div>
                 <div class="kpi-value profit" id="kpiTotalPnL"><span class="currency-sym">$</span>0.00</div>
-                <div class="kpi-subtext" id="kpiTotalTradesCount">Trades in total: 0</div>
+                <div class="kpi-subtext" id="kpiTotalTradesCount">0 trades</div>
               </div>
 
-              <!-- Profit Factor -->
+              <!-- 2. Net Return -->
+              <div class="kpi-card" id="kpiNetReturnCard">
+                <div class="kpi-card-header">
+                  <span class="kpi-title">Net Return</span>
+                  <button type="button" class="btn-kpi-action" id="btnEditCapital" title="Calculate or edit Starting Balance">Calculate</button>
+                </div>
+
+                <!-- Display when capital is set -->
+                <div id="kpiNetReturnDisplay" style="display: none;">
+                  <div class="kpi-value" id="kpiNetReturn">--</div>
+                  <div class="kpi-subtext" id="kpiNetReturnSub"><span style="color: var(--text-dim);">Enter capital to calculate return</span></div>
+                </div>
+
+                <!-- Inline Input when capital is not set or when editing -->
+                <div class="kpi-capital-inline" id="kpiCapitalInlineForm">
+                  <div class="kpi-capital-input-group">
+                    <span class="kpi-capital-currency" id="kpiInlineCurrencyPrefix">$</span>
+                    <input type="number" id="kpiInlineCapitalInput" class="kpi-capital-input" placeholder="Enter balance" min="0" step="any">
+                    <button type="button" class="btn-kpi-calculate" id="btnInlineCalculateCapital">Calculate</button>
+                  </div>
+                  <div class="kpi-subtext" id="kpiCapitalInlineHint"><span style="color: var(--text-dim);">Optional: Enter balance to calculate %</span></div>
+                </div>
+              </div>
+
+              <!-- 3. Profit Factor -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
                   <span class="kpi-title">Profit factor</span>
@@ -254,7 +282,16 @@
                 <div class="kpi-subtext" id="kpiProfitFactorDelta"><span class="delta-pos">+0.12</span></div>
               </div>
 
-              <!-- Average Winning Trade -->
+              <!-- 4. Win Rate -->
+              <div class="kpi-card">
+                <div class="kpi-card-header">
+                  <span class="kpi-title">Win Rate</span>
+                </div>
+                <div class="kpi-value" id="kpiWinRate">0.0%</div>
+                <div class="kpi-subtext" id="kpiWinRateSub">0W / 0L</div>
+              </div>
+
+              <!-- 5. Average Winning Trade -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
                   <span class="kpi-title">Average winning trade</span>
@@ -263,7 +300,7 @@
                 <div class="kpi-subtext" id="kpiAvgWinSub"><span class="delta-pos">▲ +17.25</span></div>
               </div>
 
-              <!-- Average Losing Trade -->
+              <!-- 6. Average Losing Trade -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
                   <span class="kpi-title">Average losing trade</span>
@@ -271,29 +308,44 @@
                 <div class="kpi-value loss" id="kpiAvgLoss"><span class="currency-sym">$</span>0.00</div>
                 <div class="kpi-subtext" id="kpiAvgLossSub"><span class="delta-neg">▼ -21.36</span></div>
               </div>
-            </div>
 
-            <!-- 1b. Performance KPI Cards Row 2 (Profitable Day, Lossing Day, Largest Profit, Largest Loss) -->
-            <div class="kpi-row-2">
-              <!-- Profitable Day -->
+              <!-- 7. Expectancy / Trade -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
-                  <span class="kpi-title">Profitable day</span>
+                  <span class="kpi-title">Expectancy / Trade</span>
+                </div>
+                <div class="kpi-value" id="kpiExpectancy"><span class="currency-sym">$</span>0.00 / trade</div>
+                <div class="kpi-subtext" id="kpiExpectancySub">Avg outcome per trade</div>
+              </div>
+
+              <!-- 8. Max Drawdown -->
+              <div class="kpi-card">
+                <div class="kpi-card-header">
+                  <span class="kpi-title">Max Drawdown</span>
+                </div>
+                <div class="kpi-value loss" id="kpiMaxDrawdown"><span class="currency-sym">$</span>0.00</div>
+                <div class="kpi-subtext" id="kpiMaxDrawdownSub">Realized equity decline</div>
+              </div>
+
+              <!-- 9. Best Day -->
+              <div class="kpi-card">
+                <div class="kpi-card-header">
+                  <span class="kpi-title">Best day</span>
                 </div>
                 <div class="kpi-value profit" id="kpiProfitableDay">--</div>
-                <div class="kpi-subtext" id="kpiProfitableDaySub"><span class="delta-pos">▲ +<span class="currency-sym">$</span>0.00</span> • 0% win rate</div>
+                <div class="kpi-subtext" id="kpiProfitableDaySub"><span style="color: var(--text-dim);">No trades recorded</span></div>
               </div>
 
-              <!-- Lossing Day -->
+              <!-- 10. Worst Day -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
-                  <span class="kpi-title">Lossing day</span>
+                  <span class="kpi-title">Worst day</span>
                 </div>
                 <div class="kpi-value loss" id="kpiLossingDay">--</div>
-                <div class="kpi-subtext" id="kpiLossingDaySub"><span class="delta-neg">▼ -<span class="currency-sym">$</span>0.00</span> • 0% win rate</div>
+                <div class="kpi-subtext" id="kpiLossingDaySub"><span style="color: var(--text-dim);">No trades recorded</span></div>
               </div>
 
-              <!-- Largest Profit -->
+              <!-- 11. Largest Profit -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
                   <span class="kpi-title">Largest profit</span>
@@ -302,7 +354,7 @@
                 <div class="kpi-subtext" id="kpiLargestProfitSub"><span style="color: var(--text-dim);">No winning trades</span></div>
               </div>
 
-              <!-- Largest Loss -->
+              <!-- 12. Largest Loss -->
               <div class="kpi-card">
                 <div class="kpi-card-header">
                   <span class="kpi-title">Largest loss</span>
@@ -365,13 +417,14 @@
                 </div>
               </div>
 
-              <!-- Right Area Chart Card: Daily / Cumulative / Weekly Net P&L -->
+              <!-- Right Area Chart Card: Daily / Cumulative / Weekly / Monthly Net P&L -->
               <div class="chart-card">
                 <div class="chart-card-header">
                   <div class="chart-tabs">
                     <button class="chart-tab-btn active" id="tabCumPnL">Daily Net cumulative P&L</button>
                     <button class="chart-tab-btn" id="tabDailyPnL">Net daily P&L</button>
                     <button class="chart-tab-btn" id="tabWeeklyPnL">Net weekly P&L</button>
+                    <button class="chart-tab-btn" id="tabMonthlyPnL">Net monthly P&L</button>
                   </div>
                   <div style="font-size: 0.8rem; color: var(--text-dim);" id="pnlChartSubtext">Realized Equity Growth</div>
                 </div>
@@ -381,7 +434,38 @@
               </div>
             </div>
 
-            <!-- 3. Bottom Section: Recent Trades Table & Monthly Calendar -->
+            <!-- 3. Profit Source & Exit Breakdown Row -->
+            <div class="breakdown-row">
+              <!-- Left: Profit Source Card -->
+              <div class="breakdown-card" id="cardProfitSource">
+                <div class="breakdown-card-header">
+                  <div>
+                    <div class="breakdown-card-title">Profit Source</div>
+                    <div class="breakdown-card-sub" id="profitSourceSub">Realized P&L by symbol</div>
+                  </div>
+                  <div class="breakdown-card-badge" id="profitSourceBadge">0 symbols</div>
+                </div>
+                <div class="breakdown-card-body" id="profitSourceBody">
+                  <!-- Dynamically rendered symbol bars -->
+                </div>
+              </div>
+
+              <!-- Right: Exit Breakdown Card -->
+              <div class="breakdown-card" id="cardExitBreakdown">
+                <div class="breakdown-card-header">
+                  <div>
+                    <div class="breakdown-card-title">Exit Breakdown</div>
+                    <div class="breakdown-card-sub" id="exitBreakdownSub">Distribution by close reason</div>
+                  </div>
+                  <div class="breakdown-card-badge" id="exitBreakdownBadge">0 exits</div>
+                </div>
+                <div class="breakdown-card-body" id="exitBreakdownBody">
+                  <!-- Dynamically rendered exit reason bars -->
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Bottom Section: Recent Trades Table & Monthly Calendar -->
             <div class="bottom-row">
               <!-- Left: Recent Trades Table Card -->
               <div class="table-card">
@@ -722,6 +806,26 @@
                     </span>
                   </div>
                   <p class="bot-subtitle">AI Trading Performance Assistant</p>
+                </div>
+              </div>
+
+              <!-- Real-Time Token Calculator & Context Gauge -->
+              <div class="bot-token-gauge" id="botTokenGauge" title="Real-time Token Usage & Context Window (Gemini 3.8 Flash - 1,000,000 max context)">
+                <div class="token-gauge-header">
+                  <div class="token-gauge-label">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    <span>Tokens (Used / Max)</span>
+                  </div>
+                  <span class="token-gauge-pct" id="tokenUsagePct">0.0%</span>
+                </div>
+                <div class="token-gauge-bar-wrap">
+                  <div class="token-gauge-bar" id="tokenUsageBar" style="width: 0%;"></div>
+                </div>
+                <div class="token-gauge-stats">
+                  <span class="token-gauge-val" id="tokenUsageVal"><strong>0</strong> / 1.0M <span class="token-sub">tok</span></span>
+                  <span class="token-gauge-session" id="tokenSessionVal">Turn: 0 tok</span>
                 </div>
               </div>
 
@@ -1121,6 +1225,119 @@
   </div>
 
   <!-- ==========================================================================
+       FULL WINDOW DRAG & DROP OVERLAY
+       ========================================================================== -->
+  <div class="window-drag-overlay" id="windowDragOverlay">
+    <div class="window-drag-box">
+      <div class="window-drag-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="12" y1="18" x2="12" y2="12"></line>
+          <line x1="9" y1="15" x2="15" y2="15"></line>
+        </svg>
+      </div>
+      <div class="window-drag-title">Drop CSV File Anywhere</div>
+      <div class="window-drag-sub">Release to immediately preview and import your trading history into TradeForge</div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL: Interactive CSV Upload & Preview Modal
+       ========================================================================== -->
+  <div class="modal-overlay" id="csvPreviewModal">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="display: flex; align-items: center; gap: 10px;">
+          <div class="brand-icon" style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <span>CSV Upload Preview</span>
+        </h3>
+        <button type="button" class="modal-close-btn" id="closeCsvPreviewModalBtn">&times;</button>
+      </div>
+
+      <div class="modal-body" style="gap: 16px;">
+        <!-- File Details Card -->
+        <div class="preview-file-header">
+          <div class="preview-file-info">
+            <div class="preview-file-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <div class="preview-file-details">
+              <div class="preview-file-name" id="previewFileName">trade_history.csv</div>
+              <div class="preview-file-size" id="previewFileSize">0 KB</div>
+            </div>
+          </div>
+          <span class="preview-badge-valid">✓ Valid CSV</span>
+        </div>
+
+        <!-- Quick Summary Metrics Grid -->
+        <div class="preview-metrics-grid">
+          <div class="preview-metric-box">
+            <span class="preview-metric-label">Parsed Trades</span>
+            <span class="preview-metric-val" id="previewMetricTrades">0</span>
+            <span class="preview-metric-sub" id="previewMetricTradesSub">Closed trades</span>
+          </div>
+          <div class="preview-metric-box">
+            <span class="preview-metric-label">Realized P&L</span>
+            <span class="preview-metric-val" id="previewMetricPnL">$0.00</span>
+            <span class="preview-metric-sub" id="previewMetricWinRate">0% winrate</span>
+          </div>
+          <div class="preview-metric-box">
+            <span class="preview-metric-label">Symbols Detected</span>
+            <span class="preview-metric-val" id="previewMetricSymbolsCount">0</span>
+            <span class="preview-metric-sub" id="previewMetricSymbolsList" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</span>
+          </div>
+        </div>
+
+        <div style="font-size: 0.78rem; color: var(--text-dim);" id="previewDateRange">
+          Date range: --
+        </div>
+
+        <!-- Import Mode Selection (Merge vs Replace) -->
+        <div class="preview-mode-section" id="previewModeSection">
+          <span class="preview-mode-title">Import Options</span>
+          <div class="preview-mode-options">
+            <label class="preview-mode-card selected" id="optMergeCard">
+              <input type="radio" name="csvImportMode" id="optMergeTrades" value="merge" class="preview-mode-radio" checked>
+              <div>
+                <div class="preview-mode-label">Merge with existing trades (Recommended)</div>
+                <div class="preview-mode-desc" id="previewMergeDesc">Keep previous uploads untouched and append new trades</div>
+              </div>
+            </label>
+            <label class="preview-mode-card" id="optReplaceCard">
+              <input type="radio" name="csvImportMode" id="optReplaceTrades" value="replace" class="preview-mode-radio">
+              <div>
+                <div class="preview-mode-label">Replace existing trades</div>
+                <div class="preview-mode-desc">Start fresh with only trades from this file</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 10px;">
+        <button type="button" class="btn-secondary modal-cancel-btn" id="btnCancelCsvPreview">Cancel</button>
+        <button type="button" class="btn-primary" id="btnConfirmCsvImport" style="padding: 9px 20px; font-weight: 700; gap: 8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Upload & View Results
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
        MODAL 1: Upload CSV Modal
        ========================================================================== -->
   <div class="modal-overlay" id="uploadModal">
@@ -1312,14 +1529,54 @@
         <div class="install-instructions" id="installInstructions">
           <!-- Populated dynamically based on device platform -->
         </div>
-      </div>
       <div class="modal-footer" style="display: flex; justify-content: flex-end;">
         <button class="btn-secondary modal-cancel-btn" id="installModalCancelBtn">Got it</button>
       </div>
     </div>
   </div>
 
+  <!-- ==========================================================================
+       MODAL 6: Starting Capital Modal (Initial Account Balance)
+       ========================================================================== -->
+  <div class="modal-overlay" id="startingCapitalModal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="brand-icon" style="width: 30px; height: 30px; border-radius: 6px; font-weight: 800; font-size: 0.95rem;">
+            <span id="capitalModalHeaderSym">$</span>
+          </div>
+          <h3 class="modal-title">Starting Capital</h3>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeCapitalModalBtn">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px 24px;">
+        <p style="color: var(--text-muted); font-size: 0.86rem; margin-bottom: 16px; line-height: 1.5;">
+          Set your initial account capital to calculate exact <strong>Net Return %</strong>, <strong>Max Drawdown %</strong>, and <strong>Calculated Balance</strong>.
+        </p>
 
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" for="startingCapitalInput" style="display: flex; justify-content: space-between; font-weight: 600;">
+            <span>Initial Account Balance</span>
+            <span id="capitalCurrentDisplay" style="color: var(--text-dim); font-size: 0.78rem;"></span>
+          </label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <span style="position: absolute; left: 14px; font-size: 1.05rem; color: var(--text-muted); font-weight: 700;" id="capitalInputCurrencyPrefix">$</span>
+            <input type="number" id="startingCapitalInput" class="form-input" style="padding-left: 32px; font-size: 1.1rem; font-weight: 700;" placeholder="e.g. 2500" min="0" step="any">
+          </div>
+        </div>
+        <div style="font-size: 0.76rem; color: var(--text-dim); line-height: 1.4;">
+          Stored locally on your device. Cleared or updated anytime.
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 24px;">
+        <button type="button" class="btn-secondary" id="btnResetCapital" style="color: var(--loss); border-color: rgba(244, 63, 94, 0.3);">Reset</button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-secondary modal-cancel-btn" id="btnCancelCapital">Cancel</button>
+          <button type="button" class="btn-primary" id="btnSaveCapital">Calculate</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>

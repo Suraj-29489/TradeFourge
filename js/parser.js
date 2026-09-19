@@ -181,7 +181,7 @@ const TradeParser = {
     };
 
     const rawCloseReason = get('closeReason');
-    const closeReason = rawCloseReason ? rawCloseReason.toLowerCase().trim() : (profit >= 0 ? 'tp' : 'user');
+    const closeReason = rawCloseReason ? rawCloseReason.toLowerCase().trim() : '';
     const originalPositionSize = numberOrNull('originalPositionSize');
 
     return {

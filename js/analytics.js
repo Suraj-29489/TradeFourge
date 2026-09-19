@@ -6,10 +6,14 @@ const TradeAnalytics = {
   /**
    * Compute complete performance metrics from trades array
    */
-  calculateMetrics(trades) {
+  calculateMetrics(trades, customStartingCapital = null) {
     if (!trades || trades.length === 0) {
-      return this.getEmptyMetrics();
+      return this.getEmptyMetrics(customStartingCapital);
     }
+
+    const startingCapital = customStartingCapital !== null && customStartingCapital !== undefined && !isNaN(Number(customStartingCapital)) && Number(customStartingCapital) > 0
+      ? Number(customStartingCapital)
+      : this.getStartingCapital();
 
     let totalPnL = 0;
     let grossProfit = 0;
@@ -30,6 +34,8 @@ const TradeAnalytics = {
 
     // Daily breakdown mapping: 'YYYY-MM-DD' => { date, pnl, tradesCount, wins, losses }
     const dailyMap = {};
+    // Monthly breakdown mapping: 'YYYY-MM' => { monthKey, year, month, label, fullLabel, monthlyPnL, trades, wins, losses, breakEven }
+    const monthlyMap = {};
     // Symbol breakdown mapping: 'SYMBOL' => { symbol, pnl, trades, wins, losses, volume }
     const symbolMap = {};
     // Day of week breakdown: 0=Sun..6=Sat
@@ -44,10 +50,13 @@ const TradeAnalytics = {
       sell: { count: 0, pnl: 0, wins: 0, losses: 0 }
     };
 
+    const mNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const fullMonthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
     trades.forEach((trade) => {
-      const pnl = trade.profit || 0;
+      const pnl = Number(trade.profit) || 0;
       totalPnL += pnl;
-      totalLots += (trade.lots || 0);
+      totalLots += (Number(trade.lots) || 0);
 
       // Best / Worst trade
       if (pnl > maxWin) {
@@ -76,9 +85,9 @@ const TradeAnalytics = {
         breakEvenCount++;
       }
 
-      // Date parsing
+      // Date parsing (uses closing date when trade closed, fallback to open date)
       const tradeDateStr = (trade.closeTime || trade.openTime || '').slice(0, 10);
-      if (tradeDateStr) {
+      if (tradeDateStr && tradeDateStr.length === 10) {
         if (!dailyMap[tradeDateStr]) {
           dailyMap[tradeDateStr] = {
             date: tradeDateStr,
@@ -94,6 +103,34 @@ const TradeAnalytics = {
         dailyMap[tradeDateStr].tradeList.push(trade);
         if (pnl > 0) dailyMap[tradeDateStr].wins++;
         if (pnl < 0) dailyMap[tradeDateStr].losses++;
+
+        // Monthly breakdown mapping
+        const monthKey = tradeDateStr.slice(0, 7); // 'YYYY-MM'
+        const parts = monthKey.split('-').map(Number);
+        const yr = parts[0];
+        const mIdx = parts[1] - 1;
+
+        if (!monthlyMap[monthKey]) {
+          const label = `${mNames[mIdx]} ${yr}`;
+          const fullLabel = `${fullMonthNames[mIdx]} ${yr}`;
+          monthlyMap[monthKey] = {
+            monthKey,
+            year: yr,
+            month: mIdx + 1,
+            label,
+            fullLabel,
+            monthlyPnL: 0,
+            trades: 0,
+            wins: 0,
+            losses: 0,
+            breakEven: 0
+          };
+        }
+        monthlyMap[monthKey].monthlyPnL += pnl;
+        monthlyMap[monthKey].trades += 1;
+        if (pnl > 0) monthlyMap[monthKey].wins++;
+        else if (pnl < 0) monthlyMap[monthKey].losses++;
+        else monthlyMap[monthKey].breakEven++;
 
         // Weekday
         const d = new Date(tradeDateStr);
@@ -111,7 +148,7 @@ const TradeAnalytics = {
       }
       symbolMap[sym].pnl += pnl;
       symbolMap[sym].trades += 1;
-      symbolMap[sym].volume += (trade.lots || 0);
+      symbolMap[sym].volume += (Number(trade.lots) || 0);
       if (pnl > 0) symbolMap[sym].wins++;
       if (pnl < 0) symbolMap[sym].losses++;
 
@@ -130,6 +167,47 @@ const TradeAnalytics = {
     const avgWin = winnersCount > 0 ? grossProfit / winnersCount : 0;
     const avgLoss = losersCount > 0 ? grossLoss / losersCount : 0;
     const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : (grossProfit > 0 ? 99.99 : 0);
+
+    // Expectancy per trade: total realized P&L / total closed trades
+    const expectancy = totalTrades > 0 ? totalPnL / totalTrades : 0;
+
+    // Net Return % & Calculated Balance based on starting capital
+    let netReturnPercent = null;
+    let calculatedBalance = null;
+    if (startingCapital && startingCapital > 0) {
+      netReturnPercent = Math.round(((totalPnL / startingCapital) * 100) * 100) / 100;
+      calculatedBalance = Math.round((startingCapital + totalPnL) * 100) / 100;
+    }
+
+    // Chronological realized equity curve for Maximum Drawdown calculation
+    // Sort trades chronologically by closing time (fallback to open time)
+    const chronologicalTrades = [...trades].sort((a, b) => {
+      const timeA = a.closeTime || a.openTime || '';
+      const timeB = b.closeTime || b.openTime || '';
+      return timeA.localeCompare(timeB);
+    });
+
+    let peakEquityPnL = 0;
+    let runningEquityPnL = 0;
+    let maxDrawdownAmount = 0;
+
+    chronologicalTrades.forEach((t) => {
+      const pnl = Number(t.profit) || 0;
+      runningEquityPnL += pnl;
+      if (runningEquityPnL > peakEquityPnL) {
+        peakEquityPnL = runningEquityPnL;
+      }
+      const dd = peakEquityPnL - runningEquityPnL;
+      if (dd > maxDrawdownAmount) {
+        maxDrawdownAmount = dd;
+      }
+    });
+
+    maxDrawdownAmount = Math.round(maxDrawdownAmount * 100) / 100;
+    let maxDrawdownPercent = null;
+    if (startingCapital && startingCapital > 0) {
+      maxDrawdownPercent = Math.round(((maxDrawdownAmount / startingCapital) * 100) * 100) / 100;
+    }
 
     // Days calculations
     const sortedDays = Object.keys(dailyMap).sort();
@@ -166,7 +244,6 @@ const TradeAnalytics = {
 
     // Weekly breakdown aggregation
     const weeklyMap = {};
-    const mNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     sortedDays.forEach((dayStr) => {
       const dayData = dailyMap[dayStr];
@@ -223,6 +300,31 @@ const TradeAnalytics = {
       };
     });
 
+    // Monthly breakdown timeseries
+    const sortedMonths = Object.keys(monthlyMap).sort();
+    let runningMonthlyCum = 0;
+    const monthlyTimeseries = sortedMonths.map((mKey) => {
+      const m = monthlyMap[mKey];
+      m.monthlyPnL = Math.round(m.monthlyPnL * 100) / 100;
+      runningMonthlyCum += m.monthlyPnL;
+      runningMonthlyCum = Math.round(runningMonthlyCum * 100) / 100;
+      const mWinRate = m.trades > 0 ? Math.round((m.wins / m.trades) * 1000) / 10 : 0;
+      return {
+        monthKey: m.monthKey,
+        year: m.year,
+        month: m.month,
+        label: m.label,
+        fullLabel: m.fullLabel,
+        monthlyPnL: m.monthlyPnL,
+        cumulativePnL: runningMonthlyCum,
+        trades: m.trades,
+        wins: m.wins,
+        losses: m.losses,
+        breakEven: m.breakEven,
+        winRate: mWinRate
+      };
+    });
+
     const totalTradingDays = sortedDays.length;
     const dayWinRate = totalTradingDays > 0 ? (winningDaysCount / totalTradingDays) * 100 : 0;
 
@@ -271,8 +373,116 @@ const TradeAnalytics = {
       };
     }
 
+    // Profit Source (Symbol Breakdown & Contribution)
+    const symbolsList = Object.values(symbolMap);
+    const positiveSymbols = symbolsList.filter(s => s.pnl > 0).sort((a, b) => b.pnl - a.pnl);
+    const negativeSymbols = symbolsList.filter(s => s.pnl < 0).sort((a, b) => a.pnl - b.pnl);
+    const zeroSymbols = symbolsList.filter(s => s.pnl === 0);
+
+    const roundedTotalPnL = Math.round(totalPnL * 100) / 100;
+    const isTotalPnLPositive = roundedTotalPnL > 0;
+
+    const mapSymbolItem = (s) => {
+      const pnl = Math.round(s.pnl * 100) / 100;
+      const contributionPercent = isTotalPnLPositive && pnl > 0
+        ? Math.round((pnl / roundedTotalPnL) * 1000) / 10
+        : (pnl === 0 ? 0 : null);
+      const winRate = s.trades > 0 ? Math.round((s.wins / s.trades) * 1000) / 10 : 0;
+      return {
+        symbol: s.symbol,
+        pnl,
+        trades: s.trades,
+        wins: s.wins,
+        losses: s.losses,
+        volume: Math.round(s.volume * 100) / 100,
+        winRate,
+        contributionPercent
+      };
+    };
+
+    const symbolProfitSource = {
+      totalPnL: roundedTotalPnL,
+      isTotalPositive: isTotalPnLPositive,
+      positive: positiveSymbols.map(mapSymbolItem),
+      negative: negativeSymbols.map(mapSymbolItem),
+      zero: zeroSymbols.map(mapSymbolItem),
+      all: symbolsList.sort((a, b) => b.pnl - a.pnl).map(mapSymbolItem)
+    };
+
+    // Exit Breakdown (Close Reason Distribution & Metrics)
+    const exitMap = {};
+    trades.forEach(trade => {
+      const rawReason = (trade.closeReason !== undefined && trade.closeReason !== null)
+        ? String(trade.closeReason).trim()
+        : '';
+
+      const key = rawReason.toLowerCase().replace(/^[\[\(\{<"']+|[\]\)\}>"']+$/g, '').trim();
+      let normalizedLabel = 'UNKNOWN';
+      if (key === 'tp' || key === 'take_profit' || key === 'takeprofit') {
+        normalizedLabel = 'TP';
+      } else if (key === 'sl' || key === 'stop_loss' || key === 'stoploss') {
+        normalizedLabel = 'SL';
+      } else if (key === 'user' || key === 'manual' || key === 'client') {
+        normalizedLabel = 'USER';
+      } else if (key === 'so' || key === 'stop_out' || key === 'stopout') {
+        normalizedLabel = 'STOP OUT';
+      } else if (key === '' || key === 'unknown' || key === 'null' || key === 'undefined') {
+        normalizedLabel = 'UNKNOWN';
+      } else {
+        normalizedLabel = key.toUpperCase();
+      }
+
+      if (!exitMap[normalizedLabel]) {
+        exitMap[normalizedLabel] = {
+          reason: normalizedLabel,
+          count: 0,
+          pnl: 0,
+          wins: 0,
+          losses: 0,
+          breakEven: 0
+        };
+      }
+      const em = exitMap[normalizedLabel];
+      em.count += 1;
+      const pnl = Number(trade.profit) || 0;
+      em.pnl += pnl;
+      if (pnl > 0) em.wins += 1;
+      else if (pnl < 0) em.losses += 1;
+      else em.breakEven += 1;
+    });
+
+    const standardExitOrder = ['TP', 'SL', 'USER', 'STOP OUT', 'UNKNOWN'];
+    const exitBreakdown = Object.values(exitMap)
+      .map(em => {
+        const pnl = Math.round(em.pnl * 100) / 100;
+        const percentage = totalTrades > 0 ? Math.round((em.count / totalTrades) * 1000) / 10 : 0;
+        const winRate = em.count > 0 ? Math.round((em.wins / em.count) * 1000) / 10 : 0;
+        const percentageOfPnL = isTotalPnLPositive && pnl > 0
+          ? Math.round((pnl / roundedTotalPnL) * 1000) / 10
+          : null;
+        return {
+          reason: em.reason,
+          count: em.count,
+          percentage,
+          pnl,
+          wins: em.wins,
+          losses: em.losses,
+          breakEven: em.breakEven,
+          winRate,
+          percentageOfPnL
+        };
+      })
+      .sort((a, b) => {
+        const idxA = standardExitOrder.indexOf(a.reason);
+        const idxB = standardExitOrder.indexOf(b.reason);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return b.count - a.count;
+      });
+
     return {
-      totalPnL: Math.round(totalPnL * 100) / 100,
+      totalPnL: roundedTotalPnL,
       grossProfit: Math.round(grossProfit * 100) / 100,
       grossLoss: Math.round(grossLoss * 100) / 100,
       profitFactor: Math.round(profitFactor * 100) / 100,
@@ -284,6 +494,12 @@ const TradeAnalytics = {
       lossRate: Math.round(lossRate * 10) / 10,
       avgWin: Math.round(avgWin * 100) / 100,
       avgLoss: Math.round(avgLoss * 100) / 100,
+      expectancy: Math.round(expectancy * 100) / 100,
+      startingCapital,
+      netReturnPercent,
+      calculatedBalance,
+      maxDrawdownAmount,
+      maxDrawdownPercent,
       maxWin: Math.round(maxWin * 100) / 100,
       maxLoss: Math.round(maxLoss * 100) / 100,
       maxWinTrade,
@@ -303,12 +519,17 @@ const TradeAnalytics = {
       firstTradeDate,
       lastTradeDate,
       dailyMap,
+      weeklyMap,
+      monthlyMap,
       cumulativeTimeseries,
       dailyTimeseries,
       weeklyTimeseries,
+      monthlyTimeseries,
 
       // Groupings & Day Performance
       symbolBreakdown: Object.values(symbolMap).sort((a, b) => b.pnl - a.pnl),
+      symbolProfitSource,
+      exitBreakdown,
       typeBreakdown,
       weekdayMap,
       weekdayCount,
@@ -620,9 +841,52 @@ const TradeAnalytics = {
   },
 
   /**
+   * Starting Capital State & Management
+   */
+  getStartingCapital() {
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const val = localStorage.getItem('tradeforge_starting_capital');
+        if (val !== null && val !== '' && !isNaN(Number(val)) && Number(val) > 0) {
+          return Number(val);
+        }
+      } catch (e) {
+        console.warn('Unable to read starting capital from localStorage:', e);
+      }
+    }
+    return null;
+  },
+
+  setStartingCapital(val) {
+    if (val === null || val === undefined || val === '' || isNaN(Number(val)) || Number(val) <= 0) {
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.removeItem('tradeforge_starting_capital');
+        } catch (e) {
+          console.warn('Unable to clear starting capital:', e);
+        }
+      }
+      return null;
+    }
+    const num = Math.round(Number(val) * 100) / 100;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('tradeforge_starting_capital', String(num));
+      } catch (e) {
+        console.warn('Unable to persist starting capital in localStorage:', e);
+      }
+    }
+    return num;
+  },
+
+  /**
    * Returns empty metrics template
    */
-  getEmptyMetrics() {
+  getEmptyMetrics(customStartingCapital = null) {
+    const sc = customStartingCapital !== null && customStartingCapital !== undefined && !isNaN(Number(customStartingCapital)) && Number(customStartingCapital) > 0
+      ? Number(customStartingCapital)
+      : this.getStartingCapital();
+
     return {
       totalPnL: 0,
       grossProfit: 0,
@@ -636,6 +900,12 @@ const TradeAnalytics = {
       lossRate: 0,
       avgWin: 0,
       avgLoss: 0,
+      expectancy: 0,
+      startingCapital: sc,
+      netReturnPercent: null,
+      calculatedBalance: sc,
+      maxDrawdownAmount: 0,
+      maxDrawdownPercent: null,
       maxWin: 0,
       maxLoss: 0,
       maxWinTrade: null,
@@ -651,10 +921,22 @@ const TradeAnalytics = {
       firstTradeDate: null,
       lastTradeDate: null,
       dailyMap: {},
+      weeklyMap: {},
+      monthlyMap: {},
       cumulativeTimeseries: [],
       dailyTimeseries: [],
       weeklyTimeseries: [],
+      monthlyTimeseries: [],
       symbolBreakdown: [],
+      symbolProfitSource: {
+        totalPnL: 0,
+        isTotalPositive: false,
+        positive: [],
+        negative: [],
+        zero: [],
+        all: []
+      },
+      exitBreakdown: [],
       typeBreakdown: { buy: { count: 0, pnl: 0 }, sell: { count: 0, pnl: 0 } },
       weekdayMap: {},
       weekdayCount: {},
@@ -670,5 +952,11 @@ const TradeAnalytics = {
 
 if (typeof window !== 'undefined') {
   window.TradeAnalytics = TradeAnalytics;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = TradeAnalytics;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.TradeAnalytics = TradeAnalytics;
 }
 

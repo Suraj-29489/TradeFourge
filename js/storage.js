@@ -46,6 +46,37 @@ const StorageManager = {
     return true;
   },
 
+  mergeTrades(newTrades, importFileName = 'Trade Log CSV') {
+    if (!Array.isArray(newTrades) || newTrades.length === 0) {
+      return { trades: this.getTrades(), addedCount: 0, total: this.state.trades.length };
+    }
+
+    const makeKey = (t) => `${t.ticket}_${t.closeTime || t.openTime || ''}_${t.lots}_${t.profit}`;
+    const seen = new Set(this.state.trades.map(makeKey));
+    let addedCount = 0;
+
+    newTrades.forEach(t => {
+      const key = makeKey(t);
+      if (!seen.has(key)) {
+        seen.add(key);
+        this.state.trades.push(t);
+        addedCount++;
+      }
+    });
+
+    const fileLabel = this.state.lastImport && this.state.lastImport.fileName && this.state.lastImport.fileName !== importFileName
+      ? `${this.state.lastImport.fileName} + ${importFileName}`
+      : importFileName;
+
+    this.state.lastImport = {
+      timestamp: new Date().toISOString(),
+      fileName: fileLabel,
+      count: this.state.trades.length
+    };
+
+    return { trades: this.getTrades(), addedCount, total: this.state.trades.length };
+  },
+
   addTrade(trade) {
     this.state.trades.unshift(trade);
     this.saveTrades(this.state.trades, 'Manual Trade');
@@ -90,5 +121,27 @@ const StorageManager = {
 
   saveRules(rules) {
     this.state.rules = Array.isArray(rules) ? rules : null;
+  },
+
+  getStartingCapital() {
+    return (typeof TradeAnalytics !== 'undefined' && TradeAnalytics.getStartingCapital) 
+      ? TradeAnalytics.getStartingCapital() 
+      : null;
+  },
+
+  saveStartingCapital(val) {
+    return (typeof TradeAnalytics !== 'undefined' && TradeAnalytics.setStartingCapital) 
+      ? TradeAnalytics.setStartingCapital(val) 
+      : null;
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.StorageManager = StorageManager;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = StorageManager;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.StorageManager = StorageManager;
+}

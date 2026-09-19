@@ -59,6 +59,8 @@ const App = {
     ChartManager.updateDashboardCharts(this.currentMetrics);
     CalendarManager.init(this.currentMetrics);
     this.renderRecentTradesTable();
+    this.renderProfitSource();
+    this.renderExitBreakdown();
     this.renderTradeLogTable();
     this.renderReportsView();
     this.renderAnalyticsView();
@@ -345,12 +347,12 @@ const App = {
   },
 
   /**
-   * Update Top KPI Cards
+   * Update Top KPI Performance Cards (12 Cards)
    */
   updateKPICards() {
     const m = this.currentMetrics;
 
-    // Total P&L
+    // 1. Total P&L
     const totalPnlEl = document.getElementById('kpiTotalPnL');
     if (totalPnlEl) {
       totalPnlEl.innerText = TradeAnalytics.formatCurrency(m.totalPnL);
@@ -359,10 +361,63 @@ const App = {
 
     const tradesCountEl = document.getElementById('kpiTotalTradesCount');
     if (tradesCountEl) {
-      tradesCountEl.innerText = `Trades in total: ${m.totalTrades}`;
+      tradesCountEl.innerText = `${m.totalTrades} trade${m.totalTrades === 1 ? '' : 's'}`;
     }
 
-    // Profit Factor
+    // 2. Net Return
+    const netReturnEl = document.getElementById('kpiNetReturn');
+    const netReturnSubEl = document.getElementById('kpiNetReturnSub');
+    const netReturnDisplay = document.getElementById('kpiNetReturnDisplay');
+    const capitalInlineForm = document.getElementById('kpiCapitalInlineForm');
+    const inlineInput = document.getElementById('kpiInlineCapitalInput');
+    const inlinePrefix = document.getElementById('kpiInlineCurrencyPrefix');
+    const editCapitalBtn = document.getElementById('btnEditCapital');
+
+    const currSym = TradeAnalytics.getCurrencySymbol();
+    if (inlinePrefix) {
+      inlinePrefix.innerText = currSym;
+    }
+
+    if (m.startingCapital && m.startingCapital > 0 && m.netReturnPercent !== null) {
+      if (netReturnDisplay) netReturnDisplay.style.display = 'block';
+      if (capitalInlineForm) capitalInlineForm.style.display = 'none';
+      if (editCapitalBtn) editCapitalBtn.innerText = 'Edit';
+
+      if (netReturnEl) {
+        const sign = m.netReturnPercent > 0 ? '+' : (m.netReturnPercent < 0 ? '-' : '');
+        netReturnEl.innerText = `${sign}${Math.abs(m.netReturnPercent).toFixed(2)}%`;
+        netReturnEl.className = `kpi-value ${m.netReturnPercent > 0 ? 'profit' : (m.netReturnPercent < 0 ? 'loss' : '')}`;
+      }
+
+      if (netReturnSubEl) {
+        const pnlClass = m.totalPnL >= 0 ? 'delta-pos' : 'delta-neg';
+        const pnlFmt = TradeAnalytics.formatCurrency(m.totalPnL);
+        const capFmt = TradeAnalytics.formatCurrency(m.startingCapital, false);
+        netReturnSubEl.innerHTML = `<span class="${pnlClass}">${pnlFmt}</span> on ${capFmt} balance <button type="button" class="btn-kpi-inline-edit" id="btnInlineEditCapital" title="Edit balance">✎</button>`;
+        const inlineEditBtn = document.getElementById('btnInlineEditCapital');
+        if (inlineEditBtn) {
+          inlineEditBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showInlineCapitalInput();
+          });
+        }
+      }
+    } else {
+      if (netReturnDisplay) netReturnDisplay.style.display = 'none';
+      if (capitalInlineForm) capitalInlineForm.style.display = 'flex';
+      if (editCapitalBtn) editCapitalBtn.innerText = 'Calculate';
+      if (inlineInput) {
+        try {
+          if (typeof document !== 'undefined' && document.activeElement !== inlineInput) {
+            inlineInput.value = '';
+          }
+        } catch (e) {
+          inlineInput.value = '';
+        }
+      }
+    }
+
+    // 3. Profit Factor
     const pfEl = document.getElementById('kpiProfitFactor');
     if (pfEl) {
       pfEl.innerText = m.profitFactor.toFixed(2);
@@ -374,10 +429,21 @@ const App = {
         : `<span class="delta-neg">▼ Needs adjustment (<1.0)</span>`;
     }
 
-    // Average Winning Trade
+    // 4. Win Rate
+    const winRateEl = document.getElementById('kpiWinRate');
+    if (winRateEl) {
+      winRateEl.innerText = `${m.winRate.toFixed(1)}%`;
+      winRateEl.className = `kpi-value ${m.winRate >= 50 ? 'profit' : (m.winRate > 0 ? 'loss' : '')}`;
+    }
+    const winRateSubEl = document.getElementById('kpiWinRateSub');
+    if (winRateSubEl) {
+      winRateSubEl.innerText = `${m.winnersCount}W / ${m.losersCount}L`;
+    }
+
+    // 5. Average Winning Trade
     const avgWinEl = document.getElementById('kpiAvgWin');
     if (avgWinEl) {
-      avgWinEl.innerText = TradeAnalytics.formatCurrency(m.avgWin);
+      avgWinEl.innerText = TradeAnalytics.formatCurrency(m.avgWin, false);
       avgWinEl.className = 'kpi-value profit';
     }
     const avgWinSubEl = document.getElementById('kpiAvgWinSub');
@@ -385,7 +451,7 @@ const App = {
       avgWinSubEl.innerHTML = `<span class="delta-pos">▲ ${m.winnersCount} winning trades</span>`;
     }
 
-    // Average Losing Trade
+    // 6. Average Losing Trade
     const avgLossEl = document.getElementById('kpiAvgLoss');
     if (avgLossEl) {
       avgLossEl.innerText = TradeAnalytics.formatCurrency(m.avgLoss, false);
@@ -396,7 +462,44 @@ const App = {
       avgLossSubEl.innerHTML = `<span class="delta-neg">▼ ${m.losersCount} losing trades</span>`;
     }
 
-    // Profitable Day (Best Day of Week)
+    // 7. Expectancy / Trade
+    const expEl = document.getElementById('kpiExpectancy');
+    const expSubEl = document.getElementById('kpiExpectancySub');
+    if (expEl) {
+      expEl.innerText = `${TradeAnalytics.formatCurrency(m.expectancy)} / trade`;
+      expEl.className = `kpi-value ${m.expectancy > 0 ? 'profit' : (m.expectancy < 0 ? 'loss' : '')}`;
+    }
+    if (expSubEl) {
+      if (m.expectancy > 0) {
+        expSubEl.innerHTML = `<span class="delta-pos">▲ Positive expectancy</span>`;
+      } else if (m.expectancy < 0) {
+        expSubEl.innerHTML = `<span class="delta-neg">▼ Negative expectancy</span>`;
+      } else {
+        expSubEl.innerHTML = `Avg return per trade`;
+      }
+    }
+
+    // 8. Max Drawdown
+    const maxDdEl = document.getElementById('kpiMaxDrawdown');
+    const maxDdSubEl = document.getElementById('kpiMaxDrawdownSub');
+    if (maxDdEl) {
+      if (m.maxDrawdownAmount > 0) {
+        maxDdEl.innerText = `-${TradeAnalytics.formatCurrency(m.maxDrawdownAmount, false)}`;
+        maxDdEl.className = 'kpi-value loss';
+      } else {
+        maxDdEl.innerText = TradeAnalytics.formatCurrency(0, false);
+        maxDdEl.className = 'kpi-value';
+      }
+    }
+    if (maxDdSubEl) {
+      if (m.startingCapital && m.startingCapital > 0 && m.maxDrawdownPercent !== null) {
+        maxDdSubEl.innerHTML = `<span class="delta-neg">▼ -${m.maxDrawdownPercent.toFixed(2)}%</span> from peak equity`;
+      } else {
+        maxDdSubEl.innerHTML = `Realized equity decline`;
+      }
+    }
+
+    // 9. Best Day (Most Profitable Day of Week)
     const profDayEl = document.getElementById('kpiProfitableDay');
     const profDaySubEl = document.getElementById('kpiProfitableDaySub');
     if (profDayEl) {
@@ -407,7 +510,7 @@ const App = {
           const pnlFormatted = TradeAnalytics.formatCurrency(m.profitableDay.pnl);
           const icon = m.profitableDay.pnl >= 0 ? '▲' : '▼';
           const pnlClass = m.profitableDay.pnl >= 0 ? 'delta-pos' : 'delta-neg';
-          profDaySubEl.innerHTML = `<span class="${pnlClass}">${icon} ${pnlFormatted}</span> • ${m.profitableDay.winRate}% win rate (${m.profitableDay.trades} trades)`;
+          profDaySubEl.innerHTML = `<span class="${pnlClass}">${icon} ${pnlFormatted}</span> • ${m.profitableDay.winRate}% win rate • ${m.profitableDay.trades} trades`;
         }
       } else {
         profDayEl.innerText = '--';
@@ -416,7 +519,7 @@ const App = {
       }
     }
 
-    // Lossing Day (Worst Day of Week)
+    // 10. Worst Day (Most Unprofitable Day of Week)
     const lossDayEl = document.getElementById('kpiLossingDay');
     const lossDaySubEl = document.getElementById('kpiLossingDaySub');
     if (lossDayEl) {
@@ -427,7 +530,7 @@ const App = {
           const pnlFormatted = TradeAnalytics.formatCurrency(m.lossingDay.pnl);
           const icon = m.lossingDay.pnl >= 0 ? '▲' : '▼';
           const pnlClass = m.lossingDay.pnl >= 0 ? 'delta-pos' : 'delta-neg';
-          lossDaySubEl.innerHTML = `<span class="${pnlClass}">${icon} ${pnlFormatted}</span> • ${m.lossingDay.winRate}% win rate (${m.lossingDay.trades} trades)`;
+          lossDaySubEl.innerHTML = `<span class="${pnlClass}">${icon} ${pnlFormatted}</span> • ${m.lossingDay.winRate}% win rate • ${m.lossingDay.trades} trades`;
         }
       } else {
         lossDayEl.innerText = '--';
@@ -436,7 +539,7 @@ const App = {
       }
     }
 
-    // Largest Profit Trade
+    // 11. Largest Profit Trade
     const largestProfitEl = document.getElementById('kpiLargestProfit');
     const largestProfitSubEl = document.getElementById('kpiLargestProfitSub');
     if (largestProfitEl) {
@@ -446,9 +549,10 @@ const App = {
         if (largestProfitSubEl) {
           if (m.maxWinTrade) {
             const sym = m.maxWinTrade.symbol || 'Trade';
-            const date = m.maxWinTrade.closeTime ? m.maxWinTrade.closeTime.slice(0, 10) : (m.maxWinTrade.openTime ? m.maxWinTrade.openTime.slice(0, 10) : '');
+            const rawDate = m.maxWinTrade.closeTime ? m.maxWinTrade.closeTime.slice(0, 10) : (m.maxWinTrade.openTime ? m.maxWinTrade.openTime.slice(0, 10) : '');
+            const date = rawDate ? this.formatDateShort(rawDate) : 'Winner';
             const lotsText = m.maxWinTrade.lots ? ` • ${m.maxWinTrade.lots} lot` : '';
-            largestProfitSubEl.innerHTML = `<span class="delta-pos">▲ ${sym}</span> • ${date || 'Winner'}${lotsText}`;
+            largestProfitSubEl.innerHTML = `<span class="delta-pos">▲ ${sym}</span> • ${date}${lotsText}`;
           } else {
             largestProfitSubEl.innerHTML = `<span class="delta-pos">▲ Best trade</span>`;
           }
@@ -462,7 +566,7 @@ const App = {
       }
     }
 
-    // Largest Loss Trade
+    // 12. Largest Loss Trade
     const largestLossEl = document.getElementById('kpiLargestLoss');
     const largestLossSubEl = document.getElementById('kpiLargestLossSub');
     if (largestLossEl) {
@@ -472,9 +576,10 @@ const App = {
         if (largestLossSubEl) {
           if (m.maxLossTrade) {
             const sym = m.maxLossTrade.symbol || 'Trade';
-            const date = m.maxLossTrade.closeTime ? m.maxLossTrade.closeTime.slice(0, 10) : (m.maxLossTrade.openTime ? m.maxLossTrade.openTime.slice(0, 10) : '');
+            const rawDate = m.maxLossTrade.closeTime ? m.maxLossTrade.closeTime.slice(0, 10) : (m.maxLossTrade.openTime ? m.maxLossTrade.openTime.slice(0, 10) : '');
+            const date = rawDate ? this.formatDateShort(rawDate) : 'Worst';
             const lotsText = m.maxLossTrade.lots ? ` • ${m.maxLossTrade.lots} lot` : '';
-            largestLossSubEl.innerHTML = `<span class="delta-neg">▼ ${sym}</span> • ${date || 'Worst'}${lotsText}`;
+            largestLossSubEl.innerHTML = `<span class="delta-neg">▼ ${sym}</span> • ${date}${lotsText}`;
           } else {
             largestLossSubEl.innerHTML = `<span class="delta-neg">▼ Worst trade</span>`;
           }
@@ -534,6 +639,202 @@ const App = {
 
       tr.addEventListener('click', () => this.openTradeDetailModal(trade));
       tbody.appendChild(tr);
+    });
+  },
+
+  /**
+   * Render Profit Source Card on Dashboard
+   */
+  renderProfitSource() {
+    const body = document.getElementById('profitSourceBody');
+    const badge = document.getElementById('profitSourceBadge');
+    const sub = document.getElementById('profitSourceSub');
+    if (!body) return;
+
+    body.innerHTML = '';
+    const ps = this.currentMetrics ? this.currentMetrics.symbolProfitSource : null;
+
+    if (!ps || (!ps.all || ps.all.length === 0)) {
+      if (badge) badge.innerText = '0 symbols';
+      if (sub) sub.innerText = 'Realized P&L by symbol';
+      body.innerHTML = `<div class="breakdown-empty-state">No trades in selected date range</div>`;
+      return;
+    }
+
+    const totalSymbolsCount = ps.all.length;
+    if (badge) {
+      badge.innerText = `${totalSymbolsCount} symbol${totalSymbolsCount === 1 ? '' : 's'}`;
+    }
+
+    if (sub) {
+      if (ps.isTotalPositive) {
+        sub.innerText = 'Realized P&L & contribution by symbol';
+      } else {
+        sub.innerText = 'Realized P&L by symbol (total P&L ≤ 0)';
+      }
+    }
+
+    // Determine max absolute P&L to scale horizontal bars proportionally
+    const maxAbsPnL = Math.max(...ps.all.map(s => Math.abs(s.pnl)), 1);
+
+    const topPositive = ps.positive.slice(0, 5);
+    const topNegative = ps.negative.slice(0, 3);
+    const hasZero = ps.zero.length > 0 && topPositive.length === 0 && topNegative.length === 0;
+
+    const renderSymbolRow = (s) => {
+      const itemEl = document.createElement('div');
+      itemEl.className = 'breakdown-item';
+
+      const pnlFormatted = TradeAnalytics.formatCurrency(s.pnl, true);
+      const pnlColor = s.pnl > 0 ? 'var(--profit)' : (s.pnl < 0 ? 'var(--loss)' : 'var(--text-muted)');
+      
+      let pctText = '--';
+      if (s.contributionPercent !== null && s.contributionPercent !== undefined) {
+        pctText = `${s.contributionPercent}%`;
+      }
+
+      const barWidth = Math.max(4, Math.min(100, Math.round((Math.abs(s.pnl) / maxAbsPnL) * 100)));
+      const fillClass = s.pnl >= 0 ? 'profit' : 'loss';
+
+      itemEl.innerHTML = `
+        <div class="breakdown-item-header">
+          <div class="breakdown-item-name">
+            <span class="symbol-badge">${s.symbol}</span>
+            <span style="font-size: 0.72rem; color: var(--text-dim);">${s.trades} trade${s.trades === 1 ? '' : 's'} (${s.winRate}% win)</span>
+          </div>
+          <div class="breakdown-item-values">
+            <span class="breakdown-item-pnl" style="color: ${pnlColor};">${pnlFormatted}</span>
+            <span class="breakdown-item-pct" title="Contribution to positive total P&L">${pctText}</span>
+          </div>
+        </div>
+        <div class="breakdown-bar-track">
+          <div class="breakdown-bar-fill ${fillClass}" style="width: ${barWidth}%;"></div>
+        </div>
+      `;
+      return itemEl;
+    };
+
+    // Render positive section if any
+    if (topPositive.length > 0) {
+      if (topNegative.length > 0) {
+        const header = document.createElement('div');
+        header.className = 'breakdown-section-title';
+        header.innerText = 'Top Profitable Symbols';
+        body.appendChild(header);
+      }
+      topPositive.forEach(s => {
+        body.appendChild(renderSymbolRow(s));
+      });
+      if (ps.positive.length > 5) {
+        const more = document.createElement('div');
+        more.className = 'breakdown-more-text';
+        more.innerText = `+ ${ps.positive.length - 5} more profitable symbol(s)`;
+        body.appendChild(more);
+      }
+    }
+
+    // Render negative section if any
+    if (topNegative.length > 0) {
+      if (topPositive.length > 0) {
+        const div = document.createElement('div');
+        div.className = 'breakdown-section-divider';
+        body.appendChild(div);
+        const header = document.createElement('div');
+        header.className = 'breakdown-section-title';
+        header.innerText = 'Top Loss Symbols';
+        body.appendChild(header);
+      }
+      topNegative.forEach(s => {
+        body.appendChild(renderSymbolRow(s));
+      });
+      if (ps.negative.length > 3) {
+        const more = document.createElement('div');
+        more.className = 'breakdown-more-text';
+        more.innerText = `+ ${ps.negative.length - 3} more losing symbol(s)`;
+        body.appendChild(more);
+      }
+    }
+
+    // If only zero PnL symbols exist
+    if (hasZero) {
+      ps.zero.slice(0, 5).forEach(s => {
+        body.appendChild(renderSymbolRow(s));
+      });
+    }
+
+    // If total P&L <= 0, add subtle note about contribution %
+    if (!ps.isTotalPositive && ps.all.length > 0) {
+      const note = document.createElement('div');
+      note.className = 'breakdown-note';
+      note.innerText = '* Contribution % unavailable when total realized P&L is ≤ 0';
+      body.appendChild(note);
+    }
+  },
+
+  /**
+   * Render Exit Breakdown Card on Dashboard
+   */
+  renderExitBreakdown() {
+    const body = document.getElementById('exitBreakdownBody');
+    const badge = document.getElementById('exitBreakdownBadge');
+    const sub = document.getElementById('exitBreakdownSub');
+    if (!body) return;
+
+    body.innerHTML = '';
+    const eb = this.currentMetrics ? this.currentMetrics.exitBreakdown : null;
+    const totalTrades = this.currentMetrics ? this.currentMetrics.totalTrades : 0;
+
+    if (!eb || eb.length === 0 || totalTrades === 0) {
+      if (badge) badge.innerText = '0 exits';
+      if (sub) sub.innerText = 'Distribution by close reason';
+      body.innerHTML = `<div class="breakdown-empty-state">No exit data in selected date range</div>`;
+      return;
+    }
+
+    if (badge) {
+      badge.innerText = `${totalTrades} exit${totalTrades === 1 ? '' : 's'}`;
+    }
+
+    const reasonMeta = {
+      'TP': { label: 'Take Profit', badgeClass: 'tp', fillClass: 'tp', bg: 'rgba(16, 185, 129, 0.15)', color: '#10b981' },
+      'SL': { label: 'Stop Loss', badgeClass: 'sl', fillClass: 'sl', bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' },
+      'USER': { label: 'Manual / Client', badgeClass: 'user', fillClass: 'user', bg: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' },
+      'STOP OUT': { label: 'Margin Stop Out', badgeClass: 'so', fillClass: 'so', bg: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' },
+      'UNKNOWN': { label: 'Unspecified', badgeClass: 'unknown', fillClass: 'unknown', bg: 'rgba(100, 116, 139, 0.15)', color: '#94a3b8' }
+    };
+
+    eb.forEach(item => {
+      const meta = reasonMeta[item.reason] || {
+        label: item.reason,
+        badgeClass: 'unknown',
+        fillClass: 'unknown',
+        bg: 'rgba(100, 116, 139, 0.15)',
+        color: '#94a3b8'
+      };
+
+      const itemEl = document.createElement('div');
+      itemEl.className = 'breakdown-item';
+
+      const pnlFormatted = TradeAnalytics.formatCurrency(item.pnl, true);
+      const pnlColor = item.pnl > 0 ? 'var(--profit)' : (item.pnl < 0 ? 'var(--loss)' : 'var(--text-muted)');
+      const barWidth = Math.max(item.percentage > 0 ? 3 : 0, Math.min(100, item.percentage));
+
+      itemEl.innerHTML = `
+        <div class="breakdown-item-header">
+          <div class="breakdown-item-name">
+            <span class="breakdown-item-badge" style="background: ${meta.bg}; color: ${meta.color}; border: 1px solid ${meta.color}40;">${item.reason}</span>
+            <span style="font-size: 0.72rem; color: var(--text-dim);">${meta.label}</span>
+          </div>
+          <div class="breakdown-item-values">
+            <span class="breakdown-item-pnl" style="color: ${pnlColor};">${pnlFormatted}</span>
+            <span class="breakdown-item-pct">${item.count} (${item.percentage}%)</span>
+          </div>
+        </div>
+        <div class="breakdown-bar-track">
+          <div class="breakdown-bar-fill ${meta.fillClass}" style="width: ${barWidth}%;"></div>
+        </div>
+      `;
+      body.appendChild(itemEl);
     });
   },
 
@@ -1064,6 +1365,8 @@ const App = {
     // Re-render all components with the new currency
     this.updateKPICards();
     this.renderRecentTradesTable();
+    this.renderProfitSource();
+    this.renderExitBreakdown();
     this.renderTradeLogTable();
     this.renderReportsView();
     this.renderAnalyticsView();
@@ -1116,6 +1419,118 @@ const App = {
     document.querySelectorAll('.currency-sym').forEach(el => {
       el.textContent = sym;
     });
+
+    // Update inline currency prefix in Net Return card if present
+    const inlinePrefix = document.getElementById('kpiInlineCurrencyPrefix');
+    if (inlinePrefix) {
+      inlinePrefix.innerText = sym;
+    }
+  },
+
+  /**
+   * Show inline capital input inside Net Return card
+   */
+  showInlineCapitalInput() {
+    const netReturnDisplay = document.getElementById('kpiNetReturnDisplay');
+    const capitalInlineForm = document.getElementById('kpiCapitalInlineForm');
+    const inlineInput = document.getElementById('kpiInlineCapitalInput');
+    const editCapitalBtn = document.getElementById('btnEditCapital');
+
+    if (netReturnDisplay) netReturnDisplay.style.display = 'none';
+    if (capitalInlineForm) capitalInlineForm.style.display = 'flex';
+    if (editCapitalBtn) editCapitalBtn.innerText = 'Calculate';
+
+    if (inlineInput) {
+      const curCap = TradeAnalytics.getStartingCapital();
+      if (curCap) inlineInput.value = curCap;
+      setTimeout(() => {
+        inlineInput.focus();
+        inlineInput.select();
+      }, 30);
+    }
+  },
+
+  /**
+   * Apply starting capital directly from the Net Return card input
+   */
+  applyInlineStartingCapital() {
+    const input = document.getElementById('kpiInlineCapitalInput');
+    const rawVal = input ? input.value.trim() : '';
+    const num = (rawVal === '' || isNaN(Number(rawVal)) || Number(rawVal) <= 0) ? null : Number(rawVal);
+    const saved = TradeAnalytics.setStartingCapital(num);
+
+    this.processTrades();
+
+    if (saved !== null) {
+      this.showToast(`Starting balance set to ${TradeAnalytics.formatCurrency(saved, false)} — calculations updated`, 'success');
+    } else {
+      this.showToast('Starting balance cleared', 'info');
+    }
+  },
+
+  /**
+   * Starting Capital Modal Management
+   */
+  openStartingCapitalModal() {
+    const modal = document.getElementById('startingCapitalModal');
+    const input = document.getElementById('startingCapitalInput');
+    const headerSym = document.getElementById('capitalModalHeaderSym');
+    const prefixSym = document.getElementById('capitalInputCurrencyPrefix');
+    const currentDisp = document.getElementById('capitalCurrentDisplay');
+    const sym = TradeAnalytics.getCurrencySymbol();
+
+    if (headerSym) headerSym.innerText = sym;
+    if (prefixSym) prefixSym.innerText = sym;
+
+    const currentCapital = TradeAnalytics.getStartingCapital();
+    if (currentDisp) {
+      currentDisp.innerText = currentCapital ? `Current: ${TradeAnalytics.formatCurrency(currentCapital, false)}` : 'Not set';
+    }
+    if (input) {
+      input.value = currentCapital !== null ? currentCapital : '';
+    }
+    if (modal) {
+      modal.classList.add('active');
+      setTimeout(() => {
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }, 50);
+    }
+  },
+
+  closeStartingCapitalModal() {
+    const modal = document.getElementById('startingCapitalModal');
+    if (modal) {
+      modal.classList.remove('active');
+    }
+  },
+
+  saveStartingCapital() {
+    const input = document.getElementById('startingCapitalInput');
+    const rawVal = input ? input.value.trim() : '';
+    const num = (rawVal === '' || isNaN(Number(rawVal)) || Number(rawVal) <= 0) ? null : Number(rawVal);
+    const saved = TradeAnalytics.setStartingCapital(num);
+
+    this.closeStartingCapitalModal();
+    this.processTrades();
+
+    if (saved !== null) {
+      this.showToast(`Starting capital updated to ${TradeAnalytics.formatCurrency(saved, false)}`, 'success');
+    } else {
+      this.showToast('Starting capital cleared', 'info');
+    }
+  },
+
+  resetStartingCapital() {
+    TradeAnalytics.setStartingCapital(null);
+    const input = document.getElementById('startingCapitalInput');
+    if (input) input.value = '';
+
+    this.closeStartingCapitalModal();
+    this.processTrades();
+    this.showToast('Starting capital reset', 'info');
   },
 
   /**
@@ -1291,13 +1706,14 @@ const App = {
       }
     }
 
-    // Main Chart Cumulative / Daily / Weekly toggles
+    // Main Chart Cumulative / Daily / Weekly / Monthly toggles
     const tabCum = document.getElementById('tabCumPnL');
     const tabDaily = document.getElementById('tabDailyPnL');
     const tabWeekly = document.getElementById('tabWeeklyPnL');
+    const tabMonthly = document.getElementById('tabMonthlyPnL');
 
     const updateChartTabState = (activeBtn) => {
-      [tabCum, tabDaily, tabWeekly].forEach(btn => {
+      [tabCum, tabDaily, tabWeekly, tabMonthly].forEach(btn => {
         if (btn) btn.classList.remove('active');
       });
       if (activeBtn) activeBtn.classList.add('active');
@@ -1324,6 +1740,97 @@ const App = {
         updateChartTabState(tabWeekly);
         ChartManager.currentPnLView = 'weekly';
         ChartManager.renderMainPnLChart(this.currentMetrics);
+      });
+    }
+
+    if (tabMonthly) {
+      tabMonthly.addEventListener('click', () => {
+        updateChartTabState(tabMonthly);
+        ChartManager.currentPnLView = 'monthly';
+        ChartManager.renderMainPnLChart(this.currentMetrics);
+      });
+    }
+
+    // Starting Capital triggers & actions (Inline card input + Modal)
+    const btnEditCap = document.getElementById('btnEditCapital');
+    if (btnEditCap) {
+      btnEditCap.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const capitalInlineForm = document.getElementById('kpiCapitalInlineForm');
+        if (capitalInlineForm && capitalInlineForm.style.display !== 'none') {
+          this.applyInlineStartingCapital();
+        } else {
+          this.showInlineCapitalInput();
+        }
+      });
+    }
+
+    const btnInlineCalc = document.getElementById('btnInlineCalculateCapital');
+    if (btnInlineCalc) {
+      btnInlineCalc.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.applyInlineStartingCapital();
+      });
+    }
+
+    const inlineCapInput = document.getElementById('kpiInlineCapitalInput');
+    if (inlineCapInput) {
+      inlineCapInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.applyInlineStartingCapital();
+        }
+      });
+    }
+
+    const netReturnCard = document.getElementById('kpiNetReturnCard');
+    if (netReturnCard) {
+      netReturnCard.addEventListener('click', (e) => {
+        if (e.target.closest('.set-capital-prompt')) {
+          e.stopPropagation();
+          this.showInlineCapitalInput();
+        }
+      });
+    }
+
+    const saveCapBtn = document.getElementById('btnSaveCapital');
+    if (saveCapBtn) {
+      saveCapBtn.addEventListener('click', () => this.saveStartingCapital());
+    }
+
+    const resetCapBtn = document.getElementById('btnResetCapital');
+    if (resetCapBtn) {
+      resetCapBtn.addEventListener('click', () => this.resetStartingCapital());
+    }
+
+    const cancelCapBtn = document.getElementById('btnCancelCapital');
+    if (cancelCapBtn) {
+      cancelCapBtn.addEventListener('click', () => this.closeStartingCapitalModal());
+    }
+
+    const closeCapModalBtn = document.getElementById('closeCapitalModalBtn');
+    if (closeCapModalBtn) {
+      closeCapModalBtn.addEventListener('click', () => this.closeStartingCapitalModal());
+    }
+
+    const capInput = document.getElementById('startingCapitalInput');
+    if (capInput) {
+      capInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.saveStartingCapital();
+        } else if (e.key === 'Escape') {
+          this.closeStartingCapitalModal();
+        }
+      });
+    }
+
+    const capModal = document.getElementById('startingCapitalModal');
+    if (capModal) {
+      capModal.addEventListener('click', (e) => {
+        if (e.target === capModal) {
+          this.closeStartingCapitalModal();
+        }
       });
     }
 
@@ -1385,7 +1892,7 @@ const App = {
       });
     });
 
-    // File Input & Dropzone handling
+    // File Input & Dropzone handling (Opens preview popup)
     if (dropzone && fileInput) {
       dropzone.addEventListener('click', () => fileInput.click());
 
@@ -1402,16 +1909,56 @@ const App = {
         e.preventDefault();
         dropzone.classList.remove('dragover');
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-          this.handleCSVFile(e.dataTransfer.files[0]);
+          this.previewCSVFile(e.dataTransfer.files[0]);
         }
       });
 
       fileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files[0]) {
-          this.handleCSVFile(e.target.files[0]);
+          this.previewCSVFile(e.target.files[0]);
+          fileInput.value = ''; // Reset so same file can be re-selected if needed
         }
       });
     }
+
+    // CSV Upload Preview Modal Actions
+    const btnConfirmCsv = document.getElementById('btnConfirmCsvImport');
+    if (btnConfirmCsv) {
+      btnConfirmCsv.addEventListener('click', () => this.confirmCSVImport());
+    }
+
+    const btnCancelCsv = document.getElementById('btnCancelCsvPreview');
+    if (btnCancelCsv) {
+      btnCancelCsv.addEventListener('click', () => this.closeCSVPreviewModal());
+    }
+
+    const closeCsvPreviewBtn = document.getElementById('closeCsvPreviewModalBtn');
+    if (closeCsvPreviewBtn) {
+      closeCsvPreviewBtn.addEventListener('click', () => this.closeCSVPreviewModal());
+    }
+
+    // Radio cards toggle for import mode (Merge vs Replace)
+    const optMergeCard = document.getElementById('optMergeCard');
+    const optReplaceCard = document.getElementById('optReplaceCard');
+    const optMergeRadio = document.getElementById('optMergeTrades');
+    const optReplaceRadio = document.getElementById('optReplaceTrades');
+
+    if (optMergeCard && optReplaceCard) {
+      optMergeCard.addEventListener('click', () => {
+        if (optMergeRadio) optMergeRadio.checked = true;
+        optMergeCard.classList.add('selected');
+        optReplaceCard.classList.remove('selected');
+      });
+
+      optReplaceCard.addEventListener('click', () => {
+        if (optReplaceRadio) optReplaceRadio.checked = true;
+        optReplaceCard.classList.add('selected');
+        optMergeCard.classList.remove('selected');
+      });
+    }
+
+    // Initialize full-window drag & drop overlay
+    this.initWindowDragAndDrop();
 
     // Clear Data Button
     const clearDataBtn = document.getElementById('btnClearData');
@@ -1700,24 +2247,79 @@ const App = {
   },
 
   /**
-   * Handle CSV File from upload input or dropzone
+   * Initialize full-window drag & drop overlay
    */
-  handleCSVFile(file) {
-    if (!file) return;
-    const reader = new FileReader();
+  initWindowDragAndDrop() {
+    if (typeof window === 'undefined') return;
 
+    const overlay = document.getElementById('windowDragOverlay');
+    if (!overlay) return;
+
+    let dragCounter = 0;
+
+    window.addEventListener('dragenter', (e) => {
+      if (e.dataTransfer && e.dataTransfer.types && (Array.from(e.dataTransfer.types).includes('Files') || e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('application/x-moz-file'))) {
+        dragCounter++;
+        overlay.classList.add('active');
+      }
+    });
+
+    window.addEventListener('dragleave', (e) => {
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        overlay.classList.remove('active');
+      }
+    });
+
+    window.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    });
+
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      overlay.classList.remove('active');
+
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (file.name.toLowerCase().endsWith('.csv') || file.type.includes('csv') || file.type.includes('text') || !file.type) {
+          this.previewCSVFile(file);
+        } else {
+          this.showToast('Please drop a valid .csv file.', 'error');
+        }
+      }
+    });
+  },
+
+  /**
+   * Parse CSV File and open interactive preview modal
+   */
+  previewCSVFile(file) {
+    if (!file) return;
+
+    const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const text = e.target.result;
         const parsedTrades = TradeParser.parseCSV(text);
-        StorageManager.saveTrades(parsedTrades, file.name);
-        this.trades = parsedTrades;
-        this.processTrades();
 
-        const uploadModal = document.getElementById('uploadModal');
-        if (uploadModal) uploadModal.classList.remove('active');
+        if (!parsedTrades || parsedTrades.length === 0) {
+          throw new Error('No trade records found in CSV file.');
+        }
 
-        this.showToast(`Imported ${parsedTrades.length} trades from ${file.name}!`, 'success');
+        // Store pending preview data
+        this._pendingImport = {
+          file,
+          fileName: file.name,
+          fileSize: file.size || text.length,
+          parsedTrades
+        };
+
+        this.showCSVPreviewModal(this._pendingImport);
       } catch (err) {
         console.error(err);
         this.showToast(err.message || 'Failed to parse CSV file', 'error');
@@ -1729,6 +2331,132 @@ const App = {
     };
 
     reader.readAsText(file);
+  },
+
+  /**
+   * Render preview data into the CSV Preview Modal
+   */
+  showCSVPreviewModal(pending) {
+    const modal = document.getElementById('csvPreviewModal');
+    if (!modal) return;
+
+    const nameEl = document.getElementById('previewFileName');
+    const sizeEl = document.getElementById('previewFileSize');
+    const tradesEl = document.getElementById('previewMetricTrades');
+    const tradesSubEl = document.getElementById('previewMetricTradesSub');
+    const pnlEl = document.getElementById('previewMetricPnL');
+    const winRateEl = document.getElementById('previewMetricWinRate');
+    const symCountEl = document.getElementById('previewMetricSymbolsCount');
+    const symListEl = document.getElementById('previewMetricSymbolsList');
+    const dateRangeEl = document.getElementById('previewDateRange');
+    const mergeDesc = document.getElementById('previewMergeDesc');
+    const optMergeCard = document.getElementById('optMergeCard');
+    const optReplaceCard = document.getElementById('optReplaceCard');
+    const optMerge = document.getElementById('optMergeTrades');
+
+    // Close regular upload modal if open
+    const uploadModal = document.getElementById('uploadModal');
+    if (uploadModal) uploadModal.classList.remove('active');
+
+    // Format file size
+    const sizeKb = (pending.fileSize / 1024).toFixed(1);
+    if (nameEl) nameEl.innerText = pending.fileName;
+    if (sizeEl) sizeEl.innerText = `${sizeKb} KB • ${pending.parsedTrades.length} records`;
+
+    // Compute quick metrics on preview trades
+    const metrics = TradeAnalytics.calculateMetrics(pending.parsedTrades);
+
+    if (tradesEl) tradesEl.innerText = `${metrics.totalTrades}`;
+    if (tradesSubEl) tradesSubEl.innerText = `${metrics.winnersCount} wins / ${metrics.losersCount} losses`;
+
+    if (pnlEl) {
+      pnlEl.innerText = TradeAnalytics.formatCurrency(metrics.totalPnL);
+      pnlEl.className = `preview-metric-val ${metrics.totalPnL >= 0 ? 'profit' : 'loss'}`;
+    }
+    if (winRateEl) winRateEl.innerText = `${metrics.winRate}% win rate`;
+
+    // Symbols detected
+    const symbols = metrics.symbolBreakdown ? metrics.symbolBreakdown.map(s => s.symbol) : [];
+    if (symCountEl) symCountEl.innerText = `${symbols.length} symbol${symbols.length === 1 ? '' : 's'}`;
+    if (symListEl) symListEl.innerText = symbols.slice(0, 4).join(', ') + (symbols.length > 4 ? ` +${symbols.length - 4}` : '');
+
+    // Date range
+    if (dateRangeEl) {
+      if (metrics.firstTradeDate && metrics.lastTradeDate) {
+        dateRangeEl.innerText = `Date range: ${this.formatDateShort(metrics.firstTradeDate)} → ${this.formatDateShort(metrics.lastTradeDate)}`;
+      } else {
+        dateRangeEl.innerText = `Date range: Single trade session`;
+      }
+    }
+
+    // Merge options description
+    const existingCount = this.trades.length;
+    if (existingCount > 0) {
+      const makeKey = (t) => `${t.ticket}_${t.closeTime || t.openTime || ''}_${t.lots}_${t.profit}`;
+      const seen = new Set(this.trades.map(makeKey));
+      let newCount = 0;
+      pending.parsedTrades.forEach(t => {
+        if (!seen.has(makeKey(t))) newCount++;
+      });
+
+      if (mergeDesc) {
+        mergeDesc.innerText = `Keep existing ${existingCount} trades untouched and add ${newCount} new trade(s) (Total: ${existingCount + newCount})`;
+      }
+    } else {
+      if (mergeDesc) {
+        mergeDesc.innerText = `Import ${pending.parsedTrades.length} trades into your session`;
+      }
+    }
+
+    // Default to merge (keep existing uploads untouched)
+    if (optMerge) optMerge.checked = true;
+    if (optMergeCard) optMergeCard.classList.add('selected');
+    if (optReplaceCard) optReplaceCard.classList.remove('selected');
+
+    modal.classList.add('active');
+  },
+
+  /**
+   * Confirm and apply CSV import (merging or replacing)
+   */
+  confirmCSVImport() {
+    if (!this._pendingImport || !this._pendingImport.parsedTrades) {
+      this.closeCSVPreviewModal();
+      return;
+    }
+
+    const { parsedTrades, fileName } = this._pendingImport;
+    const optMerge = document.getElementById('optMergeTrades');
+    const isMerge = optMerge ? optMerge.checked : true;
+
+    let importedCount = 0;
+    if (isMerge && this.trades.length > 0) {
+      const res = StorageManager.mergeTrades(parsedTrades, fileName);
+      this.trades = res.trades;
+      importedCount = res.addedCount;
+    } else {
+      StorageManager.saveTrades(parsedTrades, fileName);
+      this.trades = [...parsedTrades];
+      importedCount = parsedTrades.length;
+    }
+
+    this.processTrades();
+    this.closeCSVPreviewModal();
+
+    this.showToast(`Imported ${importedCount} trades from ${fileName}! (Total: ${this.trades.length})`, 'success');
+  },
+
+  closeCSVPreviewModal() {
+    const modal = document.getElementById('csvPreviewModal');
+    if (modal) modal.classList.remove('active');
+    this._pendingImport = null;
+  },
+
+  /**
+   * Legacy / fallback direct handler
+   */
+  handleCSVFile(file) {
+    this.previewCSVFile(file);
   },
 
   /**

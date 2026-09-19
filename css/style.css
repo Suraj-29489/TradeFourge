@@ -903,13 +903,133 @@ html, body {
 }
 
 /* ==========================================================================
-   KPI Summary Stat Cards (Top Row)
+   KPI Summary Stat Cards (12 Performance Cards)
    ========================================================================== */
+.kpi-grid,
 .kpi-row,
 .kpi-row-2 {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
+  gap: 16px;
+}
+
+.btn-kpi-action {
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+}
+
+.btn-kpi-action:hover {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+/* Inline Capital Input inside Net Return Card */
+.kpi-capital-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.kpi-capital-input-group {
+  display: flex;
+  align-items: center;
+  position: relative;
+  background: var(--bg-card-alt, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  padding: 2px 4px 2px 8px;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.kpi-capital-input-group:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.kpi-capital-currency {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-right: 4px;
+  user-select: none;
+}
+
+.kpi-capital-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-family: inherit;
+  padding: 5px 2px;
+  outline: none;
+}
+
+.kpi-capital-input::placeholder {
+  color: var(--text-dim);
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+.kpi-capital-input::-webkit-outer-spin-button,
+.kpi-capital-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.kpi-capital-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.btn-kpi-calculate {
+  background: var(--primary);
+  color: #ffffff;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+.btn-kpi-calculate:hover {
+  background: var(--primary-hover, #4f46e5);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+.btn-kpi-calculate:active {
+  transform: scale(0.96);
+}
+
+.btn-kpi-inline-edit {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: 4px;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+
+.btn-kpi-inline-edit:hover {
+  color: #ffffff;
+  background: rgba(99, 102, 241, 0.2);
 }
 
 .kpi-card {
@@ -1203,12 +1323,14 @@ html, body {
     text-overflow: ellipsis;
   }
 
+  .kpi-grid,
   .kpi-row,
   .kpi-row-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .middle-row,
+  .breakdown-row,
   .bottom-row {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1389,6 +1511,7 @@ html, body {
     min-width: 0;
   }
 
+  .kpi-grid,
   .kpi-row,
   .kpi-row-2 {
     grid-template-columns: 1fr;
@@ -1604,6 +1727,194 @@ html, body {
   flex: 1;
   width: 100%;
   min-height: 230px;
+}
+
+/* ==========================================================================
+   Profit Source & Exit Breakdown Cards
+   ========================================================================== */
+.breakdown-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.breakdown-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.breakdown-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.breakdown-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.breakdown-card-sub {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.breakdown-card-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.breakdown-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.breakdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.breakdown-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.breakdown-item-name {
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breakdown-item-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.breakdown-item-values {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.breakdown-item-pnl {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+.breakdown-item-pct {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+.breakdown-bar-track {
+  width: 100%;
+  height: 6px;
+  background-color: var(--border-color);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.breakdown-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.breakdown-bar-fill.profit {
+  background-color: var(--profit);
+}
+
+.breakdown-bar-fill.loss {
+  background-color: var(--loss);
+}
+
+.breakdown-bar-fill.tp {
+  background-color: #10b981;
+}
+
+.breakdown-bar-fill.sl {
+  background-color: #ef4444;
+}
+
+.breakdown-bar-fill.user {
+  background-color: #3b82f6;
+}
+
+.breakdown-bar-fill.so {
+  background-color: #a855f7;
+}
+
+.breakdown-bar-fill.unknown {
+  background-color: #64748b;
+}
+
+.breakdown-section-divider {
+  border-top: 1px dashed var(--border-color);
+  margin: 6px 0;
+}
+
+.breakdown-section-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.breakdown-more-text {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-align: right;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.breakdown-empty-state {
+  padding: 30px 10px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.breakdown-note {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-top: 6px;
+  font-style: italic;
 }
 
 /* ==========================================================================

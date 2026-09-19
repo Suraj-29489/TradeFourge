@@ -86,6 +86,33 @@ function getConfiguredProjects() {
   return slots.filter(s => s.key && typeof s.key === 'string' && s.key.trim() && s.key !== 'YOUR_GEMINI_API_KEY');
 }
 
+// Extract output text from Gemini Interactions API or GenerateContent response formats
+function extractOutputText(data) {
+  if (!data) return '';
+  if (typeof data.output_text === 'string' && data.output_text.trim()) {
+    return data.output_text.trim();
+  }
+  if (Array.isArray(data.steps)) {
+    for (const step of data.steps) {
+      if (step && step.type === 'model_output' && Array.isArray(step.content)) {
+        for (const item of step.content) {
+          if (item && (item.type === 'text' || typeof item.text === 'string') && item.text) {
+            return item.text.trim();
+          }
+        }
+      } else if (step && Array.isArray(step.content)) {
+        for (const item of step.content) {
+          if (item && item.text) return item.text.trim();
+        }
+      }
+    }
+  }
+  if (Array.isArray(data.candidates) && data.candidates[0]?.content?.parts?.[0]?.text) {
+    return data.candidates[0].content.parts[0].text.trim();
+  }
+  return '';
+}
+
 // Sanitize messages so no API keys, credentials, or internal patterns leak
 function sanitizeError(msg) {
   if (!msg || typeof msg !== 'string') return 'An error occurred during AI processing.';
@@ -232,11 +259,15 @@ module.exports = async function handler(req, res) {
       }
 
       if (result.ok && result.data) {
-        // Success! Return sanitized output
-        return res.status(200).json({
-          id: result.data.id || null,
-          output_text: result.data.output_text || ''
-        });
+        const text = extractOutputText(result.data);
+        if (text) {
+          // Success! Return sanitized output + usage telemetry
+          return res.status(200).json({
+            id: result.data.id || null,
+            output_text: text,
+            usage: result.data.usage || null
+          });
+        }
       }
 
       // Record error

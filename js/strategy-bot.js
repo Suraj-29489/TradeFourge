@@ -6,8 +6,13 @@
 const StrategyBotManager = {
   STORAGE_KEYS: {
     CHAT_HISTORY: 'tradeforge_bot_chat_history',
-    AI_MODE: 'fourge_ai_mode'
+    AI_MODE: 'fourge_ai_mode',
+    GEMINI_API_KEY: 'fourge_gemini_api_key',
+    TOKEN_USAGE: 'fourge_ai_token_usage'
   },
+
+  DEFAULT_KEY: '',
+  MAX_CONTEXT_TOKENS: 1000000,
 
   // In-memory conversation state
   messages: [],
@@ -17,15 +22,165 @@ const StrategyBotManager = {
   offlineContext: {},
   aiMode: 'online', // 'online' | 'offline'
 
+  tokenUsage: {
+    promptTokens: 0,
+    outputTokens: 0,
+    thoughtTokens: 0,
+    lastTurnTokens: 0,
+    sessionTokens: 0,
+    activeContextTokens: 0
+  },
+
+  /**
+   * Helper to extract output text from Gemini Interactions API or Server response
+   */
+  extractOutputText(data) {
+    if (!data) return '';
+    if (typeof data.output_text === 'string' && data.output_text.trim()) {
+      return data.output_text.trim();
+    }
+    if (typeof data.text === 'string' && data.text.trim()) {
+      return data.text.trim();
+    }
+    if (Array.isArray(data.steps)) {
+      for (const step of data.steps) {
+        if (step && step.type === 'model_output' && Array.isArray(step.content)) {
+          for (const item of step.content) {
+            if (item && (item.type === 'text' || typeof item.text === 'string') && item.text) {
+              return item.text.trim();
+            }
+          }
+        } else if (step && Array.isArray(step.content)) {
+          for (const item of step.content) {
+            if (item && item.text) return item.text.trim();
+          }
+        }
+      }
+    }
+    if (Array.isArray(data.candidates) && data.candidates[0]?.content?.parts?.[0]?.text) {
+      return data.candidates[0].content.parts[0].text.trim();
+    }
+    return '';
+  },
+
   /**
    * Initialize Strategy Bot
    */
   init() {
     this.loadAiMode();
+    this.loadTokenUsage();
     this.bindEvents();
     this.updateModeUI();
+    this.updateTokenGauge();
     this.updateContext();
     this.loadChatHistory();
+  },
+
+  /**
+   * Load token usage from localStorage
+   */
+  loadTokenUsage() {
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEYS.TOKEN_USAGE);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          this.tokenUsage = { ...this.tokenUsage, ...parsed };
+        }
+      }
+    } catch (e) {}
+  },
+
+  /**
+   * Save token usage to localStorage
+   */
+  saveTokenUsage() {
+    try {
+      localStorage.setItem(this.STORAGE_KEYS.TOKEN_USAGE, JSON.stringify(this.tokenUsage));
+    } catch (e) {}
+  },
+
+  /**
+   * Record real-time token telemetry from Gemini API response
+   */
+  recordTokenUsage(usage, estTextLen) {
+    if (usage && typeof usage === 'object') {
+      const prompt = Number(usage.total_input_tokens || usage.prompt_tokens || 0);
+      const output = Number(usage.total_output_tokens || usage.candidates_tokens || 0);
+      const thought = Number(usage.total_thought_tokens || 0);
+      const turnTotal = Number(usage.total_tokens || (prompt + output + thought));
+
+      this.tokenUsage.promptTokens = prompt;
+      this.tokenUsage.outputTokens = output;
+      this.tokenUsage.thoughtTokens = thought;
+      this.tokenUsage.lastTurnTokens = turnTotal;
+      this.tokenUsage.activeContextTokens = prompt + output;
+      this.tokenUsage.sessionTokens = (this.tokenUsage.sessionTokens || 0) + turnTotal;
+    } else {
+      const est = Math.max(1, Math.round((estTextLen || 120) / 4));
+      this.tokenUsage.lastTurnTokens = est;
+      this.tokenUsage.activeContextTokens = (this.tokenUsage.activeContextTokens || 0) + est;
+      this.tokenUsage.sessionTokens = (this.tokenUsage.sessionTokens || 0) + est;
+    }
+    this.saveTokenUsage();
+    this.updateTokenGauge();
+  },
+
+  /**
+   * Update real-time token calculator gauge in Fourge AI header
+   */
+  updateTokenGauge() {
+    const gauge = document.getElementById('botTokenGauge');
+    const valEl = document.getElementById('tokenUsageVal');
+    const pctEl = document.getElementById('tokenUsagePct');
+    const barEl = document.getElementById('tokenUsageBar');
+    const sessionEl = document.getElementById('tokenSessionVal');
+
+    if (!gauge) return;
+
+    if (this.aiMode === 'offline') {
+      if (pctEl) pctEl.innerText = '0.0%';
+      if (barEl) barEl.style.width = '0%';
+      if (valEl) valEl.innerHTML = '<strong>0</strong> / 1.0M <span class="token-sub">tok (Local)</span>';
+      if (sessionEl) sessionEl.innerText = 'Local Engine';
+      gauge.setAttribute('title', 'Offline Mode active. Local Engine does not consume API tokens.');
+      return;
+    }
+
+    const activeTokens = this.tokenUsage.activeContextTokens || this.tokenUsage.lastTurnTokens || 0;
+    const sessionTokens = this.tokenUsage.sessionTokens || activeTokens;
+    const maxTokens = this.MAX_CONTEXT_TOKENS;
+    const pct = Math.min(100, Math.max(0, (activeTokens / maxTokens) * 100));
+    const pctFormatted = pct < 0.01 && activeTokens > 0 ? '<0.01%' : `${pct.toFixed(2)}%`;
+
+    const formatNum = (n) => {
+      if (n >= 1000000) return (n / 1000000).toFixed(2) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+      return String(n);
+    };
+
+    if (valEl) {
+      valEl.innerHTML = `<strong>${formatNum(activeTokens)}</strong> / 1.0M <span class="token-sub">tok</span>`;
+    }
+    if (pctEl) {
+      pctEl.innerText = pctFormatted;
+    }
+    if (barEl) {
+      barEl.style.width = `${Math.max(1.5, Math.min(100, pct))}%`;
+      if (pct > 80) {
+        barEl.className = 'token-gauge-bar danger';
+      } else if (pct > 50) {
+        barEl.className = 'token-gauge-bar warning';
+      } else {
+        barEl.className = 'token-gauge-bar';
+      }
+    }
+    if (sessionEl) {
+      const lastTurn = this.tokenUsage.lastTurnTokens || 0;
+      sessionEl.innerText = `Turn: ${lastTurn > 0 ? '+' : ''}${formatNum(lastTurn)} | Tot: ${formatNum(sessionTokens)}`;
+    }
+
+    gauge.setAttribute('title', `Context Window: ${activeTokens.toLocaleString()} / 1,000,000 tokens (${pctFormatted})\nLast Turn: ${this.tokenUsage.promptTokens.toLocaleString()} in, ${this.tokenUsage.outputTokens.toLocaleString()} out, ${this.tokenUsage.thoughtTokens.toLocaleString()} thought\nTotal Session: ${sessionTokens.toLocaleString()} tokens used`);
   },
 
   /**
@@ -53,6 +208,7 @@ const StrategyBotManager = {
       localStorage.setItem(this.STORAGE_KEYS.AI_MODE, this.aiMode);
     } catch (e) {}
     this.updateModeUI();
+    this.updateTokenGauge();
     if (typeof App !== 'undefined' && App.showToast) {
       App.showToast(this.aiMode === 'online' ? 'Fourge AI: Online Mode active (Gemini AI).' : 'Fourge AI: Offline Mode active (Local Engine).', 'info');
     }
@@ -98,6 +254,7 @@ const StrategyBotManager = {
    */
   onViewActivated() {
     this.updateModeUI();
+    this.updateTokenGauge();
     this.updateContext();
     this.scrollToBottom();
     const input = document.getElementById('botChatInput');
@@ -339,81 +496,139 @@ const StrategyBotManager = {
   },
 
   /**
-   * Call Fourge AI server proxy (/api/strategy-bot)
-   * The server handles Gemini API authentication and model selection.
-   * No API key is sent from the browser.
+   * Direct Gemini API client-side call (used when running under file:// protocol or standalone)
    */
-  async callGeminiAPI(userQuery) {
-    const endpoint = '/api/strategy-bot';
+  async callDirectGemini(userQuery) {
+    const key = localStorage.getItem(this.STORAGE_KEYS.GEMINI_API_KEY) || (typeof window !== 'undefined' && window.GEMINI_API_KEY) || this.DEFAULT_KEY;
+    if (!key) {
+      throw new Error('Fourge AI error: No Gemini API Key configured. Please add your GEMINI_API_KEY.');
+    }
 
-    // Helper to POST to the server proxy
-    const postToProxy = async (body) => {
-      return await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-    };
-
-    // Determine request payload based on conversation state
-    let payload;
+    const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/interactions';
     const isStateful = Boolean(this.lastInteractionId);
 
-    if (isStateful) {
-      // Follow-up turn: send ONLY the new user question with previous_interaction_id
-      payload = {
-        previous_interaction_id: this.lastInteractionId,
-        input: userQuery
+    const postDirect = async (input, prevId) => {
+      const payload = {
+        model: 'gemini-3.8-flash',
+        input: input.trim()
       };
-    } else {
-      // Initial turn / after dataset change: send full context + user question
-      const systemPrompt = this.buildSystemPrompt();
-      const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
-      payload = {
-        input: combinedContent
-      };
-    }
-
-    let response = await postToProxy(payload);
-
-    // Fallback: If a stateful request returns 400 or 500, clear lastInteractionId
-    // and retry exactly ONCE statelessly with the complete current context + user question.
-    if (!response.ok && isStateful && (response.status === 400 || response.status === 500)) {
-      if (typeof console !== 'undefined' && console.warn) {
-        console.warn(`[FourgeAI] Stateful interaction failed with HTTP ${response.status}. Resetting interaction ID and retrying once statelessly...`);
+      if (prevId) {
+        payload.previous_interaction_id = prevId;
       }
-      this.lastInteractionId = null;
+      const resp = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key.trim()
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json().catch(() => ({}));
+      return { ok: resp.ok, status: resp.status, data };
+    };
 
+    let result;
+    if (isStateful) {
+      result = await postDirect(userQuery, this.lastInteractionId);
+      // Retry statelessly if previous interaction id expired
+      if (!result.ok && (result.status === 400 || result.status === 404)) {
+        this.lastInteractionId = null;
+        const systemPrompt = this.buildSystemPrompt();
+        const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
+        result = await postDirect(combinedContent, null);
+      }
+    } else {
       const systemPrompt = this.buildSystemPrompt();
       const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
-      const retryPayload = {
-        input: combinedContent
-      };
-
-      response = await postToProxy(retryPayload);
+      result = await postDirect(combinedContent, null);
     }
 
-    if (!response.ok) {
-      const errorJson = await response.json().catch(() => ({}));
-      const formattedErr = this.parseServerError(response.status, errorJson);
+    if (!result.ok) {
+      const formattedErr = this.parseServerError(result.status, result.data);
       throw new Error(formattedErr);
     }
 
-    const data = await response.json();
-
-    // Server proxy returns { id, output_text }
-    const replyText = (data.output_text || '').trim();
-
-    if (!replyText) {
-      throw new Error('Fourge AI error: Server returned empty response.');
+    const text = this.extractOutputText(result.data);
+    if (!text) {
+      throw new Error('Fourge AI error: Empty response received from Gemini.');
     }
 
-    // Save interaction ID for conversation continuity
-    if (data.id) {
-      this.lastInteractionId = data.id;
+    if (result.data?.id) {
+      this.lastInteractionId = result.data.id;
     }
 
-    return replyText;
+    this.recordTokenUsage(result.data?.usage, userQuery.length + text.length);
+
+    return text;
+  },
+
+  /**
+   * Call Fourge AI server proxy (/api/strategy-bot) with direct client failover fallback
+   */
+  async callGeminiAPI(userQuery) {
+    const isFileProtocol = (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:');
+
+    // Under file:// protocol, directly call Gemini Interactions API
+    if (isFileProtocol) {
+      return await this.callDirectGemini(userQuery);
+    }
+
+    try {
+      const endpoint = '/api/strategy-bot';
+
+      // Helper to POST to the server proxy
+      const postToProxy = async (body) => {
+        return await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+      };
+
+      // Determine request payload based on conversation state
+      let payload;
+      const isStateful = Boolean(this.lastInteractionId);
+
+      if (isStateful) {
+        payload = {
+          previous_interaction_id: this.lastInteractionId,
+          input: userQuery
+        };
+      } else {
+        const systemPrompt = this.buildSystemPrompt();
+        const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
+        payload = {
+          input: combinedContent
+        };
+      }
+
+      let response = await postToProxy(payload);
+
+      // Fallback: If a stateful request returns 400 or 500, clear lastInteractionId and retry statelessly
+      if (!response.ok && isStateful && (response.status === 400 || response.status === 500)) {
+        this.lastInteractionId = null;
+        const systemPrompt = this.buildSystemPrompt();
+        const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
+        response = await postToProxy({ input: combinedContent });
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = this.extractOutputText(data);
+        if (text) {
+          if (data.id) this.lastInteractionId = data.id;
+          this.recordTokenUsage(data.usage, userQuery.length + text.length);
+          return text;
+        }
+      }
+
+      // If server proxy returned error, try direct client fallback
+      return await this.callDirectGemini(userQuery);
+    } catch (proxyErr) {
+      // Direct client fallback when proxy is unreachable
+      console.warn('[FourgeAI] Server proxy unavailable, falling back to direct client Gemini API call:', proxyErr.message);
+      return await this.callDirectGemini(userQuery);
+    }
   },
 
   /**
@@ -867,6 +1082,17 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
   clearChat() {
     this.messages = [];
     this.lastInteractionId = null;
+    this.tokenUsage = {
+      promptTokens: 0,
+      outputTokens: 0,
+      thoughtTokens: 0,
+      lastTurnTokens: 0,
+      sessionTokens: 0,
+      activeContextTokens: 0
+    };
+    this.saveTokenUsage();
+    this.updateTokenGauge();
+
     const container = document.getElementById('botChatMessages');
     if (container) {
       container.innerHTML = '';
@@ -877,7 +1103,7 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
 
     this.renderWelcomeMessage();
     if (typeof App !== 'undefined' && App.showToast) {
-      App.showToast('Chat history cleared', 'info');
+      App.showToast('Chat history and token session reset', 'info');
     }
   },
 
