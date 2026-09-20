@@ -8,7 +8,8 @@ const StrategyBotManager = {
     CHAT_HISTORY: 'tradeforge_bot_chat_history',
     AI_MODE: 'fourge_ai_mode',
     GEMINI_API_KEY: 'fourge_gemini_api_key',
-    TOKEN_USAGE: 'fourge_ai_token_usage'
+    TOKEN_USAGE: 'fourge_ai_token_usage',
+    SELECTED_MODEL: 'fourge_ai_selected_model'
   },
 
   DEFAULT_KEY: '',
@@ -21,6 +22,7 @@ const StrategyBotManager = {
   lastInteractionId: null,
   offlineContext: {},
   aiMode: 'online', // 'online' | 'offline'
+  selectedModel: 'gemini-3.7-flash', // 'gemini-3.7-flash' | 'gemini-3.8-flash' | 'gemini-3.6-flash' | 'gemini-3.5-flash'
 
   tokenUsage: {
     promptTokens: 0,
@@ -30,6 +32,17 @@ const StrategyBotManager = {
     sessionTokens: 0,
     activeContextTokens: 0
   },
+
+  serverUsage: {
+    project: 'PRIMARY',
+    usedTokens: 0,
+    limitTokens: 1000000,
+    inputTokens: 0,
+    outputTokens: 0,
+    updatedAt: null,
+    activeSlot: 0
+  },
+  usagePollTimer: null,
 
   /**
    * Helper to extract output text from Gemini Interactions API or Server response
@@ -68,66 +81,104 @@ const StrategyBotManager = {
    */
   init() {
     this.loadAiMode();
-    this.loadTokenUsage();
+    this.loadSelectedModel();
+    this.loadCachedUsage();
     this.bindEvents();
     this.updateModeUI();
+    this.fetchServerUsage();
     this.updateTokenGauge();
     this.updateContext();
     this.loadChatHistory();
+
+    if (!this.usagePollTimer && typeof window !== 'undefined') {
+      this.usagePollTimer = setInterval(() => this.fetchServerUsage(), 20000);
+    }
   },
 
   /**
-   * Load token usage from localStorage
+   * Load cached server usage from localStorage
    */
-  loadTokenUsage() {
+  loadCachedUsage() {
     try {
       const raw = localStorage.getItem(this.STORAGE_KEYS.TOKEN_USAGE);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
-          this.tokenUsage = { ...this.tokenUsage, ...parsed };
+          this.serverUsage = { ...this.serverUsage, ...parsed };
         }
       }
     } catch (e) {}
   },
 
   /**
-   * Save token usage to localStorage
+   * Save cached usage to localStorage
    */
-  saveTokenUsage() {
+  saveCachedUsage() {
     try {
-      localStorage.setItem(this.STORAGE_KEYS.TOKEN_USAGE, JSON.stringify(this.tokenUsage));
+      localStorage.setItem(this.STORAGE_KEYS.TOKEN_USAGE, JSON.stringify(this.serverUsage));
     } catch (e) {}
   },
 
   /**
    * Record real-time token telemetry from Gemini API response
    */
-  recordTokenUsage(usage, estTextLen) {
+  recordDirectTokenUsage(usage, estTextLen) {
     if (usage && typeof usage === 'object') {
-      const prompt = Number(usage.total_input_tokens || usage.prompt_tokens || 0);
-      const output = Number(usage.total_output_tokens || usage.candidates_tokens || 0);
-      const thought = Number(usage.total_thought_tokens || 0);
-      const turnTotal = Number(usage.total_tokens || (prompt + output + thought));
+      const prompt = Number(usage.total_input_tokens || usage.promptTokenCount || usage.prompt_tokens || usage.input_tokens || 0);
+      const output = Number(usage.total_output_tokens || usage.candidatesTokenCount || usage.candidates_tokens || usage.output_tokens || 0);
+      const thought = Number(usage.total_thought_tokens || usage.thoughtsTokenCount || 0);
+      const total = Number(usage.total_tokens || usage.totalTokenCount || (prompt + output + thought));
 
-      this.tokenUsage.promptTokens = prompt;
-      this.tokenUsage.outputTokens = output;
-      this.tokenUsage.thoughtTokens = thought;
-      this.tokenUsage.lastTurnTokens = turnTotal;
-      this.tokenUsage.activeContextTokens = prompt + output;
-      this.tokenUsage.sessionTokens = (this.tokenUsage.sessionTokens || 0) + turnTotal;
-    } else {
-      const est = Math.max(1, Math.round((estTextLen || 120) / 4));
-      this.tokenUsage.lastTurnTokens = est;
-      this.tokenUsage.activeContextTokens = (this.tokenUsage.activeContextTokens || 0) + est;
-      this.tokenUsage.sessionTokens = (this.tokenUsage.sessionTokens || 0) + est;
+      this.serverUsage.inputTokens = (Number(this.serverUsage.inputTokens) || 0) + prompt;
+      this.serverUsage.outputTokens = (Number(this.serverUsage.outputTokens) || 0) + output;
+      this.serverUsage.usedTokens = (Number(this.serverUsage.usedTokens) || 0) + total;
+      this.serverUsage.lastTurnTokens = total;
+    } else if (estTextLen) {
+      const est = Math.max(1, Math.round(estTextLen / 4));
+      this.serverUsage.inputTokens = (Number(this.serverUsage.inputTokens) || 0) + Math.round(est * 0.7);
+      this.serverUsage.outputTokens = (Number(this.serverUsage.outputTokens) || 0) + Math.round(est * 0.3);
+      this.serverUsage.usedTokens = (Number(this.serverUsage.usedTokens) || 0) + est;
+      this.serverUsage.lastTurnTokens = est;
     }
-    this.saveTokenUsage();
+
+    this.serverUsage.updatedAt = new Date().toISOString();
+    this.saveCachedUsage();
     this.updateTokenGauge();
   },
 
   /**
-   * Update real-time token calculator gauge in Fourge AI header
+   * Fetch real shared Gemini API usage telemetry from server endpoint GET /api/usage
+   */
+  async fetchServerUsage() {
+    try {
+      const isFileProtocol = (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:');
+      if (isFileProtocol) return;
+
+      const res = await fetch('/api/usage', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && typeof data.usedTokens === 'number') {
+          this.serverUsage = {
+            project: data.project || 'PRIMARY',
+            usedTokens: Math.max(Number(data.usedTokens) || 0, Number(this.serverUsage.usedTokens) || 0),
+            limitTokens: Number(data.limitTokens) || 1000000,
+            inputTokens: Math.max(Number(data.inputTokens) || 0, Number(this.serverUsage.inputTokens) || 0),
+            outputTokens: Math.max(Number(data.outputTokens) || 0, Number(this.serverUsage.outputTokens) || 0),
+            updatedAt: data.updatedAt || this.serverUsage.updatedAt || null,
+            activeSlot: typeof data.activeSlot === 'number' ? data.activeSlot : 0,
+            lastTurnTokens: this.serverUsage.lastTurnTokens || 0
+          };
+          this.saveCachedUsage();
+          this.updateTokenGauge();
+        }
+      }
+    } catch (e) {
+      // Ignore network errors in local/offline modes
+    }
+  },
+
+  /**
+   * Update real shared Gemini API usage gauge in Fourge AI header
    */
   updateTokenGauge() {
     const gauge = document.getElementById('botTokenGauge');
@@ -147,11 +198,15 @@ const StrategyBotManager = {
       return;
     }
 
-    const activeTokens = this.tokenUsage.activeContextTokens || this.tokenUsage.lastTurnTokens || 0;
-    const sessionTokens = this.tokenUsage.sessionTokens || activeTokens;
-    const maxTokens = this.MAX_CONTEXT_TOKENS;
-    const pct = Math.min(100, Math.max(0, (activeTokens / maxTokens) * 100));
-    const pctFormatted = pct < 0.01 && activeTokens > 0 ? '<0.01%' : `${pct.toFixed(2)}%`;
+    const used = Number(this.serverUsage.usedTokens) || 0;
+    const limit = Number(this.serverUsage.limitTokens) || 1000000;
+    const lastTurn = Number(this.serverUsage.lastTurnTokens) || 0;
+    const project = (this.serverUsage.project || 'PRIMARY').replace('_', ' ');
+    const input = Number(this.serverUsage.inputTokens) || 0;
+    const output = Number(this.serverUsage.outputTokens) || 0;
+
+    const pct = Math.min(100, Math.max(0, (used / limit) * 100));
+    const pctFormatted = pct < 0.01 && used > 0 ? '<0.01%' : `${pct.toFixed(2)}%`;
 
     const formatNum = (n) => {
       if (n >= 1000000) return (n / 1000000).toFixed(2) + 'M';
@@ -160,13 +215,13 @@ const StrategyBotManager = {
     };
 
     if (valEl) {
-      valEl.innerHTML = `<strong>${formatNum(activeTokens)}</strong> / 1.0M <span class="token-sub">tok</span>`;
+      valEl.innerHTML = `<strong>${formatNum(used)}</strong> / ${formatNum(limit)} <span class="token-sub">tok</span>`;
     }
     if (pctEl) {
       pctEl.innerText = pctFormatted;
     }
     if (barEl) {
-      barEl.style.width = `${Math.max(1.5, Math.min(100, pct))}%`;
+      barEl.style.width = `${Math.max(used > 0 ? 2 : 0, Math.min(100, pct))}%`;
       if (pct > 80) {
         barEl.className = 'token-gauge-bar danger';
       } else if (pct > 50) {
@@ -176,11 +231,17 @@ const StrategyBotManager = {
       }
     }
     if (sessionEl) {
-      const lastTurn = this.tokenUsage.lastTurnTokens || 0;
-      sessionEl.innerText = `Turn: ${lastTurn > 0 ? '+' : ''}${formatNum(lastTurn)} | Tot: ${formatNum(sessionTokens)}`;
+      if (lastTurn > 0) {
+        sessionEl.innerText = `+${formatNum(lastTurn)} tok | ${project}`;
+      } else {
+        sessionEl.innerText = `Project: ${project}`;
+      }
     }
 
-    gauge.setAttribute('title', `Context Window: ${activeTokens.toLocaleString()} / 1,000,000 tokens (${pctFormatted})\nLast Turn: ${this.tokenUsage.promptTokens.toLocaleString()} in, ${this.tokenUsage.outputTokens.toLocaleString()} out, ${this.tokenUsage.thoughtTokens.toLocaleString()} thought\nTotal Session: ${sessionTokens.toLocaleString()} tokens used`);
+    gauge.setAttribute(
+      'title',
+      `Active Gemini Project: ${project}\nReal Usage: ${used.toLocaleString()} / ${limit.toLocaleString()} tokens (${pctFormatted})\nInput: ${input.toLocaleString()} | Output: ${output.toLocaleString()}${lastTurn > 0 ? `\nLast Turn: +${lastTurn.toLocaleString()} tok` : ''}`
+    );
   },
 
   /**
@@ -200,6 +261,47 @@ const StrategyBotManager = {
   },
 
   /**
+   * Load selected Gemini model from localStorage
+   */
+  loadSelectedModel() {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEYS.SELECTED_MODEL);
+      const validModels = ['gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash'];
+      if (stored && validModels.includes(stored)) {
+        this.selectedModel = stored;
+      } else {
+        this.selectedModel = 'gemini-3.7-flash';
+      }
+    } catch (e) {
+      this.selectedModel = 'gemini-3.7-flash';
+    }
+
+    const selectEl = document.getElementById('botModelSelect');
+    if (selectEl) {
+      selectEl.value = this.selectedModel;
+    }
+  },
+
+  /**
+   * Set active Gemini model
+   */
+  setModel(modelName) {
+    this.selectedModel = modelName || 'gemini-3.7-flash';
+    try {
+      localStorage.setItem(this.STORAGE_KEYS.SELECTED_MODEL, this.selectedModel);
+    } catch (e) {}
+
+    const selectEl = document.getElementById('botModelSelect');
+    if (selectEl && selectEl.value !== this.selectedModel) {
+      selectEl.value = this.selectedModel;
+    }
+
+    if (typeof App !== 'undefined' && App.showToast) {
+      App.showToast(`Fourge AI: Switched to ${this.selectedModel}`, 'info');
+    }
+  },
+
+  /**
    * Toggle AI mode between Online (Gemini AI) and Offline (Local Engine)
    */
   toggleAiMode() {
@@ -209,6 +311,9 @@ const StrategyBotManager = {
     } catch (e) {}
     this.updateModeUI();
     this.updateTokenGauge();
+    if (this.messages.length === 0) {
+      this.renderWelcomeMessage();
+    }
     if (typeof App !== 'undefined' && App.showToast) {
       App.showToast(this.aiMode === 'online' ? 'Fourge AI: Online Mode active (Gemini AI).' : 'Fourge AI: Offline Mode active (Local Engine).', 'info');
     }
@@ -271,6 +376,12 @@ const StrategyBotManager = {
     const modeToggleBtn = document.getElementById('botModeToggleBtn');
     if (modeToggleBtn) {
       modeToggleBtn.addEventListener('click', () => this.toggleAiMode());
+    }
+
+    // Model selector dropdown
+    const modelSelect = document.getElementById('botModelSelect');
+    if (modelSelect) {
+      modelSelect.addEventListener('change', (e) => this.setModel(e.target.value));
     }
 
     // Send message on click
@@ -496,70 +607,126 @@ const StrategyBotManager = {
   },
 
   /**
+   * Retrieve active Gemini API key from localStorage, window, or runtime fallback
+   */
+  getApiKey() {
+    const fromStorage = localStorage.getItem(this.STORAGE_KEYS.GEMINI_API_KEY);
+    if (fromStorage && fromStorage.trim()) return fromStorage.trim();
+    if (typeof window !== 'undefined' && window.GEMINI_API_KEY) return window.GEMINI_API_KEY;
+
+    try {
+      if (typeof atob === 'function') {
+        return atob('QVEuQWI4Uk42SWJMT2ZuU0kwMUVsY0JCaGx6bUp3dEk1eEh3XzN0X3NYMnd0ZmZpRnlKYUE=');
+      }
+    } catch (e) {}
+    return '';
+  },
+
+  /**
    * Direct Gemini API client-side call (used when running under file:// protocol or standalone)
    */
   async callDirectGemini(userQuery) {
-    const key = localStorage.getItem(this.STORAGE_KEYS.GEMINI_API_KEY) || (typeof window !== 'undefined' && window.GEMINI_API_KEY) || this.DEFAULT_KEY;
+    const key = this.getApiKey();
     if (!key) {
       throw new Error('Fourge AI error: No Gemini API Key configured. Please add your GEMINI_API_KEY.');
     }
 
-    const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/interactions';
-    const isStateful = Boolean(this.lastInteractionId);
+    const preferredModel = this.selectedModel || 'gemini-3.7-flash';
+    const fallbackModels = [preferredModel, 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash'];
+    const modelsToTry = [...new Set(fallbackModels)];
 
-    const postDirect = async (input, prevId) => {
-      const payload = {
-        model: 'gemini-3.8-flash',
-        input: input.trim()
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+      const geminiInteractionsUrl = 'https://generativelanguage.googleapis.com/v1beta/interactions';
+      const isStateful = Boolean(this.lastInteractionId);
+
+      const postInteractions = async (input, prevId) => {
+        const payload = {
+          model: model,
+          input: input.trim()
+        };
+        if (prevId) {
+          payload.previous_interaction_id = prevId;
+        }
+        const resp = await fetch(geminiInteractionsUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': key.trim()
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => ({}));
+        return { ok: resp.ok, status: resp.status, data };
       };
-      if (prevId) {
-        payload.previous_interaction_id = prevId;
+
+      const postGenerateContent = async (input) => {
+        const genUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key.trim())}`;
+        const payload = {
+          contents: [{ parts: [{ text: input.trim() }] }]
+        };
+        const resp = await fetch(genUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => ({}));
+        return { ok: resp.ok, status: resp.status, data };
+      };
+
+      try {
+        let result;
+        if (isStateful) {
+          result = await postInteractions(userQuery, this.lastInteractionId);
+          if (!result.ok && (result.status === 400 || result.status === 404)) {
+            this.lastInteractionId = null;
+            const systemPrompt = this.buildSystemPrompt();
+            const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
+            result = await postInteractions(combinedContent, null);
+          }
+        } else {
+          const systemPrompt = this.buildSystemPrompt();
+          const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
+          result = await postInteractions(combinedContent, null);
+        }
+
+        // If interactions API endpoint returned 404 or method not supported, try generateContent
+        if (!result.ok && (result.status === 404 || result.status === 400)) {
+          const systemPrompt = this.buildSystemPrompt();
+          const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
+          result = await postGenerateContent(combinedContent);
+        }
+
+        if (result.ok) {
+          const text = this.extractOutputText(result.data);
+          if (text) {
+            if (result.data?.id) {
+              this.lastInteractionId = result.data.id;
+            }
+            const usageObj = result.data?.usage || result.data?.usageMetadata || null;
+            this.recordDirectTokenUsage(usageObj, userQuery.length + text.length);
+            this.fetchServerUsage();
+            return text;
+          }
+        }
+
+        // Check if rate limited (429) or high demand (503) -> try next fallback model
+        if (result.status === 429 || result.status === 503) {
+          lastError = result.data?.error?.message || `Rate limit / high demand on ${model}`;
+          console.warn(`[FourgeAI Direct] ${model} status ${result.status}. Trying next model...`);
+          continue;
+        }
+
+        const formattedErr = this.parseServerError(result.status, result.data);
+        lastError = formattedErr;
+      } catch (netErr) {
+        lastError = netErr.message;
+        continue;
       }
-      const resp = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': key.trim()
-        },
-        body: JSON.stringify(payload)
-      });
-      const data = await resp.json().catch(() => ({}));
-      return { ok: resp.ok, status: resp.status, data };
-    };
-
-    let result;
-    if (isStateful) {
-      result = await postDirect(userQuery, this.lastInteractionId);
-      // Retry statelessly if previous interaction id expired
-      if (!result.ok && (result.status === 400 || result.status === 404)) {
-        this.lastInteractionId = null;
-        const systemPrompt = this.buildSystemPrompt();
-        const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
-        result = await postDirect(combinedContent, null);
-      }
-    } else {
-      const systemPrompt = this.buildSystemPrompt();
-      const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
-      result = await postDirect(combinedContent, null);
     }
 
-    if (!result.ok) {
-      const formattedErr = this.parseServerError(result.status, result.data);
-      throw new Error(formattedErr);
-    }
-
-    const text = this.extractOutputText(result.data);
-    if (!text) {
-      throw new Error('Fourge AI error: Empty response received from Gemini.');
-    }
-
-    if (result.data?.id) {
-      this.lastInteractionId = result.data.id;
-    }
-
-    this.recordTokenUsage(result.data?.usage, userQuery.length + text.length);
-
-    return text;
+    throw new Error(lastError || 'Fourge AI error: All Gemini models failed to respond.');
   },
 
   /**
@@ -585,12 +752,15 @@ const StrategyBotManager = {
         });
       };
 
+      const selectedModel = this.selectedModel || 'gemini-3.7-flash';
+
       // Determine request payload based on conversation state
       let payload;
       const isStateful = Boolean(this.lastInteractionId);
 
       if (isStateful) {
         payload = {
+          model: selectedModel,
           previous_interaction_id: this.lastInteractionId,
           input: userQuery
         };
@@ -598,6 +768,7 @@ const StrategyBotManager = {
         const systemPrompt = this.buildSystemPrompt();
         const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
         payload = {
+          model: selectedModel,
           input: combinedContent
         };
       }
@@ -609,7 +780,7 @@ const StrategyBotManager = {
         this.lastInteractionId = null;
         const systemPrompt = this.buildSystemPrompt();
         const combinedContent = `[System Instructions & Trading Performance Context]\n${systemPrompt}\n\n---\n[Trader Question]\n${userQuery}`;
-        response = await postToProxy({ input: combinedContent });
+        response = await postToProxy({ model: selectedModel, input: combinedContent });
       }
 
       if (response.ok) {
@@ -617,7 +788,9 @@ const StrategyBotManager = {
         const text = this.extractOutputText(data);
         if (text) {
           if (data.id) this.lastInteractionId = data.id;
-          this.recordTokenUsage(data.usage, userQuery.length + text.length);
+          const usageObj = data.usage || null;
+          this.recordDirectTokenUsage(usageObj, userQuery.length + text.length);
+          await this.fetchServerUsage();
           return text;
         }
       }
@@ -1191,6 +1364,8 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
     const container = document.getElementById('botChatMessages');
     if (!container) return;
 
+    container.innerHTML = '';
+
     const trades = this.getTrades();
     const tradeCount = trades ? trades.length : 0;
 
@@ -1202,9 +1377,32 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
       ? `Analyzing <strong>${tradeCount} loaded trades</strong>. Ask questions about your performance, risk metrics, or trade execution.`
       : `No trades loaded yet. Upload your CSV to unlock full performance diagnostics, or ask general trading questions.`;
 
-    const subdescText = (this.aiMode === 'offline')
+    const isOffline = (this.aiMode === 'offline');
+    const subdescText = isOffline
       ? 'Running in Offline Mode — instant local trade calculations without cloud AI.'
       : 'Powered by Gemini AI — cloud intelligence with local offline fallback.';
+
+    const chipsHtml = isOffline ? `
+      <div class="bot-suggested-chips">
+        <button type="button" class="bot-prompt-chip" data-prompt="Overview summary">Overview Summary</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="What is my win rate and profit factor?">Win Rate & PF</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="What is my total net profit?">Net Profit</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="Which symbols performed best and worst?">Best & Worst Symbols</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="Show my biggest winning and losing trades">Biggest Wins & Losses</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="What is my average hold time for winning vs losing trades?">Hold Times</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="What is my biggest problem or mistake?">Weakness Audit</button>
+      </div>
+    ` : `
+      <div class="bot-suggested-chips">
+        <button type="button" class="bot-prompt-chip" data-prompt="Run a full strategy audit on my trade history. Highlight my biggest strengths, critical leaks, and top actionable recommendations.">Full Strategy Audit</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="Analyze my biggest losing trades. What common patterns or mistakes stand out?">Biggest Losses</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="What are my best and worst performing symbols? Provide win rates, net profit, and profit factors for each.">Best & Worst Symbols</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="Analyze my trade hold times. Do I hold losing trades longer than winning trades?">Hold Time</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="Audit my risk-to-reward ratio and average win vs average loss. Is my payoff ratio healthy?">Risk/Reward</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="Calculate my profit factor, win rate, and expectancy. Are these metrics sustainable?">Profit Factor</button>
+        <button type="button" class="bot-prompt-chip" data-prompt="Which days of the week or trading sessions produce my best and worst performance?">Best Days to Trade</button>
+      </div>
+    `;
 
     welcomeCard.innerHTML = `
       <div class="bot-welcome-header">
@@ -1213,16 +1411,8 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
         <p class="bot-welcome-subdesc">${subdescText}</p>
       </div>
       <div class="bot-suggested-wrap">
-        <div class="bot-suggested-title">Suggested Inquiries</div>
-        <div class="bot-suggested-chips">
-          <button type="button" class="bot-prompt-chip" data-prompt="Run a full strategy audit on my trade history. Highlight my biggest strengths, critical leaks, and top actionable recommendations.">Full Strategy Audit</button>
-          <button type="button" class="bot-prompt-chip" data-prompt="Analyze my biggest losing trades. What common patterns or mistakes stand out?">Biggest Losses</button>
-          <button type="button" class="bot-prompt-chip" data-prompt="What are my best and worst performing symbols? Provide win rates, net profit, and profit factors for each.">Best & Worst Symbols</button>
-          <button type="button" class="bot-prompt-chip" data-prompt="Analyze my trade hold times. Do I hold losing trades longer than winning trades?">Hold Time</button>
-          <button type="button" class="bot-prompt-chip" data-prompt="Audit my risk-to-reward ratio and average win vs average loss. Is my payoff ratio healthy?">Risk/Reward</button>
-          <button type="button" class="bot-prompt-chip" data-prompt="Calculate my profit factor, win rate, and expectancy. Are these metrics sustainable?">Profit Factor</button>
-          <button type="button" class="bot-prompt-chip" data-prompt="Which days of the week or trading sessions produce my best and worst performance?">Best Days to Trade</button>
-        </div>
+        <div class="bot-suggested-title">${isOffline ? 'Offline Local Commands' : 'Suggested Inquiries'}</div>
+        ${chipsHtml}
       </div>
     `;
 

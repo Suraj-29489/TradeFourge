@@ -804,19 +804,27 @@
                     <span class="bot-status-pill online" id="botLiveStatusBadge">
                       <span class="pulse-dot"></span> Fourge AI Live
                     </span>
+                    <div class="bot-model-select-wrap" title="Switch Gemini Model">
+                      <select id="botModelSelect" class="bot-model-select">
+                        <option value="gemini-3.7-flash" selected>Gemini 3.7 Flash</option>
+                        <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
+                        <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                        <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                      </select>
+                    </div>
                   </div>
                   <p class="bot-subtitle">AI Trading Performance Assistant</p>
                 </div>
               </div>
 
-              <!-- Real-Time Token Calculator & Context Gauge -->
-              <div class="bot-token-gauge" id="botTokenGauge" title="Real-time Token Usage & Context Window (Gemini 3.8 Flash - 1,000,000 max context)">
+              <!-- Real-Time Shared Gemini Project Usage Counter -->
+              <div class="bot-token-gauge" id="botTokenGauge" title="Real-time Shared Gemini API Project Usage (1,000,000 token limit)">
                 <div class="token-gauge-header">
                   <div class="token-gauge-label">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
                     </svg>
-                    <span>Tokens (Used / Max)</span>
+                    <span>Tokens (Used / Limit)</span>
                   </div>
                   <span class="token-gauge-pct" id="tokenUsagePct">0.0%</span>
                 </div>
@@ -825,7 +833,7 @@
                 </div>
                 <div class="token-gauge-stats">
                   <span class="token-gauge-val" id="tokenUsageVal"><strong>0</strong> / 1.0M <span class="token-sub">tok</span></span>
-                  <span class="token-gauge-session" id="tokenSessionVal">Turn: 0 tok</span>
+                  <span class="token-gauge-session" id="tokenSessionVal">Project: PRIMARY</span>
                 </div>
               </div>
 

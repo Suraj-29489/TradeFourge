@@ -14,6 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { recordGeminiUsage } = require('./usage-store');
 
 // Lightweight local .env.local loader for development environments
 function loadLocalEnv() {
@@ -123,11 +124,12 @@ function sanitizeError(msg) {
     .replace(/bearer\s+[a-zA-Z0-9._-]+/gi, 'Bearer [REDACTED]');
 }
 
-// Helper to make an upstream Interactions API call
-async function callGeminiEndpoint(apiKey, input, previousInteractionId) {
+// Helper to make an upstream Gemini API call (Interactions API with generateContent fallback)
+async function callGeminiEndpoint(apiKey, input, previousInteractionId, model = 'gemini-3.7-flash') {
+  const targetModel = model || 'gemini-3.7-flash';
   const geminiUrl = 'https://generativelanguage.googleapis.com/v1beta/interactions';
   const geminiPayload = {
-    model: 'gemini-3.8-flash',
+    model: targetModel,
     input: input.trim()
   };
 
@@ -135,17 +137,41 @@ async function callGeminiEndpoint(apiKey, input, previousInteractionId) {
     geminiPayload.previous_interaction_id = previousInteractionId.trim();
   }
 
-  const response = await fetch(geminiUrl, {
+  let response = await fetch(geminiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-goog-api-key': apiKey.trim()
     },
     body: JSON.stringify(geminiPayload)
-  });
+  }).catch(() => null);
 
-  const data = await response.json().catch(() => null);
-  return { ok: response.ok, status: response.status, data };
+  if (response && response.ok) {
+    const data = await response.json().catch(() => null);
+    return { ok: true, status: response.status, data };
+  }
+
+  // Fallback to generateContent API if interactions is unavailable (404/400)
+  const genUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
+  const genPayload = {
+    contents: [{ parts: [{ text: input.trim() }] }]
+  };
+
+  const genResponse = await fetch(genUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(genPayload)
+  }).catch(() => null);
+
+  if (genResponse && genResponse.ok) {
+    const data = await genResponse.json().catch(() => null);
+    return { ok: true, status: genResponse.status, data };
+  }
+
+  const errStatus = (genResponse && genResponse.status) || (response && response.status) || 500;
+  const errData = (genResponse && await genResponse.json().catch(() => null)) || (response && await response.json().catch(() => null)) || null;
+
+  return { ok: false, status: errStatus, data: errData };
 }
 
 module.exports = async function handler(req, res) {
@@ -196,7 +222,8 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  const { input, previous_interaction_id } = body;
+  const { input, previous_interaction_id, model } = body;
+  const requestedModel = (typeof model === 'string' && model.trim()) ? model.trim() : 'gemini-3.7-flash';
 
   // 3. Validate input field
   if (typeof input !== 'string' || !input.trim()) {
@@ -242,12 +269,17 @@ module.exports = async function handler(req, res) {
 
   // 5. Multi-Project Failover Router Loop
   // Primary (index 0) is always attempted first (Primary Recovery).
-  // If Primary fails with retryable error (429, 5xx), seamlessly failover to Backup 1..4.
+  // If Primary fails with retryable error (429, 5xx), seamlessly failover to Backup 1..4 or fallback model.
   for (let i = 0; i < projects.length; i++) {
     const currentProj = projects[i];
 
     try {
-      let result = await callGeminiEndpoint(currentProj.key, input, previous_interaction_id);
+      let result = await callGeminiEndpoint(currentProj.key, input, previous_interaction_id, requestedModel);
+
+      // If requested model hits 429 quota limit, automatically try gemini-3.7-flash or gemini-3.6-flash
+      if (!result.ok && result.status === 429 && requestedModel !== 'gemini-3.7-flash') {
+        result = await callGeminiEndpoint(currentProj.key, input, previous_interaction_id, 'gemini-3.7-flash');
+      }
 
       // Safe cross-project / invalid interaction ID handling:
       // If a stateful request returns 400 or 404 (invalid interaction ID), retry ONCE statelessly on this project
@@ -255,17 +287,21 @@ module.exports = async function handler(req, res) {
         if (typeof console !== 'undefined' && console.warn) {
           console.warn(`[FourgeAI Router] Interaction ID rejected by ${currentProj.name} (${result.status}). Retrying statelessly...`);
         }
-        result = await callGeminiEndpoint(currentProj.key, input, null);
+        result = await callGeminiEndpoint(currentProj.key, input, null, requestedModel);
       }
 
       if (result.ok && result.data) {
         const text = extractOutputText(result.data);
         if (text) {
-          // Success! Return sanitized output + usage telemetry
+          const usageObj = result.data.usage || result.data.usageMetadata || null;
+          recordGeminiUsage(currentProj.name, usageObj);
+
+          // Success! Return sanitized output + usage telemetry + active project name
           return res.status(200).json({
             id: result.data.id || null,
             output_text: text,
-            usage: result.data.usage || null
+            usage: usageObj,
+            project: currentProj.name
           });
         }
       }
