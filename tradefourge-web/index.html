@@ -493,6 +493,62 @@
                 </div>
               </div>
 
+              <!-- Center/Middle: Weekly Performance Card (Directly above Monthly Calendar) -->
+              <div class="weekly-perf-card">
+                <div class="weekly-perf-header">
+                  <div class="weekly-perf-title-group">
+                    <span class="weekly-perf-title">Weekly Performance</span>
+                    <span class="weekly-perf-subtitle" id="weeklyPerfSubtitle">Net P&L by day of the week</span>
+                  </div>
+                  <div class="weekly-perf-controls">
+                    <!-- 1. Mode Selector (All Data / By Month / By Week) -->
+                    <div class="weekly-perf-dropdown-wrapper">
+                      <button class="weekly-perf-filter-btn" id="weeklyPerfModeBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Filter performance by period">
+                        <span id="weeklyPerfModeLabel">All Data</span>
+                        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                      </button>
+                      <div class="weekly-perf-menu" id="weeklyPerfModeMenu">
+                        <button type="button" class="weekly-perf-menu-item active" data-mode="all">All Data</button>
+                        <button type="button" class="weekly-perf-menu-item" data-mode="month">By Month</button>
+                        <button type="button" class="weekly-perf-menu-item" data-mode="week">By Week</button>
+                      </div>
+                    </div>
+
+                    <!-- 2. Month Selector (Active when mode is 'month' or 'week') -->
+                    <div class="weekly-perf-dropdown-wrapper" id="weeklyPerfMonthWrapper" style="display: none;">
+                      <button class="weekly-perf-filter-btn" id="weeklyPerfMonthBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Select Month">
+                        <span id="weeklyPerfMonthLabel">Month</span>
+                        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                      </button>
+                      <div class="weekly-perf-menu" id="weeklyPerfMonthMenu">
+                        <!-- Populated dynamically -->
+                      </div>
+                    </div>
+
+                    <!-- 3. Week Selector (Active when mode is 'week') -->
+                    <div class="weekly-perf-dropdown-wrapper" id="weeklyPerfWeekWrapper" style="display: none;">
+                      <button class="weekly-perf-filter-btn" id="weeklyPerfWeekBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Select Week">
+                        <span id="weeklyPerfWeekLabel">Week</span>
+                        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                      </button>
+                      <div class="weekly-perf-menu" id="weeklyPerfWeekMenu">
+                        <!-- Populated dynamically -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="weekly-perf-body">
+                  <div class="weekly-perf-canvas-wrapper" id="weeklyPerfCanvasWrap">
+                    <canvas id="weeklyPerformanceCanvas"></canvas>
+                  </div>
+                  <div class="weekly-perf-empty" id="weeklyPerfEmpty" style="display: none;">
+                    <div class="weekly-perf-empty-icon">📊</div>
+                    <div class="weekly-perf-empty-text">No trading data available for the selected period</div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Right: Monthly Calendar View Card -->
               <div class="calendar-card">
                 <div class="calendar-header">

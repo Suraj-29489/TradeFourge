@@ -7,6 +7,7 @@ const ChartManager = {
     tradesDonut: null,
     daysDonut: null,
     pnlMain: null,
+    weeklyPerformance: null,
     symbolBar: null,
     weekdayBar: null,
     durationDist: null,
@@ -455,6 +456,161 @@ const ChartManager = {
         }
       });
     }
+  },
+
+  /**
+   * Render Dashboard Weekly Performance 7-Day Bar Chart (Sunday -> Saturday)
+   */
+  renderWeeklyPerformanceChart(trades = [], filterConfig = { mode: 'all' }) {
+    const canvas = document.getElementById('weeklyPerformanceCanvas');
+    const emptyEl = document.getElementById('weeklyPerfEmpty');
+    const canvasWrap = document.getElementById('weeklyPerfCanvasWrap');
+    if (!canvas) return;
+
+    if (this.instances.weeklyPerformance) {
+      this.instances.weeklyPerformance.destroy();
+      this.instances.weeklyPerformance = null;
+    }
+
+    if (!trades || trades.length === 0) {
+      if (emptyEl) emptyEl.style.display = 'flex';
+      if (canvasWrap) canvasWrap.style.display = 'none';
+      return;
+    }
+
+    // 1. Filter trades based on filterConfig
+    let scopedTrades = trades;
+    if (filterConfig.mode === 'month' && filterConfig.monthKey) {
+      scopedTrades = trades.filter(t => {
+        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+        return dStr && dStr.startsWith(filterConfig.monthKey);
+      });
+    } else if (filterConfig.mode === 'week' && filterConfig.weekStart && filterConfig.weekEnd) {
+      scopedTrades = trades.filter(t => {
+        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+        return dStr && dStr >= filterConfig.weekStart && dStr <= filterConfig.weekEnd;
+      });
+    }
+
+    // 2. Aggregate P&L across 7 fixed weekdays: Sunday (0) to Saturday (6)
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    const buckets = [0, 1, 2, 3, 4, 5, 6].map(i => ({
+      dayIndex: i,
+      dayName: dayNames[i],
+      shortName: dayShortNames[i],
+      pnl: 0,
+      trades: 0,
+      wins: 0,
+      losses: 0,
+      breakEven: 0
+    }));
+
+    scopedTrades.forEach(trade => {
+      const dateStr = (trade.closeTime || trade.openTime || '').slice(0, 10);
+      if (!dateStr || dateStr.length < 10) return;
+      const parts = dateStr.split('-').map(Number);
+      if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) return;
+
+      const d = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+      const dayOfWeek = d.getUTCDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+      const pnl = Number(trade.profit) || 0;
+
+      buckets[dayOfWeek].pnl += pnl;
+      buckets[dayOfWeek].trades += 1;
+      if (pnl > 0) buckets[dayOfWeek].wins += 1;
+      else if (pnl < 0) buckets[dayOfWeek].losses += 1;
+      else buckets[dayOfWeek].breakEven += 1;
+    });
+
+    const totalTradesInScope = buckets.reduce((acc, b) => acc + b.trades, 0);
+    if (totalTradesInScope === 0 && filterConfig.mode !== 'all') {
+      if (emptyEl) emptyEl.style.display = 'flex';
+      if (canvasWrap) canvasWrap.style.display = 'none';
+      return;
+    }
+
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (canvasWrap) canvasWrap.style.display = 'block';
+
+    const values = buckets.map(b => Math.round(b.pnl * 100) / 100);
+    const barColors = values.map(v => v > 0 ? 'rgba(16, 185, 129, 0.85)' : (v < 0 ? 'rgba(244, 63, 94, 0.85)' : 'rgba(100, 116, 139, 0.35)'));
+    const borderColors = values.map(v => v > 0 ? '#10b981' : (v < 0 ? '#f43f5e' : '#64748b'));
+    const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+
+    this.instances.weeklyPerformance = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: dayShortNames,
+        datasets: [{
+          label: `Net P&L (${sym})`,
+          data: values,
+          backgroundColor: barColors,
+          borderColor: borderColors,
+          borderWidth: 1,
+          borderRadius: 6,
+          maxBarThickness: 48
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#181d2c',
+            titleColor: '#94a3b8',
+            bodyColor: '#ffffff',
+            borderColor: '#262e45',
+            borderWidth: 1,
+            padding: 12,
+            callbacks: {
+              title: (items) => {
+                const idx = items[0].dataIndex;
+                return buckets[idx].dayName;
+              },
+              label: (item) => {
+                const idx = item.dataIndex;
+                const b = buckets[idx];
+                const val = item.raw;
+                const sign = val > 0 ? '+' : (val < 0 ? '-' : '');
+                const formattedPnl = `${sign}${sym}${Math.abs(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                const lines = [
+                  `Net P&L: ${formattedPnl}`,
+                  `Trades: ${b.trades}`
+                ];
+                if (b.trades > 0) {
+                  lines.push(`Wins: ${b.wins}`);
+                  lines.push(`Losses: ${b.losses}`);
+                  if (b.breakEven > 0) {
+                    lines.push(`Break Even: ${b.breakEven}`);
+                  }
+                }
+                return lines;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(38, 46, 69, 0.3)', drawBorder: false },
+            ticks: { color: '#94a3b8', font: { size: 12, weight: '600' } }
+          },
+          y: {
+            grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
+            ticks: {
+              color: '#64748b',
+              font: { size: 11 },
+              callback: (val) => {
+                const isNeg = val < 0;
+                return `${isNeg ? '-' : ''}${sym}${Math.abs(val)}`;
+              }
+            }
+          }
+        }
+      }
+    });
   },
 
   /**

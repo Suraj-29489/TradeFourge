@@ -27,6 +27,15 @@ const App = {
     pageSize: 15
   },
 
+  // Weekly Performance Chart state
+  weeklyPerfState: {
+    mode: 'all', // 'all', 'month', 'week'
+    selectedMonth: null, // 'YYYY-MM'
+    selectedWeek: null, // 'YYYY-MM-DD_YYYY-MM-DD'
+    weekStart: null,
+    weekEnd: null
+  },
+
   /**
    * Application Initialization
    */
@@ -57,6 +66,7 @@ const App = {
     this.updateCustomDateBounds();
     this.updateKPICards();
     ChartManager.updateDashboardCharts(this.currentMetrics);
+    this.renderWeeklyPerformance();
     CalendarManager.init(this.currentMetrics);
     this.renderRecentTradesTable();
     this.renderProfitSource();
@@ -1376,6 +1386,7 @@ const App = {
     if (typeof ChartManager !== 'undefined' && this.currentMetrics) {
       ChartManager.updateDashboardCharts(this.currentMetrics);
       ChartManager.updateAnalyticsCharts(this.currentMetrics);
+      this.renderWeeklyPerformance();
     }
     if (typeof CalendarManager !== 'undefined') {
       CalendarManager.update(this.currentMetrics);
@@ -1750,6 +1761,9 @@ const App = {
         ChartManager.renderMainPnLChart(this.currentMetrics);
       });
     }
+
+    // Weekly Performance card controls initialization
+    this.initWeeklyPerformance();
 
     // Starting Capital triggers & actions (Inline card input + Modal)
     const btnEditCap = document.getElementById('btnEditCapital');
@@ -2652,6 +2666,300 @@ const App = {
     if (installModal) {
       installModal.addEventListener('click', (e) => {
         if (e.target === installModal) closeInstallModal();
+      });
+    }
+  },
+
+  /**
+   * Initialize Weekly Performance Filter Dropdowns and Events
+   */
+  initWeeklyPerformance() {
+    const modeBtn = document.getElementById('weeklyPerfModeBtn');
+    const modeMenu = document.getElementById('weeklyPerfModeMenu');
+    const monthBtn = document.getElementById('weeklyPerfMonthBtn');
+    const monthMenu = document.getElementById('weeklyPerfMonthMenu');
+    const weekBtn = document.getElementById('weeklyPerfWeekBtn');
+    const weekMenu = document.getElementById('weeklyPerfWeekMenu');
+
+    const closeAllWeeklyMenus = () => {
+      if (modeMenu) modeMenu.classList.remove('active');
+      if (monthMenu) monthMenu.classList.remove('active');
+      if (weekMenu) weekMenu.classList.remove('active');
+      if (modeBtn) modeBtn.setAttribute('aria-expanded', 'false');
+      if (monthBtn) monthBtn.setAttribute('aria-expanded', 'false');
+      if (weekBtn) weekBtn.setAttribute('aria-expanded', 'false');
+    };
+
+    if (modeBtn && modeMenu) {
+      modeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = modeMenu.classList.contains('active');
+        closeAllWeeklyMenus();
+        if (!isOpen) {
+          modeMenu.classList.add('active');
+          modeBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      modeMenu.querySelectorAll('.weekly-perf-menu-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const mode = item.getAttribute('data-mode') || 'all';
+          this.weeklyPerfState.mode = mode;
+          closeAllWeeklyMenus();
+          this.renderWeeklyPerformance();
+        });
+      });
+    }
+
+    if (monthBtn && monthMenu) {
+      monthBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = monthMenu.classList.contains('active');
+        closeAllWeeklyMenus();
+        if (!isOpen) {
+          monthMenu.classList.add('active');
+          monthBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    }
+
+    if (weekBtn && weekMenu) {
+      weekBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = weekMenu.classList.contains('active');
+        closeAllWeeklyMenus();
+        if (!isOpen) {
+          weekMenu.classList.add('active');
+          weekBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    }
+
+    // Close menus on outside click
+    document.addEventListener('click', () => {
+      closeAllWeeklyMenus();
+    });
+  },
+
+  /**
+   * Extract unique months from trades and compute Sunday-Saturday calendar weeks
+   */
+  getWeeklyPerfOptions(trades) {
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const monthShortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    const monthMap = {};
+    (trades || []).forEach(t => {
+      const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+      if (dStr && dStr.length >= 7) {
+        const monthKey = dStr.slice(0, 7); // 'YYYY-MM'
+        if (!monthMap[monthKey]) {
+          const parts = monthKey.split('-').map(Number);
+          const y = parts[0];
+          const m = parts[1];
+          monthMap[monthKey] = {
+            key: monthKey,
+            year: y,
+            month: m,
+            label: `${monthNames[m - 1]} ${y}`,
+            tradesCount: 0
+          };
+        }
+        monthMap[monthKey].tradesCount++;
+      }
+    });
+
+    const months = Object.values(monthMap).sort((a, b) => b.key.localeCompare(a.key));
+
+    return { months, monthNames, monthShortNames };
+  },
+
+  /**
+   * Generate Sunday -> Saturday calendar weeks for a specific month with trade data
+   */
+  getWeeksForMonth(year, month, tradesInMonth) {
+    const monthShortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const pad = (n) => String(n).padStart(2, '0');
+    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const weeks = [];
+    let currentDay = 1;
+    let weekNum = 1;
+
+    while (currentDay <= daysInMonth) {
+      const d = new Date(Date.UTC(year, month - 1, currentDay));
+      const dayOfWeek = d.getUTCDay(); // 0=Sunday, 6=Saturday
+      const daysUntilSat = 6 - dayOfWeek;
+      const endDay = Math.min(currentDay + daysUntilSat, daysInMonth);
+
+      const startStr = `${year}-${pad(month)}-${pad(currentDay)}`;
+      const endStr = `${year}-${pad(month)}-${pad(endDay)}`;
+      const mStr = monthShortNames[month - 1];
+
+      // Check if this week contains any trades
+      const hasTrades = (tradesInMonth || []).some(t => {
+        const td = (t.closeTime || t.openTime || '').slice(0, 10);
+        return td && td >= startStr && td <= endStr;
+      });
+
+      if (hasTrades || (tradesInMonth || []).length === 0) {
+        weeks.push({
+          weekNum,
+          weekKey: `${startStr}_${endStr}`,
+          startStr,
+          endStr,
+          label: `Week ${weekNum} (${mStr} ${pad(currentDay)} - ${mStr} ${pad(endDay)})`
+        });
+      }
+
+      weekNum++;
+      currentDay = endDay + 1;
+    }
+
+    return weeks;
+  },
+
+  /**
+   * Render and update the Weekly Performance Filter UI and Chart
+   */
+  renderWeeklyPerformance() {
+    const trades = this.filteredTrades && this.filteredTrades.length > 0 ? this.filteredTrades : this.trades;
+    const { months } = this.getWeeklyPerfOptions(trades);
+
+    const modeBtn = document.getElementById('weeklyPerfModeBtn');
+    const modeLabel = document.getElementById('weeklyPerfModeLabel');
+    const modeMenu = document.getElementById('weeklyPerfModeMenu');
+    const monthWrapper = document.getElementById('weeklyPerfMonthWrapper');
+    const monthBtn = document.getElementById('weeklyPerfMonthBtn');
+    const monthLabel = document.getElementById('weeklyPerfMonthLabel');
+    const monthMenu = document.getElementById('weeklyPerfMonthMenu');
+    const weekWrapper = document.getElementById('weeklyPerfWeekWrapper');
+    const weekBtn = document.getElementById('weeklyPerfWeekBtn');
+    const weekLabel = document.getElementById('weeklyPerfWeekLabel');
+    const weekMenu = document.getElementById('weeklyPerfWeekMenu');
+    const subtitleEl = document.getElementById('weeklyPerfSubtitle');
+
+    const mode = this.weeklyPerfState.mode || 'all';
+
+    // Update active state in mode dropdown
+    if (modeMenu) {
+      modeMenu.querySelectorAll('.weekly-perf-menu-item').forEach(item => {
+        const itemMode = item.getAttribute('data-mode');
+        item.classList.toggle('active', itemMode === mode);
+      });
+    }
+
+    // Set default month if not selected or no longer available
+    if (months.length > 0) {
+      if (!this.weeklyPerfState.selectedMonth || !months.some(m => m.key === this.weeklyPerfState.selectedMonth)) {
+        this.weeklyPerfState.selectedMonth = months[0].key;
+      }
+    } else {
+      this.weeklyPerfState.selectedMonth = null;
+    }
+
+    const currentMonthObj = months.find(m => m.key === this.weeklyPerfState.selectedMonth) || (months.length > 0 ? months[0] : null);
+
+    // Populate Month Menu
+    if (monthMenu) {
+      monthMenu.innerHTML = '';
+      months.forEach(m => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `weekly-perf-menu-item ${m.key === this.weeklyPerfState.selectedMonth ? 'active' : ''}`;
+        btn.innerText = m.label;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.weeklyPerfState.selectedMonth = m.key;
+          this.weeklyPerfState.selectedWeek = null; // reset week when month changes
+          if (monthMenu) monthMenu.classList.remove('active');
+          this.renderWeeklyPerformance();
+        });
+        monthMenu.appendChild(btn);
+      });
+    }
+
+    // Compute weeks for selected month
+    let weeks = [];
+    if (currentMonthObj) {
+      const tradesInMonth = (trades || []).filter(t => {
+        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+        return dStr && dStr.startsWith(currentMonthObj.key);
+      });
+      weeks = this.getWeeksForMonth(currentMonthObj.year, currentMonthObj.month, tradesInMonth);
+    }
+
+    // Set default week if not selected or no longer valid
+    if (weeks.length > 0) {
+      if (!this.weeklyPerfState.selectedWeek || !weeks.some(w => w.weekKey === this.weeklyPerfState.selectedWeek)) {
+        this.weeklyPerfState.selectedWeek = weeks[0].weekKey;
+        this.weeklyPerfState.weekStart = weeks[0].startStr;
+        this.weeklyPerfState.weekEnd = weeks[0].endStr;
+      }
+    } else {
+      this.weeklyPerfState.selectedWeek = null;
+      this.weeklyPerfState.weekStart = null;
+      this.weeklyPerfState.weekEnd = null;
+    }
+
+    const currentWeekObj = weeks.find(w => w.weekKey === this.weeklyPerfState.selectedWeek) || (weeks.length > 0 ? weeks[0] : null);
+    if (currentWeekObj) {
+      this.weeklyPerfState.weekStart = currentWeekObj.startStr;
+      this.weeklyPerfState.weekEnd = currentWeekObj.endStr;
+    }
+
+    // Populate Week Menu
+    if (weekMenu) {
+      weekMenu.innerHTML = '';
+      weeks.forEach(w => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `weekly-perf-menu-item ${w.weekKey === this.weeklyPerfState.selectedWeek ? 'active' : ''}`;
+        btn.innerText = w.label;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.weeklyPerfState.selectedWeek = w.weekKey;
+          this.weeklyPerfState.weekStart = w.startStr;
+          this.weeklyPerfState.weekEnd = w.endStr;
+          if (weekMenu) weekMenu.classList.remove('active');
+          this.renderWeeklyPerformance();
+        });
+        weekMenu.appendChild(btn);
+      });
+    }
+
+    // Update visibility and labels based on active mode
+    if (mode === 'all') {
+      if (modeLabel) modeLabel.innerText = 'All Data';
+      if (monthWrapper) monthWrapper.style.display = 'none';
+      if (weekWrapper) weekWrapper.style.display = 'none';
+      if (subtitleEl) subtitleEl.innerText = 'Net P&L by day of the week (All Data)';
+    } else if (mode === 'month') {
+      if (modeLabel) modeLabel.innerText = 'By Month';
+      if (monthWrapper) monthWrapper.style.display = 'inline-block';
+      if (weekWrapper) weekWrapper.style.display = 'none';
+      if (monthLabel) monthLabel.innerText = currentMonthObj ? currentMonthObj.label : 'Select Month';
+      if (subtitleEl) subtitleEl.innerText = currentMonthObj ? `Net P&L by day (${currentMonthObj.label})` : 'Net P&L by day of the week';
+    } else if (mode === 'week') {
+      if (modeLabel) modeLabel.innerText = 'By Week';
+      if (monthWrapper) monthWrapper.style.display = 'inline-block';
+      if (weekWrapper) weekWrapper.style.display = 'inline-block';
+      if (monthLabel) monthLabel.innerText = currentMonthObj ? currentMonthObj.label : 'Select Month';
+      if (weekLabel) weekLabel.innerText = currentWeekObj ? currentWeekObj.label : 'Select Week';
+      if (subtitleEl) subtitleEl.innerText = currentWeekObj ? `Net P&L by day (${currentWeekObj.label})` : 'Net P&L by day of the week';
+    }
+
+    // Trigger Chart.js render
+    if (typeof ChartManager !== 'undefined') {
+      ChartManager.renderWeeklyPerformanceChart(trades, {
+        mode,
+        monthKey: currentMonthObj ? currentMonthObj.key : null,
+        weekKey: currentWeekObj ? currentWeekObj.weekKey : null,
+        weekStart: this.weeklyPerfState.weekStart,
+        weekEnd: this.weeklyPerfState.weekEnd
       });
     }
   }

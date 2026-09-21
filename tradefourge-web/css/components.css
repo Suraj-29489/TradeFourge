@@ -3,6 +3,175 @@
    ========================================================================== */
 
 /* ==========================================================================
+   Weekly Performance Component
+   ========================================================================== */
+.weekly-perf-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.weekly-perf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.weekly-perf-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.weekly-perf-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.weekly-perf-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.weekly-perf-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.weekly-perf-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.weekly-perf-filter-btn {
+  background: var(--bg-input, #181d2c);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.weekly-perf-filter-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary-light, #a78bfa);
+}
+
+.weekly-perf-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-card, #131722);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  min-width: 140px;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 100;
+  display: none;
+  padding: 4px;
+}
+
+.weekly-perf-menu.active {
+  display: block;
+}
+
+.weekly-perf-menu-item {
+  width: 100%;
+  display: block;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 7px 10px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.weekly-perf-menu-item:hover {
+  background: var(--bg-sidebar-hover, #1f2438);
+  color: var(--text-main);
+}
+
+.weekly-perf-menu-item.active {
+  background: var(--primary-light, rgba(99, 102, 241, 0.15));
+  color: var(--primary, #818cf8);
+  font-weight: 600;
+}
+
+.weekly-perf-body {
+  position: relative;
+  width: 100%;
+  min-height: 250px;
+}
+
+.weekly-perf-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 260px;
+}
+
+.weekly-perf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 240px;
+  gap: 10px;
+  color: var(--text-dim);
+}
+
+.weekly-perf-empty-icon {
+  font-size: 2.2rem;
+  opacity: 0.6;
+}
+
+.weekly-perf-empty-text {
+  font-size: 0.88rem;
+}
+
+@media (max-width: 768px) {
+  .weekly-perf-card {
+    padding: 14px 14px;
+  }
+  .weekly-perf-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .weekly-perf-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .weekly-perf-canvas-wrapper {
+    height: 220px;
+  }
+}
+
+/* ==========================================================================
    Monthly Calendar Component
    ========================================================================== */
 .calendar-card {
