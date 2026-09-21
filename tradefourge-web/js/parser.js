@@ -206,3 +206,13 @@ const TradeParser = {
     };
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.TradeParser = TradeParser;
+}
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = TradeParser;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.TradeParser = TradeParser;
+}

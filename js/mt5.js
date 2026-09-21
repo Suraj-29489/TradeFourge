@@ -270,6 +270,9 @@ const MT5Manager = {
     });
 
     App.trades.sort((a, b) => new Date(a.closeTime || a.openTime) - new Date(b.closeTime || b.openTime));
+    if (typeof StorageManager !== 'undefined') {
+      StorageManager.saveTrades(App.trades, 'MT5 Import');
+    }
     App.processTrades();
 
     if (typeof App.showToast === 'function') {

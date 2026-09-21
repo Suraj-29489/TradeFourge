@@ -49,9 +49,15 @@ const App = {
     if (typeof MT5Manager !== 'undefined') {
       MT5Manager.init();
     }
-    StorageManager.resetForNewSession();
     this.loadNotesAndRules();
-    this.trades = [];
+
+    // Restore persisted trade dataset from browser localStorage
+    const storedTrades = StorageManager.getTrades();
+    if (Array.isArray(storedTrades) && storedTrades.length > 0) {
+      this.trades = [...storedTrades];
+    } else {
+      this.trades = [];
+    }
     this.processTrades();
   },
 
@@ -1211,8 +1217,17 @@ const App = {
   updateStorageIndicator() {
     const el = document.getElementById('storageStatusText');
     if (el) {
-      el.innerText = this.trades.length ? `${this.trades.length} trades in this session` : 'No trades loaded';
+      el.innerText = this.trades.length ? `${this.trades.length} trade${this.trades.length === 1 ? '' : 's'} stored` : 'No trades loaded';
     }
+  },
+
+  /**
+   * Delete trade by ticket identifier and persist changes
+   */
+  deleteTrade(ticket) {
+    this.trades = StorageManager.deleteTrade(ticket);
+    this.processTrades();
+    this.showToast(`Trade #${ticket} deleted.`, 'info');
   },
 
   /**

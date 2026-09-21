@@ -1,6 +1,6 @@
 /**
- * TradeForge - in-memory data manager.
- * Imported data lives only in the current page session and is discarded on reload.
+ * TradeForge - Local Storage & Data Persistence Manager.
+ * Persists trade datasets, notes, and rules in browser localStorage.
  */
 
 const StorageManager = {
@@ -19,21 +19,82 @@ const StorageManager = {
     rules: null
   },
 
-  resetForNewSession() {
-    this.state = { trades: [], lastImport: null, notes: '', rules: null };
+  /**
+   * Helper to retrieve localStorage reference safely across different environments
+   */
+  _getStorage() {
     try {
-      Object.values(this.KEYS).forEach(key => localStorage.removeItem(key));
+      if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
+      if (typeof localStorage !== 'undefined') return localStorage;
+      if (typeof globalThis !== 'undefined' && globalThis.localStorage) return globalThis.localStorage;
     } catch (e) {
-      console.warn('Could not clear legacy browser data:', e);
+      // Storage access may throw in restricted iframe/browser contexts
+    }
+    return null;
+  },
+
+  /**
+   * Initialize StorageManager and hydrate state from browser localStorage
+   */
+  init() {
+    this.loadFromStorage();
+  },
+
+  loadFromStorage() {
+    const storage = this._getStorage();
+    if (!storage) return;
+
+    try {
+      const rawTrades = storage.getItem(this.KEYS.TRADES);
+      if (rawTrades) {
+        const parsed = JSON.parse(rawTrades);
+        if (Array.isArray(parsed)) {
+          // Validate trade items: ensure each is a non-null object with a ticket identifier
+          this.state.trades = parsed.filter(t => t && typeof t === 'object' && t.ticket !== undefined);
+        } else {
+          this.state.trades = [];
+        }
+      } else {
+        this.state.trades = [];
+      }
+
+      const rawImport = storage.getItem(this.KEYS.LAST_IMPORT);
+      if (rawImport) {
+        try {
+          this.state.lastImport = JSON.parse(rawImport);
+        } catch (e) {
+          this.state.lastImport = null;
+        }
+      } else {
+        this.state.lastImport = null;
+      }
+
+      const rawNotes = storage.getItem(this.KEYS.NOTES);
+      if (rawNotes !== null) {
+        this.state.notes = rawNotes;
+      }
+
+      const rawRules = storage.getItem(this.KEYS.RULES);
+      if (rawRules) {
+        try {
+          this.state.rules = JSON.parse(rawRules);
+        } catch (e) {
+          this.state.rules = null;
+        }
+      }
+    } catch (e) {
+      if (typeof console !== 'undefined' && console.warn) console.warn('Could not load data from localStorage:', e);
+      this.state.trades = [];
+      this.state.lastImport = null;
     }
   },
 
   hasTrades() {
-    return this.state.trades.length > 0;
+    return Array.isArray(this.state.trades) && this.state.trades.length > 0;
   },
 
   getTrades() {
-    return [...this.state.trades];
+    return Array.isArray(this.state.trades) ? [...this.state.trades] : [];
   },
 
   saveTrades(trades, importFileName = 'Trade Log CSV') {
@@ -43,7 +104,24 @@ const StorageManager = {
       fileName: importFileName,
       count: this.state.trades.length
     };
+    this._persistTrades();
     return true;
+  },
+
+  _persistTrades() {
+    const storage = this._getStorage();
+    if (!storage) return;
+
+    try {
+      storage.setItem(this.KEYS.TRADES, JSON.stringify(this.state.trades));
+      if (this.state.lastImport) {
+        storage.setItem(this.KEYS.LAST_IMPORT, JSON.stringify(this.state.lastImport));
+      } else {
+        storage.removeItem(this.KEYS.LAST_IMPORT);
+      }
+    } catch (e) {
+      if (typeof console !== 'undefined' && console.warn) console.warn('Could not persist trades to localStorage:', e);
+    }
   },
 
   mergeTrades(newTrades, importFileName = 'Trade Log CSV') {
@@ -74,6 +152,8 @@ const StorageManager = {
       count: this.state.trades.length
     };
 
+    this._persistTrades();
+
     return { trades: this.getTrades(), addedCount, total: this.state.trades.length };
   },
 
@@ -85,12 +165,22 @@ const StorageManager = {
 
   deleteTrade(ticket) {
     this.state.trades = this.state.trades.filter(t => String(t.ticket) !== String(ticket));
+    this.saveTrades(this.state.trades, this.state.lastImport && this.state.lastImport.fileName ? this.state.lastImport.fileName : 'Trade Log CSV');
     return this.getTrades();
   },
 
   clearAll() {
     this.state.trades = [];
     this.state.lastImport = null;
+    const storage = this._getStorage();
+    if (storage) {
+      try {
+        storage.removeItem(this.KEYS.TRADES);
+        storage.removeItem(this.KEYS.LAST_IMPORT);
+      } catch (e) {
+        if (typeof console !== 'undefined' && console.warn) console.warn('Could not remove trades from localStorage:', e);
+      }
+    }
   },
 
   getLastImportInfo() {
@@ -99,6 +189,18 @@ const StorageManager = {
 
   setLastImportInfo(info) {
     this.state.lastImport = info;
+    const storage = this._getStorage();
+    if (storage) {
+      try {
+        if (info) {
+          storage.setItem(this.KEYS.LAST_IMPORT, JSON.stringify(info));
+        } else {
+          storage.removeItem(this.KEYS.LAST_IMPORT);
+        }
+      } catch (e) {
+        if (typeof console !== 'undefined' && console.warn) console.warn('Could not persist last import info:', e);
+      }
+    }
   },
 
   getNotes() {
@@ -107,6 +209,14 @@ const StorageManager = {
 
   saveNotes(notes) {
     this.state.notes = notes || '';
+    const storage = this._getStorage();
+    if (storage) {
+      try {
+        storage.setItem(this.KEYS.NOTES, this.state.notes);
+      } catch (e) {
+        if (typeof console !== 'undefined' && console.warn) console.warn('Could not persist notes to localStorage:', e);
+      }
+    }
   },
 
   getRules() {
@@ -121,6 +231,18 @@ const StorageManager = {
 
   saveRules(rules) {
     this.state.rules = Array.isArray(rules) ? rules : null;
+    const storage = this._getStorage();
+    if (storage) {
+      try {
+        if (this.state.rules) {
+          storage.setItem(this.KEYS.RULES, JSON.stringify(this.state.rules));
+        } else {
+          storage.removeItem(this.KEYS.RULES);
+        }
+      } catch (e) {
+        if (typeof console !== 'undefined' && console.warn) console.warn('Could not persist rules to localStorage:', e);
+      }
+    }
   },
 
   getStartingCapital() {
@@ -135,6 +257,9 @@ const StorageManager = {
       : null;
   }
 };
+
+// Initialize from storage on script evaluation
+StorageManager.init();
 
 if (typeof window !== 'undefined') {
   window.StorageManager = StorageManager;
