@@ -49,8 +49,8 @@ const StorageManager = {
       if (rawTrades) {
         const parsed = JSON.parse(rawTrades);
         if (Array.isArray(parsed)) {
-          // Validate trade items: ensure each is a non-null object with a ticket identifier
-          this.state.trades = parsed.filter(t => t && typeof t === 'object' && t.ticket !== undefined);
+          // Validate trade items: ensure each is a non-null object
+          this.state.trades = parsed.filter(t => t && typeof t === 'object' && (t.ticket !== undefined || t.id !== undefined || t.symbol !== undefined));
         } else {
           this.state.trades = [];
         }
@@ -97,6 +97,30 @@ const StorageManager = {
     return Array.isArray(this.state.trades) ? [...this.state.trades] : [];
   },
 
+  /**
+   * Produce a deterministic fingerprint for any stored trade
+   * Exness: EXNESS_<ticket>_<closeTime/openTime>_<lots>_<profit>
+   * Zuperior: ZUPERIOR|<symbol>|<type>|<openTime>|<closeTime>|<lots>|<openPrice>|<closePrice>|<profit>
+   */
+  getTradeFingerprint(t) {
+    if (!t) return '';
+    if (t.broker === 'zuperior' || t.ticket === 'Not provided' || !t.ticket) {
+      if (typeof TradeParser !== 'undefined' && TradeParser.getZuperiorFingerprint) {
+        return TradeParser.getZuperiorFingerprint(t);
+      }
+      const sym = String(t.symbol || '').toUpperCase().trim();
+      const type = String(t.type || '').toLowerCase().trim();
+      const openTime = String(t.openTime || '').trim();
+      const closeTime = String(t.closeTime || '').trim();
+      const lots = Number(t.lots || 0).toFixed(4);
+      const openPrice = Number(t.openPrice || 0).toFixed(5);
+      const closePrice = Number(t.closePrice || 0).toFixed(5);
+      const profit = Number(t.profit || 0).toFixed(2);
+      return ['ZUPERIOR', sym, type, openTime, closeTime, lots, openPrice, closePrice, profit].join('|');
+    }
+    return `EXNESS_${t.ticket}_${t.closeTime || t.openTime || ''}_${t.lots}_${t.profit}`;
+  },
+
   saveTrades(trades, importFileName = 'Trade Log CSV') {
     this.state.trades = Array.isArray(trades) ? [...trades] : [];
     this.state.lastImport = {
@@ -129,12 +153,11 @@ const StorageManager = {
       return { trades: this.getTrades(), addedCount: 0, total: this.state.trades.length };
     }
 
-    const makeKey = (t) => `${t.ticket}_${t.closeTime || t.openTime || ''}_${t.lots}_${t.profit}`;
-    const seen = new Set(this.state.trades.map(makeKey));
+    const seen = new Set(this.state.trades.map(t => this.getTradeFingerprint(t)));
     let addedCount = 0;
 
     newTrades.forEach(t => {
-      const key = makeKey(t);
+      const key = this.getTradeFingerprint(t);
       if (!seen.has(key)) {
         seen.add(key);
         this.state.trades.push(t);
@@ -163,8 +186,12 @@ const StorageManager = {
     return this.getTrades();
   },
 
-  deleteTrade(ticket) {
-    this.state.trades = this.state.trades.filter(t => String(t.ticket) !== String(ticket));
+  deleteTrade(identifier) {
+    this.state.trades = this.state.trades.filter(t => {
+      if (String(t.ticket) === String(identifier)) return false;
+      if (t.id && String(t.id) === String(identifier)) return false;
+      return true;
+    });
     this.saveTrades(this.state.trades, this.state.lastImport && this.state.lastImport.fileName ? this.state.lastImport.fileName : 'Trade Log CSV');
     return this.getTrades();
   },

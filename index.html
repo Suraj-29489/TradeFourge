@@ -1307,6 +1307,52 @@
   </div>
 
   <!-- ==========================================================================
+       MODAL: Broker Selection Confirmation Modal
+       ========================================================================== -->
+  <div class="modal-overlay" id="brokerSelectModal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="display: flex; align-items: center; gap: 10px;">
+          <div class="brand-icon" style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <span>Select Broker</span>
+        </h3>
+        <button type="button" class="modal-close-btn" id="closeBrokerSelectModalBtn">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px 24px; gap: 16px;">
+        <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.5; margin: 0;">
+          Which broker format should be used for this CSV?
+        </p>
+        <div class="broker-select-options">
+          <label class="broker-select-card" id="brokerOptExnessCard">
+            <input type="radio" name="brokerSelection" value="exness" id="brokerOptExness" class="broker-select-radio">
+            <div class="broker-select-info">
+              <div class="broker-select-name">Exness</div>
+              <div class="broker-select-desc">Standard Exness CSV export (Ticket, Opening/Closing UTC, Lots, Profit)</div>
+            </div>
+          </label>
+          <label class="broker-select-card" id="brokerOptZuperiorCard">
+            <input type="radio" name="brokerSelection" value="zuperior" id="brokerOptZuperior" class="broker-select-radio">
+            <div class="broker-select-info">
+              <div class="broker-select-name">Zuperior</div>
+              <div class="broker-select-desc">Zuperior CSV format (Symbol, Type, Open/Close Time, Volume, Open/Close Price, Profit)</div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 24px;">
+        <button type="button" class="btn-secondary modal-cancel-btn" id="btnCancelBrokerSelect">Cancel</button>
+        <button type="button" class="btn-primary" id="btnConfirmBrokerSelect" style="padding: 9px 24px; font-weight: 700;">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
        MODAL: Interactive CSV Upload & Preview Modal
        ========================================================================== -->
   <div class="modal-overlay" id="csvPreviewModal">
@@ -1342,6 +1388,10 @@
             </div>
           </div>
           <span class="preview-badge-valid">✓ Valid CSV</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="preview-badge-broker" id="previewBrokerBadge">Exness</span>
+            <span class="preview-badge-valid">✓ Valid CSV</span>
+          </div>
         </div>
 
         <!-- Quick Summary Metrics Grid -->

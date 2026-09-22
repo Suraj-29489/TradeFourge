@@ -1986,6 +1986,41 @@ const App = {
       });
     }
 
+    // Broker Selection Confirmation Modal Actions
+    const brokerOptExnessCard = document.getElementById('brokerOptExnessCard');
+    const brokerOptZuperiorCard = document.getElementById('brokerOptZuperiorCard');
+    const brokerOptExnessRadio = document.getElementById('brokerOptExness');
+    const brokerOptZuperiorRadio = document.getElementById('brokerOptZuperior');
+    const btnConfirmBroker = document.getElementById('btnConfirmBrokerSelect');
+    const btnCancelBroker = document.getElementById('btnCancelBrokerSelect');
+    const closeBrokerBtn = document.getElementById('closeBrokerSelectModalBtn');
+
+    if (brokerOptExnessCard && brokerOptZuperiorCard) {
+      brokerOptExnessCard.addEventListener('click', () => {
+        if (brokerOptExnessRadio) brokerOptExnessRadio.checked = true;
+        brokerOptExnessCard.classList.add('selected');
+        brokerOptZuperiorCard.classList.remove('selected');
+      });
+
+      brokerOptZuperiorCard.addEventListener('click', () => {
+        if (brokerOptZuperiorRadio) brokerOptZuperiorRadio.checked = true;
+        brokerOptZuperiorCard.classList.add('selected');
+        brokerOptExnessCard.classList.remove('selected');
+      });
+    }
+
+    if (btnConfirmBroker) {
+      btnConfirmBroker.addEventListener('click', () => this.confirmBrokerSelection());
+    }
+
+    if (btnCancelBroker) {
+      btnCancelBroker.addEventListener('click', () => this.closeBrokerSelectModal());
+    }
+
+    if (closeBrokerBtn) {
+      closeBrokerBtn.addEventListener('click', () => this.closeBrokerSelectModal());
+    }
+
     // Initialize full-window drag & drop overlay
     this.initWindowDragAndDrop();
 
@@ -2326,6 +2361,7 @@ const App = {
 
   /**
    * Parse CSV File and open interactive preview modal
+   * Parse CSV File and open interactive preview or broker selection modal
    */
   previewCSVFile(file) {
     if (!file) return;
@@ -2335,10 +2371,17 @@ const App = {
       try {
         const text = e.target.result;
         const parsedTrades = TradeParser.parseCSV(text);
+        const detectedBroker = TradeParser.detectBroker(text);
 
         if (!parsedTrades || parsedTrades.length === 0) {
           throw new Error('No trade records found in CSV file.');
         }
+        // If detected as Exness, continue automatically without showing popup
+        if (detectedBroker === 'exness') {
+          const parsedTrades = TradeParser.parseCSV(text, 'exness');
+          if (!parsedTrades || parsedTrades.length === 0) {
+            throw new Error('No trade records found in CSV file.');
+          }
 
         // Store pending preview data
         this._pendingImport = {
@@ -2347,8 +2390,28 @@ const App = {
           fileSize: file.size || text.length,
           parsedTrades
         };
+          this._pendingImport = {
+            file,
+            fileName: file.name,
+            fileSize: file.size || text.length,
+            broker: 'exness',
+            parsedTrades
+          };
 
         this.showCSVPreviewModal(this._pendingImport);
+          this.showCSVPreviewModal(this._pendingImport);
+        } else {
+          // If Zuperior or unknown/ambiguous format: show broker selection popup
+          this._pendingBrokerSelection = {
+            file,
+            fileName: file.name,
+            fileSize: file.size || text.length,
+            text,
+            detectedBroker
+          };
+
+          this.openBrokerSelectModal(detectedBroker);
+        }
       } catch (err) {
         console.error(err);
         this.showToast(err.message || 'Failed to parse CSV file', 'error');
@@ -2363,6 +2426,78 @@ const App = {
   },
 
   /**
+   * Open Broker Selection Modal
+   */
+  openBrokerSelectModal(detectedBroker) {
+    const modal = document.getElementById('brokerSelectModal');
+    if (!modal) return;
+
+    // Close upload modal if open
+    const uploadModal = document.getElementById('uploadModal');
+    if (uploadModal) uploadModal.classList.remove('active');
+
+    const optExness = document.getElementById('brokerOptExness');
+    const optZuperior = document.getElementById('brokerOptZuperior');
+    const cardExness = document.getElementById('brokerOptExnessCard');
+    const cardZuperior = document.getElementById('brokerOptZuperiorCard');
+
+    if (detectedBroker === 'zuperior') {
+      if (optZuperior) optZuperior.checked = true;
+      if (cardZuperior) cardZuperior.classList.add('selected');
+      if (cardExness) cardExness.classList.remove('selected');
+    } else {
+      if (optExness) optExness.checked = true;
+      if (cardExness) cardExness.classList.add('selected');
+      if (cardZuperior) cardZuperior.classList.remove('selected');
+    }
+
+    modal.classList.add('active');
+  },
+
+  /**
+   * Confirm Broker Selection and parse CSV
+   */
+  confirmBrokerSelection() {
+    if (!this._pendingBrokerSelection || !this._pendingBrokerSelection.text) {
+      this.closeBrokerSelectModal();
+      return;
+    }
+
+    const { file, fileName, fileSize, text } = this._pendingBrokerSelection;
+    const selectedBroker = document.querySelector('input[name="brokerSelection"]:checked')?.value || 'exness';
+
+    try {
+      const parsedTrades = TradeParser.parseCSV(text, selectedBroker);
+      if (!parsedTrades || parsedTrades.length === 0) {
+        throw new Error(`No valid trades found using ${selectedBroker.toUpperCase()} broker format.`);
+      }
+
+      this._pendingImport = {
+        file,
+        fileName,
+        fileSize,
+        broker: selectedBroker,
+        parsedTrades
+      };
+
+      this.closeBrokerSelectModal();
+      this.showCSVPreviewModal(this._pendingImport);
+    } catch (err) {
+      console.error(err);
+      this.showToast(err.message || `Failed to parse file with ${selectedBroker.toUpperCase()} format.`, 'error');
+    }
+  },
+
+  /**
+   * Close Broker Selection Modal
+   */
+  closeBrokerSelectModal() {
+    const modal = document.getElementById('brokerSelectModal');
+    if (modal) modal.classList.remove('active');
+    this._pendingBrokerSelection = null;
+  },
+
+  /**
    * Render preview data into the CSV Preview Modal
    */
   showCSVPreviewModal(pending) {
@@ -2371,6 +2506,7 @@ const App = {
 
     const nameEl = document.getElementById('previewFileName');
     const sizeEl = document.getElementById('previewFileSize');
+    const brokerBadgeEl = document.getElementById('previewBrokerBadge');
     const tradesEl = document.getElementById('previewMetricTrades');
     const tradesSubEl = document.getElementById('previewMetricTradesSub');
     const pnlEl = document.getElementById('previewMetricPnL');
@@ -2391,6 +2527,12 @@ const App = {
     const sizeKb = (pending.fileSize / 1024).toFixed(1);
     if (nameEl) nameEl.innerText = pending.fileName;
     if (sizeEl) sizeEl.innerText = `${sizeKb} KB • ${pending.parsedTrades.length} records`;
+
+    // Set broker badge
+    if (brokerBadgeEl) {
+      const brokerLabel = pending.broker === 'zuperior' ? 'Zuperior' : 'Exness';
+      brokerBadgeEl.innerText = brokerLabel;
+    }
 
     // Compute quick metrics on preview trades
     const metrics = TradeAnalytics.calculateMetrics(pending.parsedTrades);
@@ -2421,11 +2563,10 @@ const App = {
     // Merge options description
     const existingCount = this.trades.length;
     if (existingCount > 0) {
-      const makeKey = (t) => `${t.ticket}_${t.closeTime || t.openTime || ''}_${t.lots}_${t.profit}`;
-      const seen = new Set(this.trades.map(makeKey));
+      const seen = new Set(this.trades.map(t => StorageManager.getTradeFingerprint(t)));
       let newCount = 0;
       pending.parsedTrades.forEach(t => {
-        if (!seen.has(makeKey(t))) newCount++;
+        if (!seen.has(StorageManager.getTradeFingerprint(t))) newCount++;
       });
 
       if (mergeDesc) {

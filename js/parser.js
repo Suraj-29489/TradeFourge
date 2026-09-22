@@ -1,14 +1,76 @@
 /**
  * TradeForge CSV parser.
  * One unique ticket is treated as one trade.
+ * Supports Exness and Zuperior broker CSV formats.
  */
 
 const TradeParser = {
-  parseCSV(csvText) {
+  /**
+   * Inspect CSV headers to detect broker format
+   * @param {string} csvText
+   * @returns {'exness' | 'zuperior' | 'unknown'}
+   */
+  detectBroker(csvText) {
+    if (!csvText || typeof csvText !== 'string') return 'unknown';
+    const rows = this.parseCSVRecords(csvText);
+    if (!rows || rows.length < 1) return 'unknown';
+
+    const cleanHeaders = rows[0].map(h => String(h || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+
+    // Check for Exness signature: contains ticket identifier
+    const hasTicket = cleanHeaders.some(h => ['ticket', 'ticketnumber', 'ticketid', 'orderid', 'positionid', 'tradeid'].includes(h));
+
+    // Check for Zuperior characteristic headers:
+    // Symbol, Type, Open Time, Close Time, Volume, Open Price, Close Price, Profit
+    const hasZupSymbol = cleanHeaders.includes('symbol');
+    const hasZupType = cleanHeaders.includes('type');
+    const hasZupOpenTime = cleanHeaders.some(h => ['opentime', 'openingtime', 'timeopen', 'opened', 'entrytime'].includes(h));
+    const hasZupCloseTime = cleanHeaders.some(h => ['closetime', 'closingtime', 'timeclose', 'closed', 'exittime'].includes(h));
+    const hasZupVolume = cleanHeaders.some(h => ['volume', 'vol', 'lots', 'lotsize', 'quantity', 'qty'].includes(h));
+    const hasZupProfit = cleanHeaders.some(h => ['profit', 'pnl', 'netprofit', 'realizedpnl', 'gainloss', 'pandl'].includes(h));
+
+    if (!hasTicket && hasZupSymbol && hasZupType && hasZupOpenTime && hasZupCloseTime && hasZupVolume && hasZupProfit) {
+      return 'zuperior';
+    }
+
+    if (hasTicket) {
+      return 'exness';
+    }
+
+    return 'unknown';
+  },
+
+  /**
+   * Main CSV parse entrypoint
+   * @param {string} csvText 
+   * @param {'exness' | 'zuperior' | null} brokerPreference 
+   * @returns {Array<Object>}
+   */
+  parseCSV(csvText, brokerPreference = null) {
     if (!csvText || typeof csvText !== 'string') {
       throw new Error('Invalid CSV data provided.');
     }
 
+    const detected = brokerPreference || this.detectBroker(csvText);
+
+    if (detected === 'zuperior') {
+      return this.parseZuperior(csvText);
+    } else if (detected === 'exness') {
+      return this.parseExness(csvText);
+    } else {
+      // Ambiguous/unknown: try Exness first, fallback to Zuperior if Exness fails
+      try {
+        return this.parseExness(csvText);
+      } catch (e) {
+        return this.parseZuperior(csvText);
+      }
+    }
+  },
+
+  /**
+   * Dedicated Exness CSV Parser
+   */
+  parseExness(csvText) {
     const rows = this.parseCSVRecords(csvText);
     if (rows.length < 2) {
       throw new Error('CSV file is empty or missing data rows.');
@@ -18,7 +80,7 @@ const TradeParser = {
     const requiredFields = ['ticket', 'type', 'lots', 'symbol', 'profit'];
     const missingFields = requiredFields.filter(field => headerMap[field] === undefined);
     if (missingFields.length) {
-      throw new Error(`CSV needs these columns: ${missingFields.join(', ')}.`);
+      throw new Error(`Exness CSV needs these columns: ${missingFields.join(', ')}.`);
     }
 
     const seenRecords = new Set();
@@ -28,8 +90,11 @@ const TradeParser = {
       const trade = this.normalizeTradeRow(values, headerMap, index + 1);
       if (!trade) return;
 
+      trade.broker = 'exness';
+
       // Full execution signature for true duplicate detection
       const recordKey = [
+        'EXNESS',
         trade.ticket,
         trade.openTime,
         trade.closeTime,
@@ -52,7 +117,7 @@ const TradeParser = {
     });
 
     if (!trades.length) {
-      throw new Error('No valid unique trades could be parsed from this CSV.');
+      throw new Error('No valid unique trades could be parsed from this Exness CSV.');
     }
 
     // Recognize partial-close patterns
@@ -73,6 +138,144 @@ const TradeParser = {
 
     trades.sort((a, b) => new Date(a.closeTime || a.openTime) - new Date(b.closeTime || b.openTime));
     return trades;
+  },
+
+  /**
+   * Dedicated Zuperior CSV Parser
+   */
+  parseZuperior(csvText) {
+    const rows = this.parseCSVRecords(csvText);
+    if (rows.length < 2) {
+      throw new Error('CSV file is empty or missing data rows.');
+    }
+
+    const headerMap = this.mapZuperiorHeaders(rows[0]);
+    const requiredFields = ['symbol', 'type', 'openTime', 'closeTime', 'volume', 'profit'];
+    const missingFields = requiredFields.filter(field => headerMap[field] === undefined);
+    if (missingFields.length) {
+      throw new Error(`Zuperior CSV needs these columns: ${missingFields.join(', ')}.`);
+    }
+
+    const seenFingerprints = new Set();
+    const trades = [];
+
+    rows.slice(1).forEach((values, index) => {
+      const trade = this.normalizeZuperiorRow(values, headerMap, index + 1);
+      if (!trade) return;
+
+      const fingerprint = this.getZuperiorFingerprint(trade);
+      if (seenFingerprints.has(fingerprint)) return;
+      seenFingerprints.add(fingerprint);
+
+      trade.broker = 'zuperior';
+      trade.id = `ZUP_${index + 1}_${trade.closeTime || trade.openTime}_${Math.abs(Math.round(trade.profit * 100))}`;
+
+      trades.push(trade);
+    });
+
+    if (!trades.length) {
+      throw new Error('No valid unique trades could be parsed from this Zuperior CSV.');
+    }
+
+    trades.sort((a, b) => new Date(a.closeTime || a.openTime) - new Date(b.closeTime || b.openTime));
+    return trades;
+  },
+
+  /**
+   * Generate a deterministic fingerprint for a Zuperior trade
+   */
+  getZuperiorFingerprint(trade) {
+    if (!trade) return '';
+    const sym = String(trade.symbol || '').toUpperCase().trim();
+    const type = String(trade.type || '').toLowerCase().trim();
+    const openTime = String(trade.openTime || '').trim();
+    const closeTime = String(trade.closeTime || '').trim();
+    const lots = Number(trade.lots || 0).toFixed(4);
+    const openPrice = Number(trade.openPrice || 0).toFixed(5);
+    const closePrice = Number(trade.closePrice || 0).toFixed(5);
+    const profit = Number(trade.profit || 0).toFixed(2);
+
+    return ['ZUPERIOR', sym, type, openTime, closeTime, lots, openPrice, closePrice, profit].join('|');
+  },
+
+  mapZuperiorHeaders(headers) {
+    const map = {};
+    const cleanHeaders = headers.map(header => String(header || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+    const aliases = {
+      symbol: ['symbol', 'pair', 'instrument', 'ticker', 'market', 'asset'],
+      type: ['type', 'side', 'action', 'direction', 'buysell'],
+      openTime: ['opentime', 'openingtime', 'timeopen', 'opened', 'entrytime'],
+      closeTime: ['closetime', 'closingtime', 'timeclose', 'closed', 'exittime'],
+      volume: ['volume', 'vol', 'lots', 'lotsize', 'quantity', 'qty'],
+      openPrice: ['openprice', 'openingprice', 'entryprice', 'priceopen'],
+      closePrice: ['closeprice', 'closingprice', 'exitprice', 'priceclose'],
+      profit: ['profit', 'pnl', 'netprofit', 'realizedpnl', 'gainloss', 'pandl']
+    };
+
+    Object.entries(aliases).forEach(([field, names]) => {
+      const index = cleanHeaders.findIndex(header => names.includes(header));
+      if (index !== -1) map[field] = index;
+    });
+    return map;
+  },
+
+  normalizeZuperiorRow(values, headerMap, rowIndex) {
+    const get = field => {
+      const index = headerMap[field];
+      return index === undefined ? '' : (values[index] ?? '').trim();
+    };
+
+    const rawSymbol = get('symbol');
+    const rawType = get('type').toLowerCase();
+    const rawOpenTime = get('openTime');
+    const rawCloseTime = get('closeTime');
+    const volume = this.parseNumber(get('volume'));
+    const profit = this.parseNumber(get('profit'));
+
+    if (!rawSymbol || !Number.isFinite(volume) || volume <= 0 || !Number.isFinite(profit)) {
+      return null;
+    }
+
+    const type = rawType.includes('sell') || rawType.includes('short')
+      ? 'sell'
+      : (rawType.includes('buy') || rawType.includes('long') ? 'buy' : null);
+    if (!type) return null;
+
+    const parseTime = (str) => {
+      if (!str) return new Date().toISOString();
+      const d = new Date(str);
+      return !isNaN(d.getTime()) ? d.toISOString() : str;
+    };
+
+    const openTime = parseTime(rawOpenTime);
+    const closeTime = rawCloseTime ? parseTime(rawCloseTime) : openTime;
+
+    const openPrice = this.parseNumber(get('openPrice'));
+    const closePrice = this.parseNumber(get('closePrice'));
+
+    return {
+      ticket: 'Not provided',
+      broker: 'zuperior',
+      openTime,
+      closeTime,
+      type,
+      lots: volume,
+      originalPositionSize: volume,
+      symbol: rawSymbol, // Preserve exact casing e.g. XAUUSDm
+      openPrice: Number.isFinite(openPrice) ? openPrice : 0,
+      closePrice: Number.isFinite(closePrice) ? closePrice : 0,
+      stopLoss: null,
+      takeProfit: null,
+      commission: 0,
+      swap: 0,
+      profit: Math.round(profit * 100) / 100,
+      closeReason: 'user',
+      isWin: profit > 0,
+      isLoss: profit < 0,
+      isBreakEven: profit === 0,
+      closeType: 'full',
+      isPartialClose: false
+    };
   },
 
   parseCSVRecords(csvText) {
