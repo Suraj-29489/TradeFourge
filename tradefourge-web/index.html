@@ -569,6 +569,98 @@
               </div>
             </div>
 
+            <!-- 5. Final / Bottommost Section: P&L Performance Card -->
+            <div class="pnl-perf-card" id="cardPnlPerformance">
+              <div class="pnl-perf-header">
+                <div class="pnl-perf-title-group">
+                  <span class="pnl-perf-title">P&L Performance</span>
+                  <span class="pnl-perf-subtitle" id="pnlPerfSubtitle">Realized profit & loss over selected period</span>
+                </div>
+                <div class="pnl-perf-controls">
+                  <!-- 1. Range Mode Selector (All Time / Monthly / Yearly / Custom) -->
+                  <div class="pnl-perf-dropdown-wrapper">
+                    <button class="pnl-perf-filter-btn" id="pnlPerfModeBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Filter P&L performance by period">
+                      <span id="pnlPerfModeLabel">All Time</span>
+                      <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="pnl-perf-menu" id="pnlPerfModeMenu">
+                      <button type="button" class="pnl-perf-menu-item active" data-mode="all">All Time</button>
+                      <button type="button" class="pnl-perf-menu-item" data-mode="monthly">Monthly</button>
+                      <button type="button" class="pnl-perf-menu-item" data-mode="yearly">Yearly</button>
+                      <button type="button" class="pnl-perf-menu-item" data-mode="custom">Custom</button>
+                    </div>
+                  </div>
+
+                  <!-- 2. Dynamic Month Selector (Active when mode is 'monthly') -->
+                  <div class="pnl-perf-dropdown-wrapper" id="pnlPerfMonthWrapper" style="display: none;">
+                    <button class="pnl-perf-filter-btn" id="pnlPerfMonthBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Select Month">
+                      <span id="pnlPerfMonthLabel">Month</span>
+                      <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="pnl-perf-menu" id="pnlPerfMonthMenu">
+                      <!-- Populated dynamically -->
+                    </div>
+                  </div>
+
+                  <!-- 3. Dynamic Year Selector (Active when mode is 'yearly') -->
+                  <div class="pnl-perf-dropdown-wrapper" id="pnlPerfYearWrapper" style="display: none;">
+                    <button class="pnl-perf-filter-btn" id="pnlPerfYearBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Select Year">
+                      <span id="pnlPerfYearLabel">Year</span>
+                      <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+                    <div class="pnl-perf-menu" id="pnlPerfYearMenu">
+                      <!-- Populated dynamically -->
+                    </div>
+                  </div>
+
+                  <!-- 4. Custom Date Range Inputs (Active when mode is 'custom') -->
+                  <div class="pnl-perf-custom-wrapper" id="pnlPerfCustomWrapper" style="display: none;">
+                    <div class="pnl-perf-date-field">
+                      <label for="pnlPerfStartDate" class="pnl-perf-date-label">Start</label>
+                      <input type="date" id="pnlPerfStartDate" class="pnl-perf-date-input" title="Start Date">
+                    </div>
+                    <span class="pnl-perf-date-sep">→</span>
+                    <div class="pnl-perf-date-field">
+                      <label for="pnlPerfEndDate" class="pnl-perf-date-label">End</label>
+                      <input type="date" id="pnlPerfEndDate" class="pnl-perf-date-input" title="End Date (Inclusive)">
+                    </div>
+                    <button type="button" class="pnl-perf-btn-apply" id="pnlPerfApplyBtn" title="Apply Custom Range">Apply</button>
+                    <button type="button" class="pnl-perf-btn-cancel" id="pnlPerfCancelBtn" title="Cancel Custom Range">Cancel</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Numerical KPI Values Row -->
+              <div class="pnl-perf-metrics-row">
+                <div class="pnl-perf-metric-box">
+                  <div class="pnl-perf-metric-title">Total Earned</div>
+                  <div class="pnl-perf-metric-value profit" id="pnlPerfTotalEarned">$0.00</div>
+                  <div class="pnl-perf-metric-sub" id="pnlPerfTotalEarnedSub">0 winning trades</div>
+                </div>
+                <div class="pnl-perf-metric-box">
+                  <div class="pnl-perf-metric-title">Total Lost</div>
+                  <div class="pnl-perf-metric-value loss" id="pnlPerfTotalLost">$0.00</div>
+                  <div class="pnl-perf-metric-sub" id="pnlPerfTotalLostSub">0 losing trades</div>
+                </div>
+                <div class="pnl-perf-metric-box">
+                  <div class="pnl-perf-metric-title">Net P&L</div>
+                  <div class="pnl-perf-metric-value" id="pnlPerfNetPnL">$0.00</div>
+                  <div class="pnl-perf-metric-sub" id="pnlPerfNetPnLSub">0 total trades</div>
+                </div>
+              </div>
+
+              <!-- Line Graph Section -->
+              <div class="pnl-perf-body">
+                <div class="pnl-perf-canvas-wrapper" id="pnlPerfCanvasWrap">
+                  <canvas id="pnlPerformanceCanvas"></canvas>
+                </div>
+                <div class="pnl-perf-empty" id="pnlPerfEmpty" style="display: none;">
+                  <div class="pnl-perf-empty-icon">📈</div>
+                  <div class="pnl-perf-empty-text">No trading data available for the selected period</div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </section>
 
@@ -1643,6 +1735,7 @@
         <div class="install-instructions" id="installInstructions">
           <!-- Populated dynamically based on device platform -->
         </div>
+      </div>
       <div class="modal-footer" style="display: flex; justify-content: flex-end;">
         <button class="btn-secondary modal-cancel-btn" id="installModalCancelBtn">Got it</button>
       </div>

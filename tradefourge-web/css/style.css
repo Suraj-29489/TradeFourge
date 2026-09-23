@@ -2015,25 +2015,32 @@ html, body {
   color: #e2e8f0;
 }
 
+/* Unified Buy / Sell Direction System */
 .type-badge {
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 4px;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
 }
 
-.type-badge.buy {
-  background: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+.type-badge.buy,
+.type-badge[data-type="buy"] {
+  background: rgba(16, 185, 129, 0.14);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
 }
 
-.type-badge.sell {
-  background: rgba(244, 63, 94, 0.15);
-  color: #fb7185;
-  border: 1px solid rgba(244, 63, 94, 0.3);
+.type-badge.sell,
+.type-badge[data-type="sell"] {
+  background: rgba(244, 63, 94, 0.14);
+  color: #f43f5e;
+  border: 1px solid rgba(244, 63, 94, 0.35);
 }
 
 .profit-text,

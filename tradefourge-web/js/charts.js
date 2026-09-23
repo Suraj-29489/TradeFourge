@@ -8,6 +8,7 @@ const ChartManager = {
     daysDonut: null,
     pnlMain: null,
     weeklyPerformance: null,
+    pnlPerformance: null,
     symbolBar: null,
     weekdayBar: null,
     durationDist: null,
@@ -614,6 +615,210 @@ const ChartManager = {
   },
 
   /**
+   * Render Dashboard Bottommost P&L Performance Line Chart (P&L Over Time)
+   */
+  renderPnLPerformanceChart(trades = [], filterConfig = { mode: 'all' }) {
+    const canvas = document.getElementById('pnlPerformanceCanvas');
+    const emptyEl = document.getElementById('pnlPerfEmpty');
+    const canvasWrap = document.getElementById('pnlPerfCanvasWrap');
+    if (!canvas) return;
+
+    if (this.instances.pnlPerformance) {
+      this.instances.pnlPerformance.destroy();
+      this.instances.pnlPerformance = null;
+    }
+    const existing = Chart.getChart(canvas);
+    if (existing) {
+      existing.destroy();
+    }
+
+    if (!trades || trades.length === 0) {
+      if (emptyEl) emptyEl.style.display = 'flex';
+      if (canvasWrap) canvasWrap.style.display = 'none';
+      return;
+    }
+
+    // 1. Filter trades based on filterConfig
+    let scopedTrades = trades;
+    if (filterConfig.mode === 'monthly' && filterConfig.selectedMonth) {
+      scopedTrades = trades.filter(t => {
+        const dStr = (t.closeTime || t.openTime || '').slice(0, 7);
+        return dStr === filterConfig.selectedMonth;
+      });
+    } else if (filterConfig.mode === 'yearly' && filterConfig.selectedYear) {
+      scopedTrades = trades.filter(t => {
+        const dStr = (t.closeTime || t.openTime || '').slice(0, 4);
+        return dStr === String(filterConfig.selectedYear);
+      });
+    } else if (filterConfig.mode === 'custom') {
+      const start = filterConfig.customStart;
+      const end = filterConfig.customEnd;
+      scopedTrades = trades.filter(t => {
+        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+        return dStr && (!start || dStr >= start) && (!end || dStr <= end);
+      });
+    }
+
+    if (scopedTrades.length === 0) {
+      if (emptyEl) emptyEl.style.display = 'flex';
+      if (canvasWrap) canvasWrap.style.display = 'none';
+      return;
+    }
+
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (canvasWrap) canvasWrap.style.display = 'block';
+
+    // 2. Sort chronologically
+    const sortedTrades = [...scopedTrades].sort((a, b) => {
+      const da = new Date(a.closeTime || a.openTime || 0).getTime();
+      const db = new Date(b.closeTime || b.openTime || 0).getTime();
+      return da - db;
+    });
+
+    // 3. Group by unique date (YYYY-MM-DD)
+    const dailyMap = {};
+    sortedTrades.forEach(t => {
+      const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+      if (!dStr || dStr.length < 10) return;
+      if (!dailyMap[dStr]) {
+        dailyMap[dStr] = { date: dStr, pnl: 0, count: 0, wins: 0, losses: 0 };
+      }
+      const pnl = Number(t.profit) || 0;
+      dailyMap[dStr].pnl += pnl;
+      dailyMap[dStr].count += 1;
+      if (pnl > 0) dailyMap[dStr].wins += 1;
+      else if (pnl < 0) dailyMap[dStr].losses += 1;
+    });
+
+    const dateKeys = Object.keys(dailyMap).sort();
+    if (dateKeys.length === 0) {
+      if (emptyEl) emptyEl.style.display = 'flex';
+      if (canvasWrap) canvasWrap.style.display = 'none';
+      return;
+    }
+
+    let runningCum = 0;
+    const timeseries = dateKeys.map(d => {
+      const dayData = dailyMap[d];
+      runningCum += dayData.pnl;
+      const parts = d.split('-');
+      const shortLabel = parts.length === 3 ? `${parts[1]}/${parts[2]}` : d;
+      return {
+        date: d,
+        shortLabel,
+        dailyPnL: Math.round(dayData.pnl * 100) / 100,
+        cumulativePnL: Math.round(runningCum * 100) / 100,
+        trades: dayData.count,
+        wins: dayData.wins,
+        losses: dayData.losses
+      };
+    });
+
+    const labels = timeseries.map(t => t.shortLabel);
+    const values = timeseries.map(t => t.cumulativePnL);
+    const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+    const finalVal = values[values.length - 1] || 0;
+    const isNetPositive = finalVal >= 0;
+    const lineColor = isNetPositive ? '#10b981' : '#f43f5e';
+    const pointColor = isNetPositive ? '#10b981' : '#f43f5e';
+
+    const ctx = canvas.getContext('2d');
+    let gradient = isNetPositive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)';
+    try {
+      gradient = ctx.createLinearGradient(0, 0, 0, 260);
+      if (isNetPositive) {
+        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
+        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.00)');
+      } else {
+        gradient.addColorStop(0, 'rgba(244, 63, 94, 0.25)');
+        gradient.addColorStop(1, 'rgba(244, 63, 94, 0.00)');
+      }
+    } catch (e) {
+      gradient = isNetPositive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)';
+    }
+
+    this.instances.pnlPerformance = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: `Cumulative Net P&L (${sym})`,
+          data: values,
+          borderColor: lineColor,
+          borderWidth: 2.5,
+          backgroundColor: gradient,
+          fill: true,
+          tension: 0.25,
+          pointRadius: values.length > 35 ? 0 : 3.5,
+          pointHoverRadius: 6,
+          pointBackgroundColor: pointColor,
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 1.5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#181d2c',
+            titleColor: '#94a3b8',
+            bodyColor: '#ffffff',
+            borderColor: '#262e45',
+            borderWidth: 1,
+            padding: 12,
+            callbacks: {
+              title: (items) => {
+                const idx = items[0].dataIndex;
+                const item = timeseries[idx];
+                return item ? `Date: ${item.date}` : items[0].label;
+              },
+              label: (item) => {
+                const idx = item.dataIndex;
+                const tData = timeseries[idx];
+                const cumVal = item.raw;
+                const cumPrefix = cumVal > 0 ? '+' : (cumVal < 0 ? '-' : '');
+                const formattedCum = `${cumPrefix}${sym}${Math.abs(cumVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                
+                const dailyVal = tData ? tData.dailyPnL : 0;
+                const dailyPrefix = dailyVal > 0 ? '+' : (dailyVal < 0 ? '-' : '');
+                const formattedDaily = `${dailyPrefix}${sym}${Math.abs(dailyVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                return [
+                  `Cumulative P&L: ${formattedCum}`,
+                  `Day P&L: ${formattedDaily} (${tData ? tData.trades : 0} trades)`
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(38, 46, 69, 0.35)', drawBorder: false },
+            ticks: { color: '#94a3b8', font: { size: 11 }, maxTicksLimit: 10 }
+          },
+          y: {
+            grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
+            ticks: {
+              color: '#64748b',
+              font: { size: 11 },
+              callback: (val) => {
+                const isNeg = val < 0;
+                return `${isNeg ? '-' : ''}${sym}${Math.abs(val)}`;
+              }
+            }
+          }
+        }
+      }
+    });
+  },
+
+  /**
    * Render Reports View Charts (Symbol breakdown & Day of Week)
    */
   renderReportsCharts(metrics) {
@@ -808,7 +1013,6 @@ const ChartManager = {
                   const d = dist[idx];
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   const sign = d.pnl >= 0 ? '+' : '-';
-                  return `Total: ${d.trades} trades | Win Rate: ${d.winRate}%\nNet P&L: ${sign}$${Math.abs(d.pnl).toFixed(2)}`;
                   return `Total: ${d.trades} trades | Win Rate: ${d.winRate}%\nNet P&L: ${sign}${sym}${Math.abs(d.pnl).toFixed(2)}`;
                 }
                 return '';

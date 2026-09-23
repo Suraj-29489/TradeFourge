@@ -36,6 +36,15 @@ const App = {
     weekEnd: null
   },
 
+  // P&L Performance Chart state (Bottommost Dashboard Section)
+  pnlPerfState: {
+    mode: 'all', // 'all', 'monthly', 'yearly', 'custom'
+    selectedMonth: null, // 'YYYY-MM'
+    selectedYear: null, // 'YYYY'
+    customStart: null, // 'YYYY-MM-DD'
+    customEnd: null // 'YYYY-MM-DD'
+  },
+
   /**
    * Application Initialization
    */
@@ -73,6 +82,7 @@ const App = {
     this.updateKPICards();
     ChartManager.updateDashboardCharts(this.currentMetrics);
     this.renderWeeklyPerformance();
+    this.renderPnLPerformance();
     CalendarManager.init(this.currentMetrics);
     this.renderRecentTradesTable();
     this.renderProfitSource();
@@ -366,7 +376,11 @@ const App = {
    * Update Top KPI Performance Cards (12 Cards)
    */
   updateKPICards() {
+    if (!this.currentMetrics) {
+      this.currentMetrics = TradeAnalytics.calculateMetrics(this.filteredTrades || []);
+    }
     const m = this.currentMetrics;
+    if (!m) return;
 
     // 1. Total P&L
     const totalPnlEl = document.getElementById('kpiTotalPnL');
@@ -903,7 +917,7 @@ const App = {
 
     // Populate Symbol dropdown options if needed
     const symbolSelect = document.getElementById('tradeLogSymbolFilter');
-    if (symbolSelect && symbolSelect.children.length <= 1) {
+    if (symbolSelect && symbolSelect.children && symbolSelect.children.length <= 1) {
       const distinctSymbols = [...new Set(this.trades.map(t => t.symbol))].sort();
       distinctSymbols.forEach(sym => {
         const opt = document.createElement('option');
@@ -962,6 +976,7 @@ const App = {
    * Render Reports View
    */
   renderReportsView() {
+    if (!this.currentMetrics) return;
     ChartManager.renderReportsCharts(this.currentMetrics);
 
     const container = document.getElementById('reportsSymbolList');
@@ -1128,8 +1143,6 @@ const App = {
               </div>
             </div>
           </td>
-          <td class="${pnlClass}" style="font-weight: 800; font-family: var(--font-mono); color: ${pnlColor};">${pnlSign}$${Math.abs(g.netPnL).toFixed(2)}</td>
-          <td class="${avgClass}" style="font-weight: 700; font-family: var(--font-mono); color: ${avgColor};">${avgSign}$${Math.abs(g.avgPnL).toFixed(2)}</td>
           <td class="${pnlClass}" style="font-weight: 800; font-family: var(--font-mono); color: ${pnlColor};">${pnlSign}${sym}${Math.abs(g.netPnL).toFixed(2)}</td>
           <td class="${avgClass}" style="font-weight: 700; font-family: var(--font-mono); color: ${avgColor};">${avgSign}${sym}${Math.abs(g.avgPnL).toFixed(2)}</td>
         </tr>
@@ -1303,42 +1316,66 @@ const App = {
     const body = document.getElementById('dayTradesModalBody');
     if (!modal || !body) return;
 
-    title.innerText = `Trades on ${dateKey} (${TradeAnalytics.formatCurrency(dayData.pnl)})`;
+    const pnlFormatted = TradeAnalytics.formatCurrency(dayData.pnl);
+    title.innerText = `Trades on ${dateKey} (${pnlFormatted})`;
 
-    const sym = TradeAnalytics.getCurrencySymbol();
-    let html = `
-      <table class="trade-table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Symbol</th>
-            <th>Type</th>
-            <th>Lots</th>
-            <th>P/L (${sym})</th>
-          </tr>
-        </thead>
-        <tbody>
+    const totalTrades = dayData.tradeList.length;
+    const profitableCount = dayData.tradeList.filter(t => t.profit > 0).length;
+    const losingCount = dayData.tradeList.filter(t => t.profit < 0).length;
+    const netPnLClass = dayData.pnl > 0 ? 'profit' : (dayData.pnl < 0 ? 'loss' : '');
+
+    let cardsHtml = dayData.tradeList.map((t, idx) => {
+      const timeOnly = (t.closeTime || t.openTime || '').slice(11, 16);
+      const tradePnlFormatted = TradeAnalytics.formatCurrency(t.profit);
+      const tradePnlClass = t.profit > 0 ? 'profit' : (t.profit < 0 ? 'loss' : 'neutral');
+      const safeTrade = JSON.stringify(t).replace(/"/g, '&quot;');
+      const typeLabel = (t.type || 'BUY').toUpperCase();
+      const typeClass = (t.type || 'buy').toLowerCase();
+
+      return `
+        <div class="day-trade-card" onclick="App.openTradeDetailModal(${safeTrade})">
+          <div class="day-trade-card-top">
+            <span class="day-trade-time">${timeOnly ? timeOnly + ' UTC' : 'Trade #' + (idx + 1)}</span>
+            <span class="type-badge ${typeClass}">${typeLabel}</span>
+          </div>
+          <div class="day-trade-card-mid">
+            <div class="day-trade-symbol">${t.symbol}</div>
+            <div class="day-trade-lots">${t.lots} Lot${t.lots === 1 ? '' : 's'}</div>
+          </div>
+          <div class="day-trade-card-bottom">
+            <span class="day-trade-pnl-label">Net P&L</span>
+            <span class="day-trade-pnl ${tradePnlClass}">${tradePnlFormatted}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    body.innerHTML = `
+      <div class="day-trades-summary-grid">
+        <div class="day-summary-card">
+          <div class="day-summary-label">Total Trades</div>
+          <div class="day-summary-value">${totalTrades}</div>
+        </div>
+        <div class="day-summary-card">
+          <div class="day-summary-label">Profitable</div>
+          <div class="day-summary-value profit">${profitableCount}</div>
+        </div>
+        <div class="day-summary-card">
+          <div class="day-summary-label">Losing</div>
+          <div class="day-summary-value loss">${losingCount}</div>
+        </div>
+        <div class="day-summary-card">
+          <div class="day-summary-label">Net P&L</div>
+          <div class="day-summary-value ${netPnLClass}">${pnlFormatted}</div>
+        </div>
+      </div>
+      <div class="day-trades-scroll-container">
+        <div class="day-trades-card-grid">
+          ${cardsHtml}
+        </div>
+      </div>
     `;
 
-    dayData.tradeList.forEach(t => {
-      const timeOnly = (t.closeTime || t.openTime || '').slice(11, 16);
-      const pnlFormatted = TradeAnalytics.formatCurrency(t.profit);
-      const pnlClass = t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text');
-      const pnlColor = t.profit > 0 ? 'var(--profit)' : (t.profit < 0 ? 'var(--loss)' : 'var(--neutral)');
-
-      html += `
-        <tr onclick="App.openTradeDetailModal(${JSON.stringify(t).replace(/"/g, '&quot;')})">
-          <td style="color: var(--text-dim);">${timeOnly}</td>
-          <td><span class="symbol-badge">${t.symbol}</span></td>
-          <td><span class="type-badge ${t.type}">${t.type.toUpperCase()}</span></td>
-          <td>${t.lots}</td>
-          <td class="${pnlClass}" style="color: ${pnlColor}; font-weight: 700; font-family: var(--font-mono);">${pnlFormatted}</td>
-        </tr>
-      `;
-    });
-
-    html += `</tbody></table>`;
-    body.innerHTML = html;
     modal.classList.add('active');
   },
 
@@ -1402,6 +1439,7 @@ const App = {
       ChartManager.updateDashboardCharts(this.currentMetrics);
       ChartManager.updateAnalyticsCharts(this.currentMetrics);
       this.renderWeeklyPerformance();
+      this.renderPnLPerformance();
     }
     if (typeof CalendarManager !== 'undefined') {
       CalendarManager.update(this.currentMetrics);
@@ -1780,6 +1818,9 @@ const App = {
     // Weekly Performance card controls initialization
     this.initWeeklyPerformance();
 
+    // P&L Performance card controls initialization (Bottommost section)
+    this.initPnLPerformance();
+
     // Starting Capital triggers & actions (Inline card input + Modal)
     const btnEditCap = document.getElementById('btnEditCapital');
     if (btnEditCap) {
@@ -1915,10 +1956,27 @@ const App = {
     if (uploadBtnTop) uploadBtnTop.addEventListener('click', openUploadModal);
 
     // Close Modals
+    // Universal Modal Close Handlers (Buttons, Backdrop Click, and ESC key)
     document.querySelectorAll('.modal-close-btn, .modal-cancel-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
       });
+    });
+
+    // Close modal when clicking outside modal card (on backdrop)
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('active');
+        }
+      });
+    });
+
+    // Close active modal on Escape key press
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+      }
     });
 
     // File Input & Dropzone handling (Opens preview popup)
@@ -3116,6 +3174,376 @@ const App = {
         weekKey: currentWeekObj ? currentWeekObj.weekKey : null,
         weekStart: this.weeklyPerfState.weekStart,
         weekEnd: this.weeklyPerfState.weekEnd
+      });
+    }
+  },
+
+  /**
+   * Initialize P&L Performance Dropdowns, Range Selectors, and Event Listeners
+   */
+  initPnLPerformance() {
+    const modeBtn = document.getElementById('pnlPerfModeBtn');
+    const modeMenu = document.getElementById('pnlPerfModeMenu');
+    const monthBtn = document.getElementById('pnlPerfMonthBtn');
+    const monthMenu = document.getElementById('pnlPerfMonthMenu');
+    const yearBtn = document.getElementById('pnlPerfYearBtn');
+    const yearMenu = document.getElementById('pnlPerfYearMenu');
+    const applyBtn = document.getElementById('pnlPerfApplyBtn');
+    const cancelBtn = document.getElementById('pnlPerfCancelBtn');
+    const startInput = document.getElementById('pnlPerfStartDate');
+    const endInput = document.getElementById('pnlPerfEndDate');
+
+    const closeAllPnLMenus = () => {
+      if (modeMenu) modeMenu.classList.remove('active');
+      if (monthMenu) monthMenu.classList.remove('active');
+      if (yearMenu) yearMenu.classList.remove('active');
+      if (modeBtn) modeBtn.setAttribute('aria-expanded', 'false');
+      if (monthBtn) monthBtn.setAttribute('aria-expanded', 'false');
+      if (yearBtn) yearBtn.setAttribute('aria-expanded', 'false');
+    };
+
+    if (modeBtn && modeMenu) {
+      modeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = modeMenu.classList.contains('active');
+        closeAllPnLMenus();
+        if (!isOpen) {
+          modeMenu.classList.add('active');
+          modeBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      modeMenu.querySelectorAll('.pnl-perf-menu-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const mode = item.getAttribute('data-mode') || 'all';
+          this.pnlPerfState.mode = mode;
+          closeAllPnLMenus();
+          this.renderPnLPerformance();
+        });
+      });
+    }
+
+    if (monthBtn && monthMenu) {
+      monthBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = monthMenu.classList.contains('active');
+        closeAllPnLMenus();
+        if (!isOpen) {
+          monthMenu.classList.add('active');
+          monthBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    }
+
+    if (yearBtn && yearMenu) {
+      yearBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = yearMenu.classList.contains('active');
+        closeAllPnLMenus();
+        if (!isOpen) {
+          yearMenu.classList.add('active');
+          yearBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    }
+
+    if (applyBtn) {
+      applyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const startVal = startInput ? startInput.value : '';
+        const endVal = endInput ? endInput.value : '';
+        if (startVal && endVal && startVal > endVal) {
+          this.showToast('Start date must be before or equal to End date', 'warning');
+          return;
+        }
+        this.pnlPerfState.customStart = startVal || null;
+        this.pnlPerfState.customEnd = endVal || null;
+        this.renderPnLPerformance();
+      });
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.pnlPerfState.mode = 'all';
+        this.renderPnLPerformance();
+      });
+    }
+
+    // Close menus on outside click
+    document.addEventListener('click', () => {
+      closeAllPnLMenus();
+    });
+  },
+
+  /**
+   * Extract dynamic months and years from trades for P&L Performance
+   */
+  getPnLPerfOptions(trades) {
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const monthMap = {};
+    const yearSet = new Set();
+    let minDate = null;
+    let maxDate = null;
+
+    (trades || []).forEach(t => {
+      const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+      if (dStr && dStr.length >= 10) {
+        if (!minDate || dStr < minDate) minDate = dStr;
+        if (!maxDate || dStr > maxDate) maxDate = dStr;
+
+        const yStr = dStr.slice(0, 4);
+        yearSet.add(yStr);
+
+        const mKey = dStr.slice(0, 7);
+        if (!monthMap[mKey]) {
+          const parts = mKey.split('-').map(Number);
+          const y = parts[0];
+          const m = parts[1];
+          monthMap[mKey] = {
+            key: mKey,
+            year: y,
+            month: m,
+            label: `${monthNames[m - 1]} ${y}`,
+            tradesCount: 0
+          };
+        }
+        monthMap[mKey].tradesCount++;
+      }
+    });
+
+    const months = Object.values(monthMap).sort((a, b) => b.key.localeCompare(a.key));
+    const years = Array.from(yearSet).sort((a, b) => b.localeCompare(a));
+
+    return { months, years, minDate, maxDate };
+  },
+
+  /**
+   * Render and update the P&L Performance Filter UI, Metrics, and Chart
+   */
+  renderPnLPerformance() {
+    const trades = this.filteredTrades && this.filteredTrades.length > 0 ? this.filteredTrades : this.trades;
+    const { months, years, minDate, maxDate } = this.getPnLPerfOptions(trades);
+
+    const modeBtn = document.getElementById('pnlPerfModeBtn');
+    const modeLabel = document.getElementById('pnlPerfModeLabel');
+    const modeMenu = document.getElementById('pnlPerfModeMenu');
+    const monthWrapper = document.getElementById('pnlPerfMonthWrapper');
+    const monthBtn = document.getElementById('pnlPerfMonthBtn');
+    const monthLabel = document.getElementById('pnlPerfMonthLabel');
+    const monthMenu = document.getElementById('pnlPerfMonthMenu');
+    const yearWrapper = document.getElementById('pnlPerfYearWrapper');
+    const yearBtn = document.getElementById('pnlPerfYearBtn');
+    const yearLabel = document.getElementById('pnlPerfYearLabel');
+    const yearMenu = document.getElementById('pnlPerfYearMenu');
+    const customWrapper = document.getElementById('pnlPerfCustomWrapper');
+    const startInput = document.getElementById('pnlPerfStartDate');
+    const endInput = document.getElementById('pnlPerfEndDate');
+    const subtitleEl = document.getElementById('pnlPerfSubtitle');
+
+    const totalEarnedEl = document.getElementById('pnlPerfTotalEarned');
+    const totalEarnedSubEl = document.getElementById('pnlPerfTotalEarnedSub');
+    const totalLostEl = document.getElementById('pnlPerfTotalLost');
+    const totalLostSubEl = document.getElementById('pnlPerfTotalLostSub');
+    const netPnLEl = document.getElementById('pnlPerfNetPnL');
+    const netPnLSubEl = document.getElementById('pnlPerfNetPnLSub');
+
+    const mode = this.pnlPerfState.mode || 'all';
+
+    // Update active state in mode dropdown
+    if (modeMenu) {
+      modeMenu.querySelectorAll('.pnl-perf-menu-item').forEach(item => {
+        const itemMode = item.getAttribute('data-mode');
+        item.classList.toggle('active', itemMode === mode);
+      });
+    }
+
+    // Dynamic month selection state
+    if (months.length > 0) {
+      if (!this.pnlPerfState.selectedMonth || !months.some(m => m.key === this.pnlPerfState.selectedMonth)) {
+        this.pnlPerfState.selectedMonth = months[0].key;
+      }
+    } else {
+      this.pnlPerfState.selectedMonth = null;
+    }
+    const currentMonthObj = months.find(m => m.key === this.pnlPerfState.selectedMonth) || (months.length > 0 ? months[0] : null);
+
+    // Populate Month Menu
+    if (monthMenu) {
+      monthMenu.innerHTML = '';
+      months.forEach(m => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `pnl-perf-menu-item ${m.key === this.pnlPerfState.selectedMonth ? 'active' : ''}`;
+        btn.innerText = m.label;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.pnlPerfState.selectedMonth = m.key;
+          if (monthMenu) monthMenu.classList.remove('active');
+          this.renderPnLPerformance();
+        });
+        monthMenu.appendChild(btn);
+      });
+    }
+
+    // Dynamic year selection state
+    if (years.length > 0) {
+      if (!this.pnlPerfState.selectedYear || !years.includes(String(this.pnlPerfState.selectedYear))) {
+        this.pnlPerfState.selectedYear = years[0];
+      }
+    } else {
+      this.pnlPerfState.selectedYear = null;
+    }
+
+    // Populate Year Menu
+    if (yearMenu) {
+      yearMenu.innerHTML = '';
+      years.forEach(y => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `pnl-perf-menu-item ${y === String(this.pnlPerfState.selectedYear) ? 'active' : ''}`;
+        btn.innerText = y;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.pnlPerfState.selectedYear = y;
+          if (yearMenu) yearMenu.classList.remove('active');
+          this.renderPnLPerformance();
+        });
+        yearMenu.appendChild(btn);
+      });
+    }
+
+    // Set default custom dates if not already set
+    if (minDate && maxDate) {
+      if (startInput && !startInput.value) startInput.value = minDate;
+      if (endInput && !endInput.value) endInput.value = maxDate;
+      if (!this.pnlPerfState.customStart && mode === 'custom') this.pnlPerfState.customStart = minDate;
+      if (!this.pnlPerfState.customEnd && mode === 'custom') this.pnlPerfState.customEnd = maxDate;
+    }
+
+    // Update UI controls visibility and labels
+    if (mode === 'all') {
+      if (modeLabel) modeLabel.innerText = 'All Time';
+      if (monthWrapper) monthWrapper.style.display = 'none';
+      if (yearWrapper) yearWrapper.style.display = 'none';
+      if (customWrapper) customWrapper.style.display = 'none';
+      if (subtitleEl) subtitleEl.innerText = 'Realized profit & loss over all loaded trade data';
+    } else if (mode === 'monthly') {
+      if (modeLabel) modeLabel.innerText = 'Monthly';
+      if (monthWrapper) monthWrapper.style.display = 'inline-block';
+      if (yearWrapper) yearWrapper.style.display = 'none';
+      if (customWrapper) customWrapper.style.display = 'none';
+      if (monthLabel) monthLabel.innerText = currentMonthObj ? currentMonthObj.label : 'Select Month';
+      if (subtitleEl) subtitleEl.innerText = currentMonthObj ? `Realized profit & loss for ${currentMonthObj.label}` : 'Realized profit & loss for selected month';
+    } else if (mode === 'yearly') {
+      if (modeLabel) modeLabel.innerText = 'Yearly';
+      if (monthWrapper) monthWrapper.style.display = 'none';
+      if (yearWrapper) yearWrapper.style.display = 'inline-block';
+      if (customWrapper) customWrapper.style.display = 'none';
+      if (yearLabel) yearLabel.innerText = this.pnlPerfState.selectedYear || 'Select Year';
+      if (subtitleEl) subtitleEl.innerText = this.pnlPerfState.selectedYear ? `Realized profit & loss for year ${this.pnlPerfState.selectedYear}` : 'Realized profit & loss for selected year';
+    } else if (mode === 'custom') {
+      if (modeLabel) modeLabel.innerText = 'Custom';
+      if (monthWrapper) monthWrapper.style.display = 'none';
+      if (yearWrapper) yearWrapper.style.display = 'none';
+      if (customWrapper) customWrapper.style.display = 'flex';
+      const sDate = this.pnlPerfState.customStart || (startInput ? startInput.value : '');
+      const eDate = this.pnlPerfState.customEnd || (endInput ? endInput.value : '');
+      if (subtitleEl) subtitleEl.innerText = (sDate && eDate) ? `Realized profit & loss from ${sDate} to ${eDate}` : 'Realized profit & loss for custom date range';
+    }
+
+    // Filter scoped trades for metrics calculations
+    let scopedTrades = trades || [];
+    if (mode === 'monthly' && this.pnlPerfState.selectedMonth) {
+      scopedTrades = (trades || []).filter(t => {
+        const dStr = (t.closeTime || t.openTime || '').slice(0, 7);
+        return dStr === this.pnlPerfState.selectedMonth;
+      });
+    } else if (mode === 'yearly' && this.pnlPerfState.selectedYear) {
+      scopedTrades = (trades || []).filter(t => {
+        const dStr = (t.closeTime || t.openTime || '').slice(0, 4);
+        return dStr === String(this.pnlPerfState.selectedYear);
+      });
+    } else if (mode === 'custom') {
+      const s = this.pnlPerfState.customStart || (startInput ? startInput.value : '');
+      const e = this.pnlPerfState.customEnd || (endInput ? endInput.value : '');
+      scopedTrades = (trades || []).filter(t => {
+        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+        return dStr && (!s || dStr >= s) && (!e || dStr <= e);
+      });
+    }
+
+    // Compute Metrics: Total Earned, Total Lost, Net P&L
+    let totalEarned = 0;
+    let totalLost = 0;
+    let winCount = 0;
+    let lossCount = 0;
+
+    scopedTrades.forEach(t => {
+      const pnl = Number(t.profit) || 0;
+      if (pnl > 0) {
+        totalEarned += pnl;
+        winCount++;
+      } else if (pnl < 0) {
+        totalLost += pnl; // keeps negative value
+        lossCount++;
+      }
+    });
+
+    const netPnL = totalEarned + totalLost;
+
+    // Render Metrics Numbers with Currency
+    if (totalEarnedEl) {
+      if (totalEarned > 0) {
+        totalEarnedEl.innerText = TradeAnalytics.formatCurrency(totalEarned, true);
+        totalEarnedEl.className = 'pnl-perf-metric-value profit';
+      } else {
+        totalEarnedEl.innerText = TradeAnalytics.formatCurrency(0, false);
+        totalEarnedEl.className = 'pnl-perf-metric-value';
+      }
+    }
+    if (totalEarnedSubEl) {
+      totalEarnedSubEl.innerText = `${winCount} winning trade${winCount === 1 ? '' : 's'}`;
+    }
+
+    if (totalLostEl) {
+      if (totalLost < 0) {
+        totalLostEl.innerText = TradeAnalytics.formatCurrency(totalLost, true);
+        totalLostEl.className = 'pnl-perf-metric-value loss';
+      } else {
+        totalLostEl.innerText = TradeAnalytics.formatCurrency(0, false);
+        totalLostEl.className = 'pnl-perf-metric-value';
+      }
+    }
+    if (totalLostSubEl) {
+      totalLostSubEl.innerText = `${lossCount} losing trade${lossCount === 1 ? '' : 's'}`;
+    }
+
+    if (netPnLEl) {
+      if (scopedTrades.length === 0) {
+        netPnLEl.innerText = TradeAnalytics.formatCurrency(0, false);
+        netPnLEl.className = 'pnl-perf-metric-value';
+      } else {
+        netPnLEl.innerText = TradeAnalytics.formatCurrency(netPnL, true);
+        netPnLEl.className = `pnl-perf-metric-value ${netPnL > 0 ? 'profit' : (netPnL < 0 ? 'loss' : '')}`;
+      }
+    }
+    if (netPnLSubEl) {
+      netPnLSubEl.innerText = `${scopedTrades.length} total trade${scopedTrades.length === 1 ? '' : 's'}`;
+    }
+
+    // Trigger Chart.js Line Graph render
+    if (typeof ChartManager !== 'undefined') {
+      ChartManager.renderPnLPerformanceChart(trades, {
+        mode,
+        selectedMonth: currentMonthObj ? currentMonthObj.key : null,
+        selectedYear: this.pnlPerfState.selectedYear,
+        customStart: this.pnlPerfState.customStart || (startInput ? startInput.value : null),
+        customEnd: this.pnlPerfState.customEnd || (endInput ? endInput.value : null)
       });
     }
   }
