@@ -1255,6 +1255,7 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
   clearChat() {
     this.messages = [];
     this.lastInteractionId = null;
+    this.offlineContext = {};
     this.tokenUsage = {
       promptTokens: 0,
       outputTokens: 0,
@@ -1263,7 +1264,6 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
       sessionTokens: 0,
       activeContextTokens: 0
     };
-    this.saveTokenUsage();
     this.updateTokenGauge();
 
     const container = document.getElementById('botChatMessages');
@@ -1276,7 +1276,7 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
 
     this.renderWelcomeMessage();
     if (typeof App !== 'undefined' && App.showToast) {
-      App.showToast('Chat history and token session reset', 'info');
+      App.showToast('Chat history reset', 'info');
     }
   },
 
@@ -1284,7 +1284,7 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
    * Export conversation to text/markdown file
    */
   exportChat() {
-    if (this.messages.length === 0) {
+    if (!this.messages || this.messages.length === 0) {
       if (typeof App !== 'undefined' && App.showToast) {
         App.showToast('No messages to export', 'warning');
       }
@@ -1293,12 +1293,18 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
 
     const currSym = typeof TradeAnalytics !== 'undefined' ? TradeAnalytics.getCurrencySymbol() : '$';
     let output = `# TradeForge - Fourge AI - Conversation Export\n`;
-    output += `Date: ${new Date().toLocaleString()}\n`;
+    output += `Export Date: ${new Date().toLocaleString()}\n`;
     output += `Currency: ${currSym}\n\n---\n\n`;
 
     this.messages.forEach(m => {
       const author = m.role === 'user' ? 'Trader' : 'Fourge AI';
-      output += `### [${author}] - ${new Date(m.timestamp).toLocaleTimeString()}\n\n`;
+      let timeStr = '';
+      try {
+        timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      } catch (e) {
+        timeStr = '';
+      }
+      output += `### [${author}]${timeStr ? ` - ${timeStr}` : ''}\n\n`;
       output += `${m.content}\n\n---\n\n`;
     });
 
@@ -1313,7 +1319,7 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
     URL.revokeObjectURL(url);
 
     if (typeof App !== 'undefined' && App.showToast) {
-      App.showToast('Chat exported as Markdown file', 'success');
+      App.showToast('Conversation exported successfully', 'success');
     }
   },
 

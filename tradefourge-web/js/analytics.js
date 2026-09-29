@@ -947,6 +947,495 @@ const TradeAnalytics = {
       durationMetrics: this.getEmptyDurationMetrics(),
       lotMetrics: this.getEmptyLotMetrics()
     };
+  },
+
+  /**
+   * Helper to normalize any trade's trading date to YYYY-MM-DD string
+   */
+  getTradeDate(trade) {
+    if (!trade) return '';
+    const raw = trade.closeTime || trade.openTime || '';
+    if (!raw) return '';
+    if (typeof raw === 'string') {
+      if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+        return raw.slice(0, 10);
+      }
+      const ymd = raw.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+      if (ymd) {
+        return `${ymd[1]}-${String(ymd[2]).padStart(2, '0')}-${String(ymd[3]).padStart(2, '0')}`;
+      }
+      const dmy = raw.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
+      if (dmy) {
+        return `${dmy[3]}-${String(dmy[2]).padStart(2, '0')}-${String(dmy[1]).padStart(2, '0')}`;
+      }
+    }
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString().slice(0, 10);
+    }
+    return '';
+  },
+
+  /**
+   * Get active trades list helper
+   */
+  getActiveTrades(tradesInput = null) {
+    if (Array.isArray(tradesInput) && tradesInput.length > 0) return tradesInput;
+    if (typeof App !== 'undefined' && Array.isArray(App.trades) && App.trades.length > 0) return App.trades;
+    if (typeof StorageManager !== 'undefined' && typeof StorageManager.getTrades === 'function') {
+      const stored = StorageManager.getTrades();
+      if (Array.isArray(stored)) return stored;
+    }
+    return [];
+  },
+
+  /**
+   * Helper to normalize user-provided date string or query into 'YYYY-MM-DD' format
+   */
+  normalizeDateQuery(input, referenceYear = null) {
+    if (!input) return null;
+    if (input instanceof Date && !isNaN(input.getTime())) {
+      const yr = input.getFullYear();
+      const mo = String(input.getMonth() + 1).padStart(2, '0');
+      const da = String(input.getDate()).padStart(2, '0');
+      return `${yr}-${mo}-${da}`;
+    }
+
+    let str = String(input).trim().toLowerCase();
+    if (!str) return null;
+
+    // Handle 'today' & 'yesterday'
+    if (str === 'today') {
+      const now = new Date();
+      const yr = now.getFullYear();
+      const mo = String(now.getMonth() + 1).padStart(2, '0');
+      const da = String(now.getDate()).padStart(2, '0');
+      return `${yr}-${mo}-${da}`;
+    }
+    if (str === 'yesterday') {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yr = yesterday.getFullYear();
+      const mo = String(yesterday.getMonth() + 1).padStart(2, '0');
+      const da = String(yesterday.getDate()).padStart(2, '0');
+      return `${yr}-${mo}-${da}`;
+    }
+
+    // Direct YYYY-MM-DD
+    const isoMatch = str.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+    if (isoMatch) {
+      const y = isoMatch[1];
+      const m = String(isoMatch[2]).padStart(2, '0');
+      const d = String(isoMatch[3]).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // DD-MM-YYYY or DD.MM.YYYY
+    const dmyMatch = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+    if (dmyMatch) {
+      const d = String(dmyMatch[1]).padStart(2, '0');
+      const m = String(dmyMatch[2]).padStart(2, '0');
+      const y = dmyMatch[3];
+      return `${y}-${m}-${d}`;
+    }
+
+    // English Month Names Mapping
+    const months = {
+      'jan': '01', 'january': '01',
+      'feb': '02', 'february': '02',
+      'mar': '03', 'march': '03',
+      'apr': '04', 'april': '04',
+      'may': '05',
+      'jun': '06', 'june': '06',
+      'jul': '07', 'july': '07',
+      'aug': '08', 'august': '08',
+      'sep': '09', 'sept': '09', 'september': '09',
+      'oct': '10', 'october': '10',
+      'nov': '11', 'november': '11',
+      'dec': '12', 'december': '12'
+    };
+
+    // Clean ordinal suffixes like 23rd, 1st, 2nd, 3rd
+    const cleanStr = str.replace(/(\d+)(st|nd|rd|th)\b/g, '$1');
+
+    // Pattern: "September 23, 2026" or "Sep 23 2026" or "September 23"
+    const mdyMatch = cleanStr.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b[,\s]+(\d{1,2})(?:[,\s]+(\d{4}))?/i);
+    if (mdyMatch) {
+      const mStr = mdyMatch[1].toLowerCase();
+      const monthNum = months[mStr] || '01';
+      const dayNum = String(mdyMatch[2]).padStart(2, '0');
+      let yearNum = mdyMatch[3] ? parseInt(mdyMatch[3], 10) : referenceYear;
+      if (!yearNum) {
+        const trades = this.getActiveTrades();
+        if (trades.length > 0) {
+          const firstDate = this.getTradeDate(trades[0]);
+          if (firstDate && firstDate.length >= 4) {
+            yearNum = parseInt(firstDate.slice(0, 4), 10);
+          }
+        }
+        if (!yearNum) yearNum = new Date().getFullYear();
+      }
+      return `${yearNum}-${monthNum}-${dayNum}`;
+    }
+
+    // Pattern: "23 September 2026" or "23 Sep"
+    const dmyWordMatch = cleanStr.match(/\b(\d{1,2})[,\s]+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:[,\s]+(\d{4}))?/i);
+    if (dmyWordMatch) {
+      const dayNum = String(dmyWordMatch[1]).padStart(2, '0');
+      const mStr = dmyWordMatch[2].toLowerCase();
+      const monthNum = months[mStr] || '01';
+      let yearNum = dmyWordMatch[3] ? parseInt(dmyWordMatch[3], 10) : referenceYear;
+      if (!yearNum) {
+        const trades = this.getActiveTrades();
+        if (trades.length > 0) {
+          const firstDate = this.getTradeDate(trades[0]);
+          if (firstDate && firstDate.length >= 4) {
+            yearNum = parseInt(firstDate.slice(0, 4), 10);
+          }
+        }
+        if (!yearNum) yearNum = new Date().getFullYear();
+      }
+      return `${yearNum}-${monthNum}-${dayNum}`;
+    }
+
+    return null;
+  },
+
+  /**
+   * Get complete daily performance grouping the entire dataset by normalized calendar date
+   * @param {Array} tradesInput
+   * @returns {Object} Mapping 'YYYY-MM-DD' => dailyStatsObject
+   */
+  getDailyPerformance(tradesInput = null) {
+    const trades = this.getActiveTrades(tradesInput);
+    const dailyMap = {};
+    if (!trades || trades.length === 0) return dailyMap;
+
+    trades.forEach(t => {
+      const dateStr = this.getTradeDate(t);
+      if (!dateStr || dateStr.length !== 10) return;
+
+      const pnl = Number(t.profit) || 0;
+      if (!dailyMap[dateStr]) {
+        const dParts = dateStr.split('-').map(Number);
+        const dateObj = new Date(Date.UTC(dParts[0], dParts[1] - 1, dParts[2]));
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayOfWeek = isNaN(dateObj.getTime()) ? 0 : dateObj.getUTCDay();
+
+        dailyMap[dateStr] = {
+          date: dateStr,
+          dayOfWeek,
+          dayName: dayNames[dayOfWeek],
+          pnl: 0,
+          trades: 0,
+          wins: 0,
+          losses: 0,
+          breakEven: 0,
+          grossProfit: 0,
+          grossLoss: 0,
+          tradeList: [],
+          bestTrade: null,
+          worstTrade: null
+        };
+      }
+
+      const day = dailyMap[dateStr];
+      day.pnl = Math.round((day.pnl + pnl) * 100) / 100;
+      day.trades += 1;
+      day.tradeList.push(t);
+
+      if (pnl > 0) {
+        day.wins += 1;
+        day.grossProfit = Math.round((day.grossProfit + pnl) * 100) / 100;
+      } else if (pnl < 0) {
+        day.losses += 1;
+        day.grossLoss = Math.round((day.grossLoss + Math.abs(pnl)) * 100) / 100;
+      } else {
+        day.breakEven += 1;
+      }
+
+      if (!day.bestTrade || pnl > (day.bestTrade.profit || 0)) {
+        day.bestTrade = t;
+      }
+      if (!day.worstTrade || pnl < (day.worstTrade.profit || 0)) {
+        day.worstTrade = t;
+      }
+    });
+
+    // Finalize computed metrics on each day
+    Object.values(dailyMap).forEach(day => {
+      day.winRate = day.trades > 0 ? Math.round(((day.wins / day.trades) * 100) * 10) / 10 : 0;
+      day.avgTrade = day.trades > 0 ? Math.round((day.pnl / day.trades) * 100) / 100 : 0;
+      day.profitFactor = day.grossLoss > 0 ? Math.round((day.grossProfit / day.grossLoss) * 100) / 100 : (day.grossProfit > 0 ? 99.99 : 0);
+    });
+
+    return dailyMap;
+  },
+
+  /**
+   * Get all trades for an exact date YYYY-MM-DD
+   */
+  getTradesForDate(dateStr, tradesInput = null) {
+    const normDate = this.normalizeDateQuery(dateStr);
+    const trades = this.getActiveTrades(tradesInput);
+    if (!normDate || !trades.length) return [];
+    return trades.filter(t => this.getTradeDate(t) === normDate);
+  },
+
+  /**
+   * Get detailed daily statistics for an exact date YYYY-MM-DD
+   */
+  getDailyStats(dateStr, tradesInput = null) {
+    const normDate = this.normalizeDateQuery(dateStr);
+    if (!normDate) return null;
+    const dailyMap = this.getDailyPerformance(tradesInput);
+    return dailyMap[normDate] || null;
+  },
+
+  getDailyPnL(dateStr, tradesInput = null) {
+    const stats = this.getDailyStats(dateStr, tradesInput);
+    return stats ? stats.pnl : 0;
+  },
+
+  getDailyTradeCount(dateStr, tradesInput = null) {
+    const stats = this.getDailyStats(dateStr, tradesInput);
+    return stats ? stats.trades : 0;
+  },
+
+  getDailyWins(dateStr, tradesInput = null) {
+    const stats = this.getDailyStats(dateStr, tradesInput);
+    return stats ? stats.wins : 0;
+  },
+
+  getDailyLosses(dateStr, tradesInput = null) {
+    const stats = this.getDailyStats(dateStr, tradesInput);
+    return stats ? stats.losses : 0;
+  },
+
+  getDailyWinRate(dateStr, tradesInput = null) {
+    const stats = this.getDailyStats(dateStr, tradesInput);
+    return stats ? stats.winRate : 0;
+  },
+
+  getDailyGrossProfit(dateStr, tradesInput = null) {
+    const stats = this.getDailyStats(dateStr, tradesInput);
+    return stats ? stats.grossProfit : 0;
+  },
+
+  getDailyGrossLoss(dateStr, tradesInput = null) {
+    const stats = this.getDailyStats(dateStr, tradesInput);
+    return stats ? stats.grossLoss : 0;
+  },
+
+  getDailyAverageTrade(dateStr, tradesInput = null) {
+    const stats = this.getDailyStats(dateStr, tradesInput);
+    return stats ? stats.avgTrade : 0;
+  },
+
+  getDailyBestTrade(dateStr, tradesInput = null) {
+    const stats = this.getDailyStats(dateStr, tradesInput);
+    return stats ? stats.bestTrade : null;
+  },
+
+  getDailyWorstTrade(dateStr, tradesInput = null) {
+    const stats = this.getDailyStats(dateStr, tradesInput);
+    return stats ? stats.worstTrade : null;
+  },
+
+  /**
+   * Best / Worst / Latest / Oldest Trading Days
+   */
+  getBestTradingDay(tradesInput = null) {
+    const dailyMap = this.getDailyPerformance(tradesInput);
+    const days = Object.values(dailyMap);
+    if (!days.length) return null;
+    return days.sort((a, b) => b.pnl - a.pnl)[0];
+  },
+
+  getWorstTradingDay(tradesInput = null) {
+    const dailyMap = this.getDailyPerformance(tradesInput);
+    const days = Object.values(dailyMap);
+    if (!days.length) return null;
+    return days.sort((a, b) => a.pnl - b.pnl)[0];
+  },
+
+  getLatestTradingDay(tradesInput = null) {
+    const dailyMap = this.getDailyPerformance(tradesInput);
+    const dateKeys = Object.keys(dailyMap).sort();
+    if (!dateKeys.length) return null;
+    const maxDate = dateKeys[dateKeys.length - 1];
+    return dailyMap[maxDate];
+  },
+
+  getOldestTradingDay(tradesInput = null) {
+    const dailyMap = this.getDailyPerformance(tradesInput);
+    const dateKeys = Object.keys(dailyMap).sort();
+    if (!dateKeys.length) return null;
+    const minDate = dateKeys[0];
+    return dailyMap[minDate];
+  },
+
+  /**
+   * Aggregate Weekday statistics
+   */
+  getWeekdayStats(weekdayQuery, tradesInput = null) {
+    const trades = this.getActiveTrades(tradesInput);
+    const dailyMap = this.getDailyPerformance(trades);
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    let targetIndex = -1;
+    if (typeof weekdayQuery === 'number' && weekdayQuery >= 0 && weekdayQuery <= 6) {
+      targetIndex = weekdayQuery;
+    } else if (typeof weekdayQuery === 'string') {
+      const clean = weekdayQuery.trim().toLowerCase();
+      targetIndex = dayNames.findIndex(d => d.toLowerCase().startsWith(clean.slice(0, 3)));
+    }
+
+    if (targetIndex === -1) return null;
+
+    const matchingDays = Object.values(dailyMap).filter(d => d.dayOfWeek === targetIndex);
+    if (!matchingDays.length) {
+      return {
+        dayIndex: targetIndex,
+        dayName: dayNames[targetIndex],
+        totalDays: 0,
+        trades: 0,
+        wins: 0,
+        losses: 0,
+        breakEven: 0,
+        pnl: 0,
+        winRate: 0,
+        avgPnLPerDay: 0,
+        days: []
+      };
+    }
+
+    let totalPnL = 0;
+    let totalTrades = 0;
+    let totalWins = 0;
+    let totalLosses = 0;
+    let totalBE = 0;
+
+    matchingDays.forEach(d => {
+      totalPnL += d.pnl;
+      totalTrades += d.trades;
+      totalWins += d.wins;
+      totalLosses += d.losses;
+      totalBE += d.breakEven;
+    });
+
+    const roundedPnL = Math.round(totalPnL * 100) / 100;
+    const winRate = totalTrades > 0 ? Math.round(((totalWins / totalTrades) * 100) * 10) / 10 : 0;
+    const avgPnLPerDay = Math.round((totalPnL / matchingDays.length) * 100) / 100;
+
+    return {
+      dayIndex: targetIndex,
+      dayName: dayNames[targetIndex],
+      totalDays: matchingDays.length,
+      trades: totalTrades,
+      wins: totalWins,
+      losses: totalLosses,
+      breakEven: totalBE,
+      pnl: roundedPnL,
+      winRate,
+      avgPnLPerDay,
+      days: matchingDays.sort((a, b) => a.date.localeCompare(b.date))
+    };
+  },
+
+  /**
+   * Aggregate Month statistics
+   */
+  getMonthStats(yearMonthQuery, tradesInput = null) {
+    const trades = this.getActiveTrades(tradesInput);
+    const dailyMap = this.getDailyPerformance(trades);
+    const months = {
+      'jan': '01', 'january': '01', 'feb': '02', 'february': '02',
+      'mar': '03', 'march': '03', 'apr': '04', 'april': '04',
+      'may': '05', 'jun': '06', 'june': '06', 'jul': '07', 'july': '07',
+      'aug': '08', 'august': '08', 'sep': '09', 'sept': '09', 'september': '09',
+      'oct': '10', 'october': '10', 'nov': '11', 'november': '11', 'dec': '12', 'december': '12'
+    };
+    const mNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    let ymKey = '';
+    const qStr = String(yearMonthQuery || '').trim().toLowerCase();
+
+    // Check if format is 'YYYY-MM'
+    if (/^\d{4}-\d{2}$/.test(qStr)) {
+      ymKey = qStr;
+    } else {
+      // e.g. "September 2026" or "September"
+      const mMatch = qStr.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b(?:\s+(\d{4}))?/i);
+      if (mMatch) {
+        const mNum = months[mMatch[1].toLowerCase()];
+        let yNum = mMatch[2] ? mMatch[2] : null;
+        if (!yNum) {
+          if (trades.length > 0) {
+            const firstDate = this.getTradeDate(trades[0]);
+            if (firstDate && firstDate.length >= 4) yNum = firstDate.slice(0, 4);
+          }
+          if (!yNum) yNum = String(new Date().getFullYear());
+        }
+        ymKey = `${yNum}-${mNum}`;
+      }
+    }
+
+    if (!ymKey) return null;
+
+    const matchingDays = Object.values(dailyMap).filter(d => d.date.startsWith(ymKey));
+    const [yr, mo] = ymKey.split('-');
+    const monthName = mNames[parseInt(mo, 10)] || ymKey;
+
+    if (!matchingDays.length) {
+      return {
+        monthKey: ymKey,
+        monthName,
+        year: parseInt(yr, 10),
+        totalDays: 0,
+        trades: 0,
+        wins: 0,
+        losses: 0,
+        breakEven: 0,
+        pnl: 0,
+        winRate: 0,
+        bestDay: null,
+        worstDay: null,
+        days: []
+      };
+    }
+
+    let totalPnL = 0;
+    let totalTrades = 0;
+    let totalWins = 0;
+    let totalLosses = 0;
+    let totalBE = 0;
+
+    matchingDays.forEach(d => {
+      totalPnL += d.pnl;
+      totalTrades += d.trades;
+      totalWins += d.wins;
+      totalLosses += d.losses;
+      totalBE += d.breakEven;
+    });
+
+    const sortedByPnL = [...matchingDays].sort((a, b) => b.pnl - a.pnl);
+
+    return {
+      monthKey: ymKey,
+      monthName,
+      year: parseInt(yr, 10),
+      totalDays: matchingDays.length,
+      trades: totalTrades,
+      wins: totalWins,
+      losses: totalLosses,
+      breakEven: totalBE,
+      pnl: Math.round(totalPnL * 100) / 100,
+      winRate: totalTrades > 0 ? Math.round(((totalWins / totalTrades) * 100) * 10) / 10 : 0,
+      bestDay: sortedByPnL[0] || null,
+      worstDay: sortedByPnL[sortedByPnL.length - 1] || null,
+      days: matchingDays.sort((a, b) => a.date.localeCompare(b.date))
+    };
   }
 };
 
