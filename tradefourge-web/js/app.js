@@ -956,11 +956,11 @@ const App = {
     }
 
     const reasonMeta = {
-      'TP': { label: 'Take Profit', badgeClass: 'tp', fillClass: 'tp', bg: 'rgba(16, 185, 129, 0.15)', color: '#10b981' },
-      'SL': { label: 'Stop Loss', badgeClass: 'sl', fillClass: 'sl', bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' },
-      'USER': { label: 'Manual / Client', badgeClass: 'user', fillClass: 'user', bg: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' },
-      'STOP OUT': { label: 'Margin Stop Out', badgeClass: 'so', fillClass: 'so', bg: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' },
-      'UNKNOWN': { label: 'Unspecified', badgeClass: 'unknown', fillClass: 'unknown', bg: 'rgba(100, 116, 139, 0.15)', color: '#94a3b8' }
+      'TP': { label: 'Take Profit', badgeClass: 'tp', fillClass: 'tp', bg: '#123526', color: '#4CAF78', border: '#24563D' },
+      'SL': { label: 'Stop Loss', badgeClass: 'sl', fillClass: 'sl', bg: '#3A1D25', color: '#E4777F', border: '#63313A' },
+      'USER': { label: 'Manual / Client', badgeClass: 'user', fillClass: 'user', bg: '#141D21', color: '#3b82f6', border: '#243239' },
+      'STOP OUT': { label: 'Margin Stop Out', badgeClass: 'so', fillClass: 'so', bg: '#141D21', color: '#a855f7', border: '#243239' },
+      'UNKNOWN': { label: 'Unspecified', badgeClass: 'unknown', fillClass: 'unknown', bg: '#141D21', color: '#94a3b8', border: '#243239' }
     };
 
     eb.forEach(item => {
@@ -968,8 +968,9 @@ const App = {
         label: item.reason,
         badgeClass: 'unknown',
         fillClass: 'unknown',
-        bg: 'rgba(100, 116, 139, 0.15)',
-        color: '#94a3b8'
+        bg: '#141D21',
+        color: '#94a3b8',
+        border: '#243239'
       };
 
       const itemEl = document.createElement('div');
@@ -982,7 +983,7 @@ const App = {
       itemEl.innerHTML = `
         <div class="breakdown-item-header">
           <div class="breakdown-item-name">
-            <span class="breakdown-item-badge" style="background: ${meta.bg}; color: ${meta.color}; border: 1px solid ${meta.color}40;">${item.reason}</span>
+            <span class="breakdown-item-badge" style="background: ${meta.bg}; color: ${meta.color}; border: 1px solid ${meta.border};">${item.reason}</span>
             <span style="font-size: 0.72rem; color: var(--text-dim);">${meta.label}</span>
           </div>
           <div class="breakdown-item-values">
@@ -1317,17 +1318,18 @@ const App = {
       const avgClass = g.avgPnL > 0 ? 'profit-text' : (g.avgPnL < 0 ? 'loss-text' : 'neutral-text');
       const avgColor = g.avgPnL > 0 ? 'var(--profit)' : (g.avgPnL < 0 ? 'var(--loss)' : 'var(--neutral)');
       const winRateColor = g.winRate >= 50 ? 'var(--profit)' : (g.winRate > 0 ? 'var(--loss)' : 'var(--text-dim)');
+      const winRateBarColor = g.winRate >= 50 ? 'var(--profit-chart)' : (g.winRate > 0 ? 'var(--loss-chart)' : 'var(--text-dim)');
 
       const sym = TradeAnalytics.getCurrencySymbol();
       return `
         <tr>
           <td style="font-weight: 700; font-family: var(--font-mono); color: var(--text-main);">${g.lotLabel} lots</td>
-          <td><span class="analytics-tag" style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 4px; font-weight: 600;">${g.trades}</span></td>
+          <td><span class="analytics-tag" style="background: var(--bg-lowest); border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 4px; font-weight: 600;">${g.trades}</span></td>
           <td>
             <div style="display: flex; align-items: center; gap: 8px;">
               <span style="font-weight: 700; font-family: var(--font-mono); color: ${winRateColor};">${g.winRate}%</span>
-              <div style="width: 48px; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden;">
-                <div style="width: ${Math.min(100, g.winRate)}%; height: 100%; background: ${winRateColor};"></div>
+              <div style="width: 48px; height: 4px; background: var(--bg-lowest); border-radius: 2px; overflow: hidden;">
+                <div style="width: ${Math.min(100, g.winRate)}%; height: 100%; background: ${winRateBarColor};"></div>
               </div>
             </div>
           </td>

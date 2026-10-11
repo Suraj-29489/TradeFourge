@@ -1,6 +1,6 @@
 /**
  * TradeForge V3.0 Institutional - Chart.js Visualizations Manager
- * Solid Obsidian & Slate Color System (#00f59b Emerald, #ff4d6d Coral, #c0c1ff Indigo)
+ * Exness-Inspired Midnight & Controlled Performance Palette (#35B779 / #4CAF78 Positive, #E05260 / #E4777F Negative)
  */
 
 const ChartManager = {
@@ -46,12 +46,12 @@ const ChartManager = {
     const labelEl = document.getElementById('tradesDonutCenterVal') || document.getElementById('donutTradesWinPct');
     if (labelEl) {
       labelEl.innerText = `${metrics.winRate}%`;
-      labelEl.style.color = metrics.winRate >= 50 ? '#00f59b' : (hasData ? '#ff4d6d' : '#f1f5f9');
+      labelEl.style.color = metrics.winRate >= 50 ? '#4CAF78' : (hasData ? '#E4777F' : '#f1f5f9');
     }
     const v3PctEl = document.getElementById('donutTradesWinPct');
     if (v3PctEl) {
       v3PctEl.innerText = winPctStr;
-      v3PctEl.style.color = metrics.winRate >= 50 ? '#00f59b' : (hasData ? '#ff4d6d' : '#f1f5f9');
+      v3PctEl.style.color = metrics.winRate >= 50 ? '#4CAF78' : (hasData ? '#E4777F' : '#f1f5f9');
     }
 
     const badgeEl = document.getElementById('donutTradesBadge');
@@ -101,7 +101,7 @@ const ChartManager = {
     if (existing) existing.destroy();
 
     const dataValues = hasData ? [wins, losses] : [1];
-    const backgroundColors = hasData ? ['#00f59b', '#ff4d6d'] : ['#272a32'];
+    const backgroundColors = hasData ? ['#35B779', '#E05260'] : ['#141D21'];
 
     this.instances.tradesDonut = new Chart(ctx, {
       type: 'doughnut',
@@ -121,8 +121,8 @@ const ChartManager = {
           legend: { display: false },
           tooltip: {
             enabled: hasData,
-            backgroundColor: '#191b23',
-            borderColor: '#3b4a3f',
+            backgroundColor: '#141D21',
+            borderColor: '#243239',
             borderWidth: 1,
             titleColor: '#94a3b8',
             bodyColor: '#f1f5f9',
@@ -156,12 +156,12 @@ const ChartManager = {
     const labelEl = document.getElementById('daysDonutCenterVal') || document.getElementById('donutDaysWinPct');
     if (labelEl) {
       labelEl.innerText = `${metrics.dayWinRate}%`;
-      labelEl.style.color = metrics.dayWinRate >= 50 ? '#00f59b' : (hasData ? '#ff4d6d' : '#f1f5f9');
+      labelEl.style.color = metrics.dayWinRate >= 50 ? '#4CAF78' : (hasData ? '#E4777F' : '#f1f5f9');
     }
     const v3PctEl = document.getElementById('donutDaysWinPct');
     if (v3PctEl) {
       v3PctEl.innerText = dayPctStr;
-      v3PctEl.style.color = metrics.dayWinRate >= 50 ? '#00f59b' : (hasData ? '#ff4d6d' : '#f1f5f9');
+      v3PctEl.style.color = metrics.dayWinRate >= 50 ? '#4CAF78' : (hasData ? '#E4777F' : '#f1f5f9');
     }
 
     const badgeEl = document.getElementById('donutDaysBadge');
@@ -202,7 +202,7 @@ const ChartManager = {
     if (existing) existing.destroy();
 
     const dataValues = hasData ? [wins, losses] : [1];
-    const backgroundColors = hasData ? ['#00f59b', '#ff4d6d'] : ['#272a32'];
+    const backgroundColors = hasData ? ['#35B779', '#E05260'] : ['#141D21'];
 
     this.instances.daysDonut = new Chart(ctx, {
       type: 'doughnut',
@@ -222,8 +222,8 @@ const ChartManager = {
           legend: { display: false },
           tooltip: {
             enabled: hasData,
-            backgroundColor: '#191b23',
-            borderColor: '#3b4a3f',
+            backgroundColor: '#141D21',
+            borderColor: '#243239',
             borderWidth: 1,
             titleColor: '#94a3b8',
             bodyColor: '#f1f5f9',
@@ -271,20 +271,8 @@ const ChartManager = {
 
       const values = timeseries.map(t => t.cumulativePnL);
       const finalVal = values.length > 0 ? values[values.length - 1] : 0;
-      const lineColor = finalVal >= 0 ? '#00f59b' : '#ff4d6d';
-
-      let bgGradient = finalVal >= 0 ? 'rgba(0, 245, 155, 0.08)' : 'rgba(255, 77, 109, 0.08)';
-      try {
-        const canvasCtx = ctx.getContext('2d');
-        bgGradient = canvasCtx.createLinearGradient(0, 0, 0, 290);
-        if (finalVal >= 0) {
-          bgGradient.addColorStop(0, 'rgba(0, 245, 155, 0.22)');
-          bgGradient.addColorStop(1, 'rgba(0, 245, 155, 0.00)');
-        } else {
-          bgGradient.addColorStop(0, 'rgba(255, 77, 109, 0.22)');
-          bgGradient.addColorStop(1, 'rgba(255, 77, 109, 0.00)');
-        }
-      } catch (e) {}
+      const lineColor = finalVal >= 0 ? '#35B779' : '#E05260';
+      const fillColor = finalVal >= 0 ? 'rgba(18, 53, 38, 0.55)' : 'rgba(58, 29, 37, 0.55)';
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'line',
@@ -295,13 +283,13 @@ const ChartManager = {
             data: values,
             borderColor: lineColor,
             borderWidth: 2.5,
-            backgroundColor: bgGradient,
+            backgroundColor: fillColor,
             fill: true,
             tension: 0.25,
             pointRadius: values.length > 30 ? 0 : 3.5,
             pointHoverRadius: 6,
             pointBackgroundColor: lineColor,
-            pointBorderColor: '#10131a',
+            pointBorderColor: '#141D21',
             pointBorderWidth: 1.5
           }]
         },
@@ -315,10 +303,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#191b23',
+              backgroundColor: '#141D21',
               titleColor: '#94a3b8',
               bodyColor: '#f1f5f9',
-              borderColor: '#3b4a3f',
+              borderColor: '#243239',
               borderWidth: 1,
               padding: 12,
               displayColors: false,
@@ -335,11 +323,11 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
+              grid: { color: '#243239', drawBorder: false },
               ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 8 }
             },
             y: {
-              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
+              grid: { color: '#243239', drawBorder: false },
               ticks: {
                 color: '#64748b',
                 font: { size: 11, family: "'JetBrains Mono', monospace" },
@@ -358,8 +346,8 @@ const ChartManager = {
 
       const labels = timeseries.map(t => t.shortLabel || t.label || t.weekStart);
       const values = timeseries.map(t => t.weeklyPnL);
-      const barColors = values.map(v => v >= 0 ? 'rgba(0, 245, 155, 0.85)' : 'rgba(255, 77, 109, 0.85)');
-      const borderColors = values.map(v => v >= 0 ? '#00f59b' : '#ff4d6d');
+      const barColors = values.map(v => v >= 0 ? '#35B779' : '#E05260');
+      const borderColors = values.map(v => v >= 0 ? '#24563D' : '#63313A');
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'bar',
@@ -380,10 +368,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#191b23',
+              backgroundColor: '#141D21',
               titleColor: '#94a3b8',
               bodyColor: '#f1f5f9',
-              borderColor: '#3b4a3f',
+              borderColor: '#243239',
               borderWidth: 1,
               padding: 12,
               callbacks: {
@@ -406,11 +394,11 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: 'rgba(39, 42, 50, 0.5)', drawBorder: false },
+              grid: { color: '#243239', drawBorder: false },
               ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 10 }
             },
             y: {
-              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
+              grid: { color: '#243239', drawBorder: false },
               ticks: {
                 color: '#64748b',
                 font: { size: 11, family: "'JetBrains Mono', monospace" },
@@ -429,8 +417,8 @@ const ChartManager = {
 
       const labels = timeseries.map(t => t.label);
       const values = timeseries.map(t => t.monthlyPnL);
-      const barColors = values.map(v => v >= 0 ? 'rgba(0, 245, 155, 0.85)' : 'rgba(255, 77, 109, 0.85)');
-      const borderColors = values.map(v => v >= 0 ? '#00f59b' : '#ff4d6d');
+      const barColors = values.map(v => v >= 0 ? '#35B779' : '#E05260');
+      const borderColors = values.map(v => v >= 0 ? '#24563D' : '#63313A');
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'bar',
@@ -451,10 +439,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#191b23',
+              backgroundColor: '#141D21',
               titleColor: '#94a3b8',
               bodyColor: '#f1f5f9',
-              borderColor: '#3b4a3f',
+              borderColor: '#243239',
               borderWidth: 1,
               padding: 12,
               callbacks: {
@@ -485,11 +473,11 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: 'rgba(39, 42, 50, 0.5)', drawBorder: false },
+              grid: { color: '#243239', drawBorder: false },
               ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 12 }
             },
             y: {
-              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
+              grid: { color: '#243239', drawBorder: false },
               ticks: {
                 color: '#64748b',
                 font: { size: 11, family: "'JetBrains Mono', monospace" },
@@ -516,8 +504,8 @@ const ChartManager = {
       });
 
       const values = timeseries.map(t => t.dailyPnL);
-      const barColors = values.map(v => v >= 0 ? 'rgba(0, 245, 155, 0.85)' : 'rgba(255, 77, 109, 0.85)');
-      const borderColors = values.map(v => v >= 0 ? '#00f59b' : '#ff4d6d');
+      const barColors = values.map(v => v >= 0 ? '#35B779' : '#E05260');
+      const borderColors = values.map(v => v >= 0 ? '#24563D' : '#63313A');
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'bar',
@@ -538,10 +526,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#191b23',
+              backgroundColor: '#141D21',
               titleColor: '#94a3b8',
               bodyColor: '#f1f5f9',
-              borderColor: '#3b4a3f',
+              borderColor: '#243239',
               borderWidth: 1,
               padding: 12,
               callbacks: {
@@ -556,11 +544,11 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
+              grid: { color: '#243239', drawBorder: false },
               ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 8 }
             },
             y: {
-              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
+              grid: { color: '#243239', drawBorder: false },
               ticks: {
                 color: '#64748b',
                 font: { size: 11, family: "'JetBrains Mono', monospace" },
@@ -655,8 +643,8 @@ const ChartManager = {
     if (canvasWrap) canvasWrap.style.display = 'block';
 
     const values = buckets.map(b => Math.round(b.pnl * 100) / 100);
-    const barColors = values.map(v => v > 0 ? 'rgba(0, 245, 155, 0.85)' : (v < 0 ? 'rgba(255, 77, 109, 0.85)' : 'rgba(100, 116, 139, 0.35)'));
-    const borderColors = values.map(v => v > 0 ? '#00f59b' : (v < 0 ? '#ff4d6d' : '#64748b'));
+    const barColors = values.map(v => v > 0 ? '#35B779' : (v < 0 ? '#E05260' : '#141D21'));
+    const borderColors = values.map(v => v > 0 ? '#24563D' : (v < 0 ? '#63313A' : '#243239'));
     const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
 
     this.instances.weeklyPerformance = new Chart(canvas, {
@@ -679,10 +667,10 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#191b23',
+            backgroundColor: '#141D21',
             titleColor: '#94a3b8',
             bodyColor: '#f1f5f9',
-            borderColor: '#3b4a3f',
+            borderColor: '#243239',
             borderWidth: 1,
             padding: 12,
             callbacks: {
@@ -714,11 +702,11 @@ const ChartManager = {
         },
         scales: {
           x: {
-            grid: { color: 'rgba(39, 42, 50, 0.5)', drawBorder: false },
+            grid: { color: '#243239', drawBorder: false },
             ticks: { color: '#94a3b8', font: { size: 11, weight: '700', family: "'JetBrains Mono', monospace" } }
           },
           y: {
-            grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
+            grid: { color: '#243239', drawBorder: false },
             ticks: {
               color: '#64748b',
               font: { size: 11, family: "'JetBrains Mono', monospace" },
@@ -838,23 +826,9 @@ const ChartManager = {
     const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
     const finalVal = values[values.length - 1] || 0;
     const isNetPositive = finalVal >= 0;
-    const lineColor = isNetPositive ? '#00f59b' : '#ff4d6d';
-    const pointColor = isNetPositive ? '#00f59b' : '#ff4d6d';
-
-    const ctx = canvas.getContext('2d');
-    let gradient = isNetPositive ? 'rgba(0, 245, 155, 0.08)' : 'rgba(255, 77, 109, 0.08)';
-    try {
-      gradient = ctx.createLinearGradient(0, 0, 0, 260);
-      if (isNetPositive) {
-        gradient.addColorStop(0, 'rgba(0, 245, 155, 0.25)');
-        gradient.addColorStop(1, 'rgba(0, 245, 155, 0.00)');
-      } else {
-        gradient.addColorStop(0, 'rgba(255, 77, 109, 0.25)');
-        gradient.addColorStop(1, 'rgba(255, 77, 109, 0.00)');
-      }
-    } catch (e) {
-      gradient = isNetPositive ? 'rgba(0, 245, 155, 0.08)' : 'rgba(255, 77, 109, 0.08)';
-    }
+    const lineColor = isNetPositive ? '#35B779' : '#E05260';
+    const pointColor = isNetPositive ? '#35B779' : '#E05260';
+    const fillColor = isNetPositive ? 'rgba(18, 53, 38, 0.55)' : 'rgba(58, 29, 37, 0.55)';
 
     this.instances.pnlPerformance = new Chart(canvas, {
       type: 'line',
@@ -865,13 +839,13 @@ const ChartManager = {
           data: values,
           borderColor: lineColor,
           borderWidth: 2.5,
-          backgroundColor: gradient,
+          backgroundColor: fillColor,
           fill: true,
           tension: 0.25,
           pointRadius: values.length > 35 ? 0 : 3.5,
           pointHoverRadius: 6,
           pointBackgroundColor: pointColor,
-          pointBorderColor: '#10131a',
+          pointBorderColor: '#141D21',
           pointBorderWidth: 1.5
         }]
       },
@@ -885,10 +859,10 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#191b23',
+            backgroundColor: '#141D21',
             titleColor: '#94a3b8',
             bodyColor: '#f1f5f9',
-            borderColor: '#3b4a3f',
+            borderColor: '#243239',
             borderWidth: 1,
             padding: 12,
             callbacks: {
@@ -918,11 +892,11 @@ const ChartManager = {
         },
         scales: {
           x: {
-            grid: { color: 'rgba(39, 42, 50, 0.5)', drawBorder: false },
+            grid: { color: '#243239', drawBorder: false },
             ticks: { color: '#94a3b8', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 10 }
           },
           y: {
-            grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
+            grid: { color: '#243239', drawBorder: false },
             ticks: {
               color: '#64748b',
               font: { size: 11, family: "'JetBrains Mono', monospace" },
@@ -957,7 +931,7 @@ const ChartManager = {
     const symbols = (metrics.symbolBreakdown || []).slice(0, 8);
     const labels = symbols.map(s => s.symbol);
     const pnls = symbols.map(s => s.pnl);
-    const colors = pnls.map(p => p >= 0 ? '#00f59b' : '#ff4d6d');
+    const colors = pnls.map(p => p >= 0 ? '#35B779' : '#E05260');
 
     this.instances.symbolBar = new Chart(ctx, {
       type: 'bar',
@@ -977,8 +951,8 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#191b23',
-            borderColor: '#3b4a3f',
+            backgroundColor: '#141D21',
+            borderColor: '#243239',
             borderWidth: 1,
             callbacks: {
               label: (item) => `P&L: ${sym}${item.raw.toFixed(2)}`
@@ -987,7 +961,7 @@ const ChartManager = {
         },
         scales: {
           x: {
-            grid: { color: 'rgba(39, 42, 50, 0.6)' },
+            grid: { color: '#243239' },
             ticks: { color: '#64748b', font: { family: "'JetBrains Mono', monospace" }, callback: v => `${sym}${v}` }
           },
           y: {
@@ -1011,7 +985,7 @@ const ChartManager = {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     const dayIndices = [1, 2, 3, 4, 5];
     const data = dayIndices.map(idx => Math.round((metrics.weekdayMap[idx] || 0) * 100) / 100);
-    const colors = data.map(d => d >= 0 ? '#00f59b' : '#ff4d6d');
+    const colors = data.map(d => d >= 0 ? '#35B779' : '#E05260');
 
     this.instances.weekdayBar = new Chart(ctx, {
       type: 'bar',
@@ -1030,8 +1004,8 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#191b23',
-            borderColor: '#3b4a3f',
+            backgroundColor: '#141D21',
+            borderColor: '#243239',
             borderWidth: 1,
             callbacks: {
               label: (item) => `Net P&L: ${sym}${item.raw.toFixed(2)}`
@@ -1044,7 +1018,7 @@ const ChartManager = {
             ticks: { color: '#f1f5f9', font: { weight: '600', family: "'JetBrains Mono', monospace" } }
           },
           y: {
-            grid: { color: 'rgba(39, 42, 50, 0.6)' },
+            grid: { color: '#243239' },
             ticks: { color: '#64748b', font: { family: "'JetBrains Mono', monospace" }, callback: v => `${sym}${v}` }
           }
         }
@@ -1093,14 +1067,14 @@ const ChartManager = {
           {
             label: 'Winners',
             data: winData,
-            backgroundColor: '#00f59b',
+            backgroundColor: '#35B779',
             borderRadius: 3,
             stack: 'trades'
           },
           {
             label: 'Losers',
             data: lossData,
-            backgroundColor: '#ff4d6d',
+            backgroundColor: '#E05260',
             borderRadius: 3,
             stack: 'trades'
           }
@@ -1122,8 +1096,8 @@ const ChartManager = {
             }
           },
           tooltip: {
-            backgroundColor: '#191b23',
-            borderColor: '#3b4a3f',
+            backgroundColor: '#141D21',
+            borderColor: '#243239',
             borderWidth: 1,
             titleColor: '#f1f5f9',
             bodyColor: '#94a3b8',
@@ -1153,7 +1127,7 @@ const ChartManager = {
           },
           y: {
             stacked: true,
-            grid: { color: 'rgba(39, 42, 50, 0.6)', drawBorder: false },
+            grid: { color: '#243239', drawBorder: false },
             ticks: {
               color: '#64748b',
               font: { size: 11, family: "'JetBrains Mono', monospace" },
@@ -1191,8 +1165,8 @@ const ChartManager = {
         datasets: [{
           label: 'Avg Hold Time (mins)',
           data: [winMins, lossMins],
-          backgroundColor: ['rgba(0, 245, 155, 0.85)', 'rgba(255, 77, 109, 0.85)'],
-          borderColor: ['#00f59b', '#ff4d6d'],
+          backgroundColor: ['#35B779', '#E05260'],
+          borderColor: ['#24563D', '#63313A'],
           borderWidth: 1,
           borderRadius: 4,
           maxBarThickness: 36
@@ -1205,8 +1179,8 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#191b23',
-            borderColor: '#3b4a3f',
+            backgroundColor: '#141D21',
+            borderColor: '#243239',
             borderWidth: 1,
             titleColor: '#f1f5f9',
             bodyColor: '#94a3b8',
@@ -1222,7 +1196,7 @@ const ChartManager = {
         },
         scales: {
           x: {
-            grid: { color: 'rgba(39, 42, 50, 0.6)', drawBorder: false },
+            grid: { color: '#243239', drawBorder: false },
             ticks: {
               color: '#64748b',
               font: { size: 10, family: "'JetBrains Mono', monospace" },
@@ -1282,8 +1256,8 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#191b23',
-              borderColor: '#3b4a3f',
+              backgroundColor: '#141D21',
+              borderColor: '#243239',
               borderWidth: 1,
               callbacks: {
                 label: (item) => `Trades: ${item.raw}`,
@@ -1302,7 +1276,7 @@ const ChartManager = {
               ticks: { color: '#94a3b8', font: { size: 11, family: "'JetBrains Mono', monospace" } }
             },
             y: {
-              grid: { color: 'rgba(39, 42, 50, 0.6)', drawBorder: false },
+              grid: { color: '#243239', drawBorder: false },
               ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, precision: 0 }
             }
           }
@@ -1312,7 +1286,8 @@ const ChartManager = {
       // Default: P&L by Lot Size
       const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
       const pnls = groups.map(g => g.netPnL);
-      const bgColors = pnls.map(p => p >= 0 ? '#00f59b' : '#ff4d6d');
+      const bgColors = pnls.map(p => p >= 0 ? '#35B779' : '#E05260');
+      const borderColors = pnls.map(p => p >= 0 ? '#24563D' : '#63313A');
 
       this.instances.lotSizeBar = new Chart(ctx, {
         type: 'bar',
@@ -1322,6 +1297,8 @@ const ChartManager = {
             label: `Net P&L (${sym})`,
             data: pnls,
             backgroundColor: bgColors,
+            borderColor: borderColors,
+            borderWidth: 1,
             borderRadius: 4
           }]
         },
@@ -1331,8 +1308,8 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#191b23',
-              borderColor: '#3b4a3f',
+              backgroundColor: '#141D21',
+              borderColor: '#243239',
               borderWidth: 1,
               callbacks: {
                 label: (item) => {
@@ -1355,7 +1332,7 @@ const ChartManager = {
               ticks: { color: '#94a3b8', font: { size: 11, family: "'JetBrains Mono', monospace" } }
             },
             y: {
-              grid: { color: 'rgba(39, 42, 50, 0.6)', drawBorder: false },
+              grid: { color: '#243239', drawBorder: false },
               ticks: {
                 color: '#64748b',
                 font: { size: 11, family: "'JetBrains Mono', monospace" },

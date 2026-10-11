@@ -368,7 +368,7 @@ const MT5Manager = {
         <div class="mt5-info-card">
           <span class="mt5-info-label">Server Ping & Status</span>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="status-dot" style="background:#10b981; box-shadow:0 0 8px #10b981;"></span>
+            <span class="status-dot" style="background:#35B779;"></span>
             <span class="mt5-info-val" style="font-size: 1.15rem;">${acc.ping} ms (Optimal)</span>
           </div>
           <span class="mt5-info-sub">Data-center: Amsterdam DC-02</span>

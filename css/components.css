@@ -9,8 +9,8 @@
   display: inline-grid;
   grid-template-columns: 1fr 1fr;
   align-items: center;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
   border-radius: var(--radius-sm);
   padding: 2px;
   height: 34px;
@@ -24,8 +24,8 @@
   bottom: 2px;
   left: 2px;
   width: calc(50% - 2px);
-  background-color: var(--bg-elevated);
-  border: 1px solid var(--accent-primary);
+  background-color: var(--btn-primary-bg);
+  border: 1px solid var(--btn-primary-border);
   border-radius: 3px;
   transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
@@ -40,7 +40,7 @@
   z-index: 1;
   background: transparent;
   border: none;
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 700;
@@ -52,7 +52,7 @@
 }
 
 .currency-opt.active {
-  color: var(--accent-primary);
+  color: var(--btn-primary-text);
 }
 
 /* ==================== 2. CUSTOM DATE RANGE POPOVER & MINI CALENDAR ==================== */
@@ -147,9 +147,9 @@
   width: 26px;
   height: 26px;
   border-radius: var(--radius-sm);
-  background-color: var(--bg-lowest);
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+  color: var(--btn-subtle-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -157,8 +157,9 @@
 }
 
 .mini-cal-nav:hover {
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
 }
 
 .mini-cal-grid {
@@ -192,8 +193,9 @@
 }
 
 .mini-cal-day:hover:not(.empty) {
-  border-color: var(--accent-primary);
-  color: var(--text-main);
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
 }
 
 .mini-cal-day.has-trades::after {
@@ -207,14 +209,15 @@
 }
 
 .mini-cal-day.in-range {
-  background-color: rgba(0, 245, 155, 0.12);
+  background-color: var(--bg-card-hover);
   color: var(--text-main);
 }
 
 .mini-cal-day.selected-start,
 .mini-cal-day.selected-end {
-  background-color: var(--accent-primary);
-  color: var(--accent-on-primary);
+  background-color: var(--btn-primary-bg);
+  border-color: #55626C;
+  color: var(--btn-primary-text);
   font-weight: 700;
 }
 
@@ -233,9 +236,9 @@
 }
 
 .btn-popover-cancel {
-  background-color: var(--bg-lowest);
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+  color: var(--btn-subtle-text);
   padding: 6px 12px;
   border-radius: var(--radius-sm);
   font-size: 0.74rem;
@@ -243,23 +246,36 @@
   cursor: pointer;
 }
 
+.btn-popover-cancel:hover {
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
+}
+
 .btn-popover-apply {
-  background-color: var(--accent-primary);
-  border: 1px solid var(--accent-primary);
-  color: var(--accent-on-primary);
+  background-color: var(--btn-primary-bg);
+  border: 1px solid var(--btn-primary-border);
+  color: var(--btn-primary-text);
   padding: 6px 12px;
   border-radius: var(--radius-sm);
   font-family: var(--font-display);
   font-size: 0.74rem;
   font-weight: 700;
   cursor: pointer;
+  transition: background-color 0.14s ease, border-color 0.14s ease;
+}
+
+.btn-popover-apply:hover {
+  background-color: var(--btn-primary-hover);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 /* ==================== 3. INLINE CAPITAL SOLVER (NET RETURN CARD) ==================== */
-.kpi-action-btn {
-  background-color: var(--bg-lowest);
-  border: 1px solid var(--border-strong);
-  color: var(--accent-primary);
+.kpi-action-btn,
+.btn-kpi-inline-edit {
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+  color: var(--btn-subtle-text);
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 700;
@@ -270,15 +286,16 @@
   transition: all 0.14s ease;
 }
 
-.kpi-action-btn:hover {
-  background-color: var(--accent-primary);
-  color: var(--accent-on-primary);
-  border-color: var(--accent-primary);
+.kpi-action-btn:hover,
+.btn-kpi-inline-edit:hover {
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 .set-capital-prompt {
   cursor: pointer;
-  color: var(--accent-primary);
+  color: var(--text-main);
   font-size: 0.92rem !important;
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -308,7 +325,7 @@
 .kpi-inline-prefix {
   font-family: var(--font-mono);
   font-weight: 700;
-  color: var(--accent-primary);
+  color: var(--text-muted);
   font-size: 0.88rem;
 }
 
@@ -326,19 +343,24 @@
 }
 
 .kpi-inline-input:focus {
-  border-color: var(--accent-primary);
+  border-color: #55626C;
 }
 
 .kpi-inline-calc-btn {
-  background-color: var(--accent-primary);
-  color: var(--accent-on-primary);
-  border: none;
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-border);
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   font-family: var(--font-display);
   font-size: 0.74rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.kpi-inline-calc-btn:hover {
+  background-color: var(--btn-primary-hover);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 .kpi-inline-hint {
@@ -473,13 +495,13 @@
 }
 
 .data-table tbody tr {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-color);
   transition: background-color 0.12s ease;
   cursor: pointer;
 }
 
 .data-table tbody tr:hover {
-  background-color: var(--bg-elevated);
+  background-color: var(--bg-card-hover);
 }
 
 .data-table tbody td {
@@ -525,10 +547,18 @@
   border: 1px solid var(--buy-border);
 }
 
+.type-badge.buy:hover {
+  background-color: var(--profit-hover);
+}
+
 .type-badge.sell {
   color: var(--sell-color);
   background-color: var(--sell-bg);
   border: 1px solid var(--sell-border);
+}
+
+.type-badge.sell:hover {
+  background-color: var(--loss-hover);
 }
 
 .reason-badge {
@@ -551,10 +581,18 @@
   background-color: var(--profit-bg);
 }
 
+.reason-badge.tp:hover {
+  background-color: var(--profit-hover);
+}
+
 .reason-badge.sl {
   color: var(--loss);
   border-color: var(--loss-border);
   background-color: var(--loss-bg);
+}
+
+.reason-badge.sl:hover {
+  background-color: var(--loss-hover);
 }
 
 .pagination-bar {
@@ -578,9 +616,9 @@
 
 .page-btn,
 .btn-sample {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  color: var(--text-main);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+  color: var(--btn-subtle-text);
   font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 600;
@@ -592,9 +630,9 @@
 
 .page-btn:hover,
 .btn-sample:hover {
-  background-color: var(--bg-elevated);
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
 }
 
 /* ==================== 5. MONTHLY TRADING CALENDAR ==================== */
@@ -617,9 +655,9 @@
   width: 28px;
   height: 28px;
   border-radius: var(--radius-sm);
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+  color: var(--btn-subtle-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -629,9 +667,9 @@
 }
 
 .cal-btn:hover {
-  background-color: var(--bg-elevated);
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
 }
 
 .calendar-grid {
@@ -671,7 +709,8 @@
 }
 
 .calendar-day-cell:hover:not(.other-month) {
-  border-color: var(--accent-primary);
+  background-color: var(--bg-card-hover);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 .calendar-day-cell.other-month {
@@ -720,12 +759,22 @@
   border-color: var(--profit-border);
 }
 
+.calendar-day-cell.profit-day:hover:not(.other-month) {
+  background-color: var(--profit-hover);
+  border-color: var(--profit-border);
+}
+
 .calendar-day-cell.profit-day .day-pnl {
   color: var(--profit);
 }
 
 .calendar-day-cell.loss-day {
   background-color: var(--loss-bg);
+  border-color: var(--loss-border);
+}
+
+.calendar-day-cell.loss-day:hover:not(.other-month) {
+  background-color: var(--loss-hover);
   border-color: var(--loss-border);
 }
 
@@ -761,10 +810,10 @@
 .pnl-perf-select-btn {
   height: 32px;
   padding: 0 11px;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
   border-radius: var(--radius-sm);
-  color: var(--text-main);
+  color: var(--btn-subtle-text);
   font-family: var(--font-mono);
   font-size: 0.74rem;
   font-weight: 600;
@@ -777,8 +826,9 @@
 
 .weekly-perf-select-btn:hover,
 .pnl-perf-select-btn:hover {
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
 }
 
 .weekly-perf-menu,
@@ -822,14 +872,14 @@
 
 .weekly-perf-menu-item:hover,
 .pnl-perf-menu-item:hover {
-  background-color: var(--bg-elevated);
-  color: var(--text-main);
+  background-color: var(--btn-subtle-hover);
+  color: var(--btn-primary-text);
 }
 
 .weekly-perf-menu-item.active,
 .pnl-perf-menu-item.active {
-  background-color: var(--profit-bg);
-  color: var(--accent-primary);
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
 }
 
 .weekly-perf-chart-container {
@@ -866,9 +916,9 @@
 .pnl-perf-apply-btn {
   height: 32px;
   padding: 0 11px;
-  background-color: var(--accent-primary);
-  color: var(--accent-on-primary);
-  border: none;
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-border);
   border-radius: var(--radius-sm);
   font-family: var(--font-display);
   font-size: 0.74rem;
@@ -876,16 +926,27 @@
   cursor: pointer;
 }
 
+.pnl-perf-apply-btn:hover {
+  background-color: var(--btn-primary-hover);
+  border-color: var(--btn-subtle-border-hover);
+}
+
 .pnl-perf-cancel-btn {
   height: 32px;
   padding: 0 10px;
-  background-color: var(--bg-card);
-  color: var(--text-muted);
-  border: 1px solid var(--border-color);
+  background-color: var(--btn-subtle-bg);
+  color: var(--btn-subtle-text);
+  border: 1px solid var(--btn-subtle-border);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 0.72rem;
   cursor: pointer;
+}
+
+.pnl-perf-cancel-btn:hover {
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
 }
 
 .pnl-perf-metrics-grid {
@@ -906,11 +967,11 @@
 }
 
 .pnl-perf-metric-card.earned {
-  border-left: 3px solid var(--profit);
+  border-left: 3px solid var(--profit-chart);
 }
 
 .pnl-perf-metric-card.lost {
-  border-left: 3px solid var(--loss);
+  border-left: 3px solid var(--loss-chart);
 }
 
 .pnl-perf-metric-card.net {
@@ -1071,11 +1132,11 @@
 }
 
 .duration-outcome-box.win-box {
-  border-left: 3px solid var(--profit);
+  border-left: 3px solid var(--profit-chart);
 }
 
 .duration-outcome-box.loss-box {
-  border-left: 3px solid var(--loss);
+  border-left: 3px solid var(--loss-chart);
 }
 
 .outcome-box-label {
@@ -1118,11 +1179,11 @@
 }
 
 .hold-ratio-banner.good {
-  border-left: 3px solid var(--profit);
+  border-left: 3px solid var(--profit-chart);
 }
 
 .hold-ratio-banner.warning {
-  border-left: 3px solid var(--loss);
+  border-left: 3px solid var(--loss-chart);
 }
 
 /* ==================== 8. FOURGE AI INTELLIGENCE WORKSTATION ==================== */
@@ -1217,7 +1278,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: currentColor;
+  background-color: var(--profit-chart);
   display: inline-block;
 }
 
@@ -1265,10 +1326,19 @@
   color: var(--profit);
 }
 
+.bot-mode-toggle-btn.online:hover {
+  background-color: var(--profit-hover);
+}
+
 .bot-mode-toggle-btn.offline {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   color: var(--text-muted);
+}
+
+.bot-mode-toggle-btn.offline:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-main);
 }
 
 .bot-token-gauge {
@@ -1391,11 +1461,11 @@
 }
 
 .bot-prompt-chip {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
   border-radius: var(--radius-sm);
   padding: 7px 12px;
-  color: var(--text-main);
+  color: var(--btn-subtle-text);
   font-family: var(--font-sans);
   font-size: 0.78rem;
   font-weight: 600;
@@ -1404,9 +1474,9 @@
 }
 
 .bot-prompt-chip:hover {
-  background-color: var(--bg-elevated);
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
 }
 
 .bot-message {
@@ -1455,9 +1525,9 @@
 }
 
 .bot-copy-btn {
-  background-color: var(--bg-lowest);
-  border: 1px solid var(--border-color);
-  color: var(--text-dim);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+  color: var(--btn-subtle-text);
   font-family: var(--font-mono);
   font-size: 0.64rem;
   padding: 2px 7px;
@@ -1466,8 +1536,9 @@
 }
 
 .bot-copy-btn:hover {
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
 }
 
 .bot-msg-text {
@@ -1479,9 +1550,9 @@
 }
 
 .bot-message-user .bot-msg-text {
-  background-color: var(--bg-elevated);
-  border: 1px solid var(--accent-primary);
-  color: var(--text-main);
+  background-color: var(--btn-primary-bg);
+  border: 1px solid #55626C;
+  color: var(--btn-primary-text);
 }
 
 .bot-message-assistant .bot-msg-text {
@@ -1500,7 +1571,7 @@
 }
 
 .bot-msg-text .bot-code-block {
-  background-color: #07090e;
+  background-color: var(--bg-lowest);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
@@ -1508,7 +1579,7 @@
   overflow-x: auto;
   font-family: var(--font-mono);
   font-size: 0.78rem;
-  color: var(--accent-primary);
+  color: var(--text-main);
 }
 
 .bot-msg-text .bot-inline-code {
@@ -1518,7 +1589,7 @@
   border-radius: 3px;
   font-family: var(--font-mono);
   font-size: 0.84em;
-  color: var(--accent-primary);
+  color: var(--text-main);
 }
 
 .bot-table-wrapper {
@@ -1545,7 +1616,7 @@
 
 .bot-table td {
   padding: 7px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .bot-input-area {
@@ -1577,26 +1648,27 @@
 }
 
 #botChatInput:focus {
-  border-color: var(--accent-primary);
+  border-color: #55626C;
 }
 
 .bot-send-btn {
   width: 42px;
   height: 42px;
   border-radius: var(--radius-sm);
-  background-color: var(--accent-primary);
-  color: var(--accent-on-primary);
-  border: none;
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-border);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background-color 0.14s ease;
+  transition: background-color 0.14s ease, border-color 0.14s ease;
 }
 
 .bot-send-btn:hover {
-  background-color: var(--accent-primary-dim);
+  background-color: var(--btn-primary-hover);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 .bot-typing-dots {
@@ -1651,9 +1723,9 @@
   width: 46px;
   height: 46px;
   border-radius: var(--radius-sm);
-  background-color: var(--bg-lowest);
-  border: 1px solid var(--accent-primary);
-  color: var(--accent-primary);
+  background-color: var(--logo-blue-bg);
+  border: 1px solid var(--logo-blue-border);
+  color: var(--logo-blue);
   font-family: var(--font-mono);
   font-weight: 800;
   font-size: 0.92rem;
@@ -1747,9 +1819,9 @@
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 3px;
-  background-color: var(--profit-bg);
-  color: var(--accent-primary);
-  border: 1px solid var(--profit-border);
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-border);
 }
 
 .mt5-spec-item strong {
@@ -1821,6 +1893,10 @@
   cursor: pointer;
 }
 
+.btn-danger-outline:hover {
+  background-color: var(--loss-hover);
+}
+
 .mt5-kpi-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -1872,10 +1948,15 @@
   white-space: nowrap;
 }
 
+.mt5-subtab-btn:hover {
+  background-color: var(--btn-subtle-hover);
+  color: var(--btn-primary-text);
+}
+
 .mt5-subtab-btn.active {
-  background-color: var(--bg-elevated);
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+  background-color: var(--btn-primary-bg);
+  border-color: var(--btn-primary-border);
+  color: var(--btn-primary-text);
 }
 
 .mt5-tab-pane {
@@ -1984,7 +2065,7 @@
 }
 
 .modal-close:hover {
-  background-color: var(--bg-elevated);
+  background-color: var(--bg-card-hover);
   color: var(--text-main);
 }
 
@@ -2022,7 +2103,7 @@
 .upload-dropzone:hover,
 .upload-dropzone.dragover {
   border-color: var(--accent-primary);
-  background-color: rgba(0, 245, 155, 0.04);
+  background-color: var(--bg-card-hover);
 }
 
 .upload-icon-circle {
@@ -2167,9 +2248,13 @@
   cursor: pointer;
 }
 
+.import-mode-option:hover {
+  background-color: var(--bg-card-hover);
+}
+
 .import-mode-option.selected {
-  border-color: var(--accent-primary);
-  background-color: rgba(0, 245, 155, 0.05);
+  border-color: #55626C;
+  background-color: var(--btn-primary-bg);
 }
 
 .import-mode-option input {
@@ -2229,13 +2314,13 @@
 }
 
 .form-control:focus {
-  border-color: var(--accent-primary);
+  border-color: #55626C;
 }
 
 .btn-primary {
-  background-color: var(--accent-primary);
-  color: var(--accent-on-primary);
-  border: 1px solid var(--accent-primary);
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-border);
   padding: 9px 16px;
   border-radius: var(--radius-sm);
   font-family: var(--font-display);
@@ -2244,27 +2329,31 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
   cursor: pointer;
+  transition: background-color 0.14s ease, border-color 0.14s ease;
 }
 
 .btn-primary:hover {
-  background-color: var(--accent-primary-dim);
+  background-color: var(--btn-primary-hover);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 .btn-secondary {
-  background-color: var(--bg-card);
-  color: var(--text-main);
-  border: 1px solid var(--border-color);
+  background-color: var(--btn-subtle-bg);
+  color: var(--btn-subtle-text);
+  border: 1px solid var(--btn-subtle-border);
   padding: 8px 14px;
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.14s ease;
 }
 
 .btn-secondary:hover {
-  background-color: var(--bg-elevated);
-  border-color: var(--border-strong);
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
 }
 
 /* Trade Detail & Day Trades Modals */
@@ -2354,6 +2443,7 @@
 }
 
 .day-trade-card:hover {
+  background-color: var(--bg-card-hover);
   border-color: var(--accent-primary);
 }
 
@@ -2424,6 +2514,10 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   cursor: pointer;
+}
+
+.rule-item:hover {
+  background-color: var(--bg-card-hover);
 }
 
 .rule-item input[type="checkbox"] {
@@ -2541,7 +2635,7 @@
 }
 
 .toast.error {
-  border-left-color: var(--loss);
+  border-left-color: var(--loss-chart);
 }
 
 .profit-text { color: var(--profit) !important; font-weight: 700; }

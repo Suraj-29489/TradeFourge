@@ -4,61 +4,88 @@
    ========================================================================== */
 
 :root {
-  /* Surface Hierarchy - Solid Institutional Blocks (Zero Glassmorphism) */
-  --bg-lowest: #0b0e15;
-  --bg-app: #10131a;
-  --bg-sidebar: #191b23;
-  --bg-card: #191b23;
-  --bg-card-hover: #1d1f27;
-  --bg-card-alt: #1d1f27;
-  --bg-elevated: #272a32;
-  --bg-highest: #32353d;
-  --bg-input: #0b0e15;
+  /* Surface Hierarchy - Unified #141D21 Slate-Charcoal Blocks */
+  --bg-lowest: #141D21;
+  --bg-app: #141D21;
+  --bg-sidebar: #141D21;
+  --bg-card: #141D21;
+  --bg-card-hover: #1E282F;
+  --bg-hover: #1E282F;
+  --bg-nav-selected: #273138;
+  --bg-card-alt: #141D21;
+  --bg-elevated: #222D35;
+  --bg-highest: #273138;
+  --bg-input: #141D21;
+
+  /* Subtle Button Palette (Matched to Screenshot) */
+  --btn-primary-bg: #222D35;
+  --btn-primary-hover: #2B3943;
+  --btn-primary-border: #2E3B44;
+  --btn-primary-text: #F0F4F7;
+
+  --btn-subtle-bg: #141D21;
+  --btn-subtle-hover: #1E282F;
+  --btn-subtle-border: #283034;
+  --btn-subtle-border-hover: #3B4952;
+  --btn-subtle-text: #C5CFD6;
+
+  /* Brand Blue Logo Palette */
+  --logo-blue: #3B82F6;
+  --logo-blue-light: #60A5FA;
+  --logo-blue-bg: #152232;
+  --logo-blue-border: #3B82F6;
 
   /* Crisp Structural Borders (1px Solid) */
-  --border-color: #272a32;
-  --border-light: rgba(59, 74, 63, 0.45);
-  --border-strong: #3b4a3f;
-  --border-focus: #00f59b;
+  --border-color: #283034;
+  --border-light: #283034;
+  --border-strong: #38464F;
+  --border-focus: #55626C;
 
   /* Text Hierarchy */
-  --text-main: #e1e2ec;
-  --text-muted: #b9cbbd;
-  --text-dim: #849588;
+  --text-main: #E6ECEF;
+  --text-muted: #9BA6AD;
+  --text-dim: #6E7B82;
 
   /* Brand & Institutional Accents */
-  --accent-primary: #00f59b;
-  --accent-primary-dim: #00e38f;
-  --accent-primary-glow: rgba(0, 245, 155, 0.14);
-  --accent-on-primary: #002111;
+  --accent-primary: #3B82F6;
+  --accent-primary-dim: #2563EB;
+  --accent-primary-glow: #222D35;
+  --accent-on-primary: #F0F4F7;
 
-  --accent-secondary: #c0c1ff;
-  --accent-indigo: #6366f1;
-  --accent-indigo-bg: rgba(99, 102, 241, 0.14);
+  --accent-secondary: #94A3B8;
+  --accent-indigo: #3B82F6;
+  --accent-indigo-bg: #141D21;
 
-  /* Financial Semantic Colors */
-  --profit: #00f59b;
-  --profit-text-soft: #cdffdc;
-  --profit-bg: rgba(0, 245, 155, 0.10);
-  --profit-border: rgba(0, 245, 155, 0.30);
+  /* Controlled Positive Performance Palette */
+  --profit: #4CAF78;
+  --color-profit: #4CAF78;
+  --profit-chart: #35B779;
+  --profit-text-soft: #4CAF78;
+  --profit-bg: #123526;
+  --profit-border: #24563D;
+  --profit-hover: #17432F;
 
-  --loss: #ff4d6d;
-  --loss-soft: #ffb4ab;
-  --loss-bg: rgba(255, 77, 109, 0.10);
-  --loss-border: rgba(255, 77, 109, 0.30);
+  /* Controlled Negative Performance Palette */
+  --loss: #E4777F;
+  --color-loss: #E4777F;
+  --loss-chart: #E05260;
+  --loss-soft: #E4777F;
+  --loss-bg: #3A1D25;
+  --loss-border: #63313A;
+  --loss-hover: #4A252D;
 
   --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.12);
+  --warning-bg: #141D21;
   --neutral: #849588;
 
   /* Global Unified BUY / SELL Direction System */
-  --buy-color: #00f59b;
-  --buy-bg: rgba(0, 245, 155, 0.10);
-  --buy-border: rgba(0, 245, 155, 0.32);
+  --buy-color: #4CAF78;
+  --buy-bg: #123526;
+  --buy-border: #24563D;
 
-  --sell-color: #ff4d6d;
-  --sell-bg: rgba(255, 77, 109, 0.10);
-  --sell-border: rgba(255, 77, 109, 0.32);
+  --sell-color: #E4777F;
+  --sell-bg: #3A1D25;
+  --sell-border: #63313A;
 
   /* Typography */
   --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -106,11 +133,11 @@ html, body {
   background: var(--bg-lowest);
 }
 ::-webkit-scrollbar-thumb {
-  background: #272a32;
+  background: var(--border-color);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3b4a3f;
+  background: var(--bg-card-hover);
 }
 
 /* ==================== APP SHELL LAYOUT ==================== */
@@ -150,7 +177,7 @@ body.sidebar-collapsed .sidebar {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-color);
-  background-color: var(--bg-lowest);
+  background-color: var(--bg-sidebar);
 }
 
 .brand-logo {
@@ -176,12 +203,12 @@ body.sidebar-collapsed .sidebar {
   width: 34px;
   height: 34px;
   border-radius: var(--radius-sm);
-  background-color: #10131a;
-  border: 1px solid var(--accent-primary);
+  background-color: var(--logo-blue-bg);
+  border: 1px solid var(--logo-blue-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent-primary);
+  color: var(--logo-blue);
   flex-shrink: 0;
 }
 
@@ -204,7 +231,7 @@ body.sidebar-collapsed .sidebar {
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: var(--accent-primary);
+  color: var(--logo-blue-light);
   margin-top: 2px;
 }
 
@@ -213,9 +240,9 @@ body.sidebar-collapsed .sidebar {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-sm);
-  background: var(--bg-card-alt);
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
+  background: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+  color: var(--btn-subtle-text);
   align-items: center;
   justify-content: center;
   cursor: pointer;
@@ -223,8 +250,9 @@ body.sidebar-collapsed .sidebar {
 }
 
 .sidebar-close-btn:hover {
-  color: var(--text-main);
-  border-color: var(--border-strong);
+  background: var(--btn-subtle-hover);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 .sidebar-backdrop {
@@ -246,28 +274,29 @@ body.sidebar-collapsed .sidebar {
   height: 36px;
   padding: 0 10px;
   border-radius: var(--radius-sm);
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  color: var(--text-main);
+  background: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+  color: var(--btn-subtle-text);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .sidebar-reveal-btn:hover {
-  background: var(--bg-elevated);
-  border-color: var(--accent-primary);
+  background: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
 }
 
 .logo-icon-sm {
   width: 22px;
   height: 22px;
   border-radius: 3px;
-  background: #10131a;
-  border: 1px solid var(--accent-primary);
+  background: var(--logo-blue-bg);
+  border: 1px solid var(--logo-blue-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent-primary);
+  color: var(--logo-blue);
 }
 
 .reveal-chevron {
@@ -284,9 +313,9 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 
 .btn-add-trade {
   width: 100%;
-  background-color: var(--accent-primary);
-  color: var(--accent-on-primary);
-  border: 1px solid var(--accent-primary);
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-border);
   padding: 10px 14px;
   border-radius: var(--radius-sm);
   font-family: var(--font-display);
@@ -299,11 +328,12 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background-color 0.15s ease, transform 0.1s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
 
 .btn-add-trade:hover {
-  background-color: var(--accent-primary-dim);
+  background-color: var(--btn-primary-hover);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 .btn-add-trade:active {
@@ -335,7 +365,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   gap: 11px;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
-  border-left: 3px solid transparent;
+  border: 1px solid transparent;
   color: var(--text-muted);
   font-weight: 600;
   font-size: 0.85rem;
@@ -357,15 +387,15 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 }
 
 .nav-item.active {
-  background-color: var(--bg-elevated);
-  border-left-color: var(--accent-primary);
-  color: var(--accent-primary);
+  background-color: var(--bg-nav-selected);
+  border-color: #55626C;
+  color: var(--btn-primary-text);
   font-weight: 700;
 }
 
 .nav-item.active svg {
   opacity: 1;
-  color: var(--accent-primary);
+  color: var(--btn-primary-text);
 }
 
 .nav-badge-ai {
@@ -374,9 +404,9 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 3px;
-  background-color: rgba(192, 193, 255, 0.14);
+  background-color: var(--bg-elevated);
   color: var(--accent-secondary);
-  border: 1px solid rgba(192, 193, 255, 0.3);
+  border: 1px solid var(--border-color);
   letter-spacing: 0.05em;
 }
 
@@ -420,7 +450,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 .sidebar-footer {
   padding: 12px;
   border-top: 1px solid var(--border-color);
-  background-color: var(--bg-lowest);
+  background-color: var(--bg-sidebar);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -459,7 +489,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background-color: var(--profit);
+  background-color: var(--profit-chart);
   flex-shrink: 0;
 }
 
@@ -470,9 +500,9 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 }
 
 .btn-sidebar-util {
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+  color: var(--btn-subtle-text);
   padding: 6px 8px;
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);
@@ -483,15 +513,15 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 }
 
 .btn-sidebar-util:hover {
-  background-color: var(--bg-elevated);
-  color: var(--text-main);
-  border-color: var(--border-strong);
+  background-color: var(--btn-subtle-hover);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 .btn-sidebar-util.danger:hover {
   color: var(--loss);
   border-color: var(--loss-border);
-  background-color: var(--loss-bg);
+  background-color: var(--loss-hover);
 }
 
 /* ==================== MAIN WRAPPER & TOP HEADER ==================== */
@@ -513,7 +543,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: var(--bg-lowest);
+  background-color: var(--bg-sidebar);
   flex-shrink: 0;
   z-index: 90;
   gap: 12px;
@@ -552,14 +582,14 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   align-items: center;
   gap: 6px;
   padding: 3px 9px;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: var(--accent-primary);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -567,7 +597,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: var(--accent-primary);
+  background-color: var(--profit-chart);
 }
 
 .header-right {
@@ -582,13 +612,18 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   width: 34px;
   height: 34px;
   border-radius: var(--radius-sm);
-  background-color: var(--accent-primary);
-  color: var(--accent-on-primary);
-  border: 1px solid var(--accent-primary);
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1px solid var(--btn-primary-border);
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.btn-mobile-add-top:hover {
+  background-color: var(--btn-primary-hover);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 .btn-header-secondary {
@@ -597,10 +632,10 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   gap: 6px;
   height: 34px;
   padding: 0 12px;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
   border-radius: var(--radius-sm);
-  color: var(--text-muted);
+  color: var(--btn-subtle-text);
   font-family: var(--font-sans);
   font-size: 0.78rem;
   font-weight: 600;
@@ -609,9 +644,9 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 }
 
 .btn-header-secondary:hover {
-  background-color: var(--bg-elevated);
-  color: var(--text-main);
-  border-color: var(--border-strong);
+  background-color: var(--btn-subtle-hover);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 .date-filter {
@@ -619,12 +654,18 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   align-items: center;
   gap: 8px;
   height: 34px;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
   padding: 0 11px;
   border-radius: var(--radius-sm);
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: var(--btn-subtle-text);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.date-filter:hover {
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
 }
 
 .date-filter select {
@@ -644,9 +685,9 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 }
 
 .btn-upload-csv {
-  background-color: var(--bg-elevated);
-  border: 1px solid var(--accent-primary);
-  color: var(--accent-primary);
+  background-color: var(--btn-primary-bg);
+  border: 1px solid var(--btn-primary-border);
+  color: var(--btn-primary-text);
   height: 34px;
   padding: 0 13px;
   border-radius: var(--radius-sm);
@@ -664,8 +705,9 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 }
 
 .btn-upload-csv:hover {
-  background-color: var(--accent-primary);
-  color: var(--accent-on-primary);
+  background-color: var(--btn-primary-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
 }
 
 /* ==================== SCROLLABLE CONTENT AREA ==================== */
@@ -796,7 +838,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 .kpi-visual {
   margin-top: auto;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--border-color);
 }
 
 /* Solid Progress Bars inside KPIs */
@@ -811,7 +853,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 }
 
 .progress-segment.profit {
-  background-color: var(--profit);
+  background-color: var(--profit-chart);
   height: 100%;
 }
 
@@ -821,7 +863,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 }
 
 .progress-segment.loss {
-  background-color: var(--loss);
+  background-color: var(--loss-chart);
   height: 100%;
 }
 
@@ -855,6 +897,10 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   border: 1px solid var(--profit-border);
 }
 
+.pill-stat.win:hover {
+  background-color: var(--profit-hover);
+}
+
 .pill-stat.be {
   background-color: var(--bg-lowest);
   color: var(--text-muted);
@@ -865,6 +911,10 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   background-color: var(--loss-bg);
   color: var(--loss);
   border: 1px solid var(--loss-border);
+}
+
+.pill-stat.loss:hover {
+  background-color: var(--loss-hover);
 }
 
 /* ==================== ROW 2: SECONDARY KPI STRIP (8 BLOCKS) ==================== */
@@ -888,14 +938,15 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 
 .mini-kpi:hover {
   border-color: var(--border-strong);
+  background-color: var(--bg-card-hover);
 }
 
 .mini-kpi-highlight.profit-border {
-  border-left: 3px solid var(--profit);
+  border-left: 3px solid var(--profit-chart);
 }
 
 .mini-kpi-highlight.loss-border {
-  border-left: 3px solid var(--loss);
+  border-left: 3px solid var(--loss-chart);
 }
 
 .mini-kpi-top-row {
@@ -1008,10 +1059,10 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 
 .card-tabs {
   display: flex;
-  background-color: var(--bg-card);
+  background-color: var(--btn-subtle-bg);
   padding: 2px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--btn-subtle-border);
   gap: 2px;
 }
 
@@ -1022,19 +1073,21 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   font-weight: 600;
   color: var(--text-muted);
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.14s ease;
 }
 
 .card-tab:hover {
-  color: var(--text-main);
+  color: var(--btn-primary-text);
+  background-color: var(--btn-subtle-hover);
 }
 
 .card-tab.active {
-  background-color: var(--bg-elevated);
-  color: var(--accent-primary);
+  background-color: var(--btn-primary-bg);
+  border-color: var(--btn-primary-border);
+  color: var(--btn-primary-text);
   font-weight: 700;
 }
 
@@ -1078,16 +1131,37 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   justify-content: space-between;
 }
 
-.analytics-tag {
+.analytics-tag,
+.donut-card-badge {
   font-size: 0.68rem;
   font-weight: 700;
   font-family: var(--font-mono);
   padding: 3px 8px;
   border-radius: 3px;
-  background: var(--bg-card);
-  color: var(--accent-primary);
-  border: 1px solid var(--border-strong);
+  background: var(--btn-subtle-bg);
+  color: var(--btn-subtle-text);
+  border: 1px solid var(--btn-subtle-border);
   letter-spacing: 0.04em;
+}
+
+.donut-card-badge.profit {
+  background-color: var(--profit-bg);
+  color: var(--profit);
+  border-color: var(--profit-border);
+}
+
+.donut-card-badge.profit:hover {
+  background-color: var(--profit-hover);
+}
+
+.donut-card-badge.loss {
+  background-color: var(--loss-bg);
+  color: var(--loss);
+  border-color: var(--loss-border);
+}
+
+.donut-card-badge.loss:hover {
+  background-color: var(--loss-hover);
 }
 
 .donut-card-body {
@@ -1177,9 +1251,9 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   flex-shrink: 0;
 }
 
-.legend-dot.win { background-color: var(--profit); }
+.legend-dot.win { background-color: var(--profit-chart); }
 .legend-dot.draw { background-color: var(--neutral); }
-.legend-dot.loss { background-color: var(--loss); }
+.legend-dot.loss { background-color: var(--loss-chart); }
 
 .legend-val {
   font-family: var(--font-mono);
@@ -1311,10 +1385,10 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   transition: width 0.35s ease;
 }
 
-.breakdown-bar-fill.profit { background-color: var(--profit); }
-.breakdown-bar-fill.loss { background-color: var(--loss); }
-.breakdown-bar-fill.tp { background-color: var(--profit); }
-.breakdown-bar-fill.sl { background-color: var(--loss); }
+.breakdown-bar-fill.profit { background-color: var(--profit-chart); }
+.breakdown-bar-fill.loss { background-color: var(--loss-chart); }
+.breakdown-bar-fill.tp { background-color: var(--profit-chart); }
+.breakdown-bar-fill.sl { background-color: var(--loss-chart); }
 .breakdown-bar-fill.user { background-color: #3b82f6; }
 .breakdown-bar-fill.so { background-color: #a855f7; }
 .breakdown-bar-fill.unknown { background-color: #64748b; }
@@ -1370,7 +1444,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 
 .settings-row.danger-zone-row {
   border-color: var(--loss-border);
-  background-color: rgba(255, 77, 109, 0.04);
+  background-color: var(--loss-bg);
 }
 
 .settings-label {
@@ -1403,7 +1477,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   right: 0;
   height: 62px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background-color: var(--bg-lowest);
+  background-color: var(--bg-sidebar);
   border-top: 1px solid var(--border-color);
   z-index: 940;
   grid-template-columns: repeat(5, 1fr);
@@ -1428,15 +1502,20 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   transition: color 0.14s ease, background-color 0.14s ease;
 }
 
+.mobile-nav-item:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-main);
+}
+
 .mobile-nav-item svg {
   width: 18px;
   height: 18px;
 }
 
 .mobile-nav-item.active {
-  color: var(--accent-primary);
-  border-top-color: var(--accent-primary);
-  background-color: rgba(0, 245, 155, 0.05);
+  color: var(--btn-primary-text);
+  border-top-color: #55626C;
+  background-color: var(--bg-nav-selected);
 }
 
 /* ==================== RESPONSIVE BREAKPOINTS ==================== */
