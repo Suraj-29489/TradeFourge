@@ -1,5 +1,6 @@
 /**
- * TradeForge - Chart.js Visualizations Manager
+ * TradeForge V3.0 Institutional - Chart.js Visualizations Manager
+ * Solid Obsidian & Slate Color System (#00f59b Emerald, #ff4d6d Coral, #c0c1ff Indigo)
  */
 
 const ChartManager = {
@@ -12,10 +13,11 @@ const ChartManager = {
     symbolBar: null,
     weekdayBar: null,
     durationDist: null,
+    durationOutcome: null,
     lotSizeBar: null
   },
 
-  currentPnLView: 'cumulative', // 'cumulative' or 'daily'
+  currentPnLView: 'cumulative', // 'cumulative', 'daily', 'weekly', 'monthly'
   currentLotView: 'pnl', // 'pnl' or 'trades'
 
   /**
@@ -28,22 +30,78 @@ const ChartManager = {
   },
 
   /**
-   * Render Winning % by Trades Donut Chart
+   * Render Winning % by Trades Donut Chart + Telemetry
    */
   renderTradesDonut(metrics) {
-    const ctx = document.getElementById('tradesDonutCanvas');
+    const ctx = document.getElementById('tradesDonutCanvas') || document.getElementById('tradesDonutChart');
+
+    const wins = metrics.winnersCount || 0;
+    const losses = metrics.losersCount || 0;
+    const draws = metrics.breakEvenCount || 0;
+    const total = metrics.totalTrades || (wins + losses + draws);
+    const hasData = (wins + losses + draws) > 0;
+
+    // Update Donut Card Telemetry (V3.0 & legacy IDs)
+    const winPctStr = `${Number(metrics.winRate || 0).toFixed(1)}%`;
+    const labelEl = document.getElementById('tradesDonutCenterVal') || document.getElementById('donutTradesWinPct');
+    if (labelEl) {
+      labelEl.innerText = `${metrics.winRate}%`;
+      labelEl.style.color = metrics.winRate >= 50 ? '#00f59b' : (hasData ? '#ff4d6d' : '#f1f5f9');
+    }
+    const v3PctEl = document.getElementById('donutTradesWinPct');
+    if (v3PctEl) {
+      v3PctEl.innerText = winPctStr;
+      v3PctEl.style.color = metrics.winRate >= 50 ? '#00f59b' : (hasData ? '#ff4d6d' : '#f1f5f9');
+    }
+
+    const badgeEl = document.getElementById('donutTradesBadge');
+    if (badgeEl) {
+      badgeEl.innerText = `${wins}W / ${losses}L`;
+      badgeEl.className = `donut-card-badge ${metrics.winRate >= 50 ? 'profit' : 'loss'}`;
+    }
+
+    const winsEl = document.getElementById('donutTradesWins');
+    if (winsEl) winsEl.innerText = String(wins);
+    const drawsEl = document.getElementById('donutTradesDraws');
+    if (drawsEl) drawsEl.innerText = String(draws);
+    const lossesEl = document.getElementById('donutTradesLosses');
+    if (lossesEl) lossesEl.innerText = String(losses);
+    const totalEl = document.getElementById('donutTradesTotal');
+    if (totalEl) totalEl.innerText = String(total);
+
+    // Best symbol win rate
+    const bestSymEl = document.getElementById('donutTradesBestSym');
+    const bestRateEl = document.getElementById('donutTradesBestRate');
+    if (bestSymEl || bestRateEl) {
+      const syms = metrics.symbolBreakdown || [];
+      if (syms.length > 0) {
+        let best = syms[0];
+        let bestWr = best.trades > 0 ? (best.wins / best.trades) * 100 : 0;
+        syms.forEach(s => {
+          const wr = s.trades > 0 ? (s.wins / s.trades) * 100 : 0;
+          if (wr > bestWr || (wr === bestWr && s.pnl > best.pnl)) {
+            best = s;
+            bestWr = wr;
+          }
+        });
+        if (bestSymEl) bestSymEl.innerText = best.symbol;
+        if (bestRateEl) bestRateEl.innerText = `${bestWr.toFixed(1)}%`;
+      } else {
+        if (bestSymEl) bestSymEl.innerText = '--';
+        if (bestRateEl) bestRateEl.innerText = '--';
+      }
+    }
+
     if (!ctx) return;
 
     if (this.instances.tradesDonut) {
       this.instances.tradesDonut.destroy();
     }
-
-    const wins = metrics.winnersCount || 0;
-    const losses = metrics.losersCount || 0;
-    const hasData = (wins + losses) > 0;
+    const existing = Chart.getChart(ctx);
+    if (existing) existing.destroy();
 
     const dataValues = hasData ? [wins, losses] : [1];
-    const backgroundColors = hasData ? ['#10b981', '#f43f5e'] : ['#262e45'];
+    const backgroundColors = hasData ? ['#00f59b', '#ff4d6d'] : ['#272a32'];
 
     this.instances.tradesDonut = new Chart(ctx, {
       type: 'doughnut',
@@ -52,7 +110,7 @@ const ChartManager = {
           data: dataValues,
           backgroundColor: backgroundColors,
           borderWidth: 0,
-          hoverOffset: 4
+          hoverOffset: 3
         }]
       },
       options: {
@@ -63,6 +121,11 @@ const ChartManager = {
           legend: { display: false },
           tooltip: {
             enabled: hasData,
+            backgroundColor: '#191b23',
+            borderColor: '#3b4a3f',
+            borderWidth: 1,
+            titleColor: '#94a3b8',
+            bodyColor: '#f1f5f9',
             callbacks: {
               label: (context) => {
                 const label = context.dataIndex === 0 ? 'Winners' : 'Losers';
@@ -73,32 +136,73 @@ const ChartManager = {
         }
       }
     });
-
-    // Update center label
-    const labelEl = document.getElementById('tradesDonutCenterVal');
-    if (labelEl) {
-      labelEl.innerText = `${metrics.winRate}%`;
-      labelEl.style.color = metrics.winRate >= 50 ? '#10b981' : '#f43f5e';
-    }
   },
 
   /**
-   * Render Winning % by Days Donut Chart
+   * Render Winning % by Days Donut Chart + Telemetry
    */
   renderDaysDonut(metrics) {
-    const ctx = document.getElementById('daysDonutCanvas');
+    const ctx = document.getElementById('daysDonutCanvas') || document.getElementById('daysDonutChart');
+
+    const wins = metrics.winningDaysCount || 0;
+    const losses = metrics.losingDaysCount || 0;
+    const dailyMap = metrics.dailyMap || {};
+    const totalDays = Object.keys(dailyMap).length || (wins + losses);
+    const flatDays = Math.max(0, totalDays - wins - losses);
+    const hasData = (wins + losses + flatDays) > 0;
+
+    // Update Donut Card Telemetry
+    const dayPctStr = `${Number(metrics.dayWinRate || 0).toFixed(1)}%`;
+    const labelEl = document.getElementById('daysDonutCenterVal') || document.getElementById('donutDaysWinPct');
+    if (labelEl) {
+      labelEl.innerText = `${metrics.dayWinRate}%`;
+      labelEl.style.color = metrics.dayWinRate >= 50 ? '#00f59b' : (hasData ? '#ff4d6d' : '#f1f5f9');
+    }
+    const v3PctEl = document.getElementById('donutDaysWinPct');
+    if (v3PctEl) {
+      v3PctEl.innerText = dayPctStr;
+      v3PctEl.style.color = metrics.dayWinRate >= 50 ? '#00f59b' : (hasData ? '#ff4d6d' : '#f1f5f9');
+    }
+
+    const badgeEl = document.getElementById('donutDaysBadge');
+    if (badgeEl) {
+      badgeEl.innerText = `${wins}D / ${losses}D`;
+      badgeEl.className = `donut-card-badge ${metrics.dayWinRate >= 50 ? 'profit' : 'loss'}`;
+    }
+
+    const profitEl = document.getElementById('donutDaysProfit');
+    if (profitEl) profitEl.innerText = String(wins);
+    const flatEl = document.getElementById('donutDaysFlat');
+    if (flatEl) flatEl.innerText = String(flatDays);
+    const lossEl = document.getElementById('donutDaysLoss');
+    if (lossEl) lossEl.innerText = String(losses);
+    const totalEl = document.getElementById('donutDaysTotal');
+    if (totalEl) totalEl.innerText = String(totalDays);
+
+    const bestDayEl = document.getElementById('donutDaysBestDay');
+    const bestValEl = document.getElementById('donutDaysBestVal');
+    if (bestDayEl || bestValEl) {
+      if (metrics.profitableDay) {
+        if (bestDayEl) bestDayEl.innerText = metrics.profitableDay.dayName || '--';
+        if (bestValEl && typeof TradeAnalytics !== 'undefined') {
+          bestValEl.innerText = TradeAnalytics.formatCurrency(metrics.profitableDay.pnl, true);
+        }
+      } else {
+        if (bestDayEl) bestDayEl.innerText = '--';
+        if (bestValEl) bestValEl.innerText = '--';
+      }
+    }
+
     if (!ctx) return;
 
     if (this.instances.daysDonut) {
       this.instances.daysDonut.destroy();
     }
-
-    const wins = metrics.winningDaysCount || 0;
-    const losses = metrics.losingDaysCount || 0;
-    const hasData = (wins + losses) > 0;
+    const existing = Chart.getChart(ctx);
+    if (existing) existing.destroy();
 
     const dataValues = hasData ? [wins, losses] : [1];
-    const backgroundColors = hasData ? ['#10b981', '#f43f5e'] : ['#262e45'];
+    const backgroundColors = hasData ? ['#00f59b', '#ff4d6d'] : ['#272a32'];
 
     this.instances.daysDonut = new Chart(ctx, {
       type: 'doughnut',
@@ -107,7 +211,7 @@ const ChartManager = {
           data: dataValues,
           backgroundColor: backgroundColors,
           borderWidth: 0,
-          hoverOffset: 4
+          hoverOffset: 3
         }]
       },
       options: {
@@ -118,6 +222,11 @@ const ChartManager = {
           legend: { display: false },
           tooltip: {
             enabled: hasData,
+            backgroundColor: '#191b23',
+            borderColor: '#3b4a3f',
+            borderWidth: 1,
+            titleColor: '#94a3b8',
+            bodyColor: '#f1f5f9',
             callbacks: {
               label: (context) => {
                 const label = context.dataIndex === 0 ? 'Winning Days' : 'Losing Days';
@@ -128,20 +237,13 @@ const ChartManager = {
         }
       }
     });
-
-    // Update center label
-    const labelEl = document.getElementById('daysDonutCenterVal');
-    if (labelEl) {
-      labelEl.innerText = `${metrics.dayWinRate}%`;
-      labelEl.style.color = metrics.dayWinRate >= 50 ? '#10b981' : '#f43f5e';
-    }
   },
 
   /**
-   * Render Main P&L Chart (Cumulative Line, Daily Bar, or Weekly Bar)
+   * Render Main P&L Chart (Cumulative Line, Daily Bar, Weekly Bar, or Monthly Bar)
    */
   renderMainPnLChart(metrics) {
-    const ctx = document.getElementById('pnlMainCanvas');
+    const ctx = document.getElementById('pnlMainCanvas') || document.getElementById('mainPnLChart');
     if (!ctx) return;
 
     if (this.instances.pnlMain) {
@@ -168,6 +270,21 @@ const ChartManager = {
       });
 
       const values = timeseries.map(t => t.cumulativePnL);
+      const finalVal = values.length > 0 ? values[values.length - 1] : 0;
+      const lineColor = finalVal >= 0 ? '#00f59b' : '#ff4d6d';
+
+      let bgGradient = finalVal >= 0 ? 'rgba(0, 245, 155, 0.08)' : 'rgba(255, 77, 109, 0.08)';
+      try {
+        const canvasCtx = ctx.getContext('2d');
+        bgGradient = canvasCtx.createLinearGradient(0, 0, 0, 290);
+        if (finalVal >= 0) {
+          bgGradient.addColorStop(0, 'rgba(0, 245, 155, 0.22)');
+          bgGradient.addColorStop(1, 'rgba(0, 245, 155, 0.00)');
+        } else {
+          bgGradient.addColorStop(0, 'rgba(255, 77, 109, 0.22)');
+          bgGradient.addColorStop(1, 'rgba(255, 77, 109, 0.00)');
+        }
+      } catch (e) {}
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'line',
@@ -176,15 +293,15 @@ const ChartManager = {
           datasets: [{
             label: 'Cumulative Net P&L',
             data: values,
-            borderColor: '#10b981',
+            borderColor: lineColor,
             borderWidth: 2.5,
-            backgroundColor: 'transparent',
-            fill: false,
+            backgroundColor: bgGradient,
+            fill: true,
             tension: 0.25,
             pointRadius: values.length > 30 ? 0 : 3.5,
             pointHoverRadius: 6,
-            pointBackgroundColor: '#10b981',
-            pointBorderColor: '#ffffff',
+            pointBackgroundColor: lineColor,
+            pointBorderColor: '#10131a',
             pointBorderWidth: 1.5
           }]
         },
@@ -198,10 +315,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#181d2c',
+              backgroundColor: '#191b23',
               titleColor: '#94a3b8',
-              bodyColor: '#ffffff',
-              borderColor: '#262e45',
+              bodyColor: '#f1f5f9',
+              borderColor: '#3b4a3f',
               borderWidth: 1,
               padding: 12,
               displayColors: false,
@@ -218,14 +335,14 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
-              ticks: { color: '#64748b', font: { size: 11 }, maxTicksLimit: 8 }
+              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
+              ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 8 }
             },
             y: {
-              grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
+              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
               ticks: {
                 color: '#64748b',
-                font: { size: 11 },
+                font: { size: 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   return `${sym}${val}`;
@@ -241,8 +358,8 @@ const ChartManager = {
 
       const labels = timeseries.map(t => t.shortLabel || t.label || t.weekStart);
       const values = timeseries.map(t => t.weeklyPnL);
-      const barColors = values.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.85)' : 'rgba(244, 63, 94, 0.85)');
-      const borderColors = values.map(v => v >= 0 ? '#10b981' : '#f43f5e');
+      const barColors = values.map(v => v >= 0 ? 'rgba(0, 245, 155, 0.85)' : 'rgba(255, 77, 109, 0.85)');
+      const borderColors = values.map(v => v >= 0 ? '#00f59b' : '#ff4d6d');
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'bar',
@@ -254,7 +371,7 @@ const ChartManager = {
             backgroundColor: barColors,
             borderColor: borderColors,
             borderWidth: 1,
-            borderRadius: 4
+            borderRadius: 3
           }]
         },
         options: {
@@ -263,10 +380,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#181d2c',
+              backgroundColor: '#191b23',
               titleColor: '#94a3b8',
-              bodyColor: '#ffffff',
-              borderColor: '#262e45',
+              bodyColor: '#f1f5f9',
+              borderColor: '#3b4a3f',
               borderWidth: 1,
               padding: 12,
               callbacks: {
@@ -289,14 +406,14 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: 'rgba(38, 46, 69, 0.3)', drawBorder: false },
-              ticks: { color: '#64748b', font: { size: 11 }, maxTicksLimit: 10 }
+              grid: { color: 'rgba(39, 42, 50, 0.5)', drawBorder: false },
+              ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 10 }
             },
             y: {
-              grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
+              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
               ticks: {
                 color: '#64748b',
-                font: { size: 11 },
+                font: { size: 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   return `${sym}${val}`;
@@ -312,8 +429,8 @@ const ChartManager = {
 
       const labels = timeseries.map(t => t.label);
       const values = timeseries.map(t => t.monthlyPnL);
-      const barColors = values.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.85)' : 'rgba(244, 63, 94, 0.85)');
-      const borderColors = values.map(v => v >= 0 ? '#10b981' : '#f43f5e');
+      const barColors = values.map(v => v >= 0 ? 'rgba(0, 245, 155, 0.85)' : 'rgba(255, 77, 109, 0.85)');
+      const borderColors = values.map(v => v >= 0 ? '#00f59b' : '#ff4d6d');
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'bar',
@@ -325,7 +442,7 @@ const ChartManager = {
             backgroundColor: barColors,
             borderColor: borderColors,
             borderWidth: 1,
-            borderRadius: 4
+            borderRadius: 3
           }]
         },
         options: {
@@ -334,10 +451,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#181d2c',
+              backgroundColor: '#191b23',
               titleColor: '#94a3b8',
-              bodyColor: '#ffffff',
-              borderColor: '#262e45',
+              bodyColor: '#f1f5f9',
+              borderColor: '#3b4a3f',
               borderWidth: 1,
               padding: 12,
               callbacks: {
@@ -368,14 +485,14 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: 'rgba(38, 46, 69, 0.3)', drawBorder: false },
-              ticks: { color: '#64748b', font: { size: 11 }, maxTicksLimit: 12 }
+              grid: { color: 'rgba(39, 42, 50, 0.5)', drawBorder: false },
+              ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 12 }
             },
             y: {
-              grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
+              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
               ticks: {
                 color: '#64748b',
-                font: { size: 11 },
+                font: { size: 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   return `${sym}${val}`;
@@ -399,8 +516,8 @@ const ChartManager = {
       });
 
       const values = timeseries.map(t => t.dailyPnL);
-      const barColors = values.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.85)' : 'rgba(244, 63, 94, 0.85)');
-      const borderColors = values.map(v => v >= 0 ? '#10b981' : '#f43f5e');
+      const barColors = values.map(v => v >= 0 ? 'rgba(0, 245, 155, 0.85)' : 'rgba(255, 77, 109, 0.85)');
+      const borderColors = values.map(v => v >= 0 ? '#00f59b' : '#ff4d6d');
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'bar',
@@ -412,7 +529,7 @@ const ChartManager = {
             backgroundColor: barColors,
             borderColor: borderColors,
             borderWidth: 1,
-            borderRadius: 4
+            borderRadius: 3
           }]
         },
         options: {
@@ -421,10 +538,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#181d2c',
+              backgroundColor: '#191b23',
               titleColor: '#94a3b8',
-              bodyColor: '#ffffff',
-              borderColor: '#262e45',
+              bodyColor: '#f1f5f9',
+              borderColor: '#3b4a3f',
               borderWidth: 1,
               padding: 12,
               callbacks: {
@@ -439,14 +556,14 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
-              ticks: { color: '#64748b', font: { size: 11 }, maxTicksLimit: 8 }
+              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
+              ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 8 }
             },
             y: {
-              grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
+              grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
               ticks: {
                 color: '#64748b',
-                font: { size: 11 },
+                font: { size: 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   return `${sym}${val}`;
@@ -463,7 +580,7 @@ const ChartManager = {
    * Render Dashboard Weekly Performance 7-Day Bar Chart (Sunday -> Saturday)
    */
   renderWeeklyPerformanceChart(trades = [], filterConfig = { mode: 'all' }) {
-    const canvas = document.getElementById('weeklyPerformanceCanvas');
+    const canvas = document.getElementById('weeklyPerformanceCanvas') || document.getElementById('weeklyPerfChart');
     const emptyEl = document.getElementById('weeklyPerfEmpty');
     const canvasWrap = document.getElementById('weeklyPerfCanvasWrap');
     if (!canvas) return;
@@ -472,6 +589,8 @@ const ChartManager = {
       this.instances.weeklyPerformance.destroy();
       this.instances.weeklyPerformance = null;
     }
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
 
     if (!trades || trades.length === 0) {
       if (emptyEl) emptyEl.style.display = 'flex';
@@ -536,8 +655,8 @@ const ChartManager = {
     if (canvasWrap) canvasWrap.style.display = 'block';
 
     const values = buckets.map(b => Math.round(b.pnl * 100) / 100);
-    const barColors = values.map(v => v > 0 ? 'rgba(16, 185, 129, 0.85)' : (v < 0 ? 'rgba(244, 63, 94, 0.85)' : 'rgba(100, 116, 139, 0.35)'));
-    const borderColors = values.map(v => v > 0 ? '#10b981' : (v < 0 ? '#f43f5e' : '#64748b'));
+    const barColors = values.map(v => v > 0 ? 'rgba(0, 245, 155, 0.85)' : (v < 0 ? 'rgba(255, 77, 109, 0.85)' : 'rgba(100, 116, 139, 0.35)'));
+    const borderColors = values.map(v => v > 0 ? '#00f59b' : (v < 0 ? '#ff4d6d' : '#64748b'));
     const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
 
     this.instances.weeklyPerformance = new Chart(canvas, {
@@ -550,7 +669,7 @@ const ChartManager = {
           backgroundColor: barColors,
           borderColor: borderColors,
           borderWidth: 1,
-          borderRadius: 6,
+          borderRadius: 4,
           maxBarThickness: 48
         }]
       },
@@ -560,10 +679,10 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#181d2c',
+            backgroundColor: '#191b23',
             titleColor: '#94a3b8',
-            bodyColor: '#ffffff',
-            borderColor: '#262e45',
+            bodyColor: '#f1f5f9',
+            borderColor: '#3b4a3f',
             borderWidth: 1,
             padding: 12,
             callbacks: {
@@ -595,14 +714,14 @@ const ChartManager = {
         },
         scales: {
           x: {
-            grid: { color: 'rgba(38, 46, 69, 0.3)', drawBorder: false },
-            ticks: { color: '#94a3b8', font: { size: 12, weight: '600' } }
+            grid: { color: 'rgba(39, 42, 50, 0.5)', drawBorder: false },
+            ticks: { color: '#94a3b8', font: { size: 11, weight: '700', family: "'JetBrains Mono', monospace" } }
           },
           y: {
-            grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
+            grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
             ticks: {
               color: '#64748b',
-              font: { size: 11 },
+              font: { size: 11, family: "'JetBrains Mono', monospace" },
               callback: (val) => {
                 const isNeg = val < 0;
                 return `${isNeg ? '-' : ''}${sym}${Math.abs(val)}`;
@@ -618,7 +737,7 @@ const ChartManager = {
    * Render Dashboard Bottommost P&L Performance Line Chart (P&L Over Time)
    */
   renderPnLPerformanceChart(trades = [], filterConfig = { mode: 'all' }) {
-    const canvas = document.getElementById('pnlPerformanceCanvas');
+    const canvas = document.getElementById('pnlPerformanceCanvas') || document.getElementById('pnlPerfChart');
     const emptyEl = document.getElementById('pnlPerfEmpty');
     const canvasWrap = document.getElementById('pnlPerfCanvasWrap');
     if (!canvas) return;
@@ -719,22 +838,22 @@ const ChartManager = {
     const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
     const finalVal = values[values.length - 1] || 0;
     const isNetPositive = finalVal >= 0;
-    const lineColor = isNetPositive ? '#10b981' : '#f43f5e';
-    const pointColor = isNetPositive ? '#10b981' : '#f43f5e';
+    const lineColor = isNetPositive ? '#00f59b' : '#ff4d6d';
+    const pointColor = isNetPositive ? '#00f59b' : '#ff4d6d';
 
     const ctx = canvas.getContext('2d');
-    let gradient = isNetPositive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)';
+    let gradient = isNetPositive ? 'rgba(0, 245, 155, 0.08)' : 'rgba(255, 77, 109, 0.08)';
     try {
       gradient = ctx.createLinearGradient(0, 0, 0, 260);
       if (isNetPositive) {
-        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
-        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.00)');
+        gradient.addColorStop(0, 'rgba(0, 245, 155, 0.25)');
+        gradient.addColorStop(1, 'rgba(0, 245, 155, 0.00)');
       } else {
-        gradient.addColorStop(0, 'rgba(244, 63, 94, 0.25)');
-        gradient.addColorStop(1, 'rgba(244, 63, 94, 0.00)');
+        gradient.addColorStop(0, 'rgba(255, 77, 109, 0.25)');
+        gradient.addColorStop(1, 'rgba(255, 77, 109, 0.00)');
       }
     } catch (e) {
-      gradient = isNetPositive ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)';
+      gradient = isNetPositive ? 'rgba(0, 245, 155, 0.08)' : 'rgba(255, 77, 109, 0.08)';
     }
 
     this.instances.pnlPerformance = new Chart(canvas, {
@@ -752,7 +871,7 @@ const ChartManager = {
           pointRadius: values.length > 35 ? 0 : 3.5,
           pointHoverRadius: 6,
           pointBackgroundColor: pointColor,
-          pointBorderColor: '#ffffff',
+          pointBorderColor: '#10131a',
           pointBorderWidth: 1.5
         }]
       },
@@ -766,10 +885,10 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#181d2c',
+            backgroundColor: '#191b23',
             titleColor: '#94a3b8',
-            bodyColor: '#ffffff',
-            borderColor: '#262e45',
+            bodyColor: '#f1f5f9',
+            borderColor: '#3b4a3f',
             borderWidth: 1,
             padding: 12,
             callbacks: {
@@ -799,14 +918,14 @@ const ChartManager = {
         },
         scales: {
           x: {
-            grid: { color: 'rgba(38, 46, 69, 0.35)', drawBorder: false },
-            ticks: { color: '#94a3b8', font: { size: 11 }, maxTicksLimit: 10 }
+            grid: { color: 'rgba(39, 42, 50, 0.5)', drawBorder: false },
+            ticks: { color: '#94a3b8', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 10 }
           },
           y: {
-            grid: { color: 'rgba(38, 46, 69, 0.5)', drawBorder: false },
+            grid: { color: 'rgba(39, 42, 50, 0.7)', drawBorder: false },
             ticks: {
               color: '#64748b',
-              font: { size: 11 },
+              font: { size: 11, family: "'JetBrains Mono', monospace" },
               callback: (val) => {
                 const isNeg = val < 0;
                 return `${isNeg ? '-' : ''}${sym}${Math.abs(val)}`;
@@ -838,7 +957,7 @@ const ChartManager = {
     const symbols = (metrics.symbolBreakdown || []).slice(0, 8);
     const labels = symbols.map(s => s.symbol);
     const pnls = symbols.map(s => s.pnl);
-    const colors = pnls.map(p => p >= 0 ? '#10b981' : '#f43f5e');
+    const colors = pnls.map(p => p >= 0 ? '#00f59b' : '#ff4d6d');
 
     this.instances.symbolBar = new Chart(ctx, {
       type: 'bar',
@@ -848,7 +967,7 @@ const ChartManager = {
           label: `Net P&L (${sym})`,
           data: pnls,
           backgroundColor: colors,
-          borderRadius: 6
+          borderRadius: 4
         }]
       },
       options: {
@@ -858,8 +977,8 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#181d2c',
-            borderColor: '#262e45',
+            backgroundColor: '#191b23',
+            borderColor: '#3b4a3f',
             borderWidth: 1,
             callbacks: {
               label: (item) => `P&L: ${sym}${item.raw.toFixed(2)}`
@@ -868,12 +987,12 @@ const ChartManager = {
         },
         scales: {
           x: {
-            grid: { color: 'rgba(38, 46, 69, 0.5)' },
-            ticks: { color: '#64748b', callback: v => `${sym}${v}` }
+            grid: { color: 'rgba(39, 42, 50, 0.6)' },
+            ticks: { color: '#64748b', font: { family: "'JetBrains Mono', monospace" }, callback: v => `${sym}${v}` }
           },
           y: {
             grid: { display: false },
-            ticks: { color: '#f8fafc', font: { weight: '600' } }
+            ticks: { color: '#f1f5f9', font: { weight: '600', family: "'JetBrains Mono', monospace" } }
           }
         }
       }
@@ -892,7 +1011,7 @@ const ChartManager = {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     const dayIndices = [1, 2, 3, 4, 5];
     const data = dayIndices.map(idx => Math.round((metrics.weekdayMap[idx] || 0) * 100) / 100);
-    const colors = data.map(d => d >= 0 ? '#10b981' : '#f43f5e');
+    const colors = data.map(d => d >= 0 ? '#00f59b' : '#ff4d6d');
 
     this.instances.weekdayBar = new Chart(ctx, {
       type: 'bar',
@@ -902,7 +1021,7 @@ const ChartManager = {
           label: `Net P&L (${sym})`,
           data,
           backgroundColor: colors,
-          borderRadius: 6
+          borderRadius: 4
         }]
       },
       options: {
@@ -911,8 +1030,8 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#181d2c',
-            borderColor: '#262e45',
+            backgroundColor: '#191b23',
+            borderColor: '#3b4a3f',
             borderWidth: 1,
             callbacks: {
               label: (item) => `Net P&L: ${sym}${item.raw.toFixed(2)}`
@@ -922,11 +1041,11 @@ const ChartManager = {
         scales: {
           x: {
             grid: { display: false },
-            ticks: { color: '#f8fafc', font: { weight: '600' } }
+            ticks: { color: '#f1f5f9', font: { weight: '600', family: "'JetBrains Mono', monospace" } }
           },
           y: {
-            grid: { color: 'rgba(38, 46, 69, 0.5)' },
-            ticks: { color: '#64748b', callback: v => `${sym}${v}` }
+            grid: { color: 'rgba(39, 42, 50, 0.6)' },
+            ticks: { color: '#64748b', font: { family: "'JetBrains Mono', monospace" }, callback: v => `${sym}${v}` }
           }
         }
       }
@@ -939,6 +1058,7 @@ const ChartManager = {
   updateAnalyticsCharts(metrics) {
     if (!metrics) return;
     this.renderDurationChart(metrics.durationMetrics);
+    this.renderDurationOutcomeChart(metrics.durationMetrics);
     this.renderLotSizeChart(metrics.lotMetrics, this.currentLotView);
   },
 
@@ -946,13 +1066,15 @@ const ChartManager = {
    * Render Trade Duration Distribution Chart
    */
   renderDurationChart(durationMetrics) {
-    const ctx = document.getElementById('durationDistCanvas');
+    const ctx = document.getElementById('durationDistCanvas') || document.getElementById('durationDistributionChart');
     if (!ctx) return;
 
     if (this.instances.durationDist) {
       this.instances.durationDist.destroy();
       this.instances.durationDist = null;
     }
+    const existing = Chart.getChart(ctx);
+    if (existing) existing.destroy();
 
     if (!durationMetrics || !durationMetrics.hasData || !durationMetrics.distribution || durationMetrics.distribution.length === 0) {
       return;
@@ -971,15 +1093,15 @@ const ChartManager = {
           {
             label: 'Winners',
             data: winData,
-            backgroundColor: '#10b981',
-            borderRadius: 4,
+            backgroundColor: '#00f59b',
+            borderRadius: 3,
             stack: 'trades'
           },
           {
             label: 'Losers',
             data: lossData,
-            backgroundColor: '#f43f5e',
-            borderRadius: 4,
+            backgroundColor: '#ff4d6d',
+            borderRadius: 3,
             stack: 'trades'
           }
         ]
@@ -996,14 +1118,14 @@ const ChartManager = {
               boxWidth: 10,
               boxHeight: 10,
               color: '#94a3b8',
-              font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" }
+              font: { size: 11, family: "'Manrope', sans-serif" }
             }
           },
           tooltip: {
-            backgroundColor: '#181d2c',
-            borderColor: '#262e45',
+            backgroundColor: '#191b23',
+            borderColor: '#3b4a3f',
             borderWidth: 1,
-            titleColor: '#f8fafc',
+            titleColor: '#f1f5f9',
             bodyColor: '#94a3b8',
             padding: 10,
             callbacks: {
@@ -1026,16 +1148,92 @@ const ChartManager = {
             grid: { display: false },
             ticks: {
               color: '#94a3b8',
-              font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" }
+              font: { size: 11, family: "'JetBrains Mono', monospace" }
             }
           },
           y: {
             stacked: true,
-            grid: { color: 'rgba(38, 46, 69, 0.4)', drawBorder: false },
+            grid: { color: 'rgba(39, 42, 50, 0.6)', drawBorder: false },
             ticks: {
               color: '#64748b',
-              font: { size: 11 },
+              font: { size: 11, family: "'JetBrains Mono', monospace" },
               precision: 0
+            }
+          }
+        }
+      }
+    });
+  },
+
+  /**
+   * Render Hold Duration vs Trade Outcome Chart (Avg Win Hold vs Avg Loss Hold)
+   */
+  renderDurationOutcomeChart(durationMetrics) {
+    const ctx = document.getElementById('durationOutcomeChart');
+    if (!ctx) return;
+
+    if (this.instances.durationOutcome) {
+      this.instances.durationOutcome.destroy();
+      this.instances.durationOutcome = null;
+    }
+    const existing = Chart.getChart(ctx);
+    if (existing) existing.destroy();
+
+    if (!durationMetrics || !durationMetrics.hasData) return;
+
+    const winMins = Math.round(((durationMetrics.avgWinDurationMs || 0) / 60000) * 100) / 100;
+    const lossMins = Math.round(((durationMetrics.avgLossDurationMs || 0) / 60000) * 100) / 100;
+
+    this.instances.durationOutcome = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Winning Trades', 'Losing Trades'],
+        datasets: [{
+          label: 'Avg Hold Time (mins)',
+          data: [winMins, lossMins],
+          backgroundColor: ['rgba(0, 245, 155, 0.85)', 'rgba(255, 77, 109, 0.85)'],
+          borderColor: ['#00f59b', '#ff4d6d'],
+          borderWidth: 1,
+          borderRadius: 4,
+          maxBarThickness: 36
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#191b23',
+            borderColor: '#3b4a3f',
+            borderWidth: 1,
+            titleColor: '#f1f5f9',
+            bodyColor: '#94a3b8',
+            callbacks: {
+              label: (item) => {
+                const isWin = item.dataIndex === 0;
+                const rawMs = isWin ? durationMetrics.avgWinDurationMs : durationMetrics.avgLossDurationMs;
+                const fmt = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.formatDuration(rawMs) : `${item.raw}m`;
+                return ` Avg Hold: ${fmt}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(39, 42, 50, 0.6)', drawBorder: false },
+            ticks: {
+              color: '#64748b',
+              font: { size: 10, family: "'JetBrains Mono', monospace" },
+              callback: (v) => `${v}m`
+            }
+          },
+          y: {
+            grid: { display: false },
+            ticks: {
+              color: '#f1f5f9',
+              font: { size: 11, weight: '700', family: "'Manrope', sans-serif" }
             }
           }
         }
@@ -1048,13 +1246,15 @@ const ChartManager = {
    */
   renderLotSizeChart(lotMetrics, mode = 'pnl') {
     this.currentLotView = mode;
-    const ctx = document.getElementById('lotSizeBarCanvas');
+    const ctx = document.getElementById('lotSizeBarCanvas') || document.getElementById('lotSizeChart');
     if (!ctx) return;
 
     if (this.instances.lotSizeBar) {
       this.instances.lotSizeBar.destroy();
       this.instances.lotSizeBar = null;
     }
+    const existing = Chart.getChart(ctx);
+    if (existing) existing.destroy();
 
     if (!lotMetrics || !lotMetrics.hasData || !lotMetrics.lotBreakdown || lotMetrics.lotBreakdown.length === 0) {
       return;
@@ -1072,8 +1272,8 @@ const ChartManager = {
           datasets: [{
             label: 'Trade Count',
             data: counts,
-            backgroundColor: '#6366f1',
-            borderRadius: 6
+            backgroundColor: '#c0c1ff',
+            borderRadius: 4
           }]
         },
         options: {
@@ -1082,8 +1282,8 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#181d2c',
-              borderColor: '#262e45',
+              backgroundColor: '#191b23',
+              borderColor: '#3b4a3f',
               borderWidth: 1,
               callbacks: {
                 label: (item) => `Trades: ${item.raw}`,
@@ -1099,11 +1299,11 @@ const ChartManager = {
           scales: {
             x: {
               grid: { display: false },
-              ticks: { color: '#94a3b8', font: { size: 11 } }
+              ticks: { color: '#94a3b8', font: { size: 11, family: "'JetBrains Mono', monospace" } }
             },
             y: {
-              grid: { color: 'rgba(38, 46, 69, 0.4)', drawBorder: false },
-              ticks: { color: '#64748b', font: { size: 11 }, precision: 0 }
+              grid: { color: 'rgba(39, 42, 50, 0.6)', drawBorder: false },
+              ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, precision: 0 }
             }
           }
         }
@@ -1112,7 +1312,7 @@ const ChartManager = {
       // Default: P&L by Lot Size
       const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
       const pnls = groups.map(g => g.netPnL);
-      const bgColors = pnls.map(p => p >= 0 ? '#10b981' : '#f43f5e');
+      const bgColors = pnls.map(p => p >= 0 ? '#00f59b' : '#ff4d6d');
 
       this.instances.lotSizeBar = new Chart(ctx, {
         type: 'bar',
@@ -1122,7 +1322,7 @@ const ChartManager = {
             label: `Net P&L (${sym})`,
             data: pnls,
             backgroundColor: bgColors,
-            borderRadius: 6
+            borderRadius: 4
           }]
         },
         options: {
@@ -1131,8 +1331,8 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#181d2c',
-              borderColor: '#262e45',
+              backgroundColor: '#191b23',
+              borderColor: '#3b4a3f',
               borderWidth: 1,
               callbacks: {
                 label: (item) => {
@@ -1152,13 +1352,13 @@ const ChartManager = {
           scales: {
             x: {
               grid: { display: false },
-              ticks: { color: '#94a3b8', font: { size: 11 } }
+              ticks: { color: '#94a3b8', font: { size: 11, family: "'JetBrains Mono', monospace" } }
             },
             y: {
-              grid: { color: 'rgba(38, 46, 69, 0.4)', drawBorder: false },
+              grid: { color: 'rgba(39, 42, 50, 0.6)', drawBorder: false },
               ticks: {
                 color: '#64748b',
-                font: { size: 11 },
+                font: { size: 11, family: "'JetBrains Mono', monospace" },
                 callback: (v) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   return `${sym}${v}`;

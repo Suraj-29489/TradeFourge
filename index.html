@@ -2,1194 +2,1424 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TradeForge - Professional Trading Journal & Analytics</title>
-
-  <!-- PWA Meta Tags & Web App Manifest -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>TradeForge | Institutional Trading Journal & Analytics Terminal</title>
+  <!-- Google Fonts: Space Grotesk (Display), Manrope (UI), JetBrains Mono (Financial Metrics) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- PWA & App Capabilities -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0f141f">
+  <meta name="theme-color" content="#10131a">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TradeForge">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <meta name="application-name" content="TradeForge">
   <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
-  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icons/icon.svg">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Custom Stylesheets -->
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/components.css">
-  <!-- Chart.js for High Performance Visualizations -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
-  <div class="app-container">
-    <!-- ==========================================================================
-         Sidebar Navigation
-         ========================================================================== -->
+  <!-- Full-Window Drag & Drop CSV Overlay -->
+  <div id="windowDragOverlay" class="window-drag-overlay">
+    <div class="window-drag-box">
+      <div class="window-drag-icon">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <h3>Drop Broker CSV to Preview &amp; Import</h3>
+      <p>Supports Exness, Zuperior &amp; MT4/MT5 trade history exports</p>
+    </div>
+  </div>
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <div class="app-layout">
+    <!-- ==================== LEFT SIDEBAR NAVIGATION ==================== -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <button class="brand-logo" id="sidebarBrandToggle" title="Toggle sidebar" aria-label="Toggle sidebar">
-          <div class="brand-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <button type="button" class="brand-logo" id="sidebarBrandToggle" title="Collapse Sidebar">
+          <div class="logo-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
               <path d="m13 2-2 2.5V8l3-3 1 1-4 4v3.5l6-6 1 1-7 7v4.5l9-9 1 1-10 10H3V2h10Z"/>
             </svg>
           </div>
-          <span class="brand-title">TRADE<span>FOURGE</span></span>
+          <div class="brand-text-stack">
+            <span class="brand-name">TRADEFORGE</span>
+            <span class="brand-version">V3.0 INSTITUTIONAL</span>
+          </div>
         </button>
-        <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close sidebar" title="Close sidebar">&times;</button>
+        <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn" title="Close Navigation" aria-label="Close Navigation">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
       </div>
 
-      <!-- Add Trade Action Button -->
-      <div class="sidebar-action-wrap">
+      <div class="sidebar-cta">
         <button class="btn-add-trade" id="btnAddTradeSidebar">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
-          Add trade
+          Add Trade
         </button>
       </div>
 
-      <!-- Sidebar Navigation Links -->
+      <div class="sidebar-section-label">TERMINAL WORKSPACE</div>
       <nav class="sidebar-nav">
-        <a class="nav-item active" data-view="dashboard">
+        <div class="nav-item active" data-view="dashboard">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"></rect>
-            <rect x="14" y="3" width="7" height="7"></rect>
-            <rect x="14" y="14" width="7" height="7"></rect>
-            <rect x="3" y="14" width="7" height="7"></rect>
+            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
           </svg>
-          Dashboard
-        </a>
-        <a class="nav-item" data-view="analytics">
+          <span>Dashboard</span>
+        </div>
+
+        <div class="nav-item" data-view="analytics">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="20" x2="18" y2="10"></line>
             <line x1="12" y1="20" x2="12" y2="4"></line>
             <line x1="6" y1="20" x2="6" y2="14"></line>
           </svg>
-          Analytics
-        </a>
-        <a class="nav-item" data-view="tradelog">
+          <span>Analytics</span>
+        </div>
+
+        <div class="nav-item" data-view="tradelog">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
           </svg>
-          Trade Log
-        </a>
-        <a class="nav-item" data-view="strategy-bot">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
-            <rect x="4" y="8" width="16" height="12" rx="2"></rect>
-            <circle cx="9" cy="13" r="1.5" fill="currentColor"></circle>
-            <circle cx="15" cy="13" r="1.5" fill="currentColor"></circle>
-            <path d="M9 17h6"></path>
-          </svg>
-          <span class="nav-label">Fourge AI</span>
-          <span class="bot-nav-badge">AI</span>
-        </a>
-        <div class="sidebar-divider" style="height: 1px; background: var(--border-light); margin: 8px 0; opacity: 0.6;"></div>
-        <a class="nav-item" data-view="mt5">
+          <span>Trade Log</span>
+        </div>
+
+        <div class="nav-item" data-view="strategy-bot">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-            <line x1="8" y1="21" x2="16" y2="21"></line>
-            <line x1="12" y1="17" x2="12" y2="21"></line>
+            <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"></path>
+            <circle cx="9" cy="13" r="1.25" fill="currentColor"></circle>
+            <circle cx="15" cy="13" r="1.25" fill="currentColor"></circle>
           </svg>
-          MT5
-        </a>
-        <a class="nav-item nav-item-install" id="sidebarInstallBtn" role="button" tabindex="0" title="Install TradeForge Web App">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
+          <span style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+            Fourge AI
+            <span class="nav-badge-ai">AI</span>
+          </span>
+        </div>
+
+        <div class="nav-item" data-view="mt5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
           </svg>
-          <span class="nav-label" id="installBtnLabel">Install App</span>
-          <span class="install-pill-badge" id="installStatusBadge">App</span>
-        </a>
+          <span style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+            MT5 Sync
+            <span class="nav-badge-live">LIVE</span>
+          </span>
+        </div>
+
+        <div class="sidebar-section-label" style="margin-top: 12px;">SYSTEM &amp; JOURNAL</div>
+
+        <div class="nav-item" data-view="strategies">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>Playbooks &amp; Notes</span>
+        </div>
+
+        <div class="nav-item" data-view="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Settings</span>
+        </div>
+
+        <div class="nav-item install-nav-item" id="sidebarInstallBtn" role="button" tabindex="0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            <path d="M12 7v6m0 0-2.5-2.5M12 13l2.5-2.5"></path>
+          </svg>
+          <span style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+            <span id="installBtnLabel">Install App</span>
+            <span id="installStatusBadge" class="install-status-badge">App</span>
+          </span>
+        </div>
       </nav>
 
-      <!-- Storage Status Indicator -->
       <div class="sidebar-footer">
-        <div class="storage-status">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <div class="status-dot"></div>
-            <span id="storageStatusText">No trades loaded</span>
+        <div class="sidebar-bridge-card">
+          <div class="bridge-card-top">
+            <span class="status-dot"></span>
+            <span class="bridge-card-title">LOCAL LEDGER ENGINE</span>
+          </div>
+          <div class="storage-indicator">
+            <span id="storageStatusText">0 trades stored</span>
           </div>
         </div>
-        <button class="btn-clear-session" id="btnClearData" title="Reset all stored trades and start fresh">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          </svg>
-          <span>Reset / Clear Data</span>
-        </button>
+        <div class="sidebar-footer-actions">
+          <button type="button" class="btn-sidebar-util" id="btnSidebarUploadCSV">Import CSV</button>
+          <button type="button" class="btn-sidebar-util danger" id="btnClearData">Clear Data</button>
+        </div>
       </div>
     </aside>
 
-    <!-- Mobile Sidebar Backdrop Overlay -->
-    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
-
-    <!-- ==========================================================================
-         Main Wrapper & Top Navigation Bar
-         ========================================================================== -->
-    <div class="main-wrapper">
+    <!-- ==================== MAIN CONTENT AREA ==================== -->
+    <main class="main-wrapper">
+      <!-- Top Header Bar -->
       <header class="top-header">
         <div class="header-left">
-          <button class="sidebar-reveal-btn" id="sidebarRevealBtn" title="Toggle menu" aria-label="Toggle menu">
-            <div class="brand-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Expand Sidebar Button (Shown when Sidebar is collapsed or on mobile) -->
+          <button type="button" class="sidebar-reveal-btn" id="sidebarRevealBtn" title="Open Navigation">
+            <span class="logo-icon-sm">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                 <path d="m13 2-2 2.5V8l3-3 1 1-4 4v3.5l6-6 1 1-7 7v4.5l9-9 1 1-10 10H3V2h10Z"/>
               </svg>
-            </div>
-            <span class="brand-title">TRADE<span>FOURGE</span></span>
+            </span>
+            <svg class="reveal-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
           </button>
-          <h1 class="page-title" id="pageTitle">Dashboard</h1>
+
+          <div class="header-title-block">
+            <div class="header-title-row">
+              <h1 class="page-title" id="pageTitle">Dashboard</h1>
+              <span class="terminal-status-pill" id="headerTerminalPill">
+                <span class="status-dot-sm"></span>
+                LIVE JOURNAL ENGINE
+              </span>
+            </div>
+          </div>
         </div>
 
         <div class="header-right">
-          <!-- Dynamic Currency Switch Slider ($ / ₹) -->
-          <div class="currency-slider-toggle" id="currencySliderToggle" role="group" aria-label="Currency Selection" title="Switch Currency ($ / ₹)">
-            <div class="currency-slider-pill" id="currencySliderPill"></div>
-            <button type="button" class="currency-slider-btn active" data-currency="USD" id="btnCurrUSD" aria-label="Select USD">
-              <span class="curr-sym">$</span>
-              <span class="curr-label">USD</span>
-            </button>
-            <button type="button" class="currency-slider-btn" data-currency="INR" id="btnCurrINR" aria-label="Select INR">
-              <span class="curr-sym">₹</span>
-              <span class="curr-label">INR</span>
-            </button>
+          <!-- Currency Switcher ($ / ₹) -->
+          <div class="currency-slider-toggle" id="currencySliderToggle" data-currency="USD" title="Switch display currency">
+            <div class="currency-slider-pill"></div>
+            <button type="button" class="currency-opt active" id="btnCurrUSD" data-curr="USD">$ USD</button>
+            <button type="button" class="currency-opt" id="btnCurrINR" data-curr="INR">₹ INR</button>
           </div>
 
-          <!-- UPLOAD CSV BUTTON IN PLACE OF "ALL ACCOUNTS" (Explicitly requested by user) -->
-          <button class="btn-upload-csv" id="btnUploadCSVTop" title="Upload Trading CSV File">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
+          <!-- Date Range Filter + Custom Range Popover -->
+          <div class="date-filter-wrapper">
+            <div class="date-filter">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <select id="headerDateRangeSelect" aria-label="Date Range Filter">
+                <option value="all">All Time</option>
+                <option value="last30">Last 30 Days</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+
+            <!-- Custom Date Range Popover -->
+            <div id="customDatePopover" class="custom-date-popover" style="display: none;">
+              <div class="popover-header">
+                <span>SELECT DATE RANGE</span>
+                <button type="button" id="closeCustomDatePopover" class="popover-close">&times;</button>
+              </div>
+              <div class="popover-inputs">
+                <div class="popover-field">
+                  <label>Start Date</label>
+                  <input type="date" id="customStartDate">
+                </div>
+                <div class="popover-field">
+                  <label>End Date</label>
+                  <input type="date" id="customEndDate">
+                </div>
+              </div>
+              <div class="mini-cal-header">
+                <button type="button" id="miniCalPrevBtn" class="mini-cal-nav">&lsaquo;</button>
+                <span id="miniCalMonthTitle" class="mini-cal-title">August 2026</span>
+                <button type="button" id="miniCalNextBtn" class="mini-cal-nav">&rsaquo;</button>
+              </div>
+              <div id="miniCalGrid" class="mini-cal-grid"></div>
+              <div class="popover-hint">Click a date to set Start, click another to set End</div>
+              <div class="popover-actions">
+                <button type="button" id="btnCancelCustomDate" class="btn-popover-cancel">Cancel</button>
+                <button type="button" id="btnApplyCustomDate" class="btn-popover-apply">Apply Range</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile Quick Add Trade Button -->
+          <button type="button" class="btn-mobile-add-top" id="btnAddTradeMobileTop" title="Add Manual Trade" aria-label="Add Manual Trade">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+
+          <!-- Export JSON Utility Button -->
+          <button type="button" class="btn-header-secondary" id="btnExportJSONTop" title="Export Trades as JSON">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span class="btn-label-desktop">Export</span>
+          </button>
+
+          <!-- Upload CSV Button -->
+          <button class="btn-upload-csv" id="btnUploadCSVTop">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
             <span>Upload CSV</span>
           </button>
-
-          <!-- Date Range Filter Dropdown & Custom Calendar Popover -->
-          <div class="date-filter-wrapper">
-            <select class="form-select" id="headerDateRangeSelect" style="padding: 7px 12px; font-size: 0.82rem;">
-              <option value="all">All Time</option>
-              <option value="last30">Last 30 Days</option>
-              <option value="custom">Custom</option>
-            </select>
-
-            <!-- Custom Date Range Popover -->
-            <div class="custom-date-popover" id="customDatePopover" style="display: none;">
-              <div class="custom-popover-header">
-                <span class="custom-popover-title">Custom Date Range</span>
-                <button type="button" class="custom-popover-close" id="closeCustomDatePopover">&times;</button>
-              </div>
-
-              <div class="custom-range-info" id="customRangeInfo">
-                Available: All time data
-              </div>
-
-              <div class="custom-inputs-row">
-                <div class="custom-input-group">
-                  <label class="custom-input-label" for="customStartDate">From</label>
-                  <input type="date" id="customStartDate" class="custom-date-input">
-                </div>
-                <div class="custom-input-group">
-                  <label class="custom-input-label" for="customEndDate">To</label>
-                  <input type="date" id="customEndDate" class="custom-date-input">
-                </div>
-              </div>
-
-              <!-- Mini Calendar Widget -->
-              <div class="custom-mini-cal">
-                <div class="mini-cal-header">
-                  <button type="button" class="mini-cal-nav" id="miniCalPrevBtn">❮</button>
-                  <span class="mini-cal-title" id="miniCalTitle">Month 2026</span>
-                  <button type="button" class="mini-cal-nav" id="miniCalNextBtn">❯</button>
-                </div>
-                <div class="mini-cal-grid" id="miniCalGrid">
-                  <!-- Rendered dynamically -->
-                </div>
-              </div>
-
-              <div class="custom-popover-actions">
-                <button type="button" class="btn-secondary" id="btnCancelCustomDate">Cancel</button>
-                <button type="button" class="btn-primary" id="btnApplyCustomDate">Apply</button>
-              </div>
-            </div>
-          </div>
         </div>
       </header>
 
-      <!-- ==========================================================================
-           Views Container
-           ========================================================================== -->
-      <main class="view-container">
+      <!-- Scrollable Viewport -->
+      <div class="content-scroll">
 
-        <!-- ==========================================================================
-             VIEW: DASHBOARD (Default / Reference Image Layout)
-             ========================================================================== -->
+        <!-- ==================== VIEW 1: DASHBOARD ==================== -->
         <section class="view-section active" id="view-dashboard">
-          <div class="dashboard-grid">
-
-            <!-- 1. Performance KPI Cards (12 Cards: 4x3 desktop, 2 col tablet, 1 col mobile) -->
-            <div class="kpi-grid">
-              <!-- 1. Total P&L -->
-              <div class="kpi-card">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Total P&L</span>
+          
+          <!-- ROW 1: 4 HERO COMMAND BLOCKS -->
+          <div class="kpi-grid">
+            <!-- KPI 1: Total Net P&L -->
+            <div class="kpi-card hero-kpi-card kpi-card-primary">
+              <div class="kpi-card-header">
+                <div class="kpi-title">
+                  <span>TOTAL NET P&amp;L</span>
+                  <span class="info-dot" title="Realized profit and loss across all closed trades">i</span>
                 </div>
-                <div class="kpi-value profit" id="kpiTotalPnL"><span class="currency-sym">$</span>0.00</div>
-                <div class="kpi-subtext" id="kpiTotalTradesCount">0 trades</div>
+                <span class="kpi-tag" id="kpiNetPnLTag">ALL TRADES</span>
               </div>
-
-              <!-- 2. Net Return -->
-              <div class="kpi-card" id="kpiNetReturnCard">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Net Return</span>
-                  <button type="button" class="btn-kpi-action" id="btnEditCapital" title="Calculate or edit Starting Balance">Calculate</button>
+              <div class="kpi-main-row">
+                <div class="kpi-value profit" id="kpiNetPnL">+$0.00</div>
+              </div>
+              <div class="kpi-visual">
+                <div class="progress-bar-wrap">
+                  <div class="progress-segment profit" id="kpiWinsBar" style="width: 50%;"></div>
+                  <div class="progress-segment loss" id="kpiLossesBar" style="width: 50%;"></div>
                 </div>
-
-                <!-- Display when capital is set -->
-                <div id="kpiNetReturnDisplay" style="display: none;">
-                  <div class="kpi-value" id="kpiNetReturn">--</div>
-                  <div class="kpi-subtext" id="kpiNetReturnSub"><span style="color: var(--text-dim);">Enter capital to calculate return</span></div>
-                </div>
-
-                <!-- Inline Input when capital is not set or when editing -->
-                <div class="kpi-capital-inline" id="kpiCapitalInlineForm">
-                  <div class="kpi-capital-input-group">
-                    <span class="kpi-capital-currency" id="kpiInlineCurrencyPrefix">$</span>
-                    <input type="number" id="kpiInlineCapitalInput" class="kpi-capital-input" placeholder="Enter balance" min="0" step="any">
-                    <button type="button" class="btn-kpi-calculate" id="btnInlineCalculateCapital">Calculate</button>
-                  </div>
-                  <div class="kpi-subtext" id="kpiCapitalInlineHint"><span style="color: var(--text-dim);">Optional: Enter balance to calculate %</span></div>
+                <div class="kpi-sub-row">
+                  <span id="kpiWinsCountText">0 Wins</span>
+                  <span id="kpiLossesCountText">0 Losses</span>
                 </div>
               </div>
+            </div>
 
-              <!-- 3. Profit Factor -->
-              <div class="kpi-card">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Profit factor</span>
+            <!-- KPI 2: Profit Factor -->
+            <div class="kpi-card hero-kpi-card">
+              <div class="kpi-card-header">
+                <div class="kpi-title">
+                  <span>PROFIT FACTOR</span>
+                  <span class="info-dot" title="Gross Profit divided by Gross Loss">i</span>
                 </div>
+                <span class="kpi-tag" id="kpiProfitFactorTag">RATIO</span>
+              </div>
+              <div class="kpi-main-row">
                 <div class="kpi-value" id="kpiProfitFactor">0.00</div>
-                <div class="kpi-subtext" id="kpiProfitFactorDelta"><span class="delta-pos">+0.12</span></div>
               </div>
-
-              <!-- 4. Win Rate -->
-              <div class="kpi-card">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Win Rate</span>
+              <div class="kpi-visual">
+                <div class="kpi-sub-row">
+                  <span>Gross Profit: <strong class="profit-text" id="kpiGrossProfit">$0.00</strong></span>
                 </div>
+                <div class="kpi-sub-row" style="margin-top: 4px;">
+                  <span>Gross Loss: <strong class="loss-text" id="kpiGrossLoss">$0.00</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- KPI 3: Trade Win Rate -->
+            <div class="kpi-card hero-kpi-card">
+              <div class="kpi-card-header">
+                <div class="kpi-title">
+                  <span>TRADE WIN %</span>
+                  <span class="info-dot" title="Percentage of winning trades vs total trades">i</span>
+                </div>
+                <span class="kpi-tag" id="kpiWinRateTag">WIN RATE</span>
+              </div>
+              <div class="kpi-main-row">
                 <div class="kpi-value" id="kpiWinRate">0.0%</div>
-                <div class="kpi-subtext" id="kpiWinRateSub">0W / 0L</div>
               </div>
-
-              <!-- 5. Average Winning Trade -->
-              <div class="kpi-card">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Average winning trade</span>
+              <div class="kpi-visual">
+                <div class="progress-bar-wrap">
+                  <div class="progress-segment profit" id="kpiWinBar" style="width: 50%;"></div>
+                  <div class="progress-segment neutral" id="kpiBeBar" style="width: 0%;"></div>
+                  <div class="progress-segment loss" id="kpiLossBar" style="width: 50%;"></div>
                 </div>
-                <div class="kpi-value profit" id="kpiAvgWin"><span class="currency-sym">$</span>0.00</div>
-                <div class="kpi-subtext" id="kpiAvgWinSub"><span class="delta-pos">▲ +17.25</span></div>
-              </div>
-
-              <!-- 6. Average Losing Trade -->
-              <div class="kpi-card">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Average losing trade</span>
+                <div class="win-loss-pills">
+                  <span class="pill-stat win" id="kpiWCount">0 W</span>
+                  <span class="pill-stat be" id="kpiBeCount">0 BE</span>
+                  <span class="pill-stat loss" id="kpiLCount">0 L</span>
                 </div>
-                <div class="kpi-value loss" id="kpiAvgLoss"><span class="currency-sym">$</span>0.00</div>
-                <div class="kpi-subtext" id="kpiAvgLossSub"><span class="delta-neg">▼ -21.36</span></div>
-              </div>
-
-              <!-- 7. Expectancy / Trade -->
-              <div class="kpi-card">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Expectancy / Trade</span>
-                </div>
-                <div class="kpi-value" id="kpiExpectancy"><span class="currency-sym">$</span>0.00 / trade</div>
-                <div class="kpi-subtext" id="kpiExpectancySub">Avg outcome per trade</div>
-              </div>
-
-              <!-- 8. Max Drawdown -->
-              <div class="kpi-card">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Max Drawdown</span>
-                </div>
-                <div class="kpi-value loss" id="kpiMaxDrawdown"><span class="currency-sym">$</span>0.00</div>
-                <div class="kpi-subtext" id="kpiMaxDrawdownSub">Realized equity decline</div>
-              </div>
-
-              <!-- 9. Best Day -->
-              <div class="kpi-card">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Best day</span>
-                </div>
-                <div class="kpi-value profit" id="kpiProfitableDay">--</div>
-                <div class="kpi-subtext" id="kpiProfitableDaySub"><span style="color: var(--text-dim);">No trades recorded</span></div>
-              </div>
-
-              <!-- 10. Worst Day -->
-              <div class="kpi-card">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Worst day</span>
-                </div>
-                <div class="kpi-value loss" id="kpiLossingDay">--</div>
-                <div class="kpi-subtext" id="kpiLossingDaySub"><span style="color: var(--text-dim);">No trades recorded</span></div>
-              </div>
-
-              <!-- 11. Largest Profit -->
-              <div class="kpi-card">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Largest profit</span>
-                </div>
-                <div class="kpi-value profit" id="kpiLargestProfit">--</div>
-                <div class="kpi-subtext" id="kpiLargestProfitSub"><span style="color: var(--text-dim);">No winning trades</span></div>
-              </div>
-
-              <!-- 12. Largest Loss -->
-              <div class="kpi-card">
-                <div class="kpi-card-header">
-                  <span class="kpi-title">Largest loss</span>
-                </div>
-                <div class="kpi-value loss" id="kpiLargestLoss">--</div>
-                <div class="kpi-subtext" id="kpiLargestLossSub"><span style="color: var(--text-dim);">No losing trades</span></div>
               </div>
             </div>
 
-            <!-- 2. Middle Section: Donut Win Rates + Cumulative P&L Area Chart -->
-            <div class="middle-row">
-              <!-- Left Donut Charts Column -->
-              <div class="donuts-column">
-                <!-- Donut 1: Winning % By Trades -->
-                <div class="donut-card">
-                  <div class="donut-card-header">
-                    <span class="donut-card-title">Winning % By Trades</span>
+            <!-- KPI 4: Net Return % / Account Capital Solver -->
+            <div class="kpi-card hero-kpi-card" id="kpiNetReturnCard">
+              <div class="kpi-card-header">
+                <div class="kpi-title">
+                  <span>NET RETURN TOOL</span>
+                  <span class="info-dot" title="Enter your starting account balance to calculate exact % return and ending equity">i</span>
+                </div>
+                <button type="button" class="kpi-action-btn" id="btnEditCapital" title="Set Starting Account Size">
+                  Set Balance
+                </button>
+              </div>
+
+              <!-- Display State -->
+              <div id="kpiNetReturnDisplay">
+                <div class="kpi-main-row">
+                  <div class="kpi-value" id="kpiNetReturn">--</div>
+                  <span class="kpi-tag" id="kpiNetReturnTag">ROI</span>
+                </div>
+                <div class="kpi-visual">
+                  <div class="kpi-sub-row">
+                    <span id="kpiStartingCapitalLabel">Start: Not set</span>
                   </div>
-                  <div class="donut-body">
-                    <div class="donut-chart-wrapper">
-                      <canvas id="tradesDonutCanvas"></canvas>
+                  <div class="kpi-sub-row" style="margin-top: 4px;">
+                    <span id="kpiEndingEquityLabel">End Equity: --</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Inline Input Form State -->
+              <div id="kpiCapitalInlineForm" class="kpi-inline-capital-form" style="display: none;">
+                <label class="kpi-inline-label" for="kpiInlineCapitalInput">Starting Account Balance</label>
+                <div class="kpi-inline-input-row">
+                  <span class="kpi-inline-prefix" id="kpiInlineCurrencyPrefix">$</span>
+                  <input type="number" id="kpiInlineCapitalInput" class="kpi-inline-input" placeholder="e.g. 1000" min="1" step="any">
+                  <button type="button" id="btnInlineCalculateCapital" class="kpi-inline-calc-btn">Apply</button>
+                </div>
+                <div class="kpi-inline-hint">Press Enter to compute ROI % &amp; Ending Equity</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 2: SECONDARY SOLID METRIC BLOCKS + SESSION EXTREMES -->
+          <div class="secondary-kpi-grid">
+            <div class="mini-kpi">
+              <span class="mini-kpi-label">AVG WIN</span>
+              <span class="mini-kpi-val profit" id="kpiAvgWin">+$0.00</span>
+              <span class="mini-kpi-sub" id="kpiAvgWinSub">0 winning trades</span>
+            </div>
+            <div class="mini-kpi">
+              <span class="mini-kpi-label">AVG LOSS</span>
+              <span class="mini-kpi-val loss" id="kpiAvgLoss">-$0.00</span>
+              <span class="mini-kpi-sub" id="kpiAvgLossSub">0 losing trades</span>
+            </div>
+            <div class="mini-kpi">
+              <span class="mini-kpi-label">EXPECTANCY / TRADE</span>
+              <span class="mini-kpi-val" id="kpiExpectancy">$0.00</span>
+              <span class="mini-kpi-sub" id="kpiExpectancySub">Avg return per trade</span>
+            </div>
+            <div class="mini-kpi">
+              <span class="mini-kpi-label">MAX DRAWDOWN</span>
+              <span class="mini-kpi-val loss" id="kpiMaxDrawdown">-$0.00</span>
+              <span class="mini-kpi-sub" id="kpiMaxDrawdownSub">Realized equity decline</span>
+            </div>
+            <div class="mini-kpi">
+              <span class="mini-kpi-label">LARGEST WIN</span>
+              <span class="mini-kpi-val profit" id="kpiLargestWin">+$0.00</span>
+              <span class="mini-kpi-sub" id="kpiLargestWinSub">No winning trades</span>
+            </div>
+            <div class="mini-kpi">
+              <span class="mini-kpi-label">LARGEST LOSS</span>
+              <span class="mini-kpi-val loss" id="kpiLargestLoss">-$0.00</span>
+              <span class="mini-kpi-sub" id="kpiLargestLossSub">No losing trades</span>
+            </div>
+            <div class="mini-kpi mini-kpi-highlight profit-border">
+              <div class="mini-kpi-top-row">
+                <span class="mini-kpi-label">BEST SESSION DAY</span>
+              </div>
+              <span class="mini-kpi-val profit" id="kpiBestDayVal">--</span>
+              <span class="mini-kpi-sub" id="kpiBestDayDate">No trades recorded</span>
+            </div>
+            <div class="mini-kpi mini-kpi-highlight loss-border">
+              <div class="mini-kpi-top-row">
+                <span class="mini-kpi-label">WORST SESSION DAY</span>
+              </div>
+              <span class="mini-kpi-val loss" id="kpiWorstDayVal">--</span>
+              <span class="mini-kpi-sub" id="kpiWorstDayDate">No trades recorded</span>
+            </div>
+          </div>
+
+          <!-- ROW 3: CENTRAL ANALYTICS GRID (EQUITY CURVE + STACKED WIN DONUT BLOCKS) -->
+          <div class="middle-analytics-grid">
+            <!-- Left: Main Cumulative / Daily / Weekly / Monthly P&L Chart -->
+            <div class="section-card main-equity-card">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">
+                    <span class="section-accent-bar"></span>
+                    EQUITY PERFORMANCE CURVE
+                  </div>
+                  <div class="section-subtitle">Realized cumulative &amp; periodic P&amp;L trajectory</div>
+                </div>
+                <div class="card-tabs">
+                  <button class="card-tab active" id="tabCumPnL">Cumulative</button>
+                  <button class="card-tab" id="tabDailyPnL">Daily</button>
+                  <button class="card-tab" id="tabWeeklyPnL">Weekly</button>
+                  <button class="card-tab" id="tabMonthlyPnL">Monthly</button>
+                </div>
+              </div>
+              <div class="section-body">
+                <div class="main-chart-container">
+                  <canvas id="mainPnLChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Stacked Win Rate Analytical Donut Blocks -->
+            <div class="side-donuts-stack">
+              <!-- Donut 1: Winning % By Trades -->
+              <div class="section-card donut-analytics-card">
+                <div class="section-header">
+                  <div>
+                    <div class="section-title">WIN % BY TRADES</div>
+                    <div class="section-subtitle">Trade outcome distribution</div>
+                  </div>
+                  <span class="analytics-tag" id="donutTradesBadge">0 Trades</span>
+                </div>
+                <div class="donut-card-body">
+                  <div class="donut-visual-col">
+                    <div class="donut-chart-wrap">
+                      <canvas id="tradesDonutChart"></canvas>
                       <div class="donut-center-label">
-                        <div class="donut-center-val" id="tradesDonutCenterVal">0%</div>
-                        <div class="donut-center-sub">WINRATE</div>
+                        <div class="val" id="donutTradesWinPct">0%</div>
+                        <div class="lbl">WIN</div>
                       </div>
                     </div>
+                  </div>
+                  <div class="donut-stats-col">
                     <div class="donut-legend">
                       <div class="legend-item">
-                        <span class="legend-label"><span class="legend-color-box win"></span><span id="donutWinnersCount">0 winners</span></span>
+                        <div class="legend-left"><span class="legend-dot win"></span>Winners</div>
+                        <div class="legend-val profit-text" id="donutTradesWins">0 (0%)</div>
                       </div>
                       <div class="legend-item">
-                        <span class="legend-label"><span class="legend-color-box loss"></span><span id="donutLosersCount">0 losers</span></span>
+                        <div class="legend-left"><span class="legend-dot draw"></span>Break-even</div>
+                        <div class="legend-val" id="donutTradesDraws">0 (0%)</div>
+                      </div>
+                      <div class="legend-item">
+                        <div class="legend-left"><span class="legend-dot loss"></span>Losers</div>
+                        <div class="legend-val loss-text" id="donutTradesLosses">0 (0%)</div>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                <!-- Donut 2: Winning % By Days -->
-                <div class="donut-card">
-                  <div class="donut-card-header">
-                    <span class="donut-card-title">Winning % By Days</span>
+                <div class="donut-card-footer">
+                  <div class="donut-footer-stat">
+                    <span class="lbl">TOTAL</span>
+                    <span class="val" id="donutTradesTotal">0</span>
                   </div>
-                  <div class="donut-body">
-                    <div class="donut-chart-wrapper">
-                      <canvas id="daysDonutCanvas"></canvas>
+                  <div class="donut-footer-stat">
+                    <span class="lbl">BEST PAIR</span>
+                    <span class="val" id="donutTradesBestSym">--</span>
+                  </div>
+                  <div class="donut-footer-stat">
+                    <span class="lbl">PAIR WIN %</span>
+                    <span class="val profit" id="donutTradesBestRate">0%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Donut 2: Winning % By Days -->
+              <div class="section-card donut-analytics-card">
+                <div class="section-header">
+                  <div>
+                    <div class="section-title">WINNING % BY DAYS</div>
+                    <div class="section-subtitle">Session consistency breakdown</div>
+                  </div>
+                  <span class="analytics-tag" id="donutDaysBadge">0 Days</span>
+                </div>
+                <div class="donut-card-body">
+                  <div class="donut-visual-col">
+                    <div class="donut-chart-wrap">
+                      <canvas id="daysDonutChart"></canvas>
                       <div class="donut-center-label">
-                        <div class="donut-center-val" id="daysDonutCenterVal">0%</div>
-                        <div class="donut-center-sub">WINRATE</div>
+                        <div class="val" id="donutDaysWinPct">0%</div>
+                        <div class="lbl">DAYS</div>
                       </div>
                     </div>
+                  </div>
+                  <div class="donut-stats-col">
                     <div class="donut-legend">
                       <div class="legend-item">
-                        <span class="legend-label"><span class="legend-color-box win"></span><span id="donutWinningDaysCount">0 winners</span></span>
+                        <div class="legend-left"><span class="legend-dot win"></span>Green Days</div>
+                        <div class="legend-val profit-text" id="donutDaysProfit">0 (0%)</div>
                       </div>
                       <div class="legend-item">
-                        <span class="legend-label"><span class="legend-color-box loss"></span><span id="donutLosingDaysCount">0 losers</span></span>
+                        <div class="legend-left"><span class="legend-dot draw"></span>Flat Days</div>
+                        <div class="legend-val" id="donutDaysFlat">0 (0%)</div>
+                      </div>
+                      <div class="legend-item">
+                        <div class="legend-left"><span class="legend-dot loss"></span>Red Days</div>
+                        <div class="legend-val loss-text" id="donutDaysLoss">0 (0%)</div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              <!-- Right Area Chart Card: Daily / Cumulative / Weekly / Monthly Net P&L -->
-              <div class="chart-card">
-                <div class="chart-card-header">
-                  <div class="chart-tabs">
-                    <button class="chart-tab-btn active" id="tabCumPnL">Daily Net cumulative P&L</button>
-                    <button class="chart-tab-btn" id="tabDailyPnL">Net daily P&L</button>
-                    <button class="chart-tab-btn" id="tabWeeklyPnL">Net weekly P&L</button>
-                    <button class="chart-tab-btn" id="tabMonthlyPnL">Net monthly P&L</button>
+                <div class="donut-card-footer">
+                  <div class="donut-footer-stat">
+                    <span class="lbl">ACTIVE DAYS</span>
+                    <span class="val" id="donutDaysTotal">0</span>
                   </div>
-                  <div style="font-size: 0.8rem; color: var(--text-dim);" id="pnlChartSubtext">Realized Equity Growth</div>
-                </div>
-                <div class="chart-canvas-wrapper">
-                  <canvas id="pnlMainCanvas"></canvas>
+                  <div class="donut-footer-stat">
+                    <span class="lbl">PEAK DAY</span>
+                    <span class="val" id="donutDaysBestDay">--</span>
+                  </div>
+                  <div class="donut-footer-stat">
+                    <span class="lbl">PEAK P&amp;L</span>
+                    <span class="val profit" id="donutDaysBestVal">+$0</span>
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- 3. Profit Source & Exit Breakdown Row -->
-            <div class="breakdown-row">
-              <!-- Left: Profit Source Card -->
-              <div class="breakdown-card" id="cardProfitSource">
-                <div class="breakdown-card-header">
-                  <div>
-                    <div class="breakdown-card-title">Profit Source</div>
-                    <div class="breakdown-card-sub" id="profitSourceSub">Realized P&L by symbol</div>
-                  </div>
-                  <div class="breakdown-card-badge" id="profitSourceBadge">0 symbols</div>
+          <!-- ROW 4: PROFIT SOURCE & EXIT BREAKDOWN -->
+          <div class="dashboard-breakdown-row">
+            <div class="section-card breakdown-card">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">PROFIT SOURCE BY INSTRUMENT</div>
+                  <div class="section-subtitle" id="profitSourceSub">P&amp;L attribution by symbol</div>
                 </div>
-                <div class="breakdown-card-body" id="profitSourceBody">
-                  <!-- Dynamically rendered symbol bars -->
-                </div>
+                <span class="analytics-tag" id="profitSourceBadge">0 pairs</span>
               </div>
-
-              <!-- Right: Exit Breakdown Card -->
-              <div class="breakdown-card" id="cardExitBreakdown">
-                <div class="breakdown-card-header">
-                  <div>
-                    <div class="breakdown-card-title">Exit Breakdown</div>
-                    <div class="breakdown-card-sub" id="exitBreakdownSub">Distribution by close reason</div>
-                  </div>
-                  <div class="breakdown-card-badge" id="exitBreakdownBadge">0 exits</div>
-                </div>
-                <div class="breakdown-card-body" id="exitBreakdownBody">
-                  <!-- Dynamically rendered exit reason bars -->
-                </div>
-              </div>
+              <div class="breakdown-body" id="profitSourceBody"></div>
             </div>
 
-            <!-- 4. Bottom Section: Recent Trades Table & Monthly Calendar -->
-            <div class="bottom-row">
-              <!-- Left: Recent Trades Table Card -->
-              <div class="table-card">
-                <div class="table-card-header">
-                  <div class="table-tabs">
-                    <button class="table-tab-btn active">Recent trades</button>
-                    <button class="table-tab-btn" onclick="App.switchView('tradelog')">View all</button>
-                  </div>
+            <div class="section-card breakdown-card">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">EXECUTION EXIT BREAKDOWN</div>
+                  <div class="section-subtitle" id="exitBreakdownSub">Distribution by close reason (TP / SL / Manual)</div>
                 </div>
-                <div class="table-responsive">
-                  <table class="trade-table">
+                <span class="analytics-tag" id="exitBreakdownBadge">0 exits</span>
+              </div>
+              <div class="breakdown-body" id="exitBreakdownBody"></div>
+            </div>
+          </div>
+
+          <!-- ROW 5: RECENT TRADES + WEEKLY PERFORMANCE + MONTHLY TRADING CALENDAR -->
+          <div class="bottom-split-grid">
+            <!-- Left Column: Recent Executions + Weekly Performance -->
+            <div style="display: flex; flex-direction: column; gap: 18px; min-width: 0;">
+              <!-- Recent Trades Table -->
+              <div class="section-card">
+                <div class="section-header">
+                  <div>
+                    <div class="section-title">RECENT TRADE EXECUTIONS</div>
+                    <div class="section-subtitle">Latest closed positions from active ledger</div>
+                  </div>
+                  <button class="card-tab" onclick="App.switchView('tradelog')">Full Ledger &rarr;</button>
+                </div>
+                <div class="table-container">
+                  <table class="data-table">
                     <thead>
                       <tr>
-                        <th>Close date</th>
                         <th>Symbol</th>
-                        <th>Volume</th>
-                        <th>Execs</th>
-                        <th>P/L</th>
+                        <th>Type</th>
+                        <th>Lots</th>
+                        <th>Close Time</th>
+                        <th>Reason</th>
+                        <th style="text-align: right;">Net P&amp;L (<span class="currency-sym">$</span>)</th>
                       </tr>
                     </thead>
-                    <tbody id="recentTradesTableBody">
-                      <!-- Dynamically rendered rows -->
-                    </tbody>
+                    <tbody id="recentTradesTableBody"></tbody>
                   </table>
                 </div>
               </div>
 
-              <!-- Center/Middle: Weekly Performance Card (Directly above Monthly Calendar) -->
-              <div class="weekly-perf-card">
-                <div class="weekly-perf-header">
-                  <div class="weekly-perf-title-group">
-                    <span class="weekly-perf-title">Weekly Performance</span>
-                    <span class="weekly-perf-subtitle" id="weeklyPerfSubtitle">Net P&L by day of the week</span>
+              <!-- Weekly Performance Breakdown -->
+              <div class="section-card" id="cardWeeklyPerformance">
+                <div class="section-header weekly-perf-header">
+                  <div>
+                    <div class="section-title">WEEKLY PERFORMANCE</div>
+                    <div class="section-subtitle" id="weeklyPerfSubtitle">Net P&amp;L by day of the week (All Data)</div>
                   </div>
                   <div class="weekly-perf-controls">
-                    <!-- 1. Mode Selector (All Data / By Month / By Week) -->
-                    <div class="weekly-perf-dropdown-wrapper">
-                      <button class="weekly-perf-filter-btn" id="weeklyPerfModeBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Filter performance by period">
+                    <div class="weekly-perf-dropdown" id="weeklyPerfModeDropdown">
+                      <button type="button" class="weekly-perf-select-btn" id="weeklyPerfModeBtn" aria-haspopup="listbox" aria-expanded="false">
                         <span id="weeklyPerfModeLabel">All Data</span>
-                        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
                       </button>
-                      <div class="weekly-perf-menu" id="weeklyPerfModeMenu">
+                      <div class="weekly-perf-menu" id="weeklyPerfModeMenu" role="listbox">
                         <button type="button" class="weekly-perf-menu-item active" data-mode="all">All Data</button>
                         <button type="button" class="weekly-perf-menu-item" data-mode="month">By Month</button>
                         <button type="button" class="weekly-perf-menu-item" data-mode="week">By Week</button>
                       </div>
                     </div>
 
-                    <!-- 2. Month Selector (Active when mode is 'month' or 'week') -->
-                    <div class="weekly-perf-dropdown-wrapper" id="weeklyPerfMonthWrapper" style="display: none;">
-                      <button class="weekly-perf-filter-btn" id="weeklyPerfMonthBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Select Month">
-                        <span id="weeklyPerfMonthLabel">Month</span>
-                        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    <div class="weekly-perf-dropdown" id="weeklyPerfMonthWrapper" style="display: none;">
+                      <button type="button" class="weekly-perf-select-btn secondary" id="weeklyPerfMonthBtn" aria-haspopup="listbox" aria-expanded="false">
+                        <span id="weeklyPerfMonthLabel">Select Month</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
                       </button>
-                      <div class="weekly-perf-menu" id="weeklyPerfMonthMenu">
-                        <!-- Populated dynamically -->
-                      </div>
+                      <div class="weekly-perf-menu" id="weeklyPerfMonthMenu" role="listbox"></div>
                     </div>
 
-                    <!-- 3. Week Selector (Active when mode is 'week') -->
-                    <div class="weekly-perf-dropdown-wrapper" id="weeklyPerfWeekWrapper" style="display: none;">
-                      <button class="weekly-perf-filter-btn" id="weeklyPerfWeekBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Select Week">
-                        <span id="weeklyPerfWeekLabel">Week</span>
-                        <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    <div class="weekly-perf-dropdown" id="weeklyPerfWeekWrapper" style="display: none;">
+                      <button type="button" class="weekly-perf-select-btn secondary" id="weeklyPerfWeekBtn" aria-haspopup="listbox" aria-expanded="false">
+                        <span id="weeklyPerfWeekLabel">Select Week</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
                       </button>
-                      <div class="weekly-perf-menu" id="weeklyPerfWeekMenu">
-                        <!-- Populated dynamically -->
-                      </div>
+                      <div class="weekly-perf-menu" id="weeklyPerfWeekMenu" role="listbox"></div>
                     </div>
                   </div>
                 </div>
-
-                <div class="weekly-perf-body">
-                  <div class="weekly-perf-canvas-wrapper" id="weeklyPerfCanvasWrap">
-                    <canvas id="weeklyPerformanceCanvas"></canvas>
-                  </div>
-                  <div class="weekly-perf-empty" id="weeklyPerfEmpty" style="display: none;">
-                    <div class="weekly-perf-empty-icon">📊</div>
-                    <div class="weekly-perf-empty-text">No trading data available for the selected period</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Right: Monthly Calendar View Card -->
-              <div class="calendar-card">
-                <div class="calendar-header">
-                  <div class="calendar-month-title">
-                    <span id="calendarTitle">August 2026</span>
-                    <div class="calendar-nav-controls">
-                      <button class="calendar-nav-btn" id="calPrevBtn" title="Previous Month">❮</button>
-                      <button class="calendar-nav-btn" id="calNextBtn" title="Next Month">❯</button>
+                <div class="section-body">
+                  <div class="weekly-perf-chart-container">
+                    <div class="weekly-perf-empty" id="weeklyPerfEmpty" style="display: none;">
+                      No trade data available for the selected period
                     </div>
-                  </div>
-                  <span style="font-size: 0.8rem; color: var(--text-dim);">Click day to inspect trades</span>
-                </div>
-                <div class="calendar-scroll-wrapper">
-                  <div class="calendar-grid" id="calendarGrid">
-                    <!-- Dynamically rendered 7-day grid -->
+                    <div class="weekly-perf-canvas-wrap" id="weeklyPerfCanvasWrap" style="height: 100%; width: 100%;">
+                      <canvas id="weeklyPerformanceCanvas"></canvas>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- 5. Final / Bottommost Section: P&L Performance Card -->
-            <div class="pnl-perf-card" id="cardPnlPerformance">
-              <div class="pnl-perf-header">
-                <div class="pnl-perf-title-group">
-                  <span class="pnl-perf-title">P&L Performance</span>
-                  <span class="pnl-perf-subtitle" id="pnlPerfSubtitle">Realized profit & loss over selected period</span>
+            <!-- Right Column: Monthly Trading Calendar -->
+            <div class="section-card">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">MONTHLY TRADING CALENDAR</div>
+                  <div class="section-subtitle">Daily realized P&amp;L &amp; trade count</div>
                 </div>
-                <div class="pnl-perf-controls">
-                  <!-- 1. Range Mode Selector (All Time / Monthly / Yearly / Custom) -->
-                  <div class="pnl-perf-dropdown-wrapper">
-                    <button class="pnl-perf-filter-btn" id="pnlPerfModeBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Filter P&L performance by period">
-                      <span id="pnlPerfModeLabel">All Time</span>
-                      <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="pnl-perf-menu" id="pnlPerfModeMenu">
-                      <button type="button" class="pnl-perf-menu-item active" data-mode="all">All Time</button>
-                      <button type="button" class="pnl-perf-menu-item" data-mode="monthly">Monthly</button>
-                      <button type="button" class="pnl-perf-menu-item" data-mode="yearly">Yearly</button>
-                      <button type="button" class="pnl-perf-menu-item" data-mode="custom">Custom</button>
-                    </div>
-                  </div>
+                <div class="calendar-controls">
+                  <button class="cal-btn" id="calPrevBtn" title="Previous Month">&larr;</button>
+                  <div class="cal-month-title" id="calendarTitle">August 2026</div>
+                  <button class="cal-btn" id="calNextBtn" title="Next Month">&rarr;</button>
+                </div>
+              </div>
+              <div class="section-body">
+                <div class="calendar-grid" id="calendarGrid"></div>
+              </div>
+            </div>
+          </div>
 
-                  <!-- 2. Dynamic Month Selector (Active when mode is 'monthly') -->
-                  <div class="pnl-perf-dropdown-wrapper" id="pnlPerfMonthWrapper" style="display: none;">
-                    <button class="pnl-perf-filter-btn" id="pnlPerfMonthBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Select Month">
-                      <span id="pnlPerfMonthLabel">Month</span>
-                      <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="pnl-perf-menu" id="pnlPerfMonthMenu">
-                      <!-- Populated dynamically -->
-                    </div>
+          <!-- ROW 6: FINAL / BOTTOMMOST DASHBOARD SECTION — P&L PERFORMANCE -->
+          <div class="section-card pnl-perf-section-card" id="cardPnlPerformance">
+            <div class="section-header pnl-perf-header">
+              <div>
+                <div class="section-title">P&amp;L PERFORMANCE</div>
+                <div class="section-subtitle" id="pnlPerfSubtitle">Realized profit &amp; loss over all loaded trade data</div>
+              </div>
+              <div class="pnl-perf-controls">
+                <div class="pnl-perf-dropdown" id="pnlPerfModeDropdown">
+                  <button type="button" class="pnl-perf-select-btn" id="pnlPerfModeBtn" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="pnlPerfModeLabel">All Time</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                  <div class="pnl-perf-menu" id="pnlPerfModeMenu" role="listbox">
+                    <button type="button" class="pnl-perf-menu-item active" data-mode="all">All Time</button>
+                    <button type="button" class="pnl-perf-menu-item" data-mode="monthly">Monthly</button>
+                    <button type="button" class="pnl-perf-menu-item" data-mode="yearly">Yearly</button>
+                    <button type="button" class="pnl-perf-menu-item" data-mode="custom">Custom</button>
                   </div>
+                </div>
 
-                  <!-- 3. Dynamic Year Selector (Active when mode is 'yearly') -->
-                  <div class="pnl-perf-dropdown-wrapper" id="pnlPerfYearWrapper" style="display: none;">
-                    <button class="pnl-perf-filter-btn" id="pnlPerfYearBtn" type="button" aria-haspopup="true" aria-expanded="false" title="Select Year">
-                      <span id="pnlPerfYearLabel">Year</span>
-                      <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="pnl-perf-menu" id="pnlPerfYearMenu">
-                      <!-- Populated dynamically -->
-                    </div>
-                  </div>
+                <div class="pnl-perf-dropdown" id="pnlPerfMonthWrapper" style="display: none;">
+                  <button type="button" class="pnl-perf-select-btn secondary" id="pnlPerfMonthBtn" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="pnlPerfMonthLabel">Select Month</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                  <div class="pnl-perf-menu" id="pnlPerfMonthMenu" role="listbox"></div>
+                </div>
 
-                  <!-- 4. Custom Date Range Inputs (Active when mode is 'custom') -->
-                  <div class="pnl-perf-custom-wrapper" id="pnlPerfCustomWrapper" style="display: none;">
-                    <div class="pnl-perf-date-field">
-                      <label for="pnlPerfStartDate" class="pnl-perf-date-label">Start</label>
-                      <input type="date" id="pnlPerfStartDate" class="pnl-perf-date-input" title="Start Date">
-                    </div>
-                    <span class="pnl-perf-date-sep">→</span>
-                    <div class="pnl-perf-date-field">
-                      <label for="pnlPerfEndDate" class="pnl-perf-date-label">End</label>
-                      <input type="date" id="pnlPerfEndDate" class="pnl-perf-date-input" title="End Date (Inclusive)">
-                    </div>
-                    <button type="button" class="pnl-perf-btn-apply" id="pnlPerfApplyBtn" title="Apply Custom Range">Apply</button>
-                    <button type="button" class="pnl-perf-btn-cancel" id="pnlPerfCancelBtn" title="Cancel Custom Range">Cancel</button>
-                  </div>
+                <div class="pnl-perf-dropdown" id="pnlPerfYearWrapper" style="display: none;">
+                  <button type="button" class="pnl-perf-select-btn secondary" id="pnlPerfYearBtn" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="pnlPerfYearLabel">Select Year</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                  <div class="pnl-perf-menu" id="pnlPerfYearMenu" role="listbox"></div>
+                </div>
+
+                <div class="pnl-perf-custom-controls" id="pnlPerfCustomWrapper" style="display: none;">
+                  <input type="date" id="pnlPerfStartDate" class="pnl-perf-date-input" aria-label="P&L Start Date">
+                  <span class="pnl-perf-date-sep">to</span>
+                  <input type="date" id="pnlPerfEndDate" class="pnl-perf-date-input" aria-label="P&L End Date">
+                  <button type="button" id="pnlPerfApplyBtn" class="pnl-perf-apply-btn">Apply</button>
+                  <button type="button" id="pnlPerfCancelBtn" class="pnl-perf-cancel-btn">Cancel</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-body">
+              <div class="pnl-perf-metrics-grid">
+                <div class="pnl-perf-metric-card earned">
+                  <span class="pnl-perf-metric-label">TOTAL EARNED</span>
+                  <span class="pnl-perf-metric-value profit" id="pnlPerfTotalEarned">+$0.00</span>
+                  <span class="pnl-perf-metric-sub" id="pnlPerfTotalEarnedSub">0 winning trades</span>
+                </div>
+                <div class="pnl-perf-metric-card lost">
+                  <span class="pnl-perf-metric-label">TOTAL LOST</span>
+                  <span class="pnl-perf-metric-value loss" id="pnlPerfTotalLost">$0.00</span>
+                  <span class="pnl-perf-metric-sub" id="pnlPerfTotalLostSub">0 losing trades</span>
+                </div>
+                <div class="pnl-perf-metric-card net">
+                  <span class="pnl-perf-metric-label">NET P&amp;L</span>
+                  <span class="pnl-perf-metric-value" id="pnlPerfNetPnL">$0.00</span>
+                  <span class="pnl-perf-metric-sub" id="pnlPerfNetPnLSub">0 total trades</span>
                 </div>
               </div>
 
-              <!-- Numerical KPI Values Row -->
-              <div class="pnl-perf-metrics-row">
-                <div class="pnl-perf-metric-box">
-                  <div class="pnl-perf-metric-title">Total Earned</div>
-                  <div class="pnl-perf-metric-value profit" id="pnlPerfTotalEarned">$0.00</div>
-                  <div class="pnl-perf-metric-sub" id="pnlPerfTotalEarnedSub">0 winning trades</div>
+              <div class="pnl-perf-chart-container">
+                <div class="pnl-perf-empty" id="pnlPerfEmpty" style="display: none;">
+                  No trade data available for the selected range
                 </div>
-                <div class="pnl-perf-metric-box">
-                  <div class="pnl-perf-metric-title">Total Lost</div>
-                  <div class="pnl-perf-metric-value loss" id="pnlPerfTotalLost">$0.00</div>
-                  <div class="pnl-perf-metric-sub" id="pnlPerfTotalLostSub">0 losing trades</div>
-                </div>
-                <div class="pnl-perf-metric-box">
-                  <div class="pnl-perf-metric-title">Net P&L</div>
-                  <div class="pnl-perf-metric-value" id="pnlPerfNetPnL">$0.00</div>
-                  <div class="pnl-perf-metric-sub" id="pnlPerfNetPnLSub">0 total trades</div>
-                </div>
-              </div>
-
-              <!-- Line Graph Section -->
-              <div class="pnl-perf-body">
-                <div class="pnl-perf-canvas-wrapper" id="pnlPerfCanvasWrap">
+                <div class="pnl-perf-canvas-wrap" id="pnlPerfCanvasWrap" style="height: 100%; width: 100%;">
                   <canvas id="pnlPerformanceCanvas"></canvas>
                 </div>
-                <div class="pnl-perf-empty" id="pnlPerfEmpty" style="display: none;">
-                  <div class="pnl-perf-empty-icon">📈</div>
-                  <div class="pnl-perf-empty-text">No trading data available for the selected period</div>
-                </div>
               </div>
             </div>
-
           </div>
+
         </section>
 
-        <!-- ==========================================================================
-             VIEW: ANALYTICS (Trade Duration & Trade Size / Lot Analysis)
-             ========================================================================== -->
+        <!-- ==================== VIEW 2: ANALYTICS WORKSTATION ==================== -->
         <section class="view-section" id="view-analytics">
-          <div class="analytics-wrapper">
+          <div class="analytics-page-header">
+            <div>
+              <div class="workstation-kicker">QUANTITATIVE EXECUTION SUITE</div>
+              <h2 class="analytics-main-title">Analytics Workstation</h2>
+              <p class="analytics-main-subtitle">Deep-dive diagnostics into hold duration behavior, position sizing efficiency, and execution edge.</p>
+            </div>
+            <div class="analytics-header-badges">
+              <span class="analytics-tag" id="analyticsTradesCountBadge">0 Trades</span>
+              <span class="analytics-tag" id="analyticsFilteredRangeBadge">All Time</span>
+            </div>
+          </div>
 
-            <!-- Performance Overview Header Banner -->
-            <div class="analytics-section-card" style="padding: 18px 24px;">
-              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+          <div id="analyticsEmptyState" class="section-card" style="display: none; padding: 48px 24px; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 12px;">📊</div>
+            <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">No Trade Data Available</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 420px; margin: 0 auto 18px;">Upload a CSV trade history file or add manual trades to unlock hold time and lot size analytics.</p>
+            <button class="btn-upload-csv" onclick="document.getElementById('btnUploadCSVTop').click()" style="margin: 0 auto;">Upload CSV</button>
+          </div>
+
+          <div id="analyticsMainContent" style="display: flex; flex-direction: column; gap: 22px;">
+            <!-- SECTION 1: TRADE DURATION & HOLD TIME -->
+            <div class="analytics-section-block">
+              <div class="analytics-section-title-row">
+                <div class="analytics-section-icon duration-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                </div>
                 <div>
-                  <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 2px;">Trade Analytics</h2>
-                  <p style="font-size: 0.82rem; color: var(--text-muted);">In-depth trade duration holding behavior, position sizing, and volume performance.</p>
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                  <span class="analytics-section-tag" id="analyticsFilteredRangeBadge">All Data Loaded</span>
-                  <span id="analyticsTradesCountBadge" style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim); background: var(--bg-card-alt); border: 1px solid var(--border-light); padding: 4px 10px; border-radius: 6px;">0 Trades</span>
+                  <h3 class="analytics-block-heading">HOLD TIME &amp; DURATION TELEMETRY</h3>
+                  <p class="analytics-block-desc">Calculated from exact trade entry and exit timestamps</p>
                 </div>
               </div>
-            </div>
 
-            <!-- Empty State (When no data loaded) -->
-            <div class="analytics-section-card" id="analyticsEmptyState" style="display: none;">
-              <div class="analytics-empty-message">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 44px; height: 44px; color: var(--text-dim);">
-                  <line x1="18" y1="20" x2="18" y2="10"></line>
-                  <line x1="12" y1="20" x2="12" y2="4"></line>
-                  <line x1="6" y1="20" x2="6" y2="14"></line>
-                </svg>
-                <div style="font-weight: 700; font-size: 1rem; color: var(--text-main);">No Trade Data Available</div>
-                <div>Import a CSV or load sample trades to view duration and lot size analytics.</div>
+              <div class="analytics-kpi-row-4">
+                <div class="kpi-card analytics-stat-card">
+                  <div class="kpi-card-header">
+                    <span class="kpi-title">AVERAGE HOLD TIME</span>
+                    <span class="kpi-tag">MEAN</span>
+                  </div>
+                  <div class="kpi-value" id="durationAvgVal">--</div>
+                  <div class="kpi-sub-row"><span>All closed positions</span></div>
+                </div>
+
+                <div class="kpi-card analytics-stat-card">
+                  <div class="kpi-card-header">
+                    <span class="kpi-title">MEDIAN HOLD TIME</span>
+                    <span class="kpi-tag">TYPICAL</span>
+                  </div>
+                  <div class="kpi-value" id="durationMedianVal">--</div>
+                  <div class="kpi-sub-row"><span>Outlier-adjusted midpoint</span></div>
+                </div>
+
+                <div class="kpi-card analytics-stat-card">
+                  <div class="kpi-card-header">
+                    <span class="kpi-title">SHORTEST TRADE</span>
+                    <span class="kpi-tag">FASTEST</span>
+                  </div>
+                  <div class="kpi-value" id="durationShortestVal">--</div>
+                  <div class="kpi-sub-row"><span>Minimum market exposure</span></div>
+                </div>
+
+                <div class="kpi-card analytics-stat-card">
+                  <div class="kpi-card-header">
+                    <span class="kpi-title">LONGEST TRADE</span>
+                    <span class="kpi-tag">MAX HOLD</span>
+                  </div>
+                  <div class="kpi-value" id="durationLongestVal">--</div>
+                  <div class="kpi-sub-row"><span>Maximum market exposure</span></div>
+                </div>
               </div>
-            </div>
 
-            <!-- Main Content Container (Visible when data loaded) -->
-            <div id="analyticsMainContent" style="display: flex; flex-direction: column; gap: 24px;">
-
-              <!-- ==========================================================
-                   1. TRADE DURATION ANALYSIS
-                   ========================================================== -->
-              <div class="analytics-section-card">
-                <div class="analytics-section-header">
-                  <div class="analytics-section-title-wrap">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: #818cf8;">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                    <h3 class="analytics-section-title">Trade Duration</h3>
-                  </div>
-                  <span class="analytics-section-tag">Holding Time Analysis</span>
-                </div>
-
-                <!-- Duration Summary 4-KPI Grid -->
-                <div class="analytics-kpi-grid-4">
-                  <div class="analytics-mini-kpi">
-                    <span class="analytics-mini-kpi-label">Average Duration</span>
-                    <span class="analytics-mini-kpi-val" id="durationAvgVal">--</span>
-                    <span class="analytics-mini-kpi-sub">Mean hold time across all trades</span>
-                  </div>
-                  <div class="analytics-mini-kpi">
-                    <span class="analytics-mini-kpi-label">Median Duration</span>
-                    <span class="analytics-mini-kpi-val" id="durationMedianVal">--</span>
-                    <span class="analytics-mini-kpi-sub">Typical middle hold time</span>
-                  </div>
-                  <div class="analytics-mini-kpi">
-                    <span class="analytics-mini-kpi-label">Shortest Trade</span>
-                    <span class="analytics-mini-kpi-val" id="durationShortestVal">--</span>
-                    <span class="analytics-mini-kpi-sub">Quickest scalp / exit</span>
-                  </div>
-                  <div class="analytics-mini-kpi">
-                    <span class="analytics-mini-kpi-label">Longest Trade</span>
-                    <span class="analytics-mini-kpi-val" id="durationLongestVal">--</span>
-                    <span class="analytics-mini-kpi-sub">Longest holding duration</span>
-                  </div>
-                </div>
-
-                <!-- Duration Distribution Chart & Winning vs Losing Comparison -->
-                <div class="analytics-duration-split">
-                  <!-- Duration Distribution Chart -->
-                  <div class="analytics-chart-box">
-                    <div class="analytics-chart-box-header">
-                      <span class="analytics-chart-title">Duration Distribution</span>
-                      <span style="font-size: 0.74rem; color: var(--text-dim);">Trades categorized by hold time</span>
-                    </div>
-                    <div style="position: relative; height: 250px; width: 100%;">
-                      <canvas id="durationDistCanvas"></canvas>
+              <div class="analytics-duration-middle-grid">
+                <div class="section-card">
+                  <div class="section-header">
+                    <div>
+                      <div class="section-title">HOLD DURATION BY OUTCOME</div>
+                      <div class="section-subtitle">Winning vs Losing position hold times</div>
                     </div>
                   </div>
-
-                  <!-- Winning vs Losing Duration Comparison -->
-                  <div class="analytics-hold-card">
-                    <div class="analytics-chart-box-header">
-                      <span class="analytics-chart-title">Winning vs Losing Duration</span>
-                    </div>
-
-                    <div class="hold-item-row">
-                      <div class="hold-subbox win">
-                        <div class="hold-subbox-left">
-                          <span class="hold-subbox-label">Winning Trades</span>
-                          <span class="hold-subbox-count" id="durationWinCount">0 trades</span>
+                  <div class="section-body" style="display: flex; flex-direction: column; gap: 16px;">
+                    <div class="duration-outcome-split">
+                      <div class="duration-outcome-box win-box">
+                        <div class="outcome-box-label">
+                          <span class="legend-dot win"></span>
+                          WINNING TRADES AVG HOLD
                         </div>
-                        <span class="hold-subbox-val win" id="durationWinAvgVal">--</span>
+                        <div class="outcome-box-val profit" id="durationWinAvgVal">--</div>
+                        <div class="outcome-box-sub" id="durationWinCount">0 trades</div>
                       </div>
-
-                      <div class="hold-subbox loss">
-                        <div class="hold-subbox-left">
-                          <span class="hold-subbox-label">Losing Trades</span>
-                          <span class="hold-subbox-count" id="durationLossCount">0 trades</span>
+                      <div class="duration-outcome-box loss-box">
+                        <div class="outcome-box-label">
+                          <span class="legend-dot loss"></span>
+                          LOSING TRADES AVG HOLD
                         </div>
-                        <span class="hold-subbox-val loss" id="durationLossAvgVal">--</span>
+                        <div class="outcome-box-val loss" id="durationLossAvgVal">--</div>
+                        <div class="outcome-box-sub" id="durationLossCount">0 trades</div>
                       </div>
                     </div>
 
-                    <!-- Holding Ratio Banner -->
                     <div class="hold-ratio-banner" id="durationRatioBanner">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; flex-shrink: 0;">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                      </svg>
-                      <span id="durationRatioText">Equal hold times</span>
+                      <span class="ratio-icon">⏱</span>
+                      <span id="durationRatioText">Analyzing hold time behavior...</span>
+                    </div>
+
+                    <div style="height: 150px; position: relative;">
+                      <canvas id="durationOutcomeChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="section-card">
+                  <div class="section-header">
+                    <div>
+                      <div class="section-title">TRADE DURATION DISTRIBUTION</div>
+                      <div class="section-subtitle">Number of trades across hold-time buckets</div>
+                    </div>
+                  </div>
+                  <div class="section-body">
+                    <div style="height: 290px; position: relative;">
+                      <canvas id="durationDistributionChart"></canvas>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <!-- ==========================================================
-                   2. TRADE SIZE / LOT ANALYSIS
-                   ========================================================== -->
-              <div class="analytics-section-card">
-                <div class="analytics-section-header">
-                  <div class="analytics-section-title-wrap">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: #818cf8;">
-                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                    </svg>
-                    <h3 class="analytics-section-title">Trade Size & Position Sizing</h3>
-                  </div>
-                  <span class="analytics-section-tag">Volume Analysis</span>
-                </div>
-
-                <!-- Lot Summary 5-KPI Grid -->
-                <div class="analytics-kpi-grid-5">
-                  <div class="analytics-mini-kpi">
-                    <span class="analytics-mini-kpi-label">Average Lot</span>
-                    <span class="analytics-mini-kpi-val" id="lotAvgVal">--</span>
-                    <span class="analytics-mini-kpi-sub">Mean position size</span>
-                  </div>
-                  <div class="analytics-mini-kpi">
-                    <span class="analytics-mini-kpi-label">Median Lot</span>
-                    <span class="analytics-mini-kpi-val" id="lotMedianVal">--</span>
-                    <span class="analytics-mini-kpi-sub">Median position size</span>
-                  </div>
-                  <div class="analytics-mini-kpi">
-                    <span class="analytics-mini-kpi-label">Smallest</span>
-                    <span class="analytics-mini-kpi-val" id="lotSmallestVal">--</span>
-                    <span class="analytics-mini-kpi-sub">Minimum trade size</span>
-                  </div>
-                  <div class="analytics-mini-kpi">
-                    <span class="analytics-mini-kpi-label">Largest</span>
-                    <span class="analytics-mini-kpi-val" id="lotLargestVal">--</span>
-                    <span class="analytics-mini-kpi-sub">Maximum trade size</span>
-                  </div>
-                  <div class="analytics-mini-kpi">
-                    <span class="analytics-mini-kpi-label">Total Volume</span>
-                    <span class="analytics-mini-kpi-val" id="lotTotalVolumeVal">--</span>
-                    <span class="analytics-mini-kpi-sub">Sum of all lots traded</span>
-                  </div>
-                </div>
-
-                <!-- Lot Size Chart (with P&L vs Trades toggle tabs) -->
-                <div class="analytics-chart-box">
-                  <div class="analytics-chart-box-header">
-                    <span class="analytics-chart-title">Position Size Performance</span>
-                    <div class="chart-tabs" style="display: flex; gap: 6px;">
-                      <button class="chart-tab-btn active" id="tabLotPnL">P&L by Lot Size</button>
-                      <button class="chart-tab-btn" id="tabLotTrades">Trades by Lot Size</button>
-                    </div>
-                  </div>
-                  <div style="position: relative; height: 260px; width: 100%;">
-                    <canvas id="lotSizeBarCanvas"></canvas>
-                  </div>
-                </div>
-
-                <!-- Performance by Position Size Table -->
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                  <span class="analytics-chart-title">Performance by Position Size</span>
-                  <div class="analytics-table-card">
-                    <div class="table-responsive">
-                      <table class="trade-table">
-                        <thead>
-                          <tr>
-                            <th>Position / Lot Size</th>
-                            <th>Trades</th>
-                            <th>Win Rate</th>
-                            <th>Net P&L (<span class="currency-sym">$</span>)</th>
-                            <th>Avg Trade P&L (<span class="currency-sym">$</span>)</th>
-                          </tr>
-                        </thead>
-                        <tbody id="lotPerformanceTableBody">
-                          <!-- Filled dynamically -->
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
             </div>
 
+            <!-- SECTION 2: LOT SIZE & POSITION SIZING -->
+            <div class="analytics-section-block">
+              <div class="analytics-section-title-row">
+                <div class="analytics-section-icon lot-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="analytics-block-heading">POSITION SIZING &amp; LOT EXPOSURE</h3>
+                  <p class="analytics-block-desc">Volume statistics and performance breakdown by lot size</p>
+                </div>
+              </div>
+
+              <div class="analytics-kpi-row-5">
+                <div class="kpi-card analytics-stat-card">
+                  <div class="kpi-card-header">
+                    <span class="kpi-title">AVERAGE LOT SIZE</span>
+                    <span class="kpi-tag">MEAN</span>
+                  </div>
+                  <div class="kpi-value" id="lotAvgVal">--</div>
+                  <div class="kpi-sub-row"><span>Lots per trade</span></div>
+                </div>
+
+                <div class="kpi-card analytics-stat-card">
+                  <div class="kpi-card-header">
+                    <span class="kpi-title">MEDIAN LOT SIZE</span>
+                    <span class="kpi-tag">TYPICAL</span>
+                  </div>
+                  <div class="kpi-value" id="lotMedianVal">--</div>
+                  <div class="kpi-sub-row"><span>Standard position size</span></div>
+                </div>
+
+                <div class="kpi-card analytics-stat-card">
+                  <div class="kpi-card-header">
+                    <span class="kpi-title">SMALLEST LOT</span>
+                    <span class="kpi-tag">MIN</span>
+                  </div>
+                  <div class="kpi-value" id="lotSmallestVal">--</div>
+                  <div class="kpi-sub-row"><span>Lowest exposure</span></div>
+                </div>
+
+                <div class="kpi-card analytics-stat-card">
+                  <div class="kpi-card-header">
+                    <span class="kpi-title">LARGEST LOT</span>
+                    <span class="kpi-tag">MAX</span>
+                  </div>
+                  <div class="kpi-value" id="lotLargestVal">--</div>
+                  <div class="kpi-sub-row"><span>Peak exposure</span></div>
+                </div>
+
+                <div class="kpi-card analytics-stat-card">
+                  <div class="kpi-card-header">
+                    <span class="kpi-title">TOTAL VOLUME</span>
+                    <span class="kpi-tag">CUMULATIVE</span>
+                  </div>
+                  <div class="kpi-value profit" id="lotTotalVolumeVal">--</div>
+                  <div class="kpi-sub-row"><span>Total lots traded</span></div>
+                </div>
+              </div>
+
+              <div class="analytics-lot-bottom-grid">
+                <div class="section-card">
+                  <div class="section-header">
+                    <div>
+                      <div class="section-title">P&amp;L &amp; VOLUME BY LOT SIZE</div>
+                      <div class="section-subtitle">Net profit and trade frequency per lot size</div>
+                    </div>
+                    <div class="card-tabs">
+                      <button class="card-tab active" id="tabLotPnL">Net P&amp;L</button>
+                      <button class="card-tab" id="tabLotTrades">Trade Count</button>
+                    </div>
+                  </div>
+                  <div class="section-body">
+                    <div style="height: 280px; position: relative;">
+                      <canvas id="lotSizeChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="section-card">
+                  <div class="section-header">
+                    <div>
+                      <div class="section-title">PERFORMANCE BY POSITION SIZE</div>
+                      <div class="section-subtitle">Win rate and expectancy grouped by lot size</div>
+                    </div>
+                  </div>
+                  <div class="table-container">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Lot Size</th>
+                          <th>Trades</th>
+                          <th>Win Rate</th>
+                          <th>Net P&amp;L (<span class="currency-sym">$</span>)</th>
+                          <th>Avg P&amp;L / Trade (<span class="currency-sym">$</span>)</th>
+                        </tr>
+                      </thead>
+                      <tbody id="lotPerformanceTableBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        <!-- ==========================================================================
-             VIEW: TRADE LOG (Sortable & Filterable Table)
-             ========================================================================== -->
+        <!-- ==================== VIEW 3: TRADE LOG & EXECUTION LEDGER ==================== -->
         <section class="view-section" id="view-tradelog">
-          <div class="filter-bar">
-            <div class="filter-group">
+          <!-- Top 4-Block Execution Telemetry Strip (Stitch Trade Log Design) -->
+          <div class="tradelog-telemetry-grid">
+            <div class="kpi-card tradelog-kpi-block">
+              <div class="kpi-card-header">
+                <span class="kpi-title">FILTERED EXECUTIONS</span>
+                <span class="kpi-tag">LEDGER</span>
+              </div>
+              <div class="kpi-value" id="tradeLogStatCount">0</div>
+              <div class="kpi-sub-row"><span id="tradeLogStatWinLoss">0 Wins / 0 Losses</span></div>
+            </div>
+            <div class="kpi-card tradelog-kpi-block">
+              <div class="kpi-card-header">
+                <span class="kpi-title">NET REALIZED P&amp;L</span>
+                <span class="kpi-tag">NET</span>
+              </div>
+              <div class="kpi-value profit" id="tradeLogStatNetPnl">+$0.00</div>
+              <div class="kpi-sub-row"><span id="tradeLogStatAvgPnl">Avg: $0.00 / trade</span></div>
+            </div>
+            <div class="kpi-card tradelog-kpi-block">
+              <div class="kpi-card-header">
+                <span class="kpi-title">EXECUTION WIN RATE</span>
+                <span class="kpi-tag">WIN %</span>
+              </div>
+              <div class="kpi-value" id="tradeLogStatWinRate">0.0%</div>
+              <div class="kpi-sub-row"><span id="tradeLogStatPf">Profit Factor: 0.00</span></div>
+            </div>
+            <div class="kpi-card tradelog-kpi-block">
+              <div class="kpi-card-header">
+                <span class="kpi-title">TOTAL VOLUME TRADED</span>
+                <span class="kpi-tag">LOTS</span>
+              </div>
+              <div class="kpi-value" id="tradeLogStatVolume">0.00</div>
+              <div class="kpi-sub-row"><span id="tradeLogStatTopSym">Top Pair: --</span></div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <div class="table-controls">
               <div class="search-input-wrap">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="text" class="form-input" id="tradeLogSearch" placeholder="Search ticket, symbol...">
+                <input type="text" id="tradeLogSearch" placeholder="Search ticket ID, instrument symbol, or exit reason...">
               </div>
-              <select class="form-select" id="tradeLogSymbolFilter">
-                <option value="all">All Symbols</option>
-              </select>
-              <select class="form-select" id="tradeLogTypeFilter">
-                <option value="all">All Types</option>
-                <option value="buy">BUY / LONG</option>
-                <option value="sell">SELL / SHORT</option>
-              </select>
-              <select class="form-select" id="tradeLogOutcomeFilter">
-                <option value="all">All Outcomes</option>
-                <option value="win">Winners Only</option>
-                <option value="loss">Losers Only</option>
-              </select>
-            </div>
-            <button class="btn-upload-csv" onclick="document.getElementById('uploadModal').classList.add('active')" style="padding: 6px 14px; font-size: 0.82rem;">
-              + Import CSV
-            </button>
-          </div>
 
-          <div class="table-card">
-            <div class="table-responsive">
-              <table class="trade-table">
+              <div class="filter-group">
+                <select class="filter-select" id="tradeLogSymbolFilter">
+                  <option value="all">All Symbols</option>
+                </select>
+
+                <select class="filter-select" id="tradeLogTypeFilter">
+                  <option value="all">All Directions</option>
+                  <option value="buy">Buy (Long)</option>
+                  <option value="sell">Sell (Short)</option>
+                </select>
+
+                <select class="filter-select" id="tradeLogOutcomeFilter">
+                  <option value="all">All Outcomes</option>
+                  <option value="win">Winners Only</option>
+                  <option value="loss">Losers Only</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
                 <thead>
                   <tr>
                     <th>Ticket</th>
                     <th>Symbol</th>
-                    <th>Type</th>
-                    <th>Lots</th>
-                    <th>Open Price</th>
-                    <th>Close Price</th>
-                    <th>Open Time</th>
-                    <th>Close Time</th>
-                    <th>P/L (<span class="currency-sym">$</span>)</th>
+                    <th>Direction</th>
+                    <th>Volume</th>
+                    <th>Entry Price</th>
+                    <th>Exit Price</th>
+                    <th>Open Time (UTC)</th>
+                    <th>Close Time (UTC)</th>
+                    <th>Net P&amp;L (<span class="currency-sym">$</span>)</th>
                     <th>Action</th>
                   </tr>
                 </thead>
-                <tbody id="tradeLogTableBody">
-                  <!-- Dynamically filled -->
-                </tbody>
+                <tbody id="tradeLogTableBody"></tbody>
               </table>
             </div>
-            <div class="pagination-controls">
-              <span id="tradeLogPageInfo" style="font-size: 0.8rem; color: var(--text-dim); margin-right: 12px;"></span>
-              <button class="calendar-nav-btn" id="tradeLogPrevPage">❮</button>
-              <button class="calendar-nav-btn" id="tradeLogNextPage">❯</button>
+
+            <div class="pagination-bar">
+              <span id="tradeLogPageInfo">Showing 0-0 of 0 trades</span>
+              <div class="page-btns">
+                <button class="page-btn" id="tradeLogPrevPage">&larr; Previous</button>
+                <button class="page-btn" id="tradeLogNextPage">Next &rarr;</button>
+              </div>
             </div>
           </div>
         </section>
 
-        <!-- ==========================================================================
-             VIEW: FOURGE AI (Trading Performance Assistant)
-             ========================================================================== -->
+        <!-- ==================== VIEW 4: FOURGE AI INTELLIGENCE ==================== -->
         <section class="view-section" id="view-strategy-bot">
-          <div class="strategy-bot-container">
-            <!-- Fourge AI Header -->
-            <div class="bot-header-card">
-              <div class="bot-header-left">
-                <div>
-                  <div class="bot-title-row">
-                    <h2 class="bot-title">Fourge AI</h2>
-                    <span class="bot-status-pill online" id="botLiveStatusBadge">
-                      <span class="pulse-dot"></span> Fourge AI Live
-                    </span>
-                    <div class="bot-model-select-wrap" title="Switch Gemini Model">
-                      <select id="botModelSelect" class="bot-model-select">
-                        <option value="gemini-3.7-flash" selected>Gemini 3.7 Flash</option>
-                        <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
-                        <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
-                        <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
-                      </select>
+          <div class="bot-workspace">
+            <div class="bot-chat-main">
+              <!-- Top Header Bar -->
+              <div class="bot-chat-header">
+                <div class="bot-header-left">
+                  <div class="bot-avatar-badge">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"></path>
+                      <circle cx="9" cy="13" r="1.25" fill="currentColor"></circle>
+                      <circle cx="15" cy="13" r="1.25" fill="currentColor"></circle>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="bot-title-row">
+                      <h2 class="bot-main-title">Fourge AI Intelligence</h2>
+                      <span class="bot-status-pill online" id="botLiveStatusBadge">
+                        <span class="pulse-dot"></span> Fourge AI Live
+                      </span>
+                    </div>
+                    <p class="bot-subtitle" id="botContextText">Institutional Quantitative Co-pilot &amp; Strategy Auditor</p>
+                  </div>
+                </div>
+
+                <div class="bot-header-actions">
+                  <span class="bot-badge bot-badge-neutral" id="botContextBadge" style="display:none;">0 Trades</span>
+
+                  <!-- Gemini Model Selector Dropdown -->
+                  <div class="bot-model-selector-wrap" title="Select Gemini AI Model">
+                    <select id="botModelSelect" class="bot-model-select" aria-label="Select Gemini AI Model">
+                      <option value="gemini-3.7-flash">gemini-3.7-flash</option>
+                      <option value="gemini-3.8-flash">gemini-3.8-flash</option>
+                      <option value="gemini-3.6-flash">gemini-3.6-flash</option>
+                      <option value="gemini-3.5-flash">gemini-3.5-flash</option>
+                    </select>
+                  </div>
+
+                  <!-- Online / Offline Mode Toggle -->
+                  <button type="button" class="btn-secondary bot-mode-toggle-btn online" id="botModeToggleBtn" title="Toggle between Online Gemini AI and Offline Local Engine">
+                    <span id="botModeToggleText">● AI ON</span>
+                  </button>
+
+                  <!-- Real-Time Token Usage Gauge -->
+                  <div class="bot-token-gauge" id="botTokenGauge" title="Session Token Usage vs 1,000,000 Context Window">
+                    <div class="token-gauge-top">
+                      <span class="token-gauge-label">TOKENS</span>
+                      <span class="token-gauge-val" id="tokenUsageVal"><strong>0</strong> / 1.0M <span class="token-sub">tok</span></span>
+                      <span class="token-gauge-pct" id="tokenUsagePct">0.0%</span>
+                    </div>
+                    <div class="token-gauge-track">
+                      <div class="token-gauge-bar" id="tokenUsageBar" style="width: 0%;"></div>
+                    </div>
+                    <div class="token-gauge-meta">
+                      <span id="tokenSessionVal">Project: PRIMARY</span>
                     </div>
                   </div>
-                  <p class="bot-subtitle">AI Trading Performance Assistant</p>
-                </div>
-              </div>
 
-              <!-- Real-Time Shared Gemini Project Usage Counter -->
-              <div class="bot-token-gauge" id="botTokenGauge" title="Real-time Shared Gemini API Project Usage (1,000,000 token limit)">
-                <div class="token-gauge-header">
-                  <div class="token-gauge-label">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  <button class="btn-secondary bot-action-btn" id="botExportChatBtn" title="Export Conversation to Markdown">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
-                    <span>Tokens (Used / Limit)</span>
-                  </div>
-                  <span class="token-gauge-pct" id="tokenUsagePct">0.0%</span>
-                </div>
-                <div class="token-gauge-bar-wrap">
-                  <div class="token-gauge-bar" id="tokenUsageBar" style="width: 0%;"></div>
-                </div>
-                <div class="token-gauge-stats">
-                  <span class="token-gauge-val" id="tokenUsageVal"><strong>0</strong> / 1.0M <span class="token-sub">tok</span></span>
-                  <span class="token-gauge-session" id="tokenSessionVal">Project: PRIMARY</span>
+                    <span>Export</span>
+                  </button>
+                  <button class="btn-secondary bot-action-btn" id="botClearChatBtn" title="Reset Conversation">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    <span>Reset</span>
+                  </button>
                 </div>
               </div>
 
-              <div class="bot-header-actions">
-                <button class="btn-secondary bot-mode-toggle-btn online" id="botModeToggleBtn" title="Toggle AI Mode (Online Gemini AI / Offline Local Engine)">
-                  <span id="botModeToggleText">● AI ON</span>
-                </button>
-                <button class="btn-secondary bot-action-btn" id="botExportChatBtn" title="Export conversation as Markdown">
-                  <span>Export</span>
-                </button>
-                <button class="btn-secondary bot-action-btn" id="botClearChatBtn" title="Clear chat history">
-                  <span>Clear</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Main Chat Card -->
-            <div class="bot-chat-card">
-              <!-- Messages Container (Scrollable chat area with suggested questions) -->
+              <!-- Message Stream -->
               <div class="bot-chat-messages" id="botChatMessages">
-                <!-- Messages & suggested questions rendered here -->
+                <div class="bot-welcome-card" id="botWelcomeCard">
+                  <div class="bot-welcome-header">
+                    <h3 class="bot-welcome-title">Fourge AI</h3>
+                    <p class="bot-welcome-desc">Ask anything about your trading history, risk management, symbol performance, or strategy edge.</p>
+                  </div>
+                  <div class="bot-suggested-wrap">
+                    <div class="bot-suggested-title">Suggested Inquiries</div>
+                    <div class="bot-suggested-chips">
+                      <button type="button" class="bot-prompt-chip" data-prompt="Run a full strategy audit on my trade history. Highlight my biggest strengths, critical leaks, and top actionable recommendations.">Full Strategy Audit</button>
+                      <button type="button" class="bot-prompt-chip" data-prompt="Analyze my biggest losing trades. What common patterns or mistakes stand out?">Biggest Losses</button>
+                      <button type="button" class="bot-prompt-chip" data-prompt="What are my best and worst performing symbols? Provide win rates, net profit, and profit factors for each.">Best &amp; Worst Symbols</button>
+                      <button type="button" class="bot-prompt-chip" data-prompt="Analyze my trade hold times. Do I hold losing trades longer than winning trades?">Hold Time</button>
+                      <button type="button" class="bot-prompt-chip" data-prompt="Audit my risk-to-reward ratio and average win vs average loss. Is my payoff ratio healthy?">Risk/Reward</button>
+                      <button type="button" class="bot-prompt-chip" data-prompt="Calculate my profit factor, win rate, and expectancy. Are these metrics sustainable?">Profit Factor</button>
+                      <button type="button" class="bot-prompt-chip" data-prompt="Which days of the week or trading sessions produce my best and worst performance?">Best Days to Trade</button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <!-- Chat Input Bar -->
-              <div class="bot-input-bar">
-                <textarea 
-                  id="botChatInput" 
-                  class="bot-chat-input" 
-                  rows="1" 
-                  placeholder="Ask Fourge AI about your trades..."
-                ></textarea>
-                <button class="btn-primary bot-send-btn" id="botSendBtn" title="Send message (Enter)">
-                  <span>Send</span>
-                </button>
+              <!-- Input Composer Area -->
+              <div class="bot-input-area">
+                <div class="bot-input-box">
+                  <textarea id="botChatInput" rows="1" placeholder="Ask Fourge AI about your trades, exact dates, win rate, symbols, or risk..."></textarea>
+                  <button class="bot-send-btn" id="botSendBtn" title="Send Message">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- ==========================================================================
-             VIEW: METATRADER 5 (MT5) INTEGRATION
-             ========================================================================== -->
+        <!-- ==================== VIEW 5: METATRADER 5 (MT5) LIVE TERMINAL ==================== -->
         <section class="view-section" id="view-mt5">
-          <!-- Disconnected State: Connect MT5 Account -->
-          <div class="mt5-connect-wrapper" id="mt5ConnectState">
-            <div class="mt5-connect-card">
-              <div class="mt5-card-header">
-                <div class="mt5-header-icon">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                  </svg>
+          <!-- STATE A: NOT CONNECTED (CONNECT FORM + ARCHITECTURE TELEMETRY) -->
+          <div id="mt5ConnectState" class="mt5-connect-wrapper">
+            <div class="mt5-connect-grid">
+              <div class="section-card mt5-connect-card">
+                <div class="mt5-connect-header">
+                  <div class="mt5-logo-badge">MT5</div>
+                  <div>
+                    <div class="workstation-kicker">DIRECT BROKER BRIDGE</div>
+                    <h2 class="mt5-connect-title">Connect MetaTrader 5 Terminal</h2>
+                    <p class="mt5-connect-subtitle">Link your MT5 trading account using read-only investor credentials for real-time telemetry and 1-click ledger import.</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 class="mt5-connect-title">Connect MT5 Account</h2>
-                  <p class="mt5-connect-desc">Enter your MetaTrader 5 broker credentials below for read-only access and live sync.</p>
-                </div>
+
+                <form id="mt5ConnectForm" class="mt5-connect-form">
+                  <div class="form-group">
+                    <label for="mt5BrokerSelect">Select Broker</label>
+                    <select id="mt5BrokerSelect" class="form-control">
+                      <option value="Exness">Exness</option>
+                      <option value="FTMO">FTMO</option>
+                      <option value="IC Markets">IC Markets</option>
+                      <option value="XM">XM Global</option>
+                      <option value="Pepperstone">Pepperstone</option>
+                      <option value="Deriv">Deriv</option>
+                      <option value="JustMarkets">JustMarkets</option>
+                      <option value="Other">Other / Custom Server</option>
+                    </select>
+                  </div>
+
+                  <div class="mt5-form-row">
+                    <div class="form-group">
+                      <label for="mt5AccountInput">MT5 Account Login ID</label>
+                      <input type="text" id="mt5AccountInput" class="form-control" placeholder="e.g. 12345678" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="mt5ServerInput">Broker Server</label>
+                      <input type="text" id="mt5ServerInput" class="form-control" value="Exness-MT5Real11" placeholder="e.g. Exness-MT5Real11" required>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="mt5PasswordInput">Investor (Read-Only) Password</label>
+                    <input type="password" id="mt5PasswordInput" class="form-control" placeholder="Enter read-only investor password" required>
+                  </div>
+
+                  <label class="mt5-readonly-check">
+                    <input type="checkbox" id="mt5ReadOnlyCheck" checked>
+                    <div>
+                      <strong>Enforce Read-Only Investor Mode (Recommended)</strong>
+                      <p>TradeForge only reads account metrics, open positions, and closed trade history. No orders can ever be executed or modified.</p>
+                    </div>
+                  </label>
+
+                  <div class="mt5-connect-actions">
+                    <button type="submit" id="btnMT5Submit" class="btn-primary" style="flex: 1; padding: 12px 20px; font-size: 0.92rem;">Connect MT5 Terminal</button>
+                    <button type="button" id="btnMT5DemoFill" class="btn-secondary" style="padding: 12px 16px;">Load Demo Account</button>
+                  </div>
+                </form>
               </div>
 
-              <form id="mt5ConnectForm" class="mt5-form">
-                <div class="form-group">
-                  <label class="form-label" for="mt5BrokerSelect">Broker</label>
-                  <select class="form-control" id="mt5BrokerSelect" required>
-                    <option value="Exness" selected>Exness</option>
-                    <option value="FTMO">FTMO</option>
-                    <option value="IC Markets">IC Markets</option>
-                    <option value="XM">XM Global</option>
-                    <option value="Pepperstone">Pepperstone</option>
-                    <option value="Deriv">Deriv</option>
-                    <option value="JustMarkets">JustMarkets</option>
-                    <option value="Other">Other / Custom</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="mt5AccountInput">MT5 Account Number</label>
-                  <input type="text" class="form-control" id="mt5AccountInput" placeholder="12345678" value="12345678" required autocomplete="username" />
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="mt5ServerInput">Server</label>
-                  <input type="text" class="form-control" id="mt5ServerInput" placeholder="Exness-MT5Real11" value="Exness-MT5Real11" required />
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label" for="mt5PasswordInput">Investor Password</label>
-                  <input type="password" class="form-control" id="mt5PasswordInput" placeholder="•••••••••••" value="InvestorDemo2026!" required autocomplete="current-password" />
-                  <span class="mt5-hint-text">Read-only investor password only. Master password is never required.</span>
-                </div>
-
-                <div class="mt5-checkbox-row">
-                  <label class="mt5-checkbox-label">
-                    <input type="checkbox" id="mt5ReadOnlyCheck" checked />
-                    <span>Read-only connection</span>
-                  </label>
-                  <button type="button" class="btn-demo-quickfill" id="btnMT5DemoFill" title="Auto-fill sample credentials">Demo Fill</button>
-                </div>
-
-                <button type="submit" class="btn-primary mt5-connect-btn" id="btnMT5Submit">
-                  Connect MT5
-                </button>
-              </form>
-            </div>
-          </div>
-
-          <!-- Connected State: Live MT5 Dashboard -->
-          <div class="mt5-dashboard-wrapper" id="mt5DashboardState" style="display: none;">
-            <!-- Top Status & Actions Banner -->
-            <div class="mt5-top-banner">
-              <div class="mt5-banner-left">
-                <div class="mt5-status-pill">
-                  <span class="status-dot online"></span>
-                  Connected
-                </div>
-                <div>
-                  <h2 class="mt5-live-title">Live MT5 Dashboard</h2>
-                  <div class="mt5-account-meta">
-                    <span>Account: <strong id="mt5ConnectedAccount">12345678</strong></span>
-                    <span class="meta-separator">•</span>
-                    <span>Broker: <strong id="mt5ConnectedBroker">Exness</strong></span>
-                    <span class="meta-separator">•</span>
-                    <span class="server-tag" id="mt5ConnectedServer">Exness-MT5Real11</span>
+              <!-- Right Column: Institutional Bridge Architecture Info -->
+              <div class="mt5-bridge-specs-col">
+                <div class="section-card" style="padding: 22px;">
+                  <div class="workstation-kicker" style="margin-bottom: 6px;">TERMINAL PROTOCOL</div>
+                  <h3 style="font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; color: var(--text-main); margin-bottom: 14px;">Zero-Execution Security Architecture</h3>
+                  <div class="mt5-spec-list">
+                    <div class="mt5-spec-item">
+                      <span class="mt5-spec-badge">READ-ONLY</span>
+                      <div>
+                        <strong>Investor Password Isolation</strong>
+                        <p>Uses native MT5 investor authentication—order placement, modification, and withdrawal permissions are disabled at the broker server level.</p>
+                      </div>
+                    </div>
+                    <div class="mt5-spec-item">
+                      <span class="mt5-spec-badge">REAL-TIME</span>
+                      <div>
+                        <strong>Sub-Second Equity &amp; Margin Telemetry</strong>
+                        <p>Streams live Balance, Equity, Free Margin, Margin Level %, and floating P&amp;L across all active positions.</p>
+                      </div>
+                    </div>
+                    <div class="mt5-spec-item">
+                      <span class="mt5-spec-badge">DEDUPLICATED</span>
+                      <div>
+                        <strong>1-Click Ledger Synchronization</strong>
+                        <p>Automatically fingerprints ticket IDs and timestamps so importing closed MT5 history never duplicates existing journal records.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div class="mt5-banner-actions">
-                <button class="btn-import-tradeforge" id="btnMT5ImportToTradeForge">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                  </svg>
-                  <span>Import to TradeForge</span>
-                  <small class="import-subtext">(moves MT5 trades into your journal)</small>
-                </button>
-
-                <button class="btn-sync-live" id="btnMT5Sync" title="Sync live data with broker">
-                  ↻ Sync Live Data
-                </button>
-
-                <button class="btn-disconnect-mt5" id="btnMT5Disconnect" title="Disconnect MT5 account">
-                  Disconnect
-                </button>
+          <!-- STATE B: CONNECTED LIVE TERMINAL DASHBOARD -->
+          <div id="mt5DashboardState" class="mt5-dashboard-wrapper" style="display: none; flex-direction: column; gap: 20px;">
+            <div class="section-card mt5-terminal-header-bar">
+              <div class="mt5-terminal-status-left">
+                <span class="mt5-live-pill"><span class="pulse-dot"></span> LIVE MT5 TERMINAL</span>
+                <div class="mt5-terminal-meta">
+                  <strong id="mt5ConnectedBroker">Exness</strong> &bull;
+                  Account <span id="mt5ConnectedAccount" style="font-family: var(--font-mono);">12345678</span> &bull;
+                  Server: <span id="mt5ConnectedServer" style="font-family: var(--font-mono);">Exness-MT5Real11</span>
+                </div>
+              </div>
+              <div class="mt5-terminal-actions">
+                <button type="button" id="btnMT5Sync" class="btn-secondary">↻ Sync Live Data</button>
+                <button type="button" id="btnMT5ImportToTradeForge" class="btn-upload-csv">↓ Import History to TradeForge</button>
+                <button type="button" id="btnMT5Disconnect" class="btn-danger-outline">Disconnect</button>
               </div>
             </div>
 
-            <!-- KPI Metric Cards Grid -->
             <div class="mt5-kpi-grid">
-              <div class="mt5-metric-card">
-                <div class="mt5-metric-label">Balance</div>
-                <div class="mt5-metric-val" id="mt5KpiBalance"><span class="currency-sym">$</span>1,082.78</div>
-                <div class="mt5-metric-sub">Account capital</div>
+              <div class="kpi-card mt5-kpi-card">
+                <span class="mt5-kpi-label">BALANCE</span>
+                <span class="mt5-kpi-value" id="mt5KpiBalance">$1,082.78</span>
               </div>
-
-              <div class="mt5-metric-card">
-                <div class="mt5-metric-label">Equity</div>
-                <div class="mt5-metric-val" id="mt5KpiEquity"><span class="currency-sym">$</span>1,094.32</div>
-                <div class="mt5-metric-sub">Floating balance</div>
+              <div class="kpi-card mt5-kpi-card">
+                <span class="mt5-kpi-label">EQUITY</span>
+                <span class="mt5-kpi-value" id="mt5KpiEquity">$1,094.32</span>
               </div>
-
-              <div class="mt5-metric-card">
-                <div class="mt5-metric-label">Free Margin</div>
-                <div class="mt5-metric-val" id="mt5KpiFreeMargin"><span class="currency-sym">$</span>942.18</div>
-                <div class="mt5-metric-sub">Usable liquidity</div>
+              <div class="kpi-card mt5-kpi-card">
+                <span class="mt5-kpi-label">FREE MARGIN</span>
+                <span class="mt5-kpi-value" id="mt5KpiFreeMargin">$942.18</span>
               </div>
-
-              <div class="mt5-metric-card">
-                <div class="mt5-metric-label">Margin Level</div>
-                <div class="mt5-metric-val" id="mt5KpiMarginLevel">718.5%</div>
-                <div class="mt5-metric-sub">Safety buffer</div>
+              <div class="kpi-card mt5-kpi-card">
+                <span class="mt5-kpi-label">MARGIN LEVEL</span>
+                <span class="mt5-kpi-value" id="mt5KpiMarginLevel">718.5%</span>
               </div>
-
-              <div class="mt5-metric-card">
-                <div class="mt5-metric-label">Open Positions</div>
-                <div class="mt5-metric-val highlight" id="mt5KpiOpenPositions">2</div>
-                <div class="mt5-metric-sub">Active floating trades</div>
+              <div class="kpi-card mt5-kpi-card">
+                <span class="mt5-kpi-label">OPEN POSITIONS</span>
+                <span class="mt5-kpi-value" id="mt5KpiOpenPositions">2</span>
               </div>
-
-              <div class="mt5-metric-card">
-                <div class="mt5-metric-label">Today P&L</div>
-                <div class="mt5-metric-val profit" id="mt5KpiTodayPnl">+<span class="currency-sym">$</span>42.18</div>
-                <div class="mt5-metric-sub">Closed & floating net</div>
+              <div class="kpi-card mt5-kpi-card">
+                <span class="mt5-kpi-label">TODAY'S P&amp;L</span>
+                <span class="mt5-kpi-value profit" id="mt5KpiTodayPnl">+$42.18</span>
               </div>
             </div>
 
-            <!-- Sub-Tabs Navigation -->
-            <div class="mt5-tabs-container">
-              <div class="mt5-subtabs-bar">
-                <button class="mt5-subtab-btn active" data-tab="overview">Account Overview</button>
-                <button class="mt5-subtab-btn" data-tab="positions">Open Positions</button>
-                <button class="mt5-subtab-btn" data-tab="history">Trade History</button>
-                <button class="mt5-subtab-btn" data-tab="orders">Orders</button>
-                <button class="mt5-subtab-btn" data-tab="deals">Deals</button>
-                <button class="mt5-subtab-btn" data-tab="sync">Sync</button>
+            <div class="section-card">
+              <div class="mt5-subtabs-nav">
+                <button type="button" class="mt5-subtab-btn active" data-tab="overview">Account Overview</button>
+                <button type="button" class="mt5-subtab-btn" data-tab="positions">Open Positions</button>
+                <button type="button" class="mt5-subtab-btn" data-tab="history">Trade History</button>
+                <button type="button" class="mt5-subtab-btn" data-tab="orders">Orders</button>
+                <button type="button" class="mt5-subtab-btn" data-tab="deals">Deals</button>
+                <button type="button" class="mt5-subtab-btn" data-tab="sync">Sync Engine</button>
               </div>
 
-              <!-- Tab 1: Account Overview -->
-              <div class="mt5-tab-pane active" id="mt5TabPane-overview">
-                <!-- Rendered dynamically -->
-              </div>
+              <div class="section-body">
+                <div id="mt5TabPane-overview" class="mt5-tab-pane active"></div>
 
-              <!-- Tab 2: Open Positions -->
-              <div class="mt5-tab-pane" id="mt5TabPane-positions">
-                <div class="table-card">
-                  <div class="table-responsive">
-                    <table class="trade-table">
+                <div id="mt5TabPane-positions" class="mt5-tab-pane">
+                  <div class="table-container">
+                    <table class="data-table">
                       <thead>
                         <tr>
                           <th>Ticket</th>
@@ -1197,24 +1427,21 @@
                           <th>Type</th>
                           <th>Lots</th>
                           <th>Open Price</th>
-                          <th>Current Price</th>
-                          <th>S/L</th>
-                          <th>T/P</th>
-                          <th>Time</th>
-                          <th>Floating Profit</th>
+                          <th>Current</th>
+                          <th>SL</th>
+                          <th>TP</th>
+                          <th>Open Time</th>
+                          <th>Profit (<span class="currency-sym">$</span>)</th>
                         </tr>
                       </thead>
                       <tbody id="mt5PositionsTableBody"></tbody>
                     </table>
                   </div>
                 </div>
-              </div>
 
-              <!-- Tab 3: Trade History -->
-              <div class="mt5-tab-pane" id="mt5TabPane-history">
-                <div class="table-card">
-                  <div class="table-responsive">
-                    <table class="trade-table">
+                <div id="mt5TabPane-history" class="mt5-tab-pane">
+                  <div class="table-container">
+                    <table class="data-table">
                       <thead>
                         <tr>
                           <th>Ticket</th>
@@ -1224,28 +1451,25 @@
                           <th>Open Price</th>
                           <th>Close Price</th>
                           <th>Close Time</th>
-                          <th>Commission</th>
-                          <th>Profit</th>
+                          <th>Comm</th>
+                          <th>Net Profit (<span class="currency-sym">$</span>)</th>
                         </tr>
                       </thead>
                       <tbody id="mt5HistoryTableBody"></tbody>
                     </table>
                   </div>
                 </div>
-              </div>
 
-              <!-- Tab 4: Orders -->
-              <div class="mt5-tab-pane" id="mt5TabPane-orders">
-                <div class="table-card">
-                  <div class="table-responsive">
-                    <table class="trade-table">
+                <div id="mt5TabPane-orders" class="mt5-tab-pane">
+                  <div class="table-container">
+                    <table class="data-table">
                       <thead>
                         <tr>
-                          <th>Ticket</th>
+                          <th>Order Ticket</th>
                           <th>Symbol</th>
                           <th>Type</th>
                           <th>Lots</th>
-                          <th>Price</th>
+                          <th>Trigger Price</th>
                           <th>Market Price</th>
                           <th>State</th>
                         </tr>
@@ -1254,538 +1478,649 @@
                     </table>
                   </div>
                 </div>
-              </div>
 
-              <!-- Tab 5: Deals -->
-              <div class="mt5-tab-pane" id="mt5TabPane-deals">
-                <div class="table-card">
-                  <div class="table-responsive">
-                    <table class="trade-table">
+                <div id="mt5TabPane-deals" class="mt5-tab-pane">
+                  <div class="table-container">
+                    <table class="data-table">
                       <thead>
                         <tr>
-                          <th>Deal #</th>
-                          <th>Order #</th>
+                          <th>Deal ID</th>
+                          <th>Order</th>
                           <th>Symbol</th>
                           <th>Type</th>
                           <th>Direction</th>
-                          <th>Lots</th>
-                          <th>Price</th>
-                          <th>Profit</th>
+                          <th>Volume</th>
+                          <th>Execution Price</th>
+                          <th>Realized P&amp;L (<span class="currency-sym">$</span>)</th>
                         </tr>
                       </thead>
                       <tbody id="mt5DealsTableBody"></tbody>
                     </table>
                   </div>
                 </div>
-              </div>
 
-              <!-- Tab 6: Sync -->
-              <div class="mt5-tab-pane" id="mt5TabPane-sync">
-                <!-- Rendered dynamically -->
+                <div id="mt5TabPane-sync" class="mt5-tab-pane"></div>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- ==========================================================================
-             VIEW: REPORTS
-             ========================================================================== -->
-        <section class="view-section" id="view-reports">
-          <div class="reports-grid">
-            <div class="chart-card">
-              <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 14px;">Net P&L by Instrument / Symbol</h3>
-              <div class="chart-canvas-wrapper" style="min-height: 260px;">
-                <canvas id="symbolBarCanvas"></canvas>
-              </div>
-            </div>
-            <div class="chart-card">
-              <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 14px;">Day of Week Performance</h3>
-              <div class="chart-canvas-wrapper" style="min-height: 260px;">
-                <canvas id="weekdayBarCanvas"></canvas>
-              </div>
-            </div>
-            <div class="table-card" style="grid-column: 1 / -1;">
-              <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 14px;">Symbol Breakdown Matrix</h3>
-              <div id="reportsSymbolList"></div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ==========================================================================
-             VIEW: ZELLA INSIGHTS
-             ========================================================================== -->
-        <section class="view-section" id="view-insights">
-          <div class="insights-grid">
-            <div class="insight-card">
-              <div class="insight-card-header">
-                <div class="insight-icon">🏆</div>
-                <div class="insight-title">Top Performing Symbol</div>
-              </div>
-              <div class="insight-metric" id="insightBestSymbol">XAUUSD</div>
-              <div class="insight-desc">Generates the majority of your profitable returns. Maintain strict focus on this setup.</div>
-            </div>
-
-            <div class="insight-card">
-              <div class="insight-card-header">
-                <div class="insight-icon">⚖️</div>
-                <div class="insight-title">Long vs Short Winrate</div>
-              </div>
-              <div class="insight-metric" id="insightLongShort">Long: 52% | Short: 48%</div>
-              <div class="insight-desc">Balanced execution across both directions with minimal directional bias.</div>
-            </div>
-
-            <div class="insight-card">
-              <div class="insight-card-header">
-                <div class="insight-icon">📅</div>
-                <div class="insight-title">Best Trading Day</div>
-              </div>
-              <div class="insight-metric" id="insightBestDay">Thursday</div>
-              <div class="insight-desc">Highest net profit density and consistency during mid-week liquidity.</div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ==========================================================================
-             VIEW: STRATEGIES
-             ========================================================================== -->
+        <!-- ==================== VIEW 6: PLAYBOOKS & NOTES WORKSTATION ==================== -->
         <section class="view-section" id="view-strategies">
-          <div style="margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center;">
-            <h2 style="font-size: 1.2rem; font-weight: 700;">Trading Playbooks & Strategies</h2>
-            <button class="btn-primary" onclick="App.showToast('Strategy creator coming in next update!', 'success')">+ Create Strategy</button>
+          <div class="analytics-page-header">
+            <div>
+              <div class="workstation-kicker">SYSTEMATIC EXECUTION PLAYBOOKS</div>
+              <h2 class="analytics-main-title">Strategy Playbooks &amp; Session Notes</h2>
+              <p class="analytics-main-subtitle">Document your institutional setups, pre-trade execution checklist, and daily session post-mortems.</p>
+            </div>
+            <div class="analytics-header-badges">
+              <button class="btn-upload-csv" onclick="document.getElementById('btnAddTradeSidebar').click()">+ Log Strategy Trade</button>
+            </div>
           </div>
-          <div class="kpi-row" id="strategiesListContainer" style="grid-template-columns: repeat(3, 1fr);">
-            <!-- Filled dynamically -->
+
+          <!-- Active Strategy Playbooks Grid -->
+          <div class="section-card">
+            <div class="section-header">
+              <div>
+                <div class="section-title">ACTIVE STRATEGY PLAYBOOKS</div>
+                <div class="section-subtitle">Performance attribution across tagged systematic setups</div>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="kpi-grid" id="strategiesListContainer" style="grid-template-columns: repeat(3, 1fr);"></div>
+            </div>
+          </div>
+
+          <!-- Split Grid: Pre-Trade Execution Checklist + Trader Session Journal -->
+          <div class="bottom-split-grid">
+            <div class="section-card">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">EXECUTION RULES &amp; RISK CHECKLIST</div>
+                  <div class="section-subtitle">Verify mandatory setup criteria before entering market risk</div>
+                </div>
+              </div>
+              <div class="section-body" id="rulesListContainer" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            </div>
+
+            <div class="section-card">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">TRADER SESSION JOURNAL</div>
+                  <div class="section-subtitle">Auto-saved local session reflections, macro bias &amp; post-trade review</div>
+                </div>
+                <span class="analytics-tag">AUTO-SAVED</span>
+              </div>
+              <div class="section-body">
+                <textarea id="notebookTextarea" class="notebook-textarea" placeholder="Write your daily market structure observations, NY/London session bias, psychological state, and execution lessons here..."></textarea>
+              </div>
+            </div>
           </div>
         </section>
 
-        <!-- ==========================================================================
-             VIEW: NOTEBOOK
-             ========================================================================== -->
+        <!-- Legacy View Aliases (Preserved for programmatic compatibility) -->
+        <section class="view-section" id="view-reports">
+          <div class="middle-analytics-grid">
+            <div class="section-card">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">MONTHLY P&amp;L BREAKDOWN</div>
+                  <div class="section-subtitle">Net performance aggregated by month</div>
+                </div>
+              </div>
+              <div class="section-body">
+                <div style="height: 280px;">
+                  <canvas id="reportsMonthlyChart"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="section-card">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">INSTRUMENT BREAKDOWN</div>
+                  <div class="section-subtitle">Win rate and net P&amp;L by traded pair</div>
+                </div>
+              </div>
+              <div class="section-body" id="reportsSymbolList"></div>
+            </div>
+          </div>
+          <div class="section-card">
+            <div class="section-header">
+              <div>
+                <div class="section-title">HOURLY SESSION PERFORMANCE (UTC)</div>
+                <div class="section-subtitle">Profitability by trade opening hour</div>
+              </div>
+            </div>
+            <div class="section-body">
+              <div style="height: 260px;">
+                <canvas id="reportsHourlyChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view-section" id="view-insights">
+          <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="kpi-card">
+              <div class="kpi-card-header">
+                <span class="kpi-title">TOP INSTRUMENT</span>
+                <span class="kpi-tag">EDGE</span>
+              </div>
+              <div class="kpi-value profit" id="insightBestSymbol" style="font-size: 1.3rem;">-</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card-header">
+                <span class="kpi-title">DIRECTION ACCURACY</span>
+                <span class="kpi-tag">LONG VS SHORT</span>
+              </div>
+              <div class="kpi-value" id="insightLongShort" style="font-size: 1.3rem;">-</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card-header">
+                <span class="kpi-title">MOST PROFITABLE DAY</span>
+                <span class="kpi-tag">TIMING</span>
+              </div>
+              <div class="kpi-value profit" id="insightBestDay" style="font-size: 1.3rem;">-</div>
+            </div>
+          </div>
+        </section>
+
         <section class="view-section" id="view-notebook">
-          <div class="notebook-container">
-            <div class="notebook-editor-card">
-              <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Daily Trading Notes & Review</h3>
-              <textarea class="form-textarea" id="notebookTextarea" rows="16" placeholder="Write down your session reflections, key lessons, psychological observations... (Auto-saved locally in your browser)"></textarea>
+          <div class="section-card">
+            <div class="section-header">
+              <div>
+                <div class="section-title">TRADER NOTEBOOK</div>
+                <div class="section-subtitle">Redirecting to unified Playbooks &amp; Notes workstation...</div>
+              </div>
+              <button class="btn-upload-csv" onclick="App.switchView('strategies')">Open Playbooks &amp; Notes</button>
             </div>
-            <div class="rules-checklist-card">
-              <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">Trading Rules Checklist</h3>
-              <div style="display: flex; flex-direction: column; gap: 8px;" id="rulesListContainer">
-                <!-- Dynamically filled -->
+          </div>
+        </section>
+
+        <!-- ==================== VIEW 7: TERMINAL SETTINGS ==================== -->
+        <section class="view-section" id="view-settings">
+          <div class="analytics-page-header">
+            <div>
+              <div class="workstation-kicker">SYSTEM CONFIGURATION</div>
+              <h2 class="analytics-main-title">Terminal Settings &amp; Data Control</h2>
+              <p class="analytics-main-subtitle">Configure base currency, account starting equity, AI co-pilot routing, and local storage ledger backups.</p>
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <!-- Block 1: Account & Currency Configuration -->
+            <div class="section-card">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">ACCOUNT &amp; DISPLAY TELEMETRY</div>
+                  <div class="section-subtitle">Base currency and ROI calculation parameters</div>
+                </div>
+              </div>
+              <div class="section-body settings-card-body">
+                <div class="settings-row">
+                  <div>
+                    <div class="settings-label">Display Currency</div>
+                    <div class="settings-desc">Switch all P&amp;L metrics, charts, and tables between USD ($) and INR (₹)</div>
+                  </div>
+                  <div class="settings-action">
+                    <button type="button" class="btn-secondary" onclick="App.setCurrency('USD')">$ USD</button>
+                    <button type="button" class="btn-secondary" onclick="App.setCurrency('INR')">₹ INR</button>
+                  </div>
+                </div>
+
+                <div class="settings-row">
+                  <div>
+                    <div class="settings-label">Starting Account Capital</div>
+                    <div class="settings-desc">Used to compute exact Net Return % and Ending Equity on the Dashboard</div>
+                  </div>
+                  <div class="settings-action">
+                    <button type="button" class="btn-upload-csv" onclick="App.openStartingCapitalModal()">Configure Balance</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Block 2: Fourge AI Co-Pilot Routing -->
+            <div class="section-card">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">FOURGE AI ENGINE ROUTING</div>
+                  <div class="section-subtitle">Cloud Gemini API vs Local Deterministic Quantitative Engine</div>
+                </div>
+              </div>
+              <div class="section-body settings-card-body">
+                <div class="settings-row">
+                  <div>
+                    <div class="settings-label">AI Execution Mode</div>
+                    <div class="settings-desc">Toggle between Online Gemini Cloud and zero-latency Offline Local Engine</div>
+                  </div>
+                  <div class="settings-action">
+                    <button type="button" class="btn-secondary" onclick="StrategyBotManager.toggleAiMode()">Toggle AI Mode</button>
+                  </div>
+                </div>
+
+                <div class="settings-row">
+                  <div>
+                    <div class="settings-label">Conversation Memory</div>
+                    <div class="settings-desc">Export or clear your local Fourge AI analytical chat transcript</div>
+                  </div>
+                  <div class="settings-action">
+                    <button type="button" class="btn-secondary" onclick="StrategyBotManager.exportChat()">Export Chat</button>
+                    <button type="button" class="btn-secondary" onclick="StrategyBotManager.clearChat()">Reset Chat</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Block 3: Ledger Data Management & Backup -->
+            <div class="section-card" style="grid-column: 1 / -1;">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">LOCAL LEDGER STORAGE &amp; DATA INTEGRITY</div>
+                  <div class="section-subtitle">Import broker CSV files, export JSON backups, or purge local browser storage</div>
+                </div>
+              </div>
+              <div class="section-body settings-card-body">
+                <div class="settings-row">
+                  <div>
+                    <div class="settings-label">Import Broker CSV History</div>
+                    <div class="settings-desc">Upload Exness, Zuperior, or MT4/MT5 CSV trade logs with automatic duplicate protection</div>
+                  </div>
+                  <div class="settings-action">
+                    <button type="button" class="btn-upload-csv" onclick="document.getElementById('btnUploadCSVTop').click()">Upload CSV File</button>
+                  </div>
+                </div>
+
+                <div class="settings-row">
+                  <div>
+                    <div class="settings-label">Export Full Trade Ledger (JSON)</div>
+                    <div class="settings-desc">Download a complete portable JSON snapshot of all stored trades</div>
+                  </div>
+                  <div class="settings-action">
+                    <button type="button" class="btn-secondary" onclick="App.exportJSON()">Download JSON Backup</button>
+                  </div>
+                </div>
+
+                <div class="settings-row danger-zone-row">
+                  <div>
+                    <div class="settings-label" style="color: var(--loss);">Purge All Local Trade Data</div>
+                    <div class="settings-desc">Permanently delete all stored trades from this browser's local storage</div>
+                  </div>
+                  <div class="settings-action">
+                    <button type="button" class="btn-danger-outline" onclick="document.getElementById('btnClearData').click()">Purge All Trades</button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-      </main>
-    </div>
-  </div>
-
-  <!-- ==========================================================================
-       FULL WINDOW DRAG & DROP OVERLAY
-       ========================================================================== -->
-  <div class="window-drag-overlay" id="windowDragOverlay">
-    <div class="window-drag-box">
-      <div class="window-drag-icon">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="12" y1="18" x2="12" y2="12"></line>
-          <line x1="9" y1="15" x2="15" y2="15"></line>
-        </svg>
-      </div>
-      <div class="window-drag-title">Drop CSV File Anywhere</div>
-      <div class="window-drag-sub">Release to immediately preview and import your trading history into TradeForge</div>
-    </div>
-  </div>
-
-  <!-- ==========================================================================
-       MODAL: Broker Selection Confirmation Modal
-       ========================================================================== -->
-  <div class="modal-overlay" id="brokerSelectModal">
-    <div class="modal-card" style="max-width: 480px;">
-      <div class="modal-header">
-        <h3 class="modal-title" style="display: flex; align-items: center; gap: 10px;">
-          <div class="brand-icon" style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-              <line x1="12" y1="22.08" x2="12" y2="12"></line>
-            </svg>
-          </div>
-          <span>Select Broker</span>
-        </h3>
-        <button type="button" class="modal-close-btn" id="closeBrokerSelectModalBtn">&times;</button>
-      </div>
-      <div class="modal-body" style="padding: 20px 24px; gap: 16px;">
-        <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.5; margin: 0;">
-          Which broker format should be used for this CSV?
-        </p>
-        <div class="broker-select-options">
-          <label class="broker-select-card" id="brokerOptExnessCard">
-            <input type="radio" name="brokerSelection" value="exness" id="brokerOptExness" class="broker-select-radio">
-            <div class="broker-select-info">
-              <div class="broker-select-name">Exness</div>
-              <div class="broker-select-desc">Standard Exness CSV export (Ticket, Opening/Closing UTC, Lots, Profit)</div>
-            </div>
-          </label>
-          <label class="broker-select-card" id="brokerOptZuperiorCard">
-            <input type="radio" name="brokerSelection" value="zuperior" id="brokerOptZuperior" class="broker-select-radio">
-            <div class="broker-select-info">
-              <div class="broker-select-name">Zuperior</div>
-              <div class="broker-select-desc">Zuperior CSV format (Symbol, Type, Open/Close Time, Volume, Open/Close Price, Profit)</div>
-            </div>
-          </label>
-        </div>
-      </div>
-      <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 24px;">
-        <button type="button" class="btn-secondary modal-cancel-btn" id="btnCancelBrokerSelect">Cancel</button>
-        <button type="button" class="btn-primary" id="btnConfirmBrokerSelect" style="padding: 9px 24px; font-weight: 700;">Continue</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==========================================================================
-       MODAL: Interactive CSV Upload & Preview Modal
-       ========================================================================== -->
-  <div class="modal-overlay" id="csvPreviewModal">
-    <div class="modal-card" style="max-width: 620px;">
-      <div class="modal-header">
-        <h3 class="modal-title" style="display: flex; align-items: center; gap: 10px;">
-          <div class="brand-icon" style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-            </svg>
-          </div>
-          <span>CSV Upload Preview</span>
-        </h3>
-        <button type="button" class="modal-close-btn" id="closeCsvPreviewModalBtn">&times;</button>
       </div>
 
-      <div class="modal-body" style="gap: 16px;">
-        <!-- File Details Card -->
-        <div class="preview-file-header">
-          <div class="preview-file-info">
-            <div class="preview-file-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-              </svg>
-            </div>
-            <div class="preview-file-details">
-              <div class="preview-file-name" id="previewFileName">trade_history.csv</div>
-              <div class="preview-file-size" id="previewFileSize">0 KB</div>
-            </div>
-          </div>
-          <span class="preview-badge-valid">✓ Valid CSV</span>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="preview-badge-broker" id="previewBrokerBadge">Exness</span>
-            <span class="preview-badge-valid">✓ Valid CSV</span>
-          </div>
-        </div>
-
-        <!-- Quick Summary Metrics Grid -->
-        <div class="preview-metrics-grid">
-          <div class="preview-metric-box">
-            <span class="preview-metric-label">Parsed Trades</span>
-            <span class="preview-metric-val" id="previewMetricTrades">0</span>
-            <span class="preview-metric-sub" id="previewMetricTradesSub">Closed trades</span>
-          </div>
-          <div class="preview-metric-box">
-            <span class="preview-metric-label">Realized P&L</span>
-            <span class="preview-metric-val" id="previewMetricPnL">$0.00</span>
-            <span class="preview-metric-sub" id="previewMetricWinRate">0% winrate</span>
-          </div>
-          <div class="preview-metric-box">
-            <span class="preview-metric-label">Symbols Detected</span>
-            <span class="preview-metric-val" id="previewMetricSymbolsCount">0</span>
-            <span class="preview-metric-sub" id="previewMetricSymbolsList" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</span>
-          </div>
-        </div>
-
-        <div style="font-size: 0.78rem; color: var(--text-dim);" id="previewDateRange">
-          Date range: --
-        </div>
-
-        <!-- Import Mode Selection (Merge vs Replace) -->
-        <div class="preview-mode-section" id="previewModeSection">
-          <span class="preview-mode-title">Import Options</span>
-          <div class="preview-mode-options">
-            <label class="preview-mode-card selected" id="optMergeCard">
-              <input type="radio" name="csvImportMode" id="optMergeTrades" value="merge" class="preview-mode-radio" checked>
-              <div>
-                <div class="preview-mode-label">Merge with existing trades (Recommended)</div>
-                <div class="preview-mode-desc" id="previewMergeDesc">Keep previous uploads untouched and append new trades</div>
-              </div>
-            </label>
-            <label class="preview-mode-card" id="optReplaceCard">
-              <input type="radio" name="csvImportMode" id="optReplaceTrades" value="replace" class="preview-mode-radio">
-              <div>
-                <div class="preview-mode-label">Replace existing trades</div>
-                <div class="preview-mode-desc">Start fresh with only trades from this file</div>
-              </div>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 10px;">
-        <button type="button" class="btn-secondary modal-cancel-btn" id="btnCancelCsvPreview">Cancel</button>
-        <button type="button" class="btn-primary" id="btnConfirmCsvImport" style="padding: 9px 20px; font-weight: 700; gap: 8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <polyline points="20 6 9 17 4 12"></polyline>
+      <!-- ==================== MOBILE BOTTOM NAVIGATION BAR ==================== -->
+      <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Mobile Primary Navigation">
+        <button type="button" class="mobile-nav-item active" data-view="dashboard">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
           </svg>
-          Upload & View Results
+          <span>Dashboard</span>
         </button>
-      </div>
-    </div>
+        <button type="button" class="mobile-nav-item" data-view="analytics">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span>Analytics</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-view="tradelog">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          <span>Trade Log</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-view="strategy-bot">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"></path>
+          </svg>
+          <span>Fourge AI</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-view="mt5">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          <span>MT5 Sync</span>
+        </button>
+      </nav>
+    </main>
   </div>
 
-  <!-- ==========================================================================
-       MODAL 1: Upload CSV Modal
-       ========================================================================== -->
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. CSV Upload Modal -->
   <div class="modal-overlay" id="uploadModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="17 8 12 3 7 8"></polyline>
-            <line x1="12" y1="3" x2="12" y2="15"></line>
-          </svg>
-          Import Trading History (CSV)
-        </h3>
-        <button class="modal-close-btn">&times;</button>
+        <div class="modal-title">IMPORT TRADING HISTORY (CSV)</div>
+        <button class="modal-close modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-dropzone" id="csvDropzone">
+          <div class="upload-icon-circle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <h4>Drag &amp; drop your CSV file here</h4>
+          <p>Supports Exness, Zuperior, MT4/MT5 exports &amp; custom CSV logs. Click to browse files.</p>
+          <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-cancel-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1B. CSV Import Preview & Confirmation Modal -->
+  <div class="modal-overlay" id="csvPreviewModal">
+    <div class="modal-card" style="max-width: 560px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 10px;">
+          <span class="preview-badge-icon">CSV</span>
+          <span>PREVIEW &amp; CONFIRM IMPORT</span>
+        </div>
+        <button class="modal-close" id="closeCsvPreviewModalBtn">&times;</button>
       </div>
 
       <div class="modal-body">
-        <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display: none;">
-        
-        <!-- Drag and drop zone -->
-        <div class="dropzone" id="csvDropzone">
-          <div class="dropzone-icon">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="12" y1="18" x2="12" y2="12"></line>
-              <line x1="9" y1="15" x2="15" y2="15"></line>
+        <div class="csv-preview-file-banner">
+          <div class="file-banner-left">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--profit)" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
             </svg>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="preview-filename" id="previewFileName">trades.csv</div>
+                <span id="previewBrokerBadge" class="analytics-tag">Exness</span>
+              </div>
+              <div class="preview-filesize" id="previewFileSize">0 KB</div>
+            </div>
           </div>
-          <div class="dropzone-text">
-            <h4>Click to browse or drag & drop CSV file</h4>
-            <p>Compatible with MT4, MT5, cTrader, Tradovate, Prop Firm exports, and standard CSVs</p>
+          <span class="preview-status-pill">Ready to Import</span>
+        </div>
+
+        <div class="csv-preview-metrics-grid">
+          <div class="preview-metric-box">
+            <span class="preview-metric-lbl">PARSED TRADES</span>
+            <span class="preview-metric-val" id="previewMetricTrades">0</span>
+            <span class="preview-metric-sub" id="previewMetricTradesSub">0 wins / 0 losses</span>
+          </div>
+          <div class="preview-metric-box">
+            <span class="preview-metric-lbl">FILE NET P&amp;L</span>
+            <span class="preview-metric-val profit" id="previewMetricPnL">+$0.00</span>
+            <span class="preview-metric-sub" id="previewMetricWinRate">0% win rate</span>
+          </div>
+          <div class="preview-metric-box">
+            <span class="preview-metric-lbl">INSTRUMENTS</span>
+            <span class="preview-metric-val" id="previewMetricSymbolsCount">0</span>
+            <span class="preview-metric-sub" id="previewMetricSymbolsList">-</span>
           </div>
         </div>
 
-        <div style="font-size: 0.78rem; color: var(--text-dim); line-height: 1.4;">
-          🔒 <strong>Privacy Guarantee:</strong> All trade calculations and CSV parsing happen 100% locally on your machine. No trade data is ever uploaded to any external server.
+        <div class="csv-preview-daterange" id="previewDateRange">
+          Date range: -- to --
+        </div>
+
+        <div class="csv-import-mode-box">
+          <label class="import-mode-option selected" id="optMergeCard">
+            <input type="radio" name="csvImportMode" value="merge" id="optMergeTrades" checked>
+            <div>
+              <div class="mode-title">Add &amp; Merge with Existing Trades (Recommended)</div>
+              <div class="mode-desc" id="previewMergeDesc">Keeps your previously uploaded trades untouched and appends new trades (duplicates skipped automatically).</div>
+            </div>
+          </label>
+          <label class="import-mode-option" id="optReplaceCard">
+            <input type="radio" name="csvImportMode" value="replace" id="optReplaceTrades">
+            <div>
+              <div class="mode-title">Replace Existing Trades</div>
+              <div class="mode-desc">Clears current session data and loads only the trades from this CSV file.</div>
+            </div>
+          </label>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button class="btn-secondary modal-cancel-btn">Cancel</button>
+        <button type="button" class="btn-secondary" id="btnCancelCsvPreview">Cancel</button>
+        <button type="button" class="btn-primary" id="btnConfirmCsvImport">Confirm &amp; Import Trades</button>
       </div>
     </div>
   </div>
 
-  <!-- ==========================================================================
-       MODAL 2: Add Manual Trade Modal
-       ========================================================================== -->
+  <!-- 1C. Broker Selection Confirmation Modal -->
+  <div class="modal-overlay" id="brokerSelectModal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 10px;">
+          <span class="preview-badge-icon">CSV</span>
+          <span>SELECT BROKER FORMAT</span>
+        </div>
+        <button class="modal-close" id="closeBrokerSelectModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+          Choose which broker format matches your uploaded CSV file so TradeForge can map all columns accurately:
+        </p>
+        <div class="csv-import-mode-box">
+          <label class="import-mode-option selected" id="brokerOptExnessCard">
+            <input type="radio" name="brokerSelection" value="exness" id="brokerOptExness" checked>
+            <div>
+              <div class="mode-title">Exness</div>
+              <div class="mode-desc">Standard Exness trade history CSV export (`ticket`, `opening_time_utc`, `closing_time_utc`, `type`, `lots`, `symbol`, `profit_usd`).</div>
+            </div>
+          </label>
+          <label class="import-mode-option" id="brokerOptZuperiorCard">
+            <input type="radio" name="brokerSelection" value="zuperior" id="brokerOptZuperior">
+            <div>
+              <div class="mode-title">Zuperior</div>
+              <div class="mode-desc">Zuperior trading history CSV export (`Symbol`, `Type`, `Open Time`, `Close Time`, `Lots`, `Open Price`, `Close Price`, `Profit`).</div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btnCancelBrokerSelect">Cancel</button>
+        <button type="button" class="btn-primary" id="btnConfirmBrokerSelect">Continue to Preview</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Add Manual Trade Modal -->
   <div class="modal-overlay" id="addTradeModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">+ Add Manual Trade</h3>
-        <button class="modal-close-btn">&times;</button>
+        <div class="modal-title">LOG MANUAL TRADE EXECUTION</div>
+        <button class="modal-close modal-close-btn">&times;</button>
       </div>
       <form id="addTradeForm">
         <div class="modal-body">
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label">Symbol</label>
-              <input type="text" class="form-input" id="formSymbol" placeholder="e.g. XAUUSD" required>
+              <label>Symbol</label>
+              <input type="text" class="form-control" id="formSymbol" placeholder="XAUUSD" required>
             </div>
             <div class="form-group">
-              <label class="form-label">Type / Direction</label>
-              <select class="form-select" id="formType">
-                <option value="buy">BUY / LONG</option>
-                <option value="sell">SELL / SHORT</option>
+              <label>Direction</label>
+              <select class="form-control" id="formType">
+                <option value="buy">BUY (Long)</option>
+                <option value="sell">SELL (Short)</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Volume (Lots)</label>
-              <input type="number" step="0.01" class="form-input" id="formLots" placeholder="0.1" required>
+              <label>Lot Volume</label>
+              <input type="number" step="0.01" class="form-control" id="formLots" placeholder="0.05" required>
             </div>
             <div class="form-group">
-              <label class="form-label">Net Profit / Loss (<span class="currency-sym">$</span>)</label>
-              <input type="number" step="0.01" class="form-input" id="formProfit" placeholder="e.g. 50.00 or -25.00" required>
+              <label>Realized Profit (<span class="currency-sym">$</span>)</label>
+              <input type="number" step="0.01" class="form-control" id="formProfit" placeholder="25.50" required>
             </div>
             <div class="form-group">
-              <label class="form-label">Entry Price</label>
-              <input type="number" step="any" class="form-input" id="formOpenPrice" placeholder="4580.50">
+              <label>Entry Price</label>
+              <input type="number" step="any" class="form-control" id="formOpenPrice" placeholder="2500.00">
             </div>
             <div class="form-group">
-              <label class="form-label">Exit Price</label>
-              <input type="number" step="any" class="form-input" id="formClosePrice" placeholder="4585.00">
+              <label>Exit Price</label>
+              <input type="number" step="any" class="form-control" id="formClosePrice" placeholder="2505.50">
             </div>
             <div class="form-group">
-              <label class="form-label">Stop Loss</label>
-              <input type="number" step="any" class="form-input" id="formStopLoss" placeholder="4575.00">
+              <label>Stop Loss</label>
+              <input type="number" step="any" class="form-control" id="formStopLoss" placeholder="2495.00">
             </div>
             <div class="form-group">
-              <label class="form-label">Take Profit</label>
-              <input type="number" step="any" class="form-input" id="formTakeProfit" placeholder="4595.00">
+              <label>Take Profit</label>
+              <input type="number" step="any" class="form-control" id="formTakeProfit" placeholder="2510.00">
             </div>
             <div class="form-group">
-              <label class="form-label">Opening Time</label>
-              <input type="datetime-local" class="form-input" id="formOpenTime">
+              <label>Open Time</label>
+              <input type="datetime-local" class="form-control" id="formOpenTime" required>
             </div>
             <div class="form-group">
-              <label class="form-label">Closing Time</label>
-              <input type="datetime-local" class="form-input" id="formCloseTime">
+              <label>Close Time</label>
+              <input type="datetime-local" class="form-control" id="formCloseTime" required>
             </div>
-            <div class="form-group full-width">
-              <label class="form-label">Close Reason</label>
-              <select class="form-select" id="formCloseReason">
-                <option value="user">Manual Exit (User)</option>
-                <option value="tp">Take Profit (TP Hit)</option>
-                <option value="sl">Stop Loss (SL Hit)</option>
+            <div class="form-group full">
+              <label>Close Reason</label>
+              <select class="form-control" id="formCloseReason">
+                <option value="tp">Take Profit (TP)</option>
+                <option value="sl">Stop Loss (SL)</option>
+                <option value="user">Manual / User Exit</option>
+                <option value="so">Stop Out (SO)</option>
               </select>
             </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary modal-cancel-btn">Cancel</button>
-          <button type="submit" class="btn-primary">Save Trade</button>
+          <button type="submit" class="btn-primary">Save Execution</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ==========================================================================
-       MODAL 3: Trade Details Inspection Modal
-       ========================================================================== -->
+  <!-- 3. Trade Detail Inspection Modal -->
   <div class="modal-overlay" id="tradeDetailModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">Trade Details Inspection</h3>
-        <button class="modal-close-btn">&times;</button>
+        <div class="modal-title">EXECUTION INSPECTION REPORT</div>
+        <button class="modal-close modal-close-btn">&times;</button>
       </div>
-      <div class="modal-body" id="tradeDetailBody">
-        <!-- Rendered dynamically -->
-      </div>
+      <div class="modal-body" id="tradeDetailBody"></div>
       <div class="modal-footer">
         <button class="btn-secondary modal-cancel-btn">Close</button>
       </div>
     </div>
   </div>
 
-  <!-- ==========================================================================
-       MODAL 4: Day Trades Modal (Calendar Drilldown)
-       ========================================================================== -->
+  <!-- 4. Calendar Day Trades Drilldown Modal -->
   <div class="modal-overlay" id="dayTradesModal">
-    <div class="modal-card" style="max-width: 680px;">
+    <div class="modal-card" style="max-width: 650px;">
       <div class="modal-header">
-        <h3 class="modal-title" id="dayTradesModalTitle">Trades on Selected Day</h3>
-        <button class="modal-close-btn">&times;</button>
+        <div class="modal-title" id="dayTradesModalTitle">Trades on Date</div>
+        <button class="modal-close modal-close-btn">&times;</button>
       </div>
-      <div class="modal-body" id="dayTradesModalBody">
-        <!-- Rendered dynamically -->
-      </div>
+      <div class="modal-body" id="dayTradesModalBody"></div>
       <div class="modal-footer">
         <button class="btn-secondary modal-cancel-btn">Close</button>
       </div>
     </div>
   </div>
 
-  <!-- ==========================================================================
-       MODAL 5: Install App Modal (PWA Installation & Guidance)
-       ========================================================================== -->
-  <div class="modal-overlay" id="installModal">
-    <div class="modal-card" style="max-width: 480px;">
-      <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div class="brand-icon" style="width: 30px; height: 30px; border-radius: 6px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m13 2-2 2.5V8l3-3 1 1-4 4v3.5l6-6 1 1-7 7v4.5l9-9 1 1-10 10H3V2h10Z"/>
-            </svg>
-          </div>
-          <h3 class="modal-title">Install TradeForge App</h3>
-        </div>
-        <button class="modal-close-btn" id="installModalCloseBtn">&times;</button>
-      </div>
-      <div class="modal-body" style="padding: 18px 22px;">
-        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5;">
-          Install TradeForge on your device for quick home screen access, distraction-free fullscreen view, and seamless offline performance.
-        </p>
-
-        <!-- Native Prompt Trigger (when browser supports beforeinstallprompt) -->
-        <div id="installNativeAction" style="display: none; margin-bottom: 18px; text-align: center;">
-          <button class="btn-primary" id="btnTriggerPrompt" style="width: 100%; justify-content: center; padding: 12px; font-weight: 700; font-size: 0.95rem; gap: 8px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Install TradeForge App
-          </button>
-        </div>
-
-        <div class="install-instructions" id="installInstructions">
-          <!-- Populated dynamically based on device platform -->
-        </div>
-      </div>
-      <div class="modal-footer" style="display: flex; justify-content: flex-end;">
-        <button class="btn-secondary modal-cancel-btn" id="installModalCancelBtn">Got it</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==========================================================================
-       MODAL 6: Starting Capital Modal (Initial Account Balance)
-       ========================================================================== -->
+  <!-- 5. Starting Account Capital Modal -->
   <div class="modal-overlay" id="startingCapitalModal">
     <div class="modal-card" style="max-width: 440px;">
       <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div class="brand-icon" style="width: 30px; height: 30px; border-radius: 6px; font-weight: 800; font-size: 0.95rem;">
-            <span id="capitalModalHeaderSym">$</span>
-          </div>
-          <h3 class="modal-title">Starting Capital</h3>
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <span class="preview-badge-icon" id="capitalModalHeaderSym">$</span>
+          <span>SET STARTING CAPITAL</span>
         </div>
-        <button type="button" class="modal-close-btn" id="closeCapitalModalBtn">&times;</button>
+        <button class="modal-close" id="closeCapitalModalBtn">&times;</button>
       </div>
-      <div class="modal-body" style="padding: 20px 24px;">
-        <p style="color: var(--text-muted); font-size: 0.86rem; margin-bottom: 16px; line-height: 1.5;">
-          Set your initial account capital to calculate exact <strong>Net Return %</strong>, <strong>Max Drawdown %</strong>, and <strong>Calculated Balance</strong>.
+      <div class="modal-body">
+        <p style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+          Enter your initial account balance to unlock exact <strong>Net Return %</strong> and <strong>Ending Equity</strong> calculations based on your realized P&amp;L.
         </p>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label class="form-label" for="startingCapitalInput" style="display: flex; justify-content: space-between; font-weight: 600;">
-            <span>Initial Account Balance</span>
-            <span id="capitalCurrentDisplay" style="color: var(--text-dim); font-size: 0.78rem;"></span>
-          </label>
-          <div style="position: relative; display: flex; align-items: center;">
-            <span style="position: absolute; left: 14px; font-size: 1.05rem; color: var(--text-muted); font-weight: 700;" id="capitalInputCurrencyPrefix">$</span>
-            <input type="number" id="startingCapitalInput" class="form-input" style="padding-left: 32px; font-size: 1.1rem; font-weight: 700;" placeholder="e.g. 2500" min="0" step="any">
+        <div class="form-group">
+          <label for="startingCapitalInput">Starting Account Balance</label>
+          <div class="capital-input-wrap">
+            <span class="capital-currency-prefix" id="capitalInputCurrencyPrefix">$</span>
+            <input type="number" step="any" min="1" class="form-control capital-input-field" id="startingCapitalInput" placeholder="e.g. 1000.00">
           </div>
         </div>
-        <div style="font-size: 0.76rem; color: var(--text-dim); line-height: 1.4;">
-          Stored locally on your device. Cleared or updated anytime.
+        <div class="capital-modal-preview" id="capitalModalPreviewBox">
+          <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--text-dim);">
+            <span>Current Setting:</span>
+            <strong id="capitalCurrentDisplay" style="color:var(--text-main);">Not set</strong>
+          </div>
         </div>
       </div>
-      <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 10px; padding: 14px 24px;">
-        <button type="button" class="btn-secondary" id="btnResetCapital" style="color: var(--loss); border-color: rgba(244, 63, 94, 0.3);">Reset</button>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn-secondary" id="btnResetCapital" style="color: var(--loss); border-color: rgba(244,63,94,0.25);">Clear</button>
         <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn-secondary modal-cancel-btn" id="btnCancelCapital">Cancel</button>
-          <button type="button" class="btn-primary" id="btnSaveCapital">Calculate</button>
+          <button type="button" class="btn-secondary" id="btnCancelCapital">Cancel</button>
+          <button type="button" class="btn-primary" id="btnSaveCapital">Save Capital</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Toast Notification Container -->
+  <!-- 6. PWA Install App Modal -->
+  <div class="modal-overlay" id="installModal">
+    <div class="modal-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title">INSTALL TRADEFORGE TERMINAL</div>
+        <button class="modal-close" id="installModalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+          <div class="logo-icon" style="width: 46px; height: 46px; border-radius: 6px; flex-shrink: 0;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+              <path d="m13 2-2 2.5V8l3-3 1 1-4 4v3.5l6-6 1 1-7 7v4.5l9-9 1 1-10 10H3V2h10Z"/>
+            </svg>
+          </div>
+          <div>
+            <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 3px;">TradeForge Desktop &amp; Mobile App</h4>
+            <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">Launch directly from your home screen or dock with full-screen institutional layout and offline access.</p>
+          </div>
+        </div>
+
+        <div id="installNativeAction" style="display: none; margin-bottom: 16px;">
+          <button type="button" class="btn-primary" id="btnTriggerPrompt" style="width: 100%; padding: 11px; font-size: 0.9rem;">
+            Install TradeForge Now
+          </button>
+        </div>
+
+        <div id="installInstructions" class="install-instructions-box"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="installModalCancelBtn">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Scripts -->

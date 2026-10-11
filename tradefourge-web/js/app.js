@@ -200,7 +200,7 @@ const App = {
    */
   renderMiniCalendar() {
     const grid = document.getElementById('miniCalGrid');
-    const title = document.getElementById('miniCalTitle');
+    const title = document.getElementById('miniCalTitle') || document.getElementById('miniCalMonthTitle');
     if (!grid || !title) return;
 
     const monthNames = [
@@ -373,7 +373,7 @@ const App = {
   },
 
   /**
-   * Update Top KPI Performance Cards (12 Cards)
+   * Update Top KPI Performance Cards (12 Cards + V3.0 Institutional Telemetry)
    */
   updateKPICards() {
     if (!this.currentMetrics) {
@@ -382,17 +382,40 @@ const App = {
     const m = this.currentMetrics;
     if (!m) return;
 
-    // 1. Total P&L
+    // 1. Total P&L (supports both kpiTotalPnL and kpiNetPnL)
     const totalPnlEl = document.getElementById('kpiTotalPnL');
     if (totalPnlEl) {
       totalPnlEl.innerText = TradeAnalytics.formatCurrency(m.totalPnL);
       totalPnlEl.className = `kpi-value ${m.totalPnL >= 0 ? 'profit' : 'loss'}`;
+    }
+    const netPnlEl = document.getElementById('kpiNetPnL');
+    if (netPnlEl) {
+      netPnlEl.innerText = TradeAnalytics.formatCurrency(m.totalPnL);
+      netPnlEl.className = `kpi-value ${m.totalPnL >= 0 ? 'profit' : 'loss'}`;
     }
 
     const tradesCountEl = document.getElementById('kpiTotalTradesCount');
     if (tradesCountEl) {
       tradesCountEl.innerText = `${m.totalTrades} trade${m.totalTrades === 1 ? '' : 's'}`;
     }
+    const netPnlTagEl = document.getElementById('kpiNetPnLTag');
+    if (netPnlTagEl) {
+      netPnlTagEl.innerText = `${m.totalTrades} TRADE${m.totalTrades === 1 ? '' : 'S'}`;
+      netPnlTagEl.className = `kpi-tag ${m.totalPnL >= 0 ? 'profit' : 'loss'}`;
+    }
+
+    // Hero Card 1 Split Bar (Wins vs Losses)
+    const winsBarEl = document.getElementById('kpiWinsBar');
+    const lossesBarEl = document.getElementById('kpiLossesBar');
+    const winsTextEl = document.getElementById('kpiWinsCountText');
+    const lossesTextEl = document.getElementById('kpiLossesCountText');
+    const totalWL = (m.winnersCount || 0) + (m.losersCount || 0);
+    const winRatioPct = totalWL > 0 ? Math.round((m.winnersCount / totalWL) * 100) : 50;
+    const lossRatioPct = totalWL > 0 ? (100 - winRatioPct) : 50;
+    if (winsBarEl) winsBarEl.style.width = `${winRatioPct}%`;
+    if (lossesBarEl) lossesBarEl.style.width = `${lossRatioPct}%`;
+    if (winsTextEl) winsTextEl.innerText = `${m.winnersCount || 0}W`;
+    if (lossesTextEl) lossesTextEl.innerText = `${m.losersCount || 0}L`;
 
     // 2. Net Return
     const netReturnEl = document.getElementById('kpiNetReturn');
@@ -402,6 +425,9 @@ const App = {
     const inlineInput = document.getElementById('kpiInlineCapitalInput');
     const inlinePrefix = document.getElementById('kpiInlineCurrencyPrefix');
     const editCapitalBtn = document.getElementById('btnEditCapital');
+    const netReturnTag = document.getElementById('kpiNetReturnTag');
+    const startCapLabel = document.getElementById('kpiStartingCapitalLabel');
+    const endEqLabel = document.getElementById('kpiEndingEquityLabel');
 
     const currSym = TradeAnalytics.getCurrencySymbol();
     if (inlinePrefix) {
@@ -417,6 +443,16 @@ const App = {
         const sign = m.netReturnPercent > 0 ? '+' : (m.netReturnPercent < 0 ? '-' : '');
         netReturnEl.innerText = `${sign}${Math.abs(m.netReturnPercent).toFixed(2)}%`;
         netReturnEl.className = `kpi-value ${m.netReturnPercent > 0 ? 'profit' : (m.netReturnPercent < 0 ? 'loss' : '')}`;
+      }
+      if (netReturnTag) {
+        netReturnTag.innerText = m.netReturnPercent >= 0 ? 'ROI POSITIVE' : 'DRAWDOWN';
+        netReturnTag.className = `kpi-tag ${m.netReturnPercent >= 0 ? 'profit' : 'loss'}`;
+      }
+      if (startCapLabel) {
+        startCapLabel.innerText = `Start: ${TradeAnalytics.formatCurrency(m.startingCapital, false)}`;
+      }
+      if (endEqLabel) {
+        endEqLabel.innerText = `End: ${TradeAnalytics.formatCurrency(m.startingCapital + m.totalPnL, false)}`;
       }
 
       if (netReturnSubEl) {
@@ -436,6 +472,10 @@ const App = {
       if (netReturnDisplay) netReturnDisplay.style.display = 'none';
       if (capitalInlineForm) capitalInlineForm.style.display = 'flex';
       if (editCapitalBtn) editCapitalBtn.innerText = 'Calculate';
+      if (netReturnTag) {
+        netReturnTag.innerText = 'ENTER BALANCE';
+        netReturnTag.className = 'kpi-tag neutral';
+      }
       if (inlineInput) {
         try {
           if (typeof document !== 'undefined' && document.activeElement !== inlineInput) {
@@ -458,6 +498,20 @@ const App = {
         ? `<span class="delta-pos">▲ Healthy (>1.0)</span>`
         : `<span class="delta-neg">▼ Needs adjustment (<1.0)</span>`;
     }
+    const pfTagEl = document.getElementById('kpiProfitFactorTag');
+    if (pfTagEl) {
+      pfTagEl.innerText = m.profitFactor >= 1.5 ? 'OPTIMAL' : (m.profitFactor >= 1.0 ? 'HEALTHY' : 'SUB-1.0');
+      pfTagEl.className = `kpi-tag ${m.profitFactor >= 1.0 ? 'profit' : 'loss'}`;
+    }
+    const grossProfitEl = document.getElementById('kpiGrossProfit');
+    if (grossProfitEl) {
+      grossProfitEl.innerText = TradeAnalytics.formatCurrency(m.grossProfit || 0, true);
+    }
+    const grossLossEl = document.getElementById('kpiGrossLoss');
+    if (grossLossEl) {
+      const gl = m.grossLoss ? -Math.abs(m.grossLoss) : 0;
+      grossLossEl.innerText = TradeAnalytics.formatCurrency(gl, gl < 0);
+    }
 
     // 4. Win Rate
     const winRateEl = document.getElementById('kpiWinRate');
@@ -469,6 +523,25 @@ const App = {
     if (winRateSubEl) {
       winRateSubEl.innerText = `${m.winnersCount}W / ${m.losersCount}L`;
     }
+    const winRateTagEl = document.getElementById('kpiWinRateTag');
+    if (winRateTagEl) {
+      winRateTagEl.innerText = `${m.winnersCount}W / ${m.losersCount}L`;
+      winRateTagEl.className = `kpi-tag ${m.winRate >= 50 ? 'profit' : 'loss'}`;
+    }
+    const winBarEl = document.getElementById('kpiWinBar');
+    const beBarEl = document.getElementById('kpiBeBar');
+    const lossBarEl = document.getElementById('kpiLossBar');
+    const wCountEl = document.getElementById('kpiWCount');
+    const beCountEl = document.getElementById('kpiBeCount');
+    const lCountEl = document.getElementById('kpiLCount');
+    const tot = m.totalTrades || 0;
+    const beCount = m.breakEvenCount || Math.max(0, tot - (m.winnersCount || 0) - (m.losersCount || 0));
+    if (winBarEl) winBarEl.style.width = tot > 0 ? `${(m.winnersCount / tot) * 100}%` : '34%';
+    if (beBarEl) beBarEl.style.width = tot > 0 ? `${(beCount / tot) * 100}%` : '32%';
+    if (lossBarEl) lossBarEl.style.width = tot > 0 ? `${(m.losersCount / tot) * 100}%` : '34%';
+    if (wCountEl) wCountEl.innerText = `${m.winnersCount || 0}W`;
+    if (beCountEl) beCountEl.innerText = `${beCount}BE`;
+    if (lCountEl) lCountEl.innerText = `${m.losersCount || 0}L`;
 
     // 5. Average Winning Trade
     const avgWinEl = document.getElementById('kpiAvgWin');
@@ -529,71 +602,115 @@ const App = {
       }
     }
 
-    // 9. Best Day (Most Profitable Day of Week)
-    const profDayEl = document.getElementById('kpiProfitableDay');
-    const profDaySubEl = document.getElementById('kpiProfitableDaySub');
-    if (profDayEl) {
-      if (m.profitableDay) {
+    // 9. Best Day (Most Profitable Day of Week) — supports kpiProfitableDay & kpiBestDayVal
+    const profDayEl = document.getElementById('kpiProfitableDay') || document.getElementById('kpiBestDayVal');
+    const profDaySubEl = document.getElementById('kpiProfitableDaySub') || document.getElementById('kpiBestDayDate');
+    const bestDayValEl = document.getElementById('kpiBestDayVal');
+    const bestDayDateEl = document.getElementById('kpiBestDayDate');
+
+    if (m.profitableDay) {
+      if (profDayEl) {
         profDayEl.innerText = m.profitableDay.dayName;
         profDayEl.className = `kpi-value ${m.profitableDay.pnl >= 0 ? 'profit' : 'loss'}`;
-        if (profDaySubEl) {
-          const pnlFormatted = TradeAnalytics.formatCurrency(m.profitableDay.pnl);
-          const icon = m.profitableDay.pnl >= 0 ? '▲' : '▼';
-          const pnlClass = m.profitableDay.pnl >= 0 ? 'delta-pos' : 'delta-neg';
-          profDaySubEl.innerHTML = `<span class="${pnlClass}">${icon} ${pnlFormatted}</span> • ${m.profitableDay.winRate}% win rate • ${m.profitableDay.trades} trades`;
-        }
-      } else {
+      }
+      if (bestDayValEl) {
+        bestDayValEl.innerText = m.profitableDay.dayName;
+        bestDayValEl.className = `kpi-value ${m.profitableDay.pnl >= 0 ? 'profit' : 'loss'}`;
+      }
+      const pnlFormatted = TradeAnalytics.formatCurrency(m.profitableDay.pnl);
+      const icon = m.profitableDay.pnl >= 0 ? '▲' : '▼';
+      const pnlClass = m.profitableDay.pnl >= 0 ? 'delta-pos' : 'delta-neg';
+      const subHtml = `<span class="${pnlClass}">${icon} ${pnlFormatted}</span> • ${m.profitableDay.winRate}% win rate • ${m.profitableDay.trades} trades`;
+      if (profDaySubEl) profDaySubEl.innerHTML = subHtml;
+      if (bestDayDateEl) bestDayDateEl.innerHTML = subHtml;
+    } else {
+      if (profDayEl) {
         profDayEl.innerText = '--';
         profDayEl.className = 'kpi-value';
-        if (profDaySubEl) profDaySubEl.innerHTML = `<span style="color: var(--text-dim);">No trades recorded</span>`;
       }
+      if (bestDayValEl) {
+        bestDayValEl.innerText = '--';
+        bestDayValEl.className = 'kpi-value';
+      }
+      const emptySub = `<span style="color: var(--text-dim);">No trades recorded</span>`;
+      if (profDaySubEl) profDaySubEl.innerHTML = emptySub;
+      if (bestDayDateEl) bestDayDateEl.innerHTML = emptySub;
     }
 
-    // 10. Worst Day (Most Unprofitable Day of Week)
-    const lossDayEl = document.getElementById('kpiLossingDay');
-    const lossDaySubEl = document.getElementById('kpiLossingDaySub');
-    if (lossDayEl) {
-      if (m.lossingDay) {
+    // 10. Worst Day (Most Unprofitable Day of Week) — supports kpiLossingDay & kpiWorstDayVal
+    const lossDayEl = document.getElementById('kpiLossingDay') || document.getElementById('kpiWorstDayVal');
+    const lossDaySubEl = document.getElementById('kpiLossingDaySub') || document.getElementById('kpiWorstDayDate');
+    const worstDayValEl = document.getElementById('kpiWorstDayVal');
+    const worstDayDateEl = document.getElementById('kpiWorstDayDate');
+
+    if (m.lossingDay) {
+      if (lossDayEl) {
         lossDayEl.innerText = m.lossingDay.dayName;
         lossDayEl.className = `kpi-value ${m.lossingDay.pnl <= 0 ? 'loss' : 'profit'}`;
-        if (lossDaySubEl) {
-          const pnlFormatted = TradeAnalytics.formatCurrency(m.lossingDay.pnl);
-          const icon = m.lossingDay.pnl >= 0 ? '▲' : '▼';
-          const pnlClass = m.lossingDay.pnl >= 0 ? 'delta-pos' : 'delta-neg';
-          lossDaySubEl.innerHTML = `<span class="${pnlClass}">${icon} ${pnlFormatted}</span> • ${m.lossingDay.winRate}% win rate • ${m.lossingDay.trades} trades`;
-        }
-      } else {
+      }
+      if (worstDayValEl) {
+        worstDayValEl.innerText = m.lossingDay.dayName;
+        worstDayValEl.className = `kpi-value ${m.lossingDay.pnl <= 0 ? 'loss' : 'profit'}`;
+      }
+      const pnlFormatted = TradeAnalytics.formatCurrency(m.lossingDay.pnl);
+      const icon = m.lossingDay.pnl >= 0 ? '▲' : '▼';
+      const pnlClass = m.lossingDay.pnl >= 0 ? 'delta-pos' : 'delta-neg';
+      const subHtml = `<span class="${pnlClass}">${icon} ${pnlFormatted}</span> • ${m.lossingDay.winRate}% win rate • ${m.lossingDay.trades} trades`;
+      if (lossDaySubEl) lossDaySubEl.innerHTML = subHtml;
+      if (worstDayDateEl) worstDayDateEl.innerHTML = subHtml;
+    } else {
+      if (lossDayEl) {
         lossDayEl.innerText = '--';
         lossDayEl.className = 'kpi-value';
-        if (lossDaySubEl) lossDaySubEl.innerHTML = `<span style="color: var(--text-dim);">No trades recorded</span>`;
       }
+      if (worstDayValEl) {
+        worstDayValEl.innerText = '--';
+        worstDayValEl.className = 'kpi-value';
+      }
+      const emptySub = `<span style="color: var(--text-dim);">No trades recorded</span>`;
+      if (lossDaySubEl) lossDaySubEl.innerHTML = emptySub;
+      if (worstDayDateEl) worstDayDateEl.innerHTML = emptySub;
     }
 
-    // 11. Largest Profit Trade
+    // 11. Largest Profit Trade — supports kpiLargestProfit & kpiLargestWin
     const largestProfitEl = document.getElementById('kpiLargestProfit');
     const largestProfitSubEl = document.getElementById('kpiLargestProfitSub');
-    if (largestProfitEl) {
-      if (m.maxWin > 0) {
-        largestProfitEl.innerText = TradeAnalytics.formatCurrency(m.maxWin, false);
+    const largestWinEl = document.getElementById('kpiLargestWin');
+    const largestWinSubEl = document.getElementById('kpiLargestWinSub');
+
+    if (m.maxWin > 0) {
+      const valStr = TradeAnalytics.formatCurrency(m.maxWin, false);
+      if (largestProfitEl) {
+        largestProfitEl.innerText = valStr;
         largestProfitEl.className = 'kpi-value profit';
-        if (largestProfitSubEl) {
-          if (m.maxWinTrade) {
-            const sym = m.maxWinTrade.symbol || 'Trade';
-            const rawDate = m.maxWinTrade.closeTime ? m.maxWinTrade.closeTime.slice(0, 10) : (m.maxWinTrade.openTime ? m.maxWinTrade.openTime.slice(0, 10) : '');
-            const date = rawDate ? this.formatDateShort(rawDate) : 'Winner';
-            const lotsText = m.maxWinTrade.lots ? ` • ${m.maxWinTrade.lots} lot` : '';
-            largestProfitSubEl.innerHTML = `<span class="delta-pos">▲ ${sym}</span> • ${date}${lotsText}`;
-          } else {
-            largestProfitSubEl.innerHTML = `<span class="delta-pos">▲ Best trade</span>`;
-          }
-        }
-      } else {
-        largestProfitEl.innerText = TradeAnalytics.formatCurrency(0, false);
-        largestProfitEl.className = 'kpi-value';
-        if (largestProfitSubEl) {
-          largestProfitSubEl.innerHTML = `<span style="color: var(--text-dim);">No winning trades</span>`;
-        }
       }
+      if (largestWinEl) {
+        largestWinEl.innerText = valStr;
+        largestWinEl.className = 'kpi-value profit';
+      }
+      let winSubHtml = `<span class="delta-pos">▲ Best trade</span>`;
+      if (m.maxWinTrade) {
+        const sym = m.maxWinTrade.symbol || 'Trade';
+        const rawDate = m.maxWinTrade.closeTime ? m.maxWinTrade.closeTime.slice(0, 10) : (m.maxWinTrade.openTime ? m.maxWinTrade.openTime.slice(0, 10) : '');
+        const date = rawDate ? this.formatDateShort(rawDate) : 'Winner';
+        const lotsText = m.maxWinTrade.lots ? ` • ${m.maxWinTrade.lots} lot` : '';
+        winSubHtml = `<span class="delta-pos">▲ ${sym}</span> • ${date}${lotsText}`;
+      }
+      if (largestProfitSubEl) largestProfitSubEl.innerHTML = winSubHtml;
+      if (largestWinSubEl) largestWinSubEl.innerHTML = winSubHtml;
+    } else {
+      const zeroStr = TradeAnalytics.formatCurrency(0, false);
+      if (largestProfitEl) {
+        largestProfitEl.innerText = zeroStr;
+        largestProfitEl.className = 'kpi-value';
+      }
+      if (largestWinEl) {
+        largestWinEl.innerText = zeroStr;
+        largestWinEl.className = 'kpi-value';
+      }
+      const noWinHtml = `<span style="color: var(--text-dim);">No winning trades</span>`;
+      if (largestProfitSubEl) largestProfitSubEl.innerHTML = noWinHtml;
+      if (largestWinSubEl) largestWinSubEl.innerHTML = noWinHtml;
     }
 
     // 12. Largest Loss Trade
@@ -635,6 +752,16 @@ const App = {
 
     const losingDaysCountEl = document.getElementById('donutLosingDaysCount');
     if (losingDaysCountEl) losingDaysCountEl.innerText = `${m.losingDaysCount} losers`;
+
+    // Update Settings view status indicators if present
+    const settingsTradesCountEl = document.getElementById('settingsTradesCount');
+    if (settingsTradesCountEl) {
+      settingsTradesCountEl.innerText = `${this.trades ? this.trades.length : 0} Trades`;
+    }
+    const settingsCapEl = document.getElementById('settingsCapitalVal');
+    if (settingsCapEl) {
+      settingsCapEl.innerText = m.startingCapital ? TradeAnalytics.formatCurrency(m.startingCapital, false) : 'Not configured';
+    }
   },
 
   /**
@@ -648,23 +775,26 @@ const App = {
     const recent = [...this.filteredTrades].reverse().slice(0, 7);
 
     if (recent.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 24px;">No trade data available</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">No trade data available</td></tr>`;
       return;
     }
 
     recent.forEach(trade => {
       const tr = document.createElement('tr');
-      const dateFormatted = trade.closeTime ? trade.closeTime.replace('T', ' ').slice(0, 16) : trade.openTime.replace('T', ' ').slice(0, 16);
+      const dateFormatted = trade.closeTime ? trade.closeTime.replace('T', ' ').slice(0, 16) : (trade.openTime ? trade.openTime.replace('T', ' ').slice(0, 16) : '-');
       const pnlFormatted = TradeAnalytics.formatCurrency(trade.profit);
       const pnlClass = trade.profit > 0 ? 'profit-text' : (trade.profit < 0 ? 'loss-text' : 'neutral-text');
       const pnlColor = trade.profit > 0 ? 'var(--profit)' : (trade.profit < 0 ? 'var(--loss)' : 'var(--neutral)');
+      const reasonRaw = (trade.closeReason || 'USER').toUpperCase();
+      const reasonClass = reasonRaw === 'TP' ? 'tp' : (reasonRaw === 'SL' ? 'sl' : (reasonRaw.includes('SO') || reasonRaw.includes('STOP') ? 'so' : 'user'));
 
       tr.innerHTML = `
-        <td style="color: var(--text-muted); font-size: 0.78rem;">${dateFormatted}</td>
         <td><span class="symbol-badge">${trade.symbol}</span></td>
-        <td>${trade.lots}</td>
-        <td><span class="type-badge ${trade.type}">${trade.type.toUpperCase()}</span></td>
-        <td class="${pnlClass}" style="color: ${pnlColor}; font-weight: 700; font-family: var(--font-mono);">${pnlFormatted}</td>
+        <td><span class="type-badge ${trade.type}">${(trade.type || 'BUY').toUpperCase()}</span></td>
+        <td style="font-family: var(--font-mono);">${trade.lots}</td>
+        <td style="color: var(--text-muted); font-size: 0.78rem; font-family: var(--font-mono);">${dateFormatted}</td>
+        <td><span class="reason-badge ${reasonClass}">${reasonRaw}</span></td>
+        <td class="${pnlClass}" style="color: ${pnlColor}; font-weight: 700; font-family: var(--font-mono); text-align: right;">${pnlFormatted}</td>
       `;
 
       tr.addEventListener('click', () => this.openTradeDetailModal(trade));
@@ -869,7 +999,7 @@ const App = {
   },
 
   /**
-   * Render Trade Log Full Table with filtering, search & pagination
+   * Render Trade Log Full Table with filtering, search, pagination & 4-KPI Telemetry Strip
    */
   renderTradeLogTable() {
     const tbody = document.getElementById('tradeLogTableBody');
@@ -905,6 +1035,62 @@ const App = {
       trades = trades.filter(t => t.profit < 0);
     }
 
+    // Update 4-Block Trade Log Execution Telemetry Strip
+    const statCountEl = document.getElementById('tradeLogStatCount');
+    const statWinLossEl = document.getElementById('tradeLogStatWinLoss');
+    const statNetPnlEl = document.getElementById('tradeLogStatNetPnl');
+    const statAvgPnlEl = document.getElementById('tradeLogStatAvgPnl');
+    const statWinRateEl = document.getElementById('tradeLogStatWinRate');
+    const statPfEl = document.getElementById('tradeLogStatPf');
+    const statVolEl = document.getElementById('tradeLogStatVolume');
+    const statTopSymEl = document.getElementById('tradeLogStatTopSym');
+
+    let logWins = 0, logLosses = 0, logGrossWin = 0, logGrossLoss = 0, logNetPnl = 0, logVol = 0;
+    const symCounts = {};
+    trades.forEach(t => {
+      const p = Number(t.profit) || 0;
+      const l = Number(t.lots) || 0;
+      logNetPnl += p;
+      logVol += l;
+      if (p > 0) {
+        logWins++;
+        logGrossWin += p;
+      } else if (p < 0) {
+        logLosses++;
+        logGrossLoss += Math.abs(p);
+      }
+      if (t.symbol) {
+        symCounts[t.symbol] = (symCounts[t.symbol] || 0) + 1;
+      }
+    });
+    const logTotal = trades.length;
+    const logWr = logTotal > 0 ? (logWins / logTotal) * 100 : 0;
+    const logAvg = logTotal > 0 ? logNetPnl / logTotal : 0;
+    const logPf = logGrossLoss > 0 ? logGrossWin / logGrossLoss : (logGrossWin > 0 ? 99.99 : 0);
+    let topPair = '--';
+    let topPairCount = 0;
+    Object.entries(symCounts).forEach(([s, c]) => {
+      if (c > topPairCount) {
+        topPair = s;
+        topPairCount = c;
+      }
+    });
+
+    if (statCountEl) statCountEl.innerText = String(logTotal);
+    if (statWinLossEl) statWinLossEl.innerText = `${logWins} Wins / ${logLosses} Losses`;
+    if (statNetPnlEl) {
+      statNetPnlEl.innerText = TradeAnalytics.formatCurrency(logNetPnl, true);
+      statNetPnlEl.className = `kpi-value ${logNetPnl >= 0 ? 'profit' : 'loss'}`;
+    }
+    if (statAvgPnlEl) statAvgPnlEl.innerText = `Avg: ${TradeAnalytics.formatCurrency(logAvg, true)} / trade`;
+    if (statWinRateEl) {
+      statWinRateEl.innerText = `${logWr.toFixed(1)}%`;
+      statWinRateEl.className = `kpi-value ${logWr >= 50 ? 'profit' : (logTotal > 0 ? 'loss' : '')}`;
+    }
+    if (statPfEl) statPfEl.innerText = `Profit Factor: ${logPf.toFixed(2)}`;
+    if (statVolEl) statVolEl.innerText = `${logVol.toFixed(2)}`;
+    if (statTopSymEl) statTopSymEl.innerText = `Top Pair: ${topPair}${topPairCount > 0 ? ` (${topPairCount})` : ''}`;
+
     // Sorting
     trades.sort((a, b) => {
       let v1 = a[sortField];
@@ -937,6 +1123,8 @@ const App = {
 
     if (paginated.length === 0) {
       tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 32px;">No matching trades found.</td></tr>`;
+      const pageInfoEl = document.getElementById('tradeLogPageInfo');
+      if (pageInfoEl) pageInfoEl.innerText = `Showing 0-0 of 0 trades`;
       return;
     }
 
@@ -952,11 +1140,11 @@ const App = {
         <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim);">${trade.ticket}</td>
         <td><span class="symbol-badge">${trade.symbol}</span></td>
         <td><span class="type-badge ${trade.type}">${trade.type.toUpperCase()}</span></td>
-        <td>${trade.lots}</td>
-        <td>${trade.openPrice || '-'}</td>
-        <td>${trade.closePrice || '-'}</td>
-        <td style="font-size: 0.78rem; color: var(--text-muted);">${openTimeFmt}</td>
-        <td style="font-size: 0.78rem; color: var(--text-muted);">${closeTimeFmt}</td>
+        <td style="font-family: var(--font-mono);">${trade.lots}</td>
+        <td style="font-family: var(--font-mono);">${trade.openPrice || '-'}</td>
+        <td style="font-family: var(--font-mono);">${trade.closePrice || '-'}</td>
+        <td style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">${openTimeFmt}</td>
+        <td style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">${closeTimeFmt}</td>
         <td class="${pnlClass}" style="color: ${pnlColor}; font-weight: 700; font-family: var(--font-mono);">${pnlFormatted}</td>
         <td><button class="btn-sample" style="padding: 3px 8px; font-size: 0.72rem;">View</button></td>
       `;
@@ -1609,8 +1797,8 @@ const App = {
       }
     } catch (e) {}
 
-    // Update sidebar nav buttons
-    document.querySelectorAll('.nav-item').forEach(el => {
+    // Update sidebar nav buttons & mobile bottom nav buttons
+    document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => {
       const v = el.getAttribute('data-view');
       const isMatch = v === viewName || 
         (viewName === 'journal' && v === 'analytics') || 
@@ -1629,15 +1817,16 @@ const App = {
     // Update Header title
     const titleMap = {
       dashboard: 'Dashboard',
-      analytics: 'Analytics',
-      journal: 'Analytics',
+      analytics: 'Analytics Workstation',
+      journal: 'Analytics Workstation',
       tradelog: 'Trade Log',
-      'strategy-bot': 'Strategy Bot',
+      'strategy-bot': 'Fourge AI',
       mt5: 'MetaTrader 5 (MT5)',
       reports: 'Reports & Performance',
       insights: 'AI & Rule Insights',
-      strategies: 'Strategies',
-      notebook: 'Trader Notebook'
+      strategies: 'Playbooks & Notes',
+      notebook: 'Playbooks & Notes',
+      settings: 'Terminal Settings'
     };
     const titleEl = document.getElementById('pageTitle');
     if (titleEl) titleEl.innerText = titleMap[viewName] || 'Dashboard';
@@ -1744,8 +1933,8 @@ const App = {
       });
     }
 
-    // Navigation items: switch view and close drawer on mobile
-    document.querySelectorAll('.nav-item').forEach(item => {
+    // Navigation items (Sidebar + Mobile Bottom Nav): switch view and close drawer on mobile
+    document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(item => {
       item.addEventListener('click', (e) => {
         if (item.id === 'sidebarInstallBtn') return;
         const view = item.getAttribute('data-view');
@@ -1759,13 +1948,13 @@ const App = {
     // Handle URL hash changes & deep linking
     window.addEventListener('hashchange', () => {
       const hash = (window.location.hash || '').replace('#', '');
-      if (hash && document.querySelector(`.nav-item[data-view="${hash}"]`)) {
+      if (hash && document.querySelector(`.nav-item[data-view="${hash}"], .mobile-nav-item[data-view="${hash}"]`)) {
         this.switchView(hash);
       }
     });
     if (window.location.hash) {
       const initialHash = window.location.hash.replace('#', '');
-      if (initialHash && document.querySelector(`.nav-item[data-view="${initialHash}"]`)) {
+      if (initialHash && document.querySelector(`.nav-item[data-view="${initialHash}"], .mobile-nav-item[data-view="${initialHash}"]`)) {
         setTimeout(() => this.switchView(initialHash), 100);
       }
     }
@@ -1926,7 +2115,6 @@ const App = {
     if (prevMonthBtn) prevMonthBtn.addEventListener('click', () => CalendarManager.prevMonth());
     if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => CalendarManager.nextMonth());
 
-    // Export JSON Button
     // Dynamic Currency Switcher Slider ($ / ₹)
     const btnUSD = document.getElementById('btnCurrUSD');
     const btnINR = document.getElementById('btnCurrINR');
@@ -1943,8 +2131,9 @@ const App = {
       exportJsonBtn.addEventListener('click', () => this.exportJSON());
     }
 
-    // CSV Upload Modals trigger
+    // CSV Upload Modals trigger (Top Header + Sidebar)
     const uploadBtnTop = document.getElementById('btnUploadCSVTop');
+    const uploadBtnSidebar = document.getElementById('btnSidebarUploadCSV');
     const uploadModal = document.getElementById('uploadModal');
     const fileInput = document.getElementById('csvFileInput');
     const dropzone = document.getElementById('csvDropzone');
@@ -1954,6 +2143,7 @@ const App = {
     };
 
     if (uploadBtnTop) uploadBtnTop.addEventListener('click', openUploadModal);
+    if (uploadBtnSidebar) uploadBtnSidebar.addEventListener('click', openUploadModal);
 
     // Close Modals
     // Universal Modal Close Handlers (Buttons, Backdrop Click, and ESC key)
@@ -2095,13 +2285,17 @@ const App = {
       });
     }
 
-    // Add Trade Modal
+    // Add Trade Modal (Sidebar + Mobile Top Button)
     const addTradeBtn = document.getElementById('btnAddTradeSidebar');
+    const addTradeMobileBtn = document.getElementById('btnAddTradeMobileTop');
     const addTradeModal = document.getElementById('addTradeModal');
     const addTradeForm = document.getElementById('addTradeForm');
 
     if (addTradeBtn && addTradeModal) {
       addTradeBtn.addEventListener('click', () => addTradeModal.classList.add('active'));
+    }
+    if (addTradeMobileBtn && addTradeModal) {
+      addTradeMobileBtn.addEventListener('click', () => addTradeModal.classList.add('active'));
     }
 
     if (addTradeForm) {
