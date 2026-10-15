@@ -1,4 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">
-  <rect width="24" height="24" rx="4" fill="#141D21" stroke="#3B82F6" stroke-width="1.5"/>
-  <path d="m13 2-2 2.5V8l3-3 1 1-4 4v3.5l6-6 1 1-7 7v4.5l9-9 1 1-10 10H3V2h10Z" fill="#3B82F6"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="tfGradApp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#B3D6FE"/>
+      <stop offset="50%" stop-color="#87AEFA"/>
+      <stop offset="100%" stop-color="#6E7AF4"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#0D111D" stroke="#1E2638" stroke-width="12"/>
+  <path d="M 108 109 C 101.4 109 96 114.4 96 121 L 96 157 C 96 163.6 101.4 169 108 169 L 226 169 L 226 391 C 226 397.6 231.4 403 238 403 L 274 403 C 280.6 403 286 397.6 286 391 L 286 298 L 378 298 C 384.6 298 390 292.6 390 286 L 390 254 C 390 247.4 384.6 242 378 242 L 286 242 L 286 169 L 404 169 C 410.6 169 416 163.6 416 157 L 416 121 C 416 114.4 410.6 109 404 109 Z" fill="url(#tfGradApp)"/>
 </svg>

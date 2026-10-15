@@ -200,16 +200,16 @@ body.sidebar-collapsed .sidebar {
 }
 
 .logo-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-sm);
-  background-color: var(--logo-blue-bg);
-  border: 1px solid var(--logo-blue-border);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: #0D111D;
+  border: 1px solid #1E2638;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--logo-blue);
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .brand-text-stack {
@@ -220,19 +220,38 @@ body.sidebar-collapsed .sidebar {
 
 .brand-name {
   font-family: var(--font-display);
-  font-size: 1.02rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--text-main);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+}
+
+.brand-name-accent {
+  color: #818CF8;
+}
+
+.brand-name-nav {
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  margin: 0 4px;
+  white-space: nowrap;
 }
 
 .brand-version {
   font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--logo-blue-light);
-  margin-top: 2px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: #778296;
+  text-transform: uppercase;
+  margin-top: 3px;
 }
 
 .sidebar-close-btn {
@@ -288,15 +307,15 @@ body.sidebar-collapsed .sidebar {
 }
 
 .logo-icon-sm {
-  width: 22px;
-  height: 22px;
-  border-radius: 3px;
-  background: var(--logo-blue-bg);
-  border: 1px solid var(--logo-blue-border);
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: #0D111D;
+  border: 1px solid #1E2638;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--logo-blue);
+  flex-shrink: 0;
 }
 
 .reveal-chevron {
