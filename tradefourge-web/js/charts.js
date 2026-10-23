@@ -474,7 +474,11 @@ const ChartManager = {
           scales: {
             x: {
               grid: { color: '#243239', drawBorder: false },
-              ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 12 }
+              ticks: {
+                color: '#64748b',
+                font: { size: 11, family: "'JetBrains Mono', monospace" },
+                autoSkip: false
+              }
             },
             y: {
               grid: { color: '#243239', drawBorder: false },

@@ -2465,6 +2465,106 @@
   border-radius: var(--radius-sm);
 }
 
+.preview-meta-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 14px;
+  background-color: var(--bg-lowest);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.preview-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preview-meta-lbl {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.preview-meta-val {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.preview-trades-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-lowest);
+  margin-top: 4px;
+  max-height: 190px;
+  overflow-y: auto;
+}
+
+.preview-trades-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.70rem;
+}
+
+.preview-trades-table th {
+  padding: 6px 8px;
+  text-align: left;
+  background-color: var(--bg-card);
+  color: var(--text-dim);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.preview-trades-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.preview-trades-table tr:last-child td {
+  border-bottom: none;
+}
+
+.preview-trades-table tr:hover {
+  background-color: var(--bg-card-hover);
+}
+
+.preview-trades-table .pnl-win {
+  color: var(--profit);
+  font-weight: 700;
+}
+
+.preview-trades-table .pnl-loss {
+  color: var(--loss);
+  font-weight: 700;
+}
+
+.preview-badge-pill {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(85, 98, 108, 0.18);
+  border: 1px solid #55626C;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+}
+
 .csv-import-mode-box {
   display: flex;
   flex-direction: column;

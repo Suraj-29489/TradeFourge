@@ -1844,9 +1844,9 @@
               <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
           </div>
-          <h4>Drag &amp; drop your CSV file here</h4>
-          <p>Supports Exness, Zuperior, MT4/MT5 exports &amp; custom CSV logs. Click to browse files.</p>
-          <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+          <h4>Drag &amp; drop your trade history report here</h4>
+          <p>Supports MT5 reports (.html, .xlsx), Exness &amp; Zuperior (.csv). Click to browse files.</p>
+          <input type="file" id="csvFileInput" accept=".csv,.html,.htm,.xlsx,text/csv,text/html,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display: none;">
         </div>
       </div>
       <div class="modal-footer">
@@ -1855,13 +1855,13 @@
     </div>
   </div>
 
-  <!-- 1B. CSV Import Preview & Confirmation Modal -->
+  <!-- 1B. Report Import Preview & Confirmation Modal -->
   <div class="modal-overlay" id="csvPreviewModal">
-    <div class="modal-card" style="max-width: 560px;">
+    <div class="modal-card" style="max-width: 620px;">
       <div class="modal-header">
         <div class="modal-title" style="display: flex; align-items: center; gap: 10px;">
-          <span class="preview-badge-icon">CSV</span>
-          <span>PREVIEW &amp; CONFIRM IMPORT</span>
+          <span class="preview-badge-icon" id="previewBadgeIcon">REPORT</span>
+          <span id="previewModalHeaderTitle">PREVIEW &amp; CONFIRM IMPORT</span>
         </div>
         <button class="modal-close" id="closeCsvPreviewModalBtn">&times;</button>
       </div>
@@ -1877,14 +1877,17 @@
             </svg>
             <div>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <div class="preview-filename" id="previewFileName">trades.csv</div>
-                <span id="previewBrokerBadge" class="analytics-tag">Exness</span>
+                <div class="preview-filename" id="previewFileName">report.html</div>
+                <span id="previewBrokerBadge" class="analytics-tag">MT5 Report</span>
               </div>
               <div class="preview-filesize" id="previewFileSize">0 KB</div>
             </div>
           </div>
-          <span class="preview-status-pill">Ready to Import</span>
+          <span class="preview-status-pill" id="previewStatusPill">Ready to Import</span>
         </div>
+
+        <!-- Optional Metadata Strip (Account, Broker, Trader, Currency, Report Date) -->
+        <div class="preview-meta-strip" id="previewMetaStrip" style="display: none;"></div>
 
         <div class="csv-preview-metrics-grid">
           <div class="preview-metric-box">
@@ -1908,6 +1911,35 @@
           Date range: -- to --
         </div>
 
+        <!-- Sample Trades Preview Table -->
+        <div id="previewSampleTradesWrap" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin: 4px 0 2px 0;">
+            <span style="font-family: var(--font-display); font-size: 0.68rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">
+              Sample Positions Preview
+            </span>
+            <span id="previewSampleCount" style="font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim);"></span>
+          </div>
+          <div class="preview-trades-table-wrap">
+            <table class="preview-trades-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Position</th>
+                  <th>Symbol</th>
+                  <th>Type</th>
+                  <th>Lots</th>
+                  <th>Open</th>
+                  <th>Close</th>
+                  <th>Net P&amp;L</th>
+                </tr>
+              </thead>
+              <tbody id="previewTradesTableBody">
+                <!-- sample rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div class="csv-import-mode-box">
           <label class="import-mode-option selected" id="optMergeCard">
             <input type="radio" name="csvImportMode" value="merge" id="optMergeTrades" checked>
@@ -1920,7 +1952,7 @@
             <input type="radio" name="csvImportMode" value="replace" id="optReplaceTrades">
             <div>
               <div class="mode-title">Replace Existing Trades</div>
-              <div class="mode-desc">Clears current session data and loads only the trades from this CSV file.</div>
+              <div class="mode-desc">Clears current session data and loads only the trades from this report.</div>
             </div>
           </label>
         </div>
@@ -2154,6 +2186,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Scripts -->
+  <script src="js/xlsx.full.min.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/parser.js"></script>
   <script src="js/analytics.js"></script>

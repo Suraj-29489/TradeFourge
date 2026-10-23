@@ -83,7 +83,13 @@ const App = {
     ChartManager.updateDashboardCharts(this.currentMetrics);
     this.renderWeeklyPerformance();
     this.renderPnLPerformance();
-    CalendarManager.init(this.currentMetrics);
+    if (typeof CalendarManager !== 'undefined') {
+      if (!CalendarManager._initialized) {
+        CalendarManager.init(this.currentMetrics);
+      } else {
+        CalendarManager.update(this.currentMetrics);
+      }
+    }
     this.renderRecentTradesTable();
     this.renderProfitSource();
     this.renderExitBreakdown();
@@ -203,10 +209,12 @@ const App = {
     const title = document.getElementById('miniCalTitle') || document.getElementById('miniCalMonthTitle');
     if (!grid || !title) return;
 
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
+    const monthNames = (typeof TradeAnalytics !== 'undefined' && TradeAnalytics.MONTH_NAMES)
+      ? TradeAnalytics.MONTH_NAMES
+      : [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
     title.innerText = `${monthNames[this.miniCalMonth]} ${this.miniCalYear}`;
     grid.innerHTML = '';
 
@@ -2111,13 +2119,8 @@ const App = {
       });
     }
 
-    // Calendar Navigation
-    const prevMonthBtn = document.getElementById('calPrevBtn');
-    const nextMonthBtn = document.getElementById('calNextBtn');
-    const todayMonthBtn = document.getElementById('calThisMonthBtn');
-    if (prevMonthBtn) prevMonthBtn.addEventListener('click', () => CalendarManager.prevMonth());
-    if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => CalendarManager.nextMonth());
-    if (todayMonthBtn) todayMonthBtn.addEventListener('click', () => CalendarManager.thisMonth());
+    // Note: Calendar Navigation buttons (calPrevBtn, calNextBtn, calThisMonthBtn)
+    // are attached exclusively in CalendarManager.attachHeaderListeners() to prevent double-stepping.
 
     // Dynamic Currency Switcher Slider ($ / ₹)
     const btnUSD = document.getElementById('btnCurrUSD');
@@ -2606,66 +2609,155 @@ const App = {
 
       if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         const file = e.dataTransfer.files[0];
-        if (file.name.toLowerCase().endsWith('.csv') || file.type.includes('csv') || file.type.includes('text') || !file.type) {
-          this.previewCSVFile(file);
+        const lowerName = file.name.toLowerCase();
+        if (lowerName.endsWith('.csv') || lowerName.endsWith('.html') || lowerName.endsWith('.htm') || lowerName.endsWith('.xlsx') || (file.type && (file.type.includes('csv') || file.type.includes('html') || file.type.includes('sheet')))) {
+          this.previewReportFile(file);
         } else {
-          this.showToast('Please drop a valid .csv file.', 'error');
+          this.showToast('Please drop a valid .csv, .html, or .xlsx report file.', 'error');
         }
       }
     });
   },
 
   /**
-   * Parse CSV File and open interactive preview modal
-   * Parse CSV File and open interactive preview or broker selection modal
+   * Escape HTML string safely
    */
-  previewCSVFile(file) {
+  escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  },
+
+  /**
+   * Parse trade report file (.csv, .html, .xlsx) and open interactive preview modal
+   */
+  previewReportFile(file) {
     if (!file) return;
 
+    const lowerName = file.name.toLowerCase();
+    const isXlsx = lowerName.endsWith('.xlsx');
+    const isHtml = lowerName.endsWith('.html') || lowerName.endsWith('.htm');
+
+    if (isXlsx) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const buffer = e.target.result;
+          const report = TradeParser.parseMT5XLSX(buffer);
+          if (!report || !report.trades || report.trades.length === 0) {
+            throw new Error('No trade positions found in this MT5 Excel report.');
+          }
+
+          this._pendingImport = {
+            file,
+            fileName: file.name,
+            fileSize: file.size,
+            format: 'mt5_xlsx',
+            broker: 'mt5',
+            metadata: report.metadata,
+            summary: report.summary,
+            parsedTrades: report.trades
+          };
+
+          this.showCSVPreviewModal(this._pendingImport);
+        } catch (err) {
+          console.error(err);
+          this.showToast(err.message || 'Failed to parse MT5 Excel report.', 'error');
+        }
+      };
+      reader.onerror = () => this.showToast('Error reading the selected Excel file.', 'error');
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+
+    if (isHtml) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const buffer = e.target.result;
+          const htmlText = TradeParser.decodeTextBuffer(buffer);
+          const report = TradeParser.parseMT5HTML(htmlText);
+          if (!report || !report.trades || report.trades.length === 0) {
+            throw new Error('No trade positions found in this MT5 HTML report.');
+          }
+
+          this._pendingImport = {
+            file,
+            fileName: file.name,
+            fileSize: file.size,
+            format: 'mt5_html',
+            broker: 'mt5',
+            metadata: report.metadata,
+            summary: report.summary,
+            parsedTrades: report.trades
+          };
+
+          this.showCSVPreviewModal(this._pendingImport);
+        } catch (err) {
+          console.error(err);
+          this.showToast(err.message || 'Failed to parse MT5 HTML report.', 'error');
+        }
+      };
+      reader.onerror = () => this.showToast('Error reading the selected HTML file.', 'error');
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+
+    // Default to CSV
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const text = e.target.result;
+        const buffer = e.target.result;
+        const text = TradeParser.decodeTextBuffer(buffer);
+
+        // Check if file is secretly HTML
+        if (TradeParser.detectFileType(file.name, text) === 'mt5_html') {
+          const report = TradeParser.parseMT5HTML(text);
+          this._pendingImport = {
+            file,
+            fileName: file.name,
+            fileSize: file.size,
+            format: 'mt5_html',
+            broker: 'mt5',
+            metadata: report.metadata,
+            summary: report.summary,
+            parsedTrades: report.trades
+          };
+          this.showCSVPreviewModal(this._pendingImport);
+          return;
+        }
+
         const parsedTrades = TradeParser.parseCSV(text);
         const detectedBroker = TradeParser.detectBroker(text);
 
         if (!parsedTrades || parsedTrades.length === 0) {
           throw new Error('No trade records found in CSV file.');
         }
-        // If detected as Exness, continue automatically without showing popup
-        if (detectedBroker === 'exness') {
-          const parsedTrades = TradeParser.parseCSV(text, 'exness');
-          if (!parsedTrades || parsedTrades.length === 0) {
-            throw new Error('No trade records found in CSV file.');
-          }
 
-        // Store pending preview data
-        this._pendingImport = {
-          file,
-          fileName: file.name,
-          fileSize: file.size || text.length,
-          parsedTrades
-        };
+        if (detectedBroker === 'exness') {
+          const exnessTrades = TradeParser.parseExness(text);
           this._pendingImport = {
             file,
             fileName: file.name,
-            fileSize: file.size || text.length,
+            fileSize: file.size,
             broker: 'exness',
-            parsedTrades
+            format: 'exness_csv',
+            metadata: { title: 'Exness CSV Export', company: 'Exness', currency: 'USD' },
+            parsedTrades: exnessTrades
           };
-
-        this.showCSVPreviewModal(this._pendingImport);
           this.showCSVPreviewModal(this._pendingImport);
         } else {
-          // If Zuperior or unknown/ambiguous format: show broker selection popup
           this._pendingBrokerSelection = {
             file,
             fileName: file.name,
-            fileSize: file.size || text.length,
+            fileSize: file.size,
             text,
             detectedBroker
           };
-
           this.openBrokerSelectModal(detectedBroker);
         }
       } catch (err) {
@@ -2673,12 +2765,15 @@ const App = {
         this.showToast(err.message || 'Failed to parse CSV file', 'error');
       }
     };
+    reader.onerror = () => this.showToast('Error reading the selected file.', 'error');
+    reader.readAsArrayBuffer(file);
+  },
 
-    reader.onerror = () => {
-      this.showToast('Error reading the selected file.', 'error');
-    };
-
-    reader.readAsText(file);
+  /**
+   * Backward-compatible alias for previewReportFile
+   */
+  previewCSVFile(file) {
+    this.previewReportFile(file);
   },
 
   /**
@@ -2760,9 +2855,12 @@ const App = {
     const modal = document.getElementById('csvPreviewModal');
     if (!modal) return;
 
+    const badgeIconEl = document.getElementById('previewBadgeIcon');
+    const headerTitleEl = document.getElementById('previewModalHeaderTitle');
     const nameEl = document.getElementById('previewFileName');
     const sizeEl = document.getElementById('previewFileSize');
     const brokerBadgeEl = document.getElementById('previewBrokerBadge');
+    const metaStripEl = document.getElementById('previewMetaStrip');
     const tradesEl = document.getElementById('previewMetricTrades');
     const tradesSubEl = document.getElementById('previewMetricTradesSub');
     const pnlEl = document.getElementById('previewMetricPnL');
@@ -2770,6 +2868,9 @@ const App = {
     const symCountEl = document.getElementById('previewMetricSymbolsCount');
     const symListEl = document.getElementById('previewMetricSymbolsList');
     const dateRangeEl = document.getElementById('previewDateRange');
+    const sampleWrap = document.getElementById('previewSampleTradesWrap');
+    const tbody = document.getElementById('previewTradesTableBody');
+    const sampleCountEl = document.getElementById('previewSampleCount');
     const mergeDesc = document.getElementById('previewMergeDesc');
     const optMergeCard = document.getElementById('optMergeCard');
     const optReplaceCard = document.getElementById('optReplaceCard');
@@ -2779,6 +2880,18 @@ const App = {
     const uploadModal = document.getElementById('uploadModal');
     if (uploadModal) uploadModal.classList.remove('active');
 
+    // Set badge icon & title
+    if (badgeIconEl) {
+      if (pending.format === 'mt5_xlsx') badgeIconEl.innerText = 'XLSX';
+      else if (pending.format === 'mt5_html') badgeIconEl.innerText = 'HTML';
+      else badgeIconEl.innerText = 'CSV';
+    }
+    if (headerTitleEl) {
+      headerTitleEl.innerText = pending.format && pending.format.startsWith('mt5')
+        ? 'PREVIEW & CONFIRM MT5 REPORT'
+        : 'PREVIEW & CONFIRM IMPORT';
+    }
+
     // Format file size
     const sizeKb = (pending.fileSize / 1024).toFixed(1);
     if (nameEl) nameEl.innerText = pending.fileName;
@@ -2786,8 +2899,39 @@ const App = {
 
     // Set broker badge
     if (brokerBadgeEl) {
-      const brokerLabel = pending.broker === 'zuperior' ? 'Zuperior' : 'Exness';
-      brokerBadgeEl.innerText = brokerLabel;
+      if (pending.format === 'mt5_xlsx') {
+        brokerBadgeEl.innerText = 'MT5 Excel';
+      } else if (pending.format === 'mt5_html') {
+        brokerBadgeEl.innerText = 'MT5 HTML';
+      } else if (pending.broker === 'zuperior') {
+        brokerBadgeEl.innerText = 'Zuperior';
+      } else {
+        brokerBadgeEl.innerText = 'Exness';
+      }
+    }
+
+    // Populate metadata strip if available
+    if (metaStripEl) {
+      const meta = pending.metadata;
+      if (meta && (meta.account || meta.name || meta.company || meta.reportDate)) {
+        let metaHtml = '';
+        if (meta.company) {
+          metaHtml += `<div class="preview-meta-item"><span class="preview-meta-lbl">Broker:</span> <span class="preview-meta-val">${this.escapeHTML(meta.company)}</span></div>`;
+        }
+        if (meta.account) {
+          metaHtml += `<div class="preview-meta-item"><span class="preview-meta-lbl">Account:</span> <span class="preview-meta-val">${this.escapeHTML(meta.account)}</span></div>`;
+        }
+        if (meta.name) {
+          metaHtml += `<div class="preview-meta-item"><span class="preview-meta-lbl">Trader:</span> <span class="preview-meta-val">${this.escapeHTML(meta.name)}</span></div>`;
+        }
+        if (meta.reportDate) {
+          metaHtml += `<div class="preview-meta-item"><span class="preview-meta-lbl">Report Date:</span> <span class="preview-meta-val">${this.escapeHTML(meta.reportDate)}</span></div>`;
+        }
+        metaStripEl.innerHTML = metaHtml;
+        metaStripEl.style.display = metaHtml ? 'flex' : 'none';
+      } else {
+        metaStripEl.style.display = 'none';
+      }
     }
 
     // Compute quick metrics on preview trades
@@ -2800,7 +2944,14 @@ const App = {
       pnlEl.innerText = TradeAnalytics.formatCurrency(metrics.totalPnL);
       pnlEl.className = `preview-metric-val ${metrics.totalPnL >= 0 ? 'profit' : 'loss'}`;
     }
-    if (winRateEl) winRateEl.innerText = `${metrics.winRate}% win rate`;
+    if (winRateEl) {
+      if (pending.summary && (pending.summary.commission || pending.summary.swap)) {
+        const commStr = TradeAnalytics.formatCurrency(pending.summary.commission || 0);
+        winRateEl.innerText = `${metrics.winRate}% win | Comm: ${commStr}`;
+      } else {
+        winRateEl.innerText = `${metrics.winRate}% win rate`;
+      }
+    }
 
     // Symbols detected
     const symbols = metrics.symbolBreakdown ? metrics.symbolBreakdown.map(s => s.symbol) : [];
@@ -2816,17 +2967,53 @@ const App = {
       }
     }
 
+    // Sample Trades Preview Table
+    if (sampleWrap && tbody) {
+      const sampleTrades = pending.parsedTrades.slice(0, 5);
+      if (sampleTrades.length > 0) {
+        sampleWrap.style.display = 'block';
+        if (sampleCountEl) {
+          sampleCountEl.innerText = `Showing first ${sampleTrades.length} of ${pending.parsedTrades.length} records`;
+        }
+        tbody.innerHTML = sampleTrades.map(t => {
+          const pnlClass = t.profit >= 0 ? 'pnl-win' : 'pnl-loss';
+          const pnlStr = (t.profit >= 0 ? '+' : '') + TradeAnalytics.formatCurrency(t.profit);
+          const typeUpper = (t.type || '').toUpperCase();
+          const openDate = (t.openTime || '').split('T')[0] || t.openTime;
+          const posStr = String(t.position || t.ticket || '');
+          return `<tr>
+            <td>${this.escapeHTML(openDate)}</td>
+            <td>#${this.escapeHTML(posStr)}</td>
+            <td><strong>${this.escapeHTML(t.symbol)}</strong></td>
+            <td><span class="analytics-tag" style="padding: 1px 5px; font-size: 0.62rem;">${this.escapeHTML(typeUpper)}</span></td>
+            <td>${Number(t.lots || 0).toFixed(2)}</td>
+            <td>${Number(t.openPrice || 0).toFixed(2)}</td>
+            <td>${Number(t.closePrice || 0).toFixed(2)}</td>
+            <td class="${pnlClass}">${pnlStr}</td>
+          </tr>`;
+        }).join('');
+      } else {
+        sampleWrap.style.display = 'none';
+      }
+    }
+
     // Merge options description
     const existingCount = this.trades.length;
     if (existingCount > 0) {
       const seen = new Set(this.trades.map(t => StorageManager.getTradeFingerprint(t)));
       let newCount = 0;
+      let dupCount = 0;
       pending.parsedTrades.forEach(t => {
-        if (!seen.has(StorageManager.getTradeFingerprint(t))) newCount++;
+        if (!seen.has(StorageManager.getTradeFingerprint(t))) {
+          newCount++;
+        } else {
+          dupCount++;
+        }
       });
 
       if (mergeDesc) {
-        mergeDesc.innerText = `Keep existing ${existingCount} trades untouched and add ${newCount} new trade(s) (Total: ${existingCount + newCount})`;
+        const dupNote = dupCount > 0 ? ` (${dupCount} duplicate${dupCount === 1 ? '' : 's'} skipped)` : '';
+        mergeDesc.innerText = `Keep existing ${existingCount} trades untouched and add ${newCount} new trade(s)${dupNote} (Total: ${existingCount + newCount})`;
       }
     } else {
       if (mergeDesc) {
@@ -2866,6 +3053,9 @@ const App = {
       importedCount = parsedTrades.length;
     }
 
+    if (typeof CalendarManager !== 'undefined') {
+      CalendarManager._initialized = false;
+    }
     this.processTrades();
     this.closeCSVPreviewModal();
 
@@ -3158,21 +3348,24 @@ const App = {
    * Extract unique months from trades and compute Sunday-Saturday calendar weeks
    */
   getWeeklyPerfOptions(trades) {
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    const monthShortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNames = (typeof TradeAnalytics !== 'undefined' && TradeAnalytics.MONTH_NAMES)
+      ? TradeAnalytics.MONTH_NAMES
+      : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthShortNames = (typeof TradeAnalytics !== 'undefined' && TradeAnalytics.MONTH_SHORT_NAMES)
+      ? TradeAnalytics.MONTH_SHORT_NAMES
+      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     const monthMap = {};
+    const yearSet = new Set();
     (trades || []).forEach(t => {
       const dStr = TradeAnalytics.getTradeDate(t);
       if (dStr && dStr.length >= 7) {
         const monthKey = dStr.slice(0, 7); // 'YYYY-MM'
+        const parts = monthKey.split('-').map(Number);
+        const y = parts[0];
+        const m = parts[1];
+        yearSet.add(String(y));
         if (!monthMap[monthKey]) {
-          const parts = monthKey.split('-').map(Number);
-          const y = parts[0];
-          const m = parts[1];
           monthMap[monthKey] = {
             key: monthKey,
             year: y,
@@ -3182,6 +3375,24 @@ const App = {
           };
         }
         monthMap[monthKey].tradesCount++;
+      }
+    });
+
+    // Populate all 12 months for every present year (or current year) so all 12 months are accessible in order
+    const yearsToGenerate = yearSet.size > 0 ? Array.from(yearSet) : [String(new Date().getFullYear())];
+    yearsToGenerate.forEach(yrStr => {
+      const yr = parseInt(yrStr, 10);
+      for (let m = 1; m <= 12; m++) {
+        const mKey = `${yr}-${String(m).padStart(2, '0')}`;
+        if (!monthMap[mKey]) {
+          monthMap[mKey] = {
+            key: mKey,
+            year: yr,
+            month: m,
+            label: `${monthNames[m - 1]} ${yr}`,
+            tradesCount: 0
+          };
+        }
       }
     });
 
@@ -3479,10 +3690,9 @@ const App = {
    * Extract dynamic months and years from trades for P&L Performance
    */
   getPnLPerfOptions(trades) {
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
+    const monthNames = (typeof TradeAnalytics !== 'undefined' && TradeAnalytics.MONTH_NAMES)
+      ? TradeAnalytics.MONTH_NAMES
+      : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const monthMap = {};
     const yearSet = new Set();
     let minDate = null;
@@ -3511,6 +3721,24 @@ const App = {
           };
         }
         monthMap[mKey].tradesCount++;
+      }
+    });
+
+    // Populate all 12 months for every present year (or current year) so all 12 months are accessible in order
+    const yearsToGenerate = yearSet.size > 0 ? Array.from(yearSet) : [String(new Date().getFullYear())];
+    yearsToGenerate.forEach(yrStr => {
+      const yr = parseInt(yrStr, 10);
+      for (let m = 1; m <= 12; m++) {
+        const mKey = `${yr}-${String(m).padStart(2, '0')}`;
+        if (!monthMap[mKey]) {
+          monthMap[mKey] = {
+            key: mKey,
+            year: yr,
+            month: m,
+            label: `${monthNames[m - 1]} ${yr}`,
+            tradesCount: 0
+          };
+        }
       }
     });
 

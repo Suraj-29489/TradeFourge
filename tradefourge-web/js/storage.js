@@ -99,11 +99,22 @@ const StorageManager = {
 
   /**
    * Produce a deterministic fingerprint for any stored trade
+   * MT5: MT5|<position>|<closeTime>|<lots>|<profit>
    * Exness: EXNESS_<ticket>_<closeTime/openTime>_<lots>_<profit>
    * Zuperior: ZUPERIOR|<symbol>|<type>|<openTime>|<closeTime>|<lots>|<openPrice>|<closePrice>|<profit>
    */
   getTradeFingerprint(t) {
     if (!t) return '';
+    if (t.broker === 'mt5' || t.broker === 'mt5_html' || t.broker === 'mt5_xlsx' || String(t.id || '').startsWith('MT5_') || (t.position && !t.broker)) {
+      if (typeof TradeParser !== 'undefined' && TradeParser.getMT5Fingerprint) {
+        return TradeParser.getMT5Fingerprint(t);
+      }
+      const pos = String(t.position || t.ticket || '').trim();
+      const closeTime = String(t.closeTime || t.openTime || '').trim();
+      const lots = Number(t.lots || 0).toFixed(4);
+      const profit = Number(t.profit || 0).toFixed(2);
+      return ['MT5', pos, closeTime, lots, profit].join('|');
+    }
     if (t.broker === 'zuperior' || t.ticket === 'Not provided' || !t.ticket) {
       if (typeof TradeParser !== 'undefined' && TradeParser.getZuperiorFingerprint) {
         return TradeParser.getZuperiorFingerprint(t);

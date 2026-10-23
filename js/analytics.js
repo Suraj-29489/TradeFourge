@@ -120,6 +120,9 @@ const TradeAnalytics = {
             label,
             fullLabel,
             monthlyPnL: 0,
+            grossProfit: 0,
+            commission: 0,
+            swap: 0,
             trades: 0,
             wins: 0,
             losses: 0,
@@ -128,6 +131,9 @@ const TradeAnalytics = {
         }
         monthlyMap[monthKey].monthlyPnL += pnl;
         monthlyMap[monthKey].trades += 1;
+        monthlyMap[monthKey].grossProfit += (trade.grossProfit !== undefined ? Number(trade.grossProfit) : (trade.profit !== undefined ? Number(trade.profit) : pnl));
+        monthlyMap[monthKey].commission += Number(trade.commission || 0);
+        monthlyMap[monthKey].swap += Number(trade.swap || 0);
         if (pnl > 0) monthlyMap[monthKey].wins++;
         else if (pnl < 0) monthlyMap[monthKey].losses++;
         else monthlyMap[monthKey].breakEven++;
@@ -306,6 +312,9 @@ const TradeAnalytics = {
     const monthlyTimeseries = sortedMonths.map((mKey) => {
       const m = monthlyMap[mKey];
       m.monthlyPnL = Math.round(m.monthlyPnL * 100) / 100;
+      m.grossProfit = Math.round(m.grossProfit * 100) / 100;
+      m.commission = Math.round(m.commission * 100) / 100;
+      m.swap = Math.round(m.swap * 100) / 100;
       runningMonthlyCum += m.monthlyPnL;
       runningMonthlyCum = Math.round(runningMonthlyCum * 100) / 100;
       const mWinRate = m.trades > 0 ? Math.round((m.wins / m.trades) * 1000) / 10 : 0;
@@ -316,6 +325,9 @@ const TradeAnalytics = {
         label: m.label,
         fullLabel: m.fullLabel,
         monthlyPnL: m.monthlyPnL,
+        grossProfit: m.grossProfit,
+        commission: m.commission,
+        swap: m.swap,
         cumulativePnL: runningMonthlyCum,
         trades: m.trades,
         wins: m.wins,
@@ -950,6 +962,55 @@ const TradeAnalytics = {
   },
 
   /**
+   * Canonical 12 months array (human index 1..12 maps to array index 0..11)
+   */
+  MONTH_NAMES: [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ],
+  MONTH_SHORT_NAMES: [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ],
+
+  /**
+   * Returns human-readable month name for a 1-based (1..12) or 0-based (0..11) index
+   */
+  getMonthName(monthNumOrZeroBased, zeroBased = false) {
+    const idx = zeroBased ? Number(monthNumOrZeroBased) : (Number(monthNumOrZeroBased) - 1);
+    return this.MONTH_NAMES[idx] || '';
+  },
+
+  /**
+   * Returns short 3-letter month name for a 1-based (1..12) or 0-based (0..11) index
+   */
+  getMonthShortName(monthNumOrZeroBased, zeroBased = false) {
+    const idx = zeroBased ? Number(monthNumOrZeroBased) : (Number(monthNumOrZeroBased) - 1);
+    return this.MONTH_SHORT_NAMES[idx] || '';
+  },
+
+  /**
+   * Generates a complete, ordered list of all 12 month objects for a given year
+   * @param {number|string} year
+   * @returns {Array<{key: string, year: number, month: number, label: string, shortLabel: string}>}
+   */
+  getAllMonthsForYear(year) {
+    const yr = parseInt(year, 10) || new Date().getFullYear();
+    const result = [];
+    for (let m = 1; m <= 12; m++) {
+      const mStr = String(m).padStart(2, '0');
+      result.push({
+        key: `${yr}-${mStr}`,
+        year: yr,
+        month: m,
+        label: `${this.MONTH_NAMES[m - 1]} ${yr}`,
+        shortLabel: `${this.MONTH_SHORT_NAMES[m - 1]} ${yr}`
+      });
+    }
+    return result;
+  },
+
+  /**
    * Canonical IANA Timezone used for daily trade grouping and date boundaries
    */
   TIMEZONE: 'Asia/Kolkata',
@@ -1009,8 +1070,23 @@ const TradeAnalytics = {
       return str;
     }
 
-    // Parse ISO / MT5 format (e.g. "2026-10-07T18:48:28" or "2026-10-07 18:48:28")
-    // If no timezone offset is provided, the source CSV timestamps are UTC.
+    // MT5 reports / Broker-local timestamp formats:
+    // Format is "YYYY.MM.DD HH:mm:ss" or "YYYY-MM-DD HH:mm:ss" without UTC "Z" or explicit offset.
+    // Broker is explicitly 'mt5', 'mt5_html', 'mt5_xlsx', or has an MT5 fingerprint/id.
+    const isMT5 = trade.broker === 'mt5' || trade.broker === 'mt5_html' || trade.broker === 'mt5_xlsx' ||
+                  String(trade.id || '').startsWith('MT5_') ||
+                  (/^\d{4}[./-]\d{2}[./-]\d{2}\s+\d{2}:\d{2}(:\d{2})?$/.test(str) && !str.includes('T') && !str.endsWith('Z'));
+
+    if (isMT5) {
+      // MT5 timestamps are broker server time (e.g. "2026.09.30 18:54:58" or "2026-09-30 18:54:58").
+      // Preserve the exact calendar date (YYYY-MM-DD) directly to prevent timezone shifts across month boundaries
+      const match = str.match(/^(\d{4})[./-](\d{2})[./-](\d{2})/);
+      if (match) {
+        return `${match[1]}-${match[2]}-${match[3]}`;
+      }
+    }
+
+    // Parse ISO / Exness format (e.g. "2026-10-07T18:48:28" or explicit UTC timestamp)
     if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
       str = str.replace(' ', 'T') + 'Z';
     }

@@ -12,20 +12,22 @@ const CalendarManager = {
   pnlPillId: 'calMonthlyPnl',
   daysPillId: 'calMonthlyDays',
   _listenersAttached: false,
+  _initialized: false,
 
   /**
    * Initialize calendar with metrics
    */
-  init(metrics) {
+  init(metrics, forceReset = false) {
     this.metricsData = metrics;
 
-    // Default to the latest month containing trades, if available
-    if (metrics && metrics.lastTradeDate) {
+    // Default to the latest month containing trades, if available and not yet initialized
+    if ((!this._initialized || forceReset) && metrics && metrics.lastTradeDate) {
       const parts = metrics.lastTradeDate.split('-');
       if (parts.length >= 2) {
         this.currentYear = parseInt(parts[0], 10);
         this.currentMonth = parseInt(parts[1], 10) - 1;
       }
+      this._initialized = true;
     }
 
     this.attachHeaderListeners();
@@ -170,10 +172,12 @@ const CalendarManager = {
 
     if (!gridEl || !titleEl) return;
 
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
+    const monthNames = (typeof TradeAnalytics !== 'undefined' && TradeAnalytics.MONTH_NAMES)
+      ? TradeAnalytics.MONTH_NAMES
+      : [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
 
     titleEl.innerText = `${monthNames[this.currentMonth]} ${this.currentYear}`;
 
