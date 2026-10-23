@@ -642,27 +642,53 @@
   gap: 8px;
 }
 
+/* ==================== 5. ENHANCED MONTHLY TRADING CALENDAR ==================== */
+.calendar-section-card {
+  margin-bottom: 18px;
+}
+
+.calendar-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+}
+
+.calendar-header-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cal-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .cal-month-title {
   font-family: var(--font-display);
-  font-size: 0.86rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-main);
-  min-width: 118px;
+  min-width: 130px;
   text-align: center;
+  letter-spacing: -0.01em;
 }
 
 .cal-btn {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-sm);
   background-color: var(--btn-subtle-bg);
   border: 1px solid var(--btn-subtle-border);
   color: var(--btn-subtle-text);
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-mono);
   transition: all 0.14s ease;
 }
 
@@ -672,18 +698,129 @@
   color: var(--btn-primary-text);
 }
 
+.cal-today-btn {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+  color: var(--btn-subtle-text);
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.14s ease;
+  white-space: nowrap;
+}
+
+.cal-today-btn:hover {
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
+}
+
+.cal-stats-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cal-stats-label {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cal-stat-pill {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.cal-stat-pill.cal-stat-pnl.profit {
+  background-color: var(--profit-bg);
+  border: 1px solid var(--profit-border);
+  color: var(--profit);
+}
+
+.cal-stat-pill.cal-stat-pnl.loss {
+  background-color: var(--loss-bg);
+  border: 1px solid var(--loss-border);
+  color: var(--loss);
+}
+
+.cal-stat-pill.cal-stat-pnl.neutral {
+  background-color: var(--bg-card-alt);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.cal-stat-pill.cal-stat-days {
+  background-color: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #a5b4fc;
+}
+
+.cal-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.14s ease;
+}
+
+.cal-icon-btn:hover {
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--btn-subtle-border-hover);
+  color: var(--btn-primary-text);
+}
+
+/* Calendar Grid & Week Rows */
 .calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   width: 100%;
   min-width: 0;
 }
 
+.calendar-week-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) minmax(116px, 1.08fr);
+  gap: 6px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.calendar-header-row {
+  margin-bottom: 2px;
+}
+
 .calendar-weekday {
   text-align: center;
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: var(--text-dim);
   text-transform: uppercase;
@@ -691,13 +828,18 @@
   padding: 4px 0 6px;
 }
 
+.calendar-weekday-summary {
+  color: var(--text-muted);
+}
+
+/* Day cells */
 .calendar-day-cell {
-  aspect-ratio: 1.12;
-  min-height: 52px;
+  aspect-ratio: 1.18;
+  min-height: 56px;
   background-color: var(--bg-lowest);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  padding: 5px 6px;
+  padding: 6px 8px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -705,22 +847,29 @@
   cursor: pointer;
   min-width: 0;
   overflow: hidden;
-  transition: border-color 0.14s ease, background-color 0.14s ease;
+  transition: border-color 0.14s ease, background-color 0.14s ease, transform 0.1s ease;
 }
 
 .calendar-day-cell:hover:not(.other-month) {
   background-color: var(--bg-card-hover);
   border-color: var(--btn-subtle-border-hover);
+  transform: translateY(-1px);
 }
 
 .calendar-day-cell.other-month {
-  opacity: 0.28;
+  opacity: 0.22;
   cursor: default;
+}
+
+.day-header-line {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
 }
 
 .day-number {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-dim);
   line-height: 1;
@@ -737,7 +886,7 @@
 
 .day-pnl {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 700;
   line-height: 1.15;
   white-space: nowrap;
@@ -748,7 +897,7 @@
 
 .day-trade-count {
   font-family: var(--font-mono);
-  font-size: 0.6rem;
+  font-size: 0.62rem;
   color: var(--text-dim);
   line-height: 1.1;
   white-space: nowrap;
@@ -789,6 +938,91 @@
 
 .calendar-day-cell.breakeven-day .day-pnl {
   color: var(--text-muted);
+}
+
+/* Weekly Summary Cell on Desktop */
+.calendar-week-summary-cell {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  transition: border-color 0.14s ease, background-color 0.14s ease;
+}
+
+.calendar-week-summary-cell.profit-week {
+  background-color: rgba(18, 53, 38, 0.4);
+  border-color: var(--profit-border);
+}
+
+.calendar-week-summary-cell.loss-week {
+  background-color: rgba(58, 29, 37, 0.4);
+  border-color: var(--loss-border);
+}
+
+.week-summary-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.week-summary-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.week-summary-pnl {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin: 3px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.week-summary-pnl.profit {
+  color: var(--profit);
+}
+
+.week-summary-pnl.loss {
+  color: var(--loss);
+}
+
+.week-summary-pnl.neutral {
+  color: var(--text-muted);
+}
+
+.week-summary-days {
+  display: flex;
+  align-items: center;
+}
+
+.week-days-pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background-color: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #a5b4fc;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.calendar-week-summary-cell.empty-week .week-days-pill {
+  background-color: var(--bg-card-alt);
+  border-color: var(--border-color);
+  color: var(--text-dim);
 }
 
 /* ==================== 6. WEEKLY PERFORMANCE & P&L PERFORMANCE SECTIONS ==================== */
@@ -2715,6 +2949,35 @@
   }
   .calendar-grid {
     gap: 4px;
+  }
+  .calendar-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .cal-stats-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .calendar-week-row {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+  .calendar-weekday-summary {
+    display: none;
+  }
+  .calendar-week-summary-cell {
+    grid-column: 1 / -1;
+    padding: 6px 12px;
+  }
+  .week-summary-inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .week-summary-pnl {
+    margin: 0 8px;
+    font-size: 0.86rem;
   }
   .calendar-day-cell {
     min-height: 44px;

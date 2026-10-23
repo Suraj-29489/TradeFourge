@@ -85,8 +85,8 @@ const TradeAnalytics = {
         breakEvenCount++;
       }
 
-      // Date parsing (uses closing date when trade closed, fallback to open date)
-      const tradeDateStr = (trade.closeTime || trade.openTime || '').slice(0, 10);
+      // Date parsing (uses closing date evaluated strictly in Asia/Kolkata, fallback to open date)
+      const tradeDateStr = this.getTradeDate(trade);
       if (tradeDateStr && tradeDateStr.length === 10) {
         if (!dailyMap[tradeDateStr]) {
           dailyMap[tradeDateStr] = {
@@ -950,28 +950,84 @@ const TradeAnalytics = {
   },
 
   /**
-   * Helper to normalize any trade's trading date to YYYY-MM-DD string
+   * Canonical IANA Timezone used for daily trade grouping and date boundaries
+   */
+  TIMEZONE: 'Asia/Kolkata',
+
+  /**
+   * Helper to format a timestamp into YYYY-MM-DD strictly in Asia/Kolkata (IST)
+   */
+  formatDateIst(dateObjOrMillis) {
+    if (!dateObjOrMillis && dateObjOrMillis !== 0) return '';
+    const d = (dateObjOrMillis instanceof Date) ? dateObjOrMillis : new Date(Number(dateObjOrMillis));
+    if (isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(d);
+  },
+
+  /**
+   * Returns canonical half-open interval [startInclusiveMillis, nextDayStartExclusiveMillis)
+   * for a given calendar date string 'YYYY-MM-DD' in Asia/Kolkata.
+   * Start: YYYY-MM-DD 00:00:00.000 IST
+   * End: (YYYY-MM-DD + 1 day) 00:00:00.000 IST
+   */
+  getIstDayInterval(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const norm = this.normalizeDateQuery(dateStr);
+    if (!norm) return null;
+    const [y, m, d] = norm.split('-').map(Number);
+    // Asia/Kolkata is strictly UTC+05:30 with no DST.
+    // 00:00:00 IST is previous day 18:30:00 UTC.
+    const start = Date.UTC(y, m - 1, d, 0, 0, 0) - (5.5 * 3600 * 1000);
+    const nextDay = Date.UTC(y, m - 1, d + 1, 0, 0, 0) - (5.5 * 3600 * 1000);
+    return { startInclusive: start, nextDayExclusive: nextDay };
+  },
+
+  /**
+   * Helper to normalize any trade's trading date to YYYY-MM-DD string evaluated strictly in Asia/Kolkata.
+   * Uses trade closing timestamp primarily, falling back to opening timestamp.
    */
   getTradeDate(trade) {
     if (!trade) return '';
     const raw = trade.closeTime || trade.openTime || '';
-    if (!raw) return '';
-    if (typeof raw === 'string') {
-      if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
-        return raw.slice(0, 10);
-      }
-      const ymd = raw.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
-      if (ymd) {
-        return `${ymd[1]}-${String(ymd[2]).padStart(2, '0')}-${String(ymd[3]).padStart(2, '0')}`;
-      }
-      const dmy = raw.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
-      if (dmy) {
-        return `${dmy[3]}-${String(dmy[2]).padStart(2, '0')}-${String(dmy[1]).padStart(2, '0')}`;
-      }
+    if (!raw && raw !== 0) return '';
+
+    // If already epoch millis number
+    if (typeof raw === 'number' || /^\d{11,}$/.test(String(raw).trim())) {
+      return this.formatDateIst(Number(raw));
     }
-    const d = new Date(raw);
+
+    let str = String(raw).trim();
+    if (!str) return '';
+
+    // If pure date-only string (no time component, exactly YYYY-MM-DD)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      return str;
+    }
+
+    // Parse ISO / MT5 format (e.g. "2026-10-07T18:48:28" or "2026-10-07 18:48:28")
+    // If no timezone offset is provided, the source CSV timestamps are UTC.
+    if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+      str = str.replace(' ', 'T') + 'Z';
+    }
+
+    const d = new Date(str);
     if (!isNaN(d.getTime())) {
-      return d.toISOString().slice(0, 10);
+      return this.formatDateIst(d);
+    }
+
+    // Fallback regex matching for non-standard formats
+    const ymd = str.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+    if (ymd) {
+      return `${ymd[1]}-${String(ymd[2]).padStart(2, '0')}-${String(ymd[3]).padStart(2, '0')}`;
+    }
+    const dmy = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
+    if (dmy) {
+      return `${dmy[3]}-${String(dmy[2]).padStart(2, '0')}-${String(dmy[1]).padStart(2, '0')}`;
     }
     return '';
   },
@@ -995,30 +1051,19 @@ const TradeAnalytics = {
   normalizeDateQuery(input, referenceYear = null) {
     if (!input) return null;
     if (input instanceof Date && !isNaN(input.getTime())) {
-      const yr = input.getFullYear();
-      const mo = String(input.getMonth() + 1).padStart(2, '0');
-      const da = String(input.getDate()).padStart(2, '0');
-      return `${yr}-${mo}-${da}`;
+      return this.formatDateIst(input);
     }
 
     let str = String(input).trim().toLowerCase();
     if (!str) return null;
 
-    // Handle 'today' & 'yesterday'
+    // Handle 'today' & 'yesterday' evaluated strictly in Asia/Kolkata
     if (str === 'today') {
-      const now = new Date();
-      const yr = now.getFullYear();
-      const mo = String(now.getMonth() + 1).padStart(2, '0');
-      const da = String(now.getDate()).padStart(2, '0');
-      return `${yr}-${mo}-${da}`;
+      return this.formatDateIst(new Date());
     }
     if (str === 'yesterday') {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yr = yesterday.getFullYear();
-      const mo = String(yesterday.getMonth() + 1).padStart(2, '0');
-      const da = String(yesterday.getDate()).padStart(2, '0');
-      return `${yr}-${mo}-${da}`;
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      return this.formatDateIst(yesterday);
     }
 
     // Direct YYYY-MM-DD

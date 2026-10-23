@@ -108,16 +108,16 @@ const App = {
       const { maxDate } = this.getAvailableDateRange();
       const baseDate = maxDate ? new Date(maxDate + 'T23:59:59Z') : new Date();
       const cutoff = new Date(baseDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      const cutoffStr = TradeAnalytics.formatDateIst(cutoff);
       this.filteredTrades = this.trades.filter(t => {
-        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+        const dStr = TradeAnalytics.getTradeDate(t);
         return dStr && dStr >= cutoffStr;
       });
     } else if (this.dateFilter === 'custom') {
       const start = this.customStartDate;
       const end = this.customEndDate;
       this.filteredTrades = this.trades.filter(t => {
-        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+        const dStr = TradeAnalytics.getTradeDate(t);
         if (!dStr) return false;
         if (start && dStr < start) return false;
         if (end && dStr > end) return false;
@@ -138,7 +138,7 @@ const App = {
     let minDate = null;
     let maxDate = null;
     this.trades.forEach(t => {
-      const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+      const dStr = TradeAnalytics.getTradeDate(t);
       if (dStr && dStr.length === 10) {
         if (!minDate || dStr < minDate) minDate = dStr;
         if (!maxDate || dStr > maxDate) maxDate = dStr;
@@ -691,7 +691,7 @@ const App = {
       let winSubHtml = `<span class="delta-pos">▲ Best trade</span>`;
       if (m.maxWinTrade) {
         const sym = m.maxWinTrade.symbol || 'Trade';
-        const rawDate = m.maxWinTrade.closeTime ? m.maxWinTrade.closeTime.slice(0, 10) : (m.maxWinTrade.openTime ? m.maxWinTrade.openTime.slice(0, 10) : '');
+        const rawDate = TradeAnalytics.getTradeDate(m.maxWinTrade);
         const date = rawDate ? this.formatDateShort(rawDate) : 'Winner';
         const lotsText = m.maxWinTrade.lots ? ` • ${m.maxWinTrade.lots} lot` : '';
         winSubHtml = `<span class="delta-pos">▲ ${sym}</span> • ${date}${lotsText}`;
@@ -723,7 +723,7 @@ const App = {
         if (largestLossSubEl) {
           if (m.maxLossTrade) {
             const sym = m.maxLossTrade.symbol || 'Trade';
-            const rawDate = m.maxLossTrade.closeTime ? m.maxLossTrade.closeTime.slice(0, 10) : (m.maxLossTrade.openTime ? m.maxLossTrade.openTime.slice(0, 10) : '');
+            const rawDate = TradeAnalytics.getTradeDate(m.maxLossTrade);
             const date = rawDate ? this.formatDateShort(rawDate) : 'Worst';
             const lotsText = m.maxLossTrade.lots ? ` • ${m.maxLossTrade.lots} lot` : '';
             largestLossSubEl.innerHTML = `<span class="delta-neg">▼ ${sym}</span> • ${date}${lotsText}`;
@@ -2114,8 +2114,10 @@ const App = {
     // Calendar Navigation
     const prevMonthBtn = document.getElementById('calPrevBtn');
     const nextMonthBtn = document.getElementById('calNextBtn');
+    const todayMonthBtn = document.getElementById('calThisMonthBtn');
     if (prevMonthBtn) prevMonthBtn.addEventListener('click', () => CalendarManager.prevMonth());
     if (nextMonthBtn) nextMonthBtn.addEventListener('click', () => CalendarManager.nextMonth());
+    if (todayMonthBtn) todayMonthBtn.addEventListener('click', () => CalendarManager.thisMonth());
 
     // Dynamic Currency Switcher Slider ($ / ₹)
     const btnUSD = document.getElementById('btnCurrUSD');
@@ -3164,7 +3166,7 @@ const App = {
 
     const monthMap = {};
     (trades || []).forEach(t => {
-      const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+      const dStr = TradeAnalytics.getTradeDate(t);
       if (dStr && dStr.length >= 7) {
         const monthKey = dStr.slice(0, 7); // 'YYYY-MM'
         if (!monthMap[monthKey]) {
@@ -3211,7 +3213,7 @@ const App = {
 
       // Check if this week contains any trades
       const hasTrades = (tradesInMonth || []).some(t => {
-        const td = (t.closeTime || t.openTime || '').slice(0, 10);
+        const td = TradeAnalytics.getTradeDate(t);
         return td && td >= startStr && td <= endStr;
       });
 
@@ -3296,7 +3298,7 @@ const App = {
     let weeks = [];
     if (currentMonthObj) {
       const tradesInMonth = (trades || []).filter(t => {
-        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+        const dStr = TradeAnalytics.getTradeDate(t);
         return dStr && dStr.startsWith(currentMonthObj.key);
       });
       weeks = this.getWeeksForMonth(currentMonthObj.year, currentMonthObj.month, tradesInMonth);
@@ -3487,7 +3489,7 @@ const App = {
     let maxDate = null;
 
     (trades || []).forEach(t => {
-      const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+      const dStr = TradeAnalytics.getTradeDate(t);
       if (dStr && dStr.length >= 10) {
         if (!minDate || dStr < minDate) minDate = dStr;
         if (!maxDate || dStr > maxDate) maxDate = dStr;
@@ -3656,19 +3658,19 @@ const App = {
     let scopedTrades = trades || [];
     if (mode === 'monthly' && this.pnlPerfState.selectedMonth) {
       scopedTrades = (trades || []).filter(t => {
-        const dStr = (t.closeTime || t.openTime || '').slice(0, 7);
+        const dStr = TradeAnalytics.getTradeDate(t).slice(0, 7);
         return dStr === this.pnlPerfState.selectedMonth;
       });
     } else if (mode === 'yearly' && this.pnlPerfState.selectedYear) {
       scopedTrades = (trades || []).filter(t => {
-        const dStr = (t.closeTime || t.openTime || '').slice(0, 4);
+        const dStr = TradeAnalytics.getTradeDate(t).slice(0, 4);
         return dStr === String(this.pnlPerfState.selectedYear);
       });
     } else if (mode === 'custom') {
       const s = this.pnlPerfState.customStart || (startInput ? startInput.value : '');
       const e = this.pnlPerfState.customEnd || (endInput ? endInput.value : '');
       scopedTrades = (trades || []).filter(t => {
-        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+        const dStr = TradeAnalytics.getTradeDate(t);
         return dStr && (!s || dStr >= s) && (!e || dStr <= e);
       });
     }

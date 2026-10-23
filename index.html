@@ -629,108 +629,127 @@
             </div>
           </div>
 
-          <!-- ROW 5: RECENT TRADES + WEEKLY PERFORMANCE + MONTHLY TRADING CALENDAR -->
-          <div class="bottom-split-grid">
-            <!-- Left Column: Recent Executions + Weekly Performance -->
-            <div style="display: flex; flex-direction: column; gap: 18px; min-width: 0;">
-              <!-- Recent Trades Table -->
-              <div class="section-card">
-                <div class="section-header">
-                  <div>
-                    <div class="section-title">RECENT TRADE EXECUTIONS</div>
-                    <div class="section-subtitle">Latest closed positions from active ledger</div>
-                  </div>
-                  <button class="card-tab" onclick="App.switchView('tradelog')">Full Ledger &rarr;</button>
+          <!-- ROW 5: PERFORMANCE CHART & RECENT TRADES (MATCHING SCREENSHOT 1 TOP ROW) -->
+          <div class="dashboard-perf-recent-grid">
+            <!-- Left Card: Weekly Performance Breakdown -->
+            <div class="section-card" id="cardWeeklyPerformance">
+              <div class="section-header weekly-perf-header">
+                <div>
+                  <div class="section-title">WEEKLY PERFORMANCE</div>
+                  <div class="section-subtitle" id="weeklyPerfSubtitle">Net P&amp;L by day of the week (All Data)</div>
                 </div>
-                <div class="table-container">
-                  <table class="data-table">
-                    <thead>
-                      <tr>
-                        <th>Symbol</th>
-                        <th>Type</th>
-                        <th>Lots</th>
-                        <th>Close Time</th>
-                        <th>Reason</th>
-                        <th style="text-align: right;">Net P&amp;L (<span class="currency-sym">$</span>)</th>
-                      </tr>
-                    </thead>
-                    <tbody id="recentTradesTableBody"></tbody>
-                  </table>
+                <div class="weekly-perf-controls">
+                  <div class="weekly-perf-dropdown" id="weeklyPerfModeDropdown">
+                    <button type="button" class="weekly-perf-select-btn" id="weeklyPerfModeBtn" aria-haspopup="listbox" aria-expanded="false">
+                      <span id="weeklyPerfModeLabel">All Data</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+                    <div class="weekly-perf-menu" id="weeklyPerfModeMenu" role="listbox">
+                      <button type="button" class="weekly-perf-menu-item active" data-mode="all">All Data</button>
+                      <button type="button" class="weekly-perf-menu-item" data-mode="month">By Month</button>
+                      <button type="button" class="weekly-perf-menu-item" data-mode="week">By Week</button>
+                    </div>
+                  </div>
+
+                  <div class="weekly-perf-dropdown" id="weeklyPerfMonthWrapper" style="display: none;">
+                    <button type="button" class="weekly-perf-select-btn secondary" id="weeklyPerfMonthBtn" aria-haspopup="listbox" aria-expanded="false">
+                      <span id="weeklyPerfMonthLabel">Select Month</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+                    <div class="weekly-perf-menu" id="weeklyPerfMonthMenu" role="listbox"></div>
+                  </div>
+
+                  <div class="weekly-perf-dropdown" id="weeklyPerfWeekWrapper" style="display: none;">
+                    <button type="button" class="weekly-perf-select-btn secondary" id="weeklyPerfWeekBtn" aria-haspopup="listbox" aria-expanded="false">
+                      <span id="weeklyPerfWeekLabel">Select Week</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+                    <div class="weekly-perf-menu" id="weeklyPerfWeekMenu" role="listbox"></div>
+                  </div>
                 </div>
               </div>
-
-              <!-- Weekly Performance Breakdown -->
-              <div class="section-card" id="cardWeeklyPerformance">
-                <div class="section-header weekly-perf-header">
-                  <div>
-                    <div class="section-title">WEEKLY PERFORMANCE</div>
-                    <div class="section-subtitle" id="weeklyPerfSubtitle">Net P&amp;L by day of the week (All Data)</div>
+              <div class="section-body">
+                <div class="weekly-perf-chart-container">
+                  <div class="weekly-perf-empty" id="weeklyPerfEmpty" style="display: none;">
+                    No trade data available for the selected period
                   </div>
-                  <div class="weekly-perf-controls">
-                    <div class="weekly-perf-dropdown" id="weeklyPerfModeDropdown">
-                      <button type="button" class="weekly-perf-select-btn" id="weeklyPerfModeBtn" aria-haspopup="listbox" aria-expanded="false">
-                        <span id="weeklyPerfModeLabel">All Data</span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                          <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                      </button>
-                      <div class="weekly-perf-menu" id="weeklyPerfModeMenu" role="listbox">
-                        <button type="button" class="weekly-perf-menu-item active" data-mode="all">All Data</button>
-                        <button type="button" class="weekly-perf-menu-item" data-mode="month">By Month</button>
-                        <button type="button" class="weekly-perf-menu-item" data-mode="week">By Week</button>
-                      </div>
-                    </div>
-
-                    <div class="weekly-perf-dropdown" id="weeklyPerfMonthWrapper" style="display: none;">
-                      <button type="button" class="weekly-perf-select-btn secondary" id="weeklyPerfMonthBtn" aria-haspopup="listbox" aria-expanded="false">
-                        <span id="weeklyPerfMonthLabel">Select Month</span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                          <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                      </button>
-                      <div class="weekly-perf-menu" id="weeklyPerfMonthMenu" role="listbox"></div>
-                    </div>
-
-                    <div class="weekly-perf-dropdown" id="weeklyPerfWeekWrapper" style="display: none;">
-                      <button type="button" class="weekly-perf-select-btn secondary" id="weeklyPerfWeekBtn" aria-haspopup="listbox" aria-expanded="false">
-                        <span id="weeklyPerfWeekLabel">Select Week</span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                          <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                      </button>
-                      <div class="weekly-perf-menu" id="weeklyPerfWeekMenu" role="listbox"></div>
-                    </div>
-                  </div>
-                </div>
-                <div class="section-body">
-                  <div class="weekly-perf-chart-container">
-                    <div class="weekly-perf-empty" id="weeklyPerfEmpty" style="display: none;">
-                      No trade data available for the selected period
-                    </div>
-                    <div class="weekly-perf-canvas-wrap" id="weeklyPerfCanvasWrap" style="height: 100%; width: 100%;">
-                      <canvas id="weeklyPerformanceCanvas"></canvas>
-                    </div>
+                  <div class="weekly-perf-canvas-wrap" id="weeklyPerfCanvasWrap" style="height: 100%; width: 100%;">
+                    <canvas id="weeklyPerformanceCanvas"></canvas>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Right Column: Monthly Trading Calendar -->
-            <div class="section-card">
+            <!-- Right Card: Recent Trade Executions -->
+            <div class="section-card" id="cardRecentTrades">
               <div class="section-header">
                 <div>
-                  <div class="section-title">MONTHLY TRADING CALENDAR</div>
-                  <div class="section-subtitle">Daily realized P&amp;L &amp; trade count</div>
+                  <div class="section-title">RECENT TRADE EXECUTIONS</div>
+                  <div class="section-subtitle">Latest closed positions from active ledger</div>
                 </div>
-                <div class="calendar-controls">
-                  <button class="cal-btn" id="calPrevBtn" title="Previous Month">&larr;</button>
-                  <div class="cal-month-title" id="calendarTitle">August 2026</div>
-                  <button class="cal-btn" id="calNextBtn" title="Next Month">&rarr;</button>
+                <button class="card-tab" onclick="App.switchView('tradelog')">Full Ledger &rarr;</button>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Symbol</th>
+                      <th>Type</th>
+                      <th>Lots</th>
+                      <th>Close Time</th>
+                      <th>Reason</th>
+                      <th style="text-align: right;">Net P&amp;L (<span class="currency-sym">$</span>)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recentTradesTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ROW 6: FULL-WIDTH MONTHLY TRADING CALENDAR (MATCHING SCREENSHOT 1) -->
+          <div class="section-card calendar-section-card" id="cardMonthlyCalendar">
+            <div class="section-header calendar-section-header">
+              <div class="calendar-header-main">
+                <div class="cal-nav-group">
+                  <button type="button" class="cal-btn" id="calPrevBtn" title="Previous Month" aria-label="Previous Month">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                  </button>
+                  <div class="cal-month-title" id="calendarTitle">October 2026</div>
+                  <button type="button" class="cal-btn" id="calNextBtn" title="Next Month" aria-label="Next Month">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </button>
+                  <button type="button" class="cal-today-btn" id="calThisMonthBtn" title="Jump to Current Month">This month</button>
                 </div>
               </div>
-              <div class="section-body">
-                <div class="calendar-grid" id="calendarGrid"></div>
+
+              <div class="cal-stats-group">
+                <span class="cal-stats-label">Monthly stats:</span>
+                <span class="cal-stat-pill cal-stat-pnl" id="calMonthlyPnl">+$0.00</span>
+                <span class="cal-stat-pill cal-stat-days" id="calMonthlyDays">0 days</span>
+                <button type="button" class="cal-icon-btn" id="calSettingsBtn" title="Calendar Settings" aria-label="Calendar Settings">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                </button>
+                <button type="button" class="cal-icon-btn" id="calInfoBtn" title="Trading calendar tracks realized daily &amp; weekly net performance based on closed positions." aria-label="Calendar Information">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                </button>
               </div>
+            </div>
+            <div class="section-body">
+              <div class="calendar-grid" id="calendarGrid"></div>
             </div>
           </div>
 

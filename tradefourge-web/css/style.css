@@ -1423,6 +1423,14 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   text-align: center;
 }
 
+/* ==================== ROW 5: PERFORMANCE CHART & RECENT TRADES GRID ==================== */
+.dashboard-perf-recent-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
 /* ==================== ROW 5: BOTTOM SPLIT GRID (RECENT TRADES + CALENDAR) ==================== */
 .bottom-split-grid {
   display: grid;
@@ -1547,6 +1555,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   }
   .middle-analytics-grid,
   .bottom-split-grid,
+  .dashboard-perf-recent-grid,
   .dashboard-breakdown-row {
     grid-template-columns: 1fr;
   }
