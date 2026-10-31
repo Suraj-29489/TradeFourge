@@ -109,6 +109,17 @@
           <span>Trade Log</span>
         </div>
 
+        <div class="nav-item" data-view="reports">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Reports</span>
+        </div>
+
         <div class="nav-item" data-view="strategy-bot">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"></path>
@@ -1581,43 +1592,362 @@
           </div>
         </section>
 
-        <!-- Legacy View Aliases (Preserved for programmatic compatibility) -->
+        <!-- ==================== VIEW: TRADING REPORT STATEMENT ==================== -->
         <section class="view-section" id="view-reports">
-          <div class="middle-analytics-grid">
-            <div class="section-card">
-              <div class="section-header">
-                <div>
-                  <div class="section-title">MONTHLY P&amp;L BREAKDOWN</div>
-                  <div class="section-subtitle">Net performance aggregated by month</div>
-                </div>
+          <!-- Top Controls Bar -->
+          <div class="report-controls-banner">
+            <div class="report-controls-left">
+              <div class="report-banner-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                <span>Trading Journal Report</span>
               </div>
-              <div class="section-body">
-                <div style="height: 280px;">
-                  <canvas id="reportsMonthlyChart"></canvas>
-                </div>
-              </div>
+              <div class="report-banner-subtitle">Publication-grade statement ledger &amp; performance audit</div>
             </div>
-            <div class="section-card">
-              <div class="section-header">
-                <div>
-                  <div class="section-title">INSTRUMENT BREAKDOWN</div>
-                  <div class="section-subtitle">Win rate and net P&amp;L by traded pair</div>
+
+            <div class="report-controls-right">
+              <!-- Date Range Preset Dropdown -->
+              <div class="report-control-item">
+                <label for="reportRangePresetSelect" class="report-control-label">PERIOD</label>
+                <select id="reportRangePresetSelect" class="report-select">
+                  <option value="custom">Custom Date Range</option>
+                  <option value="all">All Available Trades</option>
+                  <option value="last30">Last 30 Days</option>
+                  <option value="last90">Last 90 Days</option>
+                </select>
+              </div>
+
+              <!-- Custom Date Pickers (Custom, no fixed range) -->
+              <div class="report-control-item report-date-range-inputs" id="reportDateRangeInputs">
+                <label class="report-control-label">DATE RANGE</label>
+                <div class="report-date-pickers-wrap">
+                  <input type="date" id="reportStartDate" class="report-date-input" title="Start Date">
+                  <span class="report-date-arrow">→</span>
+                  <input type="date" id="reportEndDate" class="report-date-input" title="End Date">
+                  <button type="button" id="btnApplyReportDate" class="btn btn-secondary btn-sm" title="Apply Date Filter">Apply</button>
                 </div>
               </div>
-              <div class="section-body" id="reportsSymbolList"></div>
+
+              <!-- Instrument Filter -->
+              <div class="report-control-item">
+                <label for="reportInstrumentSelect" class="report-control-label">INSTRUMENT</label>
+                <select id="reportInstrumentSelect" class="report-select">
+                  <option value="all">All Instruments</option>
+                </select>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="report-control-item report-actions-wrap">
+                <button type="button" id="btnDownloadReportPDF" class="btn btn-primary" title="Download Report as PDF">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  <span>Download PDF</span>
+                </button>
+                <button type="button" id="btnPrintReport" class="btn btn-secondary" title="Print Document or Save as PDF">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                  </svg>
+                  <span>Print</span>
+                </button>
+              </div>
             </div>
           </div>
-          <div class="section-card">
-            <div class="section-header">
-              <div>
-                <div class="section-title">HOURLY SESSION PERFORMANCE (UTC)</div>
-                <div class="section-subtitle">Profitability by trade opening hour</div>
+
+          <!-- Printable Trading Report Document Sheet (Mirrors Reference Screenshot) -->
+          <div class="trading-report-sheet" id="tradingReportSheet">
+            <!-- Sheet Header -->
+            <div class="rep-sheet-header">
+              <div class="rep-header-top">
+                <div class="rep-brand-box">
+                  <div class="rep-brand-title">TRADEFORGE</div>
+                  <div class="rep-brand-sub">TRADING JOURNAL</div>
+                </div>
+                <div class="rep-instrument-badge-box">
+                  <span class="rep-instrument-badge" id="repHeaderInstrument">XAUUSD</span>
+                </div>
+              </div>
+              <div class="rep-header-title-box">
+                <h1 class="rep-main-title" id="repMainTitle">TRADING REPORT</h1>
+                <div class="rep-title-underline-double"></div>
               </div>
             </div>
-            <div class="section-body">
-              <div style="height: 260px;">
-                <canvas id="reportsHourlyChart"></canvas>
+
+            <!-- Row 1: Trading Period & Specs | Account Summary -->
+            <div class="rep-grid-2">
+              <div class="rep-card rep-specs-card">
+                <ul class="rep-specs-list">
+                  <li>
+                    <span class="spec-label">• TRADING PERIOD</span>
+                    <span class="spec-colon">:</span>
+                    <span class="spec-val" id="repPeriod">-</span>
+                  </li>
+                  <li>
+                    <span class="spec-label">• INSTRUMENT</span>
+                    <span class="spec-colon">:</span>
+                    <span class="spec-val" id="repInstrument">ALL</span>
+                  </li>
+                  <li>
+                    <span class="spec-label">• LOT SIZE</span>
+                    <span class="spec-colon">:</span>
+                    <span class="spec-val" id="repLotSize">0.00 LOT</span>
+                  </li>
+                  <li>
+                    <span class="spec-label">• TOTAL TRADES</span>
+                    <span class="spec-colon">:</span>
+                    <span class="spec-val" id="repTotalTrades">0</span>
+                  </li>
+                  <li>
+                    <span class="spec-label">• TRADING DAYS</span>
+                    <span class="spec-colon">:</span>
+                    <span class="spec-val" id="repTradingDays">0</span>
+                  </li>
+                  <li>
+                    <span class="spec-label">• ACTIVE TRADING DAYS</span>
+                    <span class="spec-colon">:</span>
+                    <span class="spec-val" id="repActiveTradingDays">0</span>
+                  </li>
+                </ul>
               </div>
+
+              <div class="rep-card rep-account-card">
+                <div class="rep-card-title">ACCOUNT SUMMARY</div>
+                <div class="rep-stat-table">
+                  <div class="rep-stat-row">
+                    <span class="stat-name">STARTING BALANCE</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val" id="repStartingBalance">-</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">TOTAL PROFIT</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val profit" id="repTotalProfit">-</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">TOTAL LOSS</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val loss" id="repTotalLoss">-</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">NET P&amp;L</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val" id="repNetPnL">-</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">ENDING BALANCE</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val" id="repEndingBalance">-</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">PERIOD RETURN</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val" id="repPeriodReturn">-</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Row 2: Performance Summary | Trading Day Performance + Key Metrics -->
+            <div class="rep-grid-2">
+              <div class="rep-card rep-perf-card">
+                <div class="rep-card-title">PERFORMANCE SUMMARY</div>
+                <div class="rep-stat-table">
+                  <div class="rep-stat-row">
+                    <span class="stat-name">TOTAL TRADES</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val" id="repPerfTotalTrades">0</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">WINNING TRADES</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val" id="repWinningTrades">0</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">LOSING TRADES</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val" id="repLosingTrades">0</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">TRADE WIN RATE</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val" id="repTradeWinRate">0% (0 / 0)</span>
+                  </div>
+
+                  <div class="rep-divider"></div>
+
+                  <div class="rep-stat-row">
+                    <span class="stat-name">GROSS PROFIT</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val profit" id="repGrossProfit">-</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">GROSS LOSS</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val loss" id="repGrossLoss">-</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">NET P&amp;L</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val" id="repPerfNetPnL">-</span>
+                  </div>
+
+                  <div class="rep-divider"></div>
+
+                  <div class="rep-stat-row">
+                    <span class="stat-name">AVERAGE WINNING TRADE</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val profit" id="repAvgWinTrade">-</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">AVERAGE LOSING TRADE</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val loss" id="repAvgLossTrade">-</span>
+                  </div>
+                  <div class="rep-stat-row">
+                    <span class="stat-name">AVG. WIN/LOSS RATIO</span>
+                    <span class="stat-colon">:</span>
+                    <span class="stat-val" id="repWinLossRatio">-</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rep-col-stacked">
+                <div class="rep-card">
+                  <div class="rep-card-title">TRADING DAY PERFORMANCE</div>
+                  <div class="rep-stat-table">
+                    <div class="rep-stat-row">
+                      <span class="stat-name">PROFITABLE DAYS</span>
+                      <span class="stat-colon">:</span>
+                      <span class="stat-val profit" id="repProfitableDays">0</span>
+                    </div>
+                    <div class="rep-stat-row">
+                      <span class="stat-name">LOSING DAYS</span>
+                      <span class="stat-colon">:</span>
+                      <span class="stat-val loss" id="repLosingDays">0</span>
+                    </div>
+                    <div class="rep-stat-row">
+                      <span class="stat-name">BREAK-EVEN DAYS</span>
+                      <span class="stat-colon">:</span>
+                      <span class="stat-val" id="repBreakEvenDays">0</span>
+                    </div>
+                    <div class="rep-stat-row">
+                      <span class="stat-name">PROFITABLE DAY RATE</span>
+                      <span class="stat-colon">:</span>
+                      <span class="stat-val profit" id="repProfitableDayRate">0% (0 / 0)</span>
+                    </div>
+                    <div class="rep-stat-row">
+                      <span class="stat-name">ACTIVE DAYS</span>
+                      <span class="stat-colon">:</span>
+                      <span class="stat-val" id="repPerfActiveDays">0</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="rep-card">
+                  <div class="rep-card-title">KEY METRICS</div>
+                  <div class="rep-stat-table">
+                    <div class="rep-stat-row">
+                      <span class="stat-name">PROFIT FACTOR</span>
+                      <span class="stat-colon">:</span>
+                      <span class="stat-val" id="repProfitFactor">0.00</span>
+                    </div>
+                    <div class="rep-stat-row">
+                      <span class="stat-name">AVERAGE PER TRADE</span>
+                      <span class="stat-colon">:</span>
+                      <span class="stat-val" id="repAvgPerTrade">-</span>
+                    </div>
+                    <div class="rep-stat-row">
+                      <span class="stat-name">BEST TRADING DAY</span>
+                      <span class="stat-colon">:</span>
+                      <span class="stat-val profit" id="repBestTradingDay">-</span>
+                    </div>
+                    <div class="rep-stat-row">
+                      <span class="stat-name">WORST TRADING DAY</span>
+                      <span class="stat-colon">:</span>
+                      <span class="stat-val loss" id="repWorstTradingDay">-</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Row 3: Daily Results Table | Final Verdict + Insights & Observations -->
+            <div class="rep-grid-2 rep-bottom-grid">
+              <div class="rep-card rep-table-card">
+                <div class="rep-card-title">DAILY RESULTS (<span id="repDailyTableTitle">OCTOBER 2026</span>)</div>
+                <div class="rep-split-tables-wrap" id="repSplitTablesWrap">
+                  <div class="rep-sub-table-col">
+                    <table class="rep-daily-table">
+                      <thead>
+                        <tr>
+                          <th>DATE</th>
+                          <th>TRADES</th>
+                          <th>WIN</th>
+                          <th>LOSS</th>
+                          <th>DAILY P&amp;L</th>
+                        </tr>
+                      </thead>
+                      <tbody id="repDailyTableBody1"></tbody>
+                    </table>
+                  </div>
+
+                  <div class="rep-sub-table-col">
+                    <table class="rep-daily-table">
+                      <thead>
+                        <tr>
+                          <th>DATE</th>
+                          <th>TRADES</th>
+                          <th>WIN</th>
+                          <th>LOSS</th>
+                          <th>DAILY P&amp;L</th>
+                        </tr>
+                      </thead>
+                      <tbody id="repDailyTableBody2"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rep-col-stacked">
+                <div class="rep-card rep-verdict-card">
+                  <div class="rep-card-title">FINAL VERDICT</div>
+                  <div class="rep-verdict-body">
+                    <div class="rep-verdict-icon" id="repVerdictIcon">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                      </svg>
+                    </div>
+                    <div>
+                      <div class="rep-verdict-headline" id="repVerdictTitle">NO DATA</div>
+                      <div class="rep-verdict-subtext" id="repVerdictSub">Upload trade reports or select dates to generate your verdict.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="rep-card rep-insights-card">
+                  <div class="rep-card-title">INSIGHTS &amp; OBSERVATIONS</div>
+                  <ul class="rep-insights-bullets" id="repInsightsList">
+                    <li>No trading activity recorded for this period.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Row 5: Slogan Footer -->
+            <div class="rep-sheet-footer">
+              <span class="rep-slogan-line"></span>
+              <span class="rep-slogan">Discipline today, freedom tomorrow.</span>
+              <span class="rep-slogan-line"></span>
             </div>
           </div>
         </section>
@@ -1809,6 +2139,15 @@
             <line x1="3" y1="18" x2="3.01" y2="18"></line>
           </svg>
           <span>Trade Log</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-view="reports">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+          <span>Reports</span>
         </button>
         <button type="button" class="mobile-nav-item" data-view="strategy-bot">
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2187,6 +2526,7 @@
 
   <!-- Application Scripts -->
   <script src="js/xlsx.full.min.js"></script>
+  <script src="js/html2pdf.bundle.min.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/parser.js"></script>
   <script src="js/analytics.js"></script>

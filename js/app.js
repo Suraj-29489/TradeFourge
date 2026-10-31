@@ -45,6 +45,16 @@ const App = {
     customEnd: null // 'YYYY-MM-DD'
   },
 
+  // Trading Report Statement State
+  reportState: {
+    preset: 'custom',
+    startDate: '',
+    endDate: '',
+    instrument: 'all',
+    _listenersAttached: false,
+    _chartInstance: null
+  },
+
   /**
    * Application Initialization
    */
@@ -1170,37 +1180,631 @@ const App = {
   },
 
   /**
-   * Render Reports View
+   * Bind Event Listeners for the Trading Report Section
+   */
+  initReportListeners() {
+    if (this.reportState && this.reportState._listenersAttached) return;
+
+    const presetSelect = document.getElementById('reportRangePresetSelect');
+    const startInput = document.getElementById('reportStartDate');
+    const endInput = document.getElementById('reportEndDate');
+    const applyBtn = document.getElementById('btnApplyReportDate');
+    const instSelect = document.getElementById('reportInstrumentSelect');
+    const downloadBtn = document.getElementById('btnDownloadReportPDF');
+    const printBtn = document.getElementById('btnPrintReport');
+
+    if (presetSelect) {
+      presetSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        this.reportState.preset = val;
+        this.applyReportPreset(val);
+        this.renderReportsView();
+      });
+    }
+
+    if (startInput) {
+      startInput.addEventListener('change', (e) => {
+        this.reportState.startDate = e.target.value;
+        this.reportState.preset = 'custom';
+        if (presetSelect) presetSelect.value = 'custom';
+      });
+    }
+
+    if (endInput) {
+      endInput.addEventListener('change', (e) => {
+        this.reportState.endDate = e.target.value;
+        this.reportState.preset = 'custom';
+        if (presetSelect) presetSelect.value = 'custom';
+      });
+    }
+
+    if (applyBtn) {
+      applyBtn.addEventListener('click', () => {
+        if (startInput) this.reportState.startDate = startInput.value;
+        if (endInput) this.reportState.endDate = endInput.value;
+        this.reportState.preset = 'custom';
+        if (presetSelect) presetSelect.value = 'custom';
+        this.renderReportsView();
+        this.showToast('Report updated for selected date range', 'info');
+      });
+    }
+
+    if (instSelect) {
+      instSelect.addEventListener('change', (e) => {
+        this.reportState.instrument = e.target.value;
+        this.renderReportsView();
+      });
+    }
+
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => {
+        this.downloadReportPDF();
+      });
+    }
+
+    if (printBtn) {
+      printBtn.addEventListener('click', () => {
+        window.print();
+      });
+    }
+
+    if (this.reportState) {
+      this.reportState._listenersAttached = true;
+    }
+  },
+
+  /**
+   * Apply predefined or dynamic month date range to Report State
+   */
+  applyReportPreset(val) {
+    const startInput = document.getElementById('reportStartDate');
+    const endInput = document.getElementById('reportEndDate');
+
+    if (val === 'all') {
+      const dates = (this.trades || []).map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
+      if (dates.length > 0) {
+        this.reportState.startDate = dates[0];
+        this.reportState.endDate = dates[dates.length - 1];
+      } else {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        this.reportState.startDate = `${y}-${m}-01`;
+        this.reportState.endDate = `${y}-${m}-28`;
+      }
+    } else if (val.startsWith('month:')) {
+      const monthKey = val.replace('month:', ''); // 'YYYY-MM'
+      const parts = monthKey.split('-').map(Number);
+      const y = parts[0];
+      const m = parts[1];
+      const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      this.reportState.startDate = `${monthKey}-01`;
+      this.reportState.endDate = `${monthKey}-${String(daysInMonth).padStart(2, '0')}`;
+    } else if (val === 'last30') {
+      const dates = (this.trades || []).map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
+      const endD = dates.length > 0 ? new Date(dates[dates.length - 1]) : new Date();
+      const startD = new Date(endD);
+      startD.setDate(startD.getDate() - 30);
+      this.reportState.startDate = startD.toISOString().slice(0, 10);
+      this.reportState.endDate = endD.toISOString().slice(0, 10);
+    } else if (val === 'last90') {
+      const dates = (this.trades || []).map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
+      const endD = dates.length > 0 ? new Date(dates[dates.length - 1]) : new Date();
+      const startD = new Date(endD);
+      startD.setDate(startD.getDate() - 90);
+      this.reportState.startDate = startD.toISOString().slice(0, 10);
+      this.reportState.endDate = endD.toISOString().slice(0, 10);
+    }
+
+    if (startInput) startInput.value = this.reportState.startDate;
+    if (endInput) endInput.value = this.reportState.endDate;
+  },
+
+  /**
+   * Update Report filter dropdowns (available months and instruments)
+   */
+  updateReportFilterControls() {
+    const presetSelect = document.getElementById('reportRangePresetSelect');
+    const instSelect = document.getElementById('reportInstrumentSelect');
+    const startInput = document.getElementById('reportStartDate');
+    const endInput = document.getElementById('reportEndDate');
+
+    // 1. Populate Range Preset dropdown with distinct months in dataset
+    if (presetSelect) {
+      const monthMap = {};
+      (this.trades || []).forEach(t => {
+        const dStr = TradeAnalytics.getTradeDate(t);
+        if (dStr && dStr.length >= 7) {
+          const mKey = dStr.slice(0, 7);
+          monthMap[mKey] = (monthMap[mKey] || 0) + 1;
+        }
+      });
+
+      const sortedMonths = Object.keys(monthMap).sort((a, b) => b.localeCompare(a));
+
+      presetSelect.innerHTML = '';
+      const customOpt = document.createElement('option');
+      customOpt.value = 'custom';
+      customOpt.innerText = 'Custom Date Range';
+      presetSelect.appendChild(customOpt);
+
+      const allOpt = document.createElement('option');
+      allOpt.value = 'all';
+      allOpt.innerText = 'All Available History';
+      presetSelect.appendChild(allOpt);
+
+      sortedMonths.forEach(mKey => {
+        const parts = mKey.split('-').map(Number);
+        const y = parts[0];
+        const m = parts[1];
+        const mName = TradeAnalytics.getMonthName(m, false);
+        const opt = document.createElement('option');
+        opt.value = `month:${mKey}`;
+        opt.innerText = `${mName} ${y} (${monthMap[mKey]} trades)`;
+        presetSelect.appendChild(opt);
+      });
+
+      const l30Opt = document.createElement('option');
+      l30Opt.value = 'last30';
+      l30Opt.innerText = 'Last 30 Days';
+      presetSelect.appendChild(l30Opt);
+
+      const l90Opt = document.createElement('option');
+      l90Opt.value = 'last90';
+      l90Opt.innerText = 'Last 90 Days';
+      presetSelect.appendChild(l90Opt);
+
+      // Restore value or choose initial default
+      const optionsList = Array.from(presetSelect.options && presetSelect.options.length ? presetSelect.options : (presetSelect.children || []));
+      if (this.reportState.preset && optionsList.some(o => o.value === this.reportState.preset)) {
+        presetSelect.value = this.reportState.preset;
+      } else if (!this.reportState._presetInitialized && sortedMonths.length > 0) {
+        this.reportState.preset = `month:${sortedMonths[0]}`;
+        presetSelect.value = this.reportState.preset;
+        this.applyReportPreset(this.reportState.preset);
+        this.reportState._presetInitialized = true;
+      } else if (!this.reportState.preset) {
+        this.reportState.preset = 'custom';
+        presetSelect.value = 'custom';
+      }
+    }
+
+    // 2. Populate Instrument select with distinct traded symbols
+    if (instSelect) {
+      const curInst = this.reportState.instrument || 'all';
+      const symbolsSet = new Set();
+      (this.trades || []).forEach(t => {
+        if (t.symbol) symbolsSet.add(t.symbol);
+      });
+      const sortedSymbols = Array.from(symbolsSet).sort();
+
+      instSelect.innerHTML = '<option value="all">All Instruments</option>';
+      sortedSymbols.forEach(sym => {
+        const opt = document.createElement('option');
+        opt.value = sym;
+        opt.innerText = sym;
+        instSelect.appendChild(opt);
+      });
+
+      if (sortedSymbols.includes(curInst)) {
+        instSelect.value = curInst;
+      } else {
+        instSelect.value = 'all';
+        this.reportState.instrument = 'all';
+      }
+    }
+
+    // Initialize inputs if empty
+    if (!this.reportState.startDate || !this.reportState.endDate) {
+      if (this.reportState.preset && this.reportState.preset !== 'custom') {
+        this.applyReportPreset(this.reportState.preset);
+      } else {
+        const dates = (this.trades || []).map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
+        if (dates.length > 0) {
+          this.reportState.startDate = dates[0];
+          this.reportState.endDate = dates[dates.length - 1];
+        } else {
+          const now = new Date();
+          const y = now.getFullYear();
+          const m = String(now.getMonth() + 1).padStart(2, '0');
+          this.reportState.startDate = `${y}-${m}-01`;
+          this.reportState.endDate = `${y}-${m}-28`;
+        }
+      }
+    }
+
+    if (startInput && !startInput.value) startInput.value = this.reportState.startDate;
+    if (endInput && !endInput.value) endInput.value = this.reportState.endDate;
+  },
+
+  /**
+   * Render the publication-grade Trading Report Statement
    */
   renderReportsView() {
-    if (!this.currentMetrics) return;
-    ChartManager.renderReportsCharts(this.currentMetrics);
+    this.initReportListeners();
+    this.updateReportFilterControls();
 
-    const container = document.getElementById('reportsSymbolList');
-    if (!container) return;
+    const startDate = this.reportState.startDate;
+    const endDate = this.reportState.endDate;
+    const instrument = this.reportState.instrument || 'all';
 
-    container.innerHTML = '';
-    const symbols = this.currentMetrics.symbolBreakdown || [];
-
-    symbols.forEach(s => {
-      const row = document.createElement('div');
-      row.className = 'legend-item';
-      row.style.marginBottom = '6px';
-      const winRate = s.trades > 0 ? ((s.wins / s.trades) * 100).toFixed(1) : 0;
-      const pnlFormatted = TradeAnalytics.formatCurrency(s.pnl);
-      const pnlColor = s.pnl >= 0 ? 'var(--profit)' : 'var(--loss)';
-
-      row.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span class="symbol-badge">${s.symbol}</span>
-          <span style="font-size: 0.8rem; color: var(--text-dim);">${s.trades} trades (${winRate}% win)</span>
-        </div>
-        <div style="font-weight: 700; color: ${pnlColor}; font-size: 0.9rem;">
-          ${pnlFormatted}
-        </div>
-      `;
-      container.appendChild(row);
+    // Filter trades strictly within the selected date range & instrument
+    const trades = (this.trades || []).filter(t => {
+      const d = TradeAnalytics.getTradeDate(t);
+      if (startDate && d < startDate) return false;
+      if (endDate && d > endDate) return false;
+      if (instrument !== 'all' && t.symbol !== instrument) return false;
+      return true;
     });
+
+    // Starting capital
+    const configuredCap = TradeAnalytics.getStartingCapital();
+    const metrics = trades.length > 0
+      ? TradeAnalytics.calculateMetrics(trades, configuredCap)
+      : TradeAnalytics.getEmptyMetrics(configuredCap);
+
+    // Compute period text & instrument badge
+    const headerInstEl = document.getElementById('repHeaderInstrument');
+    const mainTitleEl = document.getElementById('repMainTitle');
+    const repPeriodEl = document.getElementById('repPeriod');
+    const repInstEl = document.getElementById('repInstrument');
+
+    // Check if period is a single calendar month
+    let isFullMonth = false;
+    let monthTitle = '';
+    if (startDate && endDate && startDate.slice(0, 7) === endDate.slice(0, 7)) {
+      const parts = startDate.split('-').map(Number);
+      const y = parts[0];
+      const m = parts[1];
+      const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      if (Number(startDate.slice(8, 10)) === 1 && Number(endDate.slice(8, 10)) === daysInMonth) {
+        isFullMonth = true;
+        const mName = TradeAnalytics.getMonthName(m, false).toUpperCase();
+        monthTitle = `${mName} ${y}`;
+      }
+    }
+
+    const formatShortPeriod = (dStr) => {
+      if (!dStr) return '';
+      const [y, m, d] = dStr.split('-').map(Number);
+      const mName = TradeAnalytics.getMonthShortName(m - 1, true);
+      return `${d} ${mName} ${y}`;
+    };
+
+    const periodLabel = isFullMonth
+      ? monthTitle
+      : (startDate && endDate ? `${formatShortPeriod(startDate)} – ${formatShortPeriod(endDate)}` : 'TRADING PERIOD');
+
+    // Header title matching screenshot
+    if (mainTitleEl) {
+      mainTitleEl.innerText = `${periodLabel} TRADING REPORT`;
+    }
+    const tableTitleEl = document.getElementById('repDailyTableTitle');
+    if (tableTitleEl) tableTitleEl.innerText = periodLabel;
+
+    // Instrument tag
+    let displaySymbol = 'ALL INSTRUMENTS';
+    if (instrument !== 'all') {
+      displaySymbol = instrument;
+    } else {
+      const symbols = Array.from(new Set(trades.map(t => t.symbol).filter(Boolean)));
+      if (symbols.length === 1) {
+        displaySymbol = symbols[0];
+      }
+    }
+    if (headerInstEl) headerInstEl.innerText = displaySymbol;
+    if (repInstEl) repInstEl.innerText = displaySymbol;
+
+    // Period & Specs
+    if (repPeriodEl) {
+      repPeriodEl.innerText = startDate && endDate ? `${formatShortPeriod(startDate)} – ${formatShortPeriod(endDate)}` : '-';
+    }
+
+    const calDays = (startDate && endDate)
+      ? Math.max(1, Math.round((new Date(endDate) - new Date(startDate)) / 86400000) + 1)
+      : 0;
+    const avgLots = metrics.totalTrades > 0
+      ? (metrics.totalLots / metrics.totalTrades).toFixed(2) + ' LOT'
+      : '0.00 LOT';
+
+    const setEl = (id, val, cls = null) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.innerText = val;
+        if (cls) el.className = cls;
+      }
+    };
+
+    setEl('repLotSize', avgLots);
+    setEl('repTotalTrades', metrics.totalTrades);
+    setEl('repTradingDays', metrics.totalTrades > 0 ? calDays : 0);
+    setEl('repActiveTradingDays', metrics.totalTradingDays);
+
+    // Account Summary
+    const startingBal = configuredCap !== null && configuredCap > 0
+      ? configuredCap
+      : (metrics.startingCapital > 0 ? metrics.startingCapital : (trades.length > 0 ? 2064 : 0));
+    const endingBal = startingBal + metrics.totalPnL;
+    const returnPct = startingBal > 0 ? ((metrics.totalPnL / startingBal) * 100).toFixed(2) : '0.00';
+    const returnCls = metrics.totalPnL > 0
+      ? 'stat-val profit'
+      : (metrics.totalPnL < 0 ? 'stat-val loss' : 'stat-val');
+
+    setEl('repStartingBalance', TradeAnalytics.formatCurrency(startingBal, false));
+    setEl('repTotalProfit', (metrics.grossProfit > 0 ? '+' : '') + TradeAnalytics.formatCurrency(metrics.grossProfit, false));
+    setEl('repTotalLoss', (metrics.grossLoss > 0 ? '-' : '') + TradeAnalytics.formatCurrency(metrics.grossLoss, false));
+    setEl('repNetPnL', TradeAnalytics.formatCurrency(metrics.totalPnL, true), returnCls);
+    setEl('repEndingBalance', TradeAnalytics.formatCurrency(endingBal, false));
+    setEl('repPeriodReturn', `${metrics.totalPnL > 0 ? '+' : ''}${returnPct}%`, returnCls);
+
+    // Performance Summary
+    setEl('repPerfTotalTrades', metrics.totalTrades);
+    setEl('repWinningTrades', metrics.winnersCount);
+    setEl('repLosingTrades', metrics.losersCount);
+    setEl('repTradeWinRate', `${metrics.winRate}% (${metrics.winnersCount} / ${metrics.totalTrades})`);
+    setEl('repGrossProfit', (metrics.grossProfit > 0 ? '+' : '') + TradeAnalytics.formatCurrency(metrics.grossProfit, false));
+    setEl('repGrossLoss', (metrics.grossLoss > 0 ? '-' : '') + TradeAnalytics.formatCurrency(metrics.grossLoss, false));
+    setEl('repPerfNetPnL', TradeAnalytics.formatCurrency(metrics.totalPnL, true), returnCls);
+    setEl('repAvgWinTrade', (metrics.avgWin > 0 ? '+' : '') + TradeAnalytics.formatCurrency(metrics.avgWin, false));
+    setEl('repAvgLossTrade', (metrics.avgLoss > 0 ? '-' : '') + TradeAnalytics.formatCurrency(metrics.avgLoss, false));
+    const winLossRatio = metrics.avgLoss > 0
+      ? (metrics.avgWin / metrics.avgLoss).toFixed(2) + ' : 1'
+      : (metrics.avgWin > 0 ? '∞ : 1' : '0.00 : 1');
+    setEl('repWinLossRatio', winLossRatio);
+
+    // Trading Day Performance
+    setEl('repProfitableDays', metrics.winningDaysCount);
+    setEl('repLosingDays', metrics.losingDaysCount);
+    setEl('repBreakEvenDays', metrics.breakEvenDaysCount);
+    setEl('repProfitableDayRate', `${metrics.dayWinRate}% (${metrics.winningDaysCount} / ${metrics.totalTradingDays})`);
+    setEl('repPerfActiveDays', metrics.totalTradingDays);
+
+    // Key Metrics
+    setEl('repProfitFactor', metrics.profitFactor.toFixed(2));
+    const avgTrade = metrics.totalTrades > 0 ? (metrics.totalPnL / metrics.totalTrades) : 0;
+    setEl('repAvgPerTrade', TradeAnalytics.formatCurrency(avgTrade, true), avgTrade > 0 ? 'stat-val profit' : (avgTrade < 0 ? 'stat-val loss' : 'stat-val'));
+
+    // Find Best & Worst Trading Days
+    let bestDay = null;
+    let bestPnL = -Infinity;
+    let worstDay = null;
+    let worstPnL = Infinity;
+    Object.entries(metrics.dailyMap || {}).forEach(([dKey, dData]) => {
+      if (dData.trades > 0) {
+        if (dData.pnl > bestPnL) {
+          bestPnL = dData.pnl;
+          bestDay = dKey;
+        }
+        if (dData.pnl < worstPnL) {
+          worstPnL = dData.pnl;
+          worstDay = dKey;
+        }
+      }
+    });
+
+    const formatDayDetailed = (dKey, pnl) => {
+      if (!dKey) return '-';
+      const [y, m, d] = dKey.split('-').map(Number);
+      const dateObj = new Date(Date.UTC(y, m - 1, d));
+      const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+      const dayPad = String(d).padStart(2, '0');
+      const mName = TradeAnalytics.getMonthShortName(m - 1, true);
+      const formatted = TradeAnalytics.formatCurrency(pnl, true);
+      return `${dayName}, ${dayPad} ${mName} ${y} (${formatted})`;
+    };
+
+    setEl('repBestTradingDay', bestDay ? formatDayDetailed(bestDay, bestPnL) : '-');
+    setEl('repWorstTradingDay', worstDay ? formatDayDetailed(worstDay, worstPnL) : '-');
+
+    // Render Daily Results Split Tables
+    this.renderReportDailyTables(startDate, endDate, metrics.dailyMap);
+
+    // Final Verdict
+    const verdictTitleEl = document.getElementById('repVerdictTitle');
+    const verdictSubEl = document.getElementById('repVerdictSub');
+    if (metrics.totalTrades === 0) {
+      if (verdictTitleEl) {
+        verdictTitleEl.innerText = 'NO DATA';
+        verdictTitleEl.className = 'rep-verdict-headline';
+      }
+      if (verdictSubEl) verdictSubEl.innerText = 'Upload trade reports or select dates to generate your verdict.';
+    } else if (metrics.totalPnL > 0) {
+      if (verdictTitleEl) {
+        verdictTitleEl.innerText = 'PROFITABLE ' + (isFullMonth ? 'MONTH' : 'PERIOD');
+        verdictTitleEl.className = 'rep-verdict-headline profit';
+      }
+      if (verdictSubEl) verdictSubEl.innerText = `Net P&L for ${periodLabel} is positive. (+${TradeAnalytics.formatCurrency(metrics.totalPnL, false)})`;
+    } else if (metrics.totalPnL < 0) {
+      if (verdictTitleEl) {
+        verdictTitleEl.innerText = 'LOSING ' + (isFullMonth ? 'MONTH' : 'PERIOD');
+        verdictTitleEl.className = 'rep-verdict-headline loss';
+      }
+      if (verdictSubEl) verdictSubEl.innerText = `Net P&L for ${periodLabel} is negative. (-${TradeAnalytics.formatCurrency(Math.abs(metrics.totalPnL), false)})`;
+    } else {
+      if (verdictTitleEl) {
+        verdictTitleEl.innerText = 'BREAK-EVEN ' + (isFullMonth ? 'MONTH' : 'PERIOD');
+        verdictTitleEl.className = 'rep-verdict-headline';
+      }
+      if (verdictSubEl) verdictSubEl.innerText = `Net P&L for ${periodLabel} is neutral. (${TradeAnalytics.formatCurrency(0)})`;
+    }
+
+    // Dynamic Insights & Observations
+    const insightsList = document.getElementById('repInsightsList');
+    if (insightsList) {
+      insightsList.innerHTML = '';
+      if (metrics.totalTrades === 0) {
+        const li = document.createElement('li');
+        li.innerText = 'No trade executions available for this date range. Upload CSV or MT5 reports to generate trading insights.';
+        insightsList.appendChild(li);
+      } else {
+        const bullets = [];
+        bullets.push(`Total ${metrics.totalTrades} trades with a ${metrics.winRate}% win rate. (${metrics.winnersCount} wins / ${metrics.losersCount} losses).`);
+        bullets.push(`${metrics.winningDaysCount} out of ${metrics.totalTradingDays} active days were profitable (${metrics.dayWinRate}% profitable day rate).`);
+        const netOutcomeText = metrics.totalPnL >= 0
+          ? `a net profit of +${TradeAnalytics.formatCurrency(metrics.totalPnL, false)}`
+          : `a net loss of -${TradeAnalytics.formatCurrency(Math.abs(metrics.totalPnL), false)}`;
+        bullets.push(`Total profit ${TradeAnalytics.formatCurrency(metrics.grossProfit, false)} and total loss ${TradeAnalytics.formatCurrency(metrics.grossLoss, false)}, resulting in ${netOutcomeText} for ${periodLabel}.`);
+        if (bestDay) bullets.push(`Best trading day: ${formatDayDetailed(bestDay, bestPnL)}.`);
+        if (worstDay) bullets.push(`Worst trading day: ${formatDayDetailed(worstDay, worstPnL)}.`);
+        bullets.push(`Profit factor is ${metrics.profitFactor.toFixed(2)} and average per trade is ${TradeAnalytics.formatCurrency(avgTrade, true)}.`);
+
+        // Dynamic analytical observation matching screenshot style
+        if (metrics.totalPnL < 0 && metrics.winRate >= 50) {
+          bullets.push(`Win rate remained healthy above 50%, but larger losses on drawdowns pulled overall net returns negative. Consider tightening risk parameters.`);
+        } else if (metrics.totalPnL >= 0 && metrics.winRate >= 50) {
+          bullets.push(`Consistent win rate combined with positive risk-reward payoff drove steady capital appreciation across active trading sessions.`);
+        } else if (metrics.totalPnL >= 0 && metrics.winRate < 50) {
+          bullets.push(`Strong risk-reward asymmetry allowed profitable outcomes despite a lower trade frequency win rate.`);
+        } else {
+          bullets.push(`Execution discipline during drawdowns remains critical to protect capital during high-volatility sessions.`);
+        }
+
+        bullets.forEach(b => {
+          const li = document.createElement('li');
+          li.innerText = b;
+          insightsList.appendChild(li);
+        });
+      }
+    }
+  },
+
+  /**
+   * Render Split 2-Column Daily Results Table
+   */
+  renderReportDailyTables(startDate, endDate, dailyMap) {
+    const tbody1 = document.getElementById('repDailyTableBody1');
+    const tbody2 = document.getElementById('repDailyTableBody2');
+    if (!tbody1 || !tbody2) return;
+
+    tbody1.innerHTML = '';
+    tbody2.innerHTML = '';
+
+    if (!startDate || !endDate) return;
+
+    const startObj = new Date(startDate);
+    const endObj = new Date(endDate);
+    const daysList = [];
+
+    const cur = new Date(startObj);
+    while (cur <= endObj) {
+      const y = cur.getUTCFullYear();
+      const m = String(cur.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(cur.getUTCDate()).padStart(2, '0');
+      const dKey = `${y}-${m}-${d}`;
+      const mShort = TradeAnalytics.getMonthShortName(cur.getUTCMonth(), true);
+      const label = `${cur.getUTCDate()} ${mShort}`;
+      const dData = dailyMap ? dailyMap[dKey] : null;
+
+      daysList.push({
+        key: dKey,
+        label,
+        trades: dData ? dData.trades : 0,
+        wins: dData ? dData.wins : 0,
+        losses: dData ? dData.losses : 0,
+        pnl: dData ? dData.pnl : 0
+      });
+
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+
+    const mid = Math.ceil(daysList.length / 2);
+    const half1 = daysList.slice(0, mid);
+    const half2 = daysList.slice(mid);
+
+    const makeRow = (day) => {
+      const tr = document.createElement('tr');
+      if (day.trades === 0) {
+        tr.innerHTML = `
+          <td>${day.label}</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+          <td>-</td>
+        `;
+      } else {
+        const pnlCls = day.pnl > 0 ? 'profit' : (day.pnl < 0 ? 'loss' : '');
+        const pnlStr = TradeAnalytics.formatCurrency(day.pnl, true);
+        tr.innerHTML = `
+          <td><strong>${day.label}</strong></td>
+          <td>${day.trades}</td>
+          <td>${day.wins > 0 ? day.wins : '-'}</td>
+          <td>${day.losses > 0 ? day.losses : '-'}</td>
+          <td class="${pnlCls}">${pnlStr}</td>
+        `;
+      }
+      return tr;
+    };
+
+    half1.forEach(d => tbody1.appendChild(makeRow(d)));
+    half2.forEach(d => tbody2.appendChild(makeRow(d)));
+  },
+
+  /**
+   * Export the Trading Report Statement to PDF (Guaranteed 1-Page Fit)
+   */
+  downloadReportPDF() {
+    const sheet = document.getElementById('tradingReportSheet');
+    if (!sheet) return;
+
+    const btn = document.getElementById('btnDownloadReportPDF');
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="spin">
+          <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+          <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+        <span>Exporting PDF (1 Page)...</span>
+      `;
+    }
+
+    this.showToast('Generating single-page PDF trading report...', 'info');
+
+    const start = this.reportState.startDate || 'start';
+    const end = this.reportState.endDate || 'end';
+    const filename = `TradeForge_Report_${start}_to_${end}.pdf`;
+
+    // Apply PDF single-page fit mode
+    sheet.classList.add('rep-pdf-single-page');
+
+    const cleanup = () => {
+      sheet.classList.remove('rep-pdf-single-page');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    };
+
+    if (typeof html2pdf !== 'undefined') {
+      const opt = {
+        margin: [4, 4, 4, 4],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          logging: false
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: 'avoid-all' }
+      };
+
+      html2pdf().set(opt).from(sheet).save().then(() => {
+        cleanup();
+        this.showToast('Trading report PDF (1 page) downloaded successfully!', 'success');
+      }).catch(err => {
+        console.error('html2pdf generation error:', err);
+        cleanup();
+        this.showToast('Opening native print dialog to save as PDF...', 'info');
+        window.print();
+      });
+    } else {
+      cleanup();
+      this.showToast('Opening native print dialog to save as PDF...', 'info');
+      window.print();
+    }
   },
 
   /**
@@ -1832,7 +2436,7 @@ const App = {
       tradelog: 'Trade Log',
       'strategy-bot': 'Fourge AI',
       mt5: 'MetaTrader 5 (MT5)',
-      reports: 'Reports & Performance',
+      reports: 'Trading Journal Report',
       insights: 'AI & Rule Insights',
       strategies: 'Playbooks & Notes',
       notebook: 'Playbooks & Notes',
@@ -2542,6 +3146,9 @@ const App = {
         }
       });
     }
+
+    // Initialize Trading Report event listeners
+    this.initReportListeners();
   },
 
   /**
