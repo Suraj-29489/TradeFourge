@@ -24,10 +24,275 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- Custom Stylesheets -->
+  <script>
+    (function () {
+      var VALID = { classic: '#141D21', midnight: '#0B1218', light: '#F1F5F9' };
+      var theme = 'classic';
+      try {
+        var raw = localStorage.getItem('tradeforge_theme');
+        if (!raw) {
+          var s = localStorage.getItem('tradeforge_settings');
+          if (s) {
+            var parsed = JSON.parse(s);
+            if (parsed && parsed.theme) raw = parsed.theme;
+          }
+        }
+        var norm = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
+        if (VALID[norm]) theme = norm;
+      } catch (e) {}
+      document.documentElement.setAttribute('data-theme', theme);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta && VALID[theme]) meta.setAttribute('content', VALID[theme]);
+    })();
+  </script>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/auth.css">
 </head>
-<body>
+<body class="auth-locked">
+
+  <!-- ==================== AUTHENTICATION GATE (LOGIN / CREATE ACCOUNT) ==================== -->
+  <section id="authGateView" class="auth-gate-view" aria-label="TradeForge Authentication" aria-hidden="false">
+    <div class="auth-gate-grid-glow" aria-hidden="true"></div>
+
+    <div class="auth-shell">
+      <div class="auth-card">
+        <!-- Brand Identity -->
+        <header class="auth-brand-header">
+          <div class="auth-logo-badge" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <defs>
+                <linearGradient id="tfGradAuth" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#B3D6FE"/>
+                  <stop offset="50%" stop-color="#87AEFA"/>
+                  <stop offset="100%" stop-color="#6E7AF4"/>
+                </linearGradient>
+              </defs>
+              <path d="M 5.06 5.11 C 4.75 5.11 4.5 5.36 4.5 5.67 L 4.5 7.36 C 4.5 7.67 4.75 7.92 5.06 7.92 L 10.59 7.92 L 10.59 18.33 C 10.59 18.64 10.85 18.89 11.16 18.89 L 12.84 18.89 C 13.15 18.89 13.41 18.64 13.41 18.33 L 13.41 13.97 L 17.72 13.97 C 18.03 13.97 18.28 13.72 18.28 13.41 L 18.28 11.91 C 18.28 11.6 18.03 11.34 17.72 11.34 L 13.41 11.34 L 13.41 7.92 L 18.94 7.92 C 19.25 7.92 19.5 7.67 19.5 7.36 L 19.5 5.67 C 19.5 5.36 19.25 5.11 18.94 5.11 Z" fill="url(#tfGradAuth)"/>
+            </svg>
+          </div>
+          <h1 class="auth-brand-title">TradeForge</h1>
+          <p class="auth-brand-subtitle">Your Trading Performance. One Workspace.</p>
+        </header>
+
+        <!-- Returning Google Session Shortcut -->
+        <div class="auth-returning-google" id="authReturningGoogleBox" hidden>
+          <div class="auth-returning-user">
+            <img id="authReturningAvatar" class="auth-returning-avatar" alt="Google Profile" hidden>
+            <span id="authReturningInitials" class="auth-returning-initials">G</span>
+            <div class="auth-returning-meta">
+              <div class="auth-returning-name" id="authReturningName">Google Account</div>
+              <div class="auth-returning-email" id="authReturningEmail">user@gmail.com</div>
+            </div>
+          </div>
+          <button type="button" class="auth-returning-btn" id="authReturningReconnectBtn">
+            <span class="auth-spinner" aria-hidden="true"></span>
+            <span>Reconnect</span>
+          </button>
+        </div>
+
+        <!-- Segmented Control -->
+        <div class="auth-tabs" id="authTabs" role="tablist" aria-label="Authentication Mode" data-active-tab="login">
+          <div class="auth-tab-indicator" aria-hidden="true"></div>
+          <button type="button" class="auth-tab-btn active" id="authTabLogin" role="tab" aria-selected="true" aria-controls="authLoginPanel">Login</button>
+          <button type="button" class="auth-tab-btn" id="authTabRegister" role="tab" aria-selected="false" aria-controls="authRegisterPanel">Create Account</button>
+        </div>
+
+        <!-- Status / Validation Alert Banner -->
+        <div class="auth-alert info" id="authAlertBox" role="status" aria-live="polite" hidden>
+          <svg class="auth-alert-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <div class="auth-alert-content">
+            <div class="auth-alert-title" id="authAlertTitle"></div>
+            <div class="auth-alert-message" id="authAlertMessage"></div>
+            <button type="button" class="auth-alert-action" id="authAlertActionBtn" hidden></button>
+          </div>
+          <button type="button" class="auth-alert-close" id="authAlertCloseBtn" aria-label="Dismiss notification">&times;</button>
+        </div>
+
+        <!-- PANEL 1: LOGIN -->
+        <div class="auth-panel" id="authLoginPanel" role="tabpanel" aria-labelledby="authTabLogin">
+          <form id="authLoginForm" class="auth-form" novalidate>
+            <div class="auth-field">
+              <label class="auth-label" for="authLoginEmail">Email address</label>
+              <div class="auth-input-wrap">
+                <input type="email" id="authLoginEmail" class="auth-input" placeholder="trader@domain.com" autocomplete="email" inputmode="email" required>
+              </div>
+              <div class="auth-field-error" id="authLoginEmailError" aria-live="polite"></div>
+            </div>
+
+            <div class="auth-field">
+              <label class="auth-label" for="authLoginPassword">Password</label>
+              <div class="auth-input-wrap">
+                <input type="password" id="authLoginPassword" class="auth-input has-toggle" placeholder="Enter your password" autocomplete="current-password" minlength="8" required>
+                <button type="button" class="auth-password-toggle" data-target="authLoginPassword" aria-label="Show password" aria-pressed="false">
+                  <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="auth-field-error" id="authLoginPasswordError" aria-live="polite"></div>
+            </div>
+
+            <div class="auth-row-between">
+              <label class="auth-checkbox-label" for="authRememberMe">
+                <input type="checkbox" id="authRememberMe" class="auth-checkbox-input">
+                <span>Remember me</span>
+              </label>
+              <button type="button" class="auth-link-btn" id="authForgotPasswordBtn">Forgot password?</button>
+            </div>
+
+            <button type="submit" class="auth-btn auth-btn-primary" id="authLoginSubmitBtn">
+              <span class="auth-spinner" aria-hidden="true"></span>
+              <span>Sign In</span>
+            </button>
+          </form>
+
+          <div class="auth-divider">or</div>
+
+          <button type="button" class="auth-btn auth-btn-google" id="authGoogleLoginBtn">
+            <span class="auth-spinner" aria-hidden="true"></span>
+            <svg class="auth-google-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
+              <path fill="#34A853" d="M12 24c3.3 0 6.08-1.09 8.1-2.96l-3.88-3.05c-1.09.73-2.49 1.16-4.22 1.16-3.25 0-6-2.19-6.98-5.14H1.02v3.14C3.05 21.17 7.21 24 12 24Z"/>
+              <path fill="#FBBC05" d="M5.02 14.01c-.25-.73-.39-1.52-.39-2.33s.14-1.6.39-2.33V6.21H1.02A11.98 11.98 0 0 0 0 11.68c0 1.93.46 3.76 1.02 5.47l4-3.14Z"/>
+              <path fill="#EA4335" d="M12 4.75c1.79 0 3.4.62 4.67 1.83l3.5-3.5C18.07 1.19 15.3 0 12 0 7.21 0 3.05 2.83 1.02 6.86l4 3.14c.98-2.95 3.73-5.25 6.98-5.25Z"/>
+            </svg>
+            <span>Continue with Google</span>
+          </button>
+        </div>
+
+        <!-- PANEL 2: CREATE ACCOUNT -->
+        <div class="auth-panel" id="authRegisterPanel" role="tabpanel" aria-labelledby="authTabRegister" hidden>
+          <form id="authRegisterForm" class="auth-form" novalidate>
+            <div class="auth-field">
+              <label class="auth-label" for="authRegisterName">Full name</label>
+              <div class="auth-input-wrap">
+                <input type="text" id="authRegisterName" class="auth-input" placeholder="Your full name" autocomplete="name" required>
+              </div>
+              <div class="auth-field-error" id="authRegisterNameError" aria-live="polite"></div>
+            </div>
+
+            <div class="auth-field">
+              <label class="auth-label" for="authRegisterEmail">Email address</label>
+              <div class="auth-input-wrap">
+                <input type="email" id="authRegisterEmail" class="auth-input" placeholder="trader@domain.com" autocomplete="email" inputmode="email" required>
+              </div>
+              <div class="auth-field-error" id="authRegisterEmailError" aria-live="polite"></div>
+            </div>
+
+            <div class="auth-field">
+              <label class="auth-label" for="authRegisterPassword">Password</label>
+              <div class="auth-input-wrap">
+                <input type="password" id="authRegisterPassword" class="auth-input has-toggle" placeholder="Minimum 8 characters" autocomplete="new-password" minlength="8" required>
+                <button type="button" class="auth-password-toggle" data-target="authRegisterPassword" aria-label="Show password" aria-pressed="false">
+                  <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="auth-field-error" id="authRegisterPasswordError" aria-live="polite"></div>
+            </div>
+
+            <div class="auth-field">
+              <label class="auth-label" for="authRegisterConfirmPassword">Confirm password</label>
+              <div class="auth-input-wrap">
+                <input type="password" id="authRegisterConfirmPassword" class="auth-input has-toggle" placeholder="Re-enter your password" autocomplete="new-password" minlength="8" required>
+                <button type="button" class="auth-password-toggle" data-target="authRegisterConfirmPassword" aria-label="Show password" aria-pressed="false">
+                  <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
+                </button>
+              </div>
+              <div class="auth-field-error" id="authRegisterConfirmPasswordError" aria-live="polite"></div>
+            </div>
+
+            <div class="auth-field">
+              <label class="auth-checkbox-label" for="authRegisterTerms">
+                <input type="checkbox" id="authRegisterTerms" class="auth-checkbox-input">
+                <span>
+                  I agree to the
+                  <button type="button" class="auth-link-btn" id="authTermsTriggerBtn" aria-expanded="false" aria-controls="authTermsInlineBox">Terms &amp; Conditions</button>
+                </span>
+              </label>
+              <div class="auth-terms-inline" id="authTermsInlineBox" hidden>
+                TradeForge is a personal trading analytics journal. Your journal data is stored locally in your browser and, when connected with Google, synced privately inside your own Google Drive (<code>My Drive / TradeForge</code>) using <code>drive.file</code> scope. TradeForge provides analytics only and does not offer financial advice.
+              </div>
+              <div class="auth-field-error" id="authRegisterTermsError" aria-live="polite"></div>
+            </div>
+
+            <button type="submit" class="auth-btn auth-btn-primary" id="authRegisterSubmitBtn">
+              <span class="auth-spinner" aria-hidden="true"></span>
+              <span>Create Account</span>
+            </button>
+          </form>
+
+          <div class="auth-divider">or</div>
+
+          <button type="button" class="auth-btn auth-btn-google" id="authGoogleRegisterBtn">
+            <span class="auth-spinner" aria-hidden="true"></span>
+            <svg class="auth-google-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
+              <path fill="#34A853" d="M12 24c3.3 0 6.08-1.09 8.1-2.96l-3.88-3.05c-1.09.73-2.49 1.16-4.22 1.16-3.25 0-6-2.19-6.98-5.14H1.02v3.14C3.05 21.17 7.21 24 12 24Z"/>
+              <path fill="#FBBC05" d="M5.02 14.01c-.25-.73-.39-1.52-.39-2.33s.14-1.6.39-2.33V6.21H1.02A11.98 11.98 0 0 0 0 11.68c0 1.93.46 3.76 1.02 5.47l4-3.14Z"/>
+              <path fill="#EA4335" d="M12 4.75c1.79 0 3.4.62 4.67 1.83l3.5-3.5C18.07 1.19 15.3 0 12 0 7.21 0 3.05 2.83 1.02 6.86l4 3.14c.98-2.95 3.73-5.25 6.98-5.25Z"/>
+            </svg>
+            <span>Sign up with Google</span>
+          </button>
+        </div>
+
+        <!-- PANEL 3: FORGOT PASSWORD -->
+        <div class="auth-panel" id="authForgotPanel" hidden>
+          <div class="auth-subpanel-head">
+            <h2 class="auth-subpanel-title">Reset your password</h2>
+            <p class="auth-subpanel-desc">Enter your account email and we will send password recovery instructions.</p>
+          </div>
+
+          <form id="authForgotForm" class="auth-form" novalidate>
+            <div class="auth-field">
+              <label class="auth-label" for="authForgotEmail">Email address</label>
+              <div class="auth-input-wrap">
+                <input type="email" id="authForgotEmail" class="auth-input" placeholder="trader@domain.com" autocomplete="email" inputmode="email" required>
+              </div>
+              <div class="auth-field-error" id="authForgotEmailError" aria-live="polite"></div>
+            </div>
+
+            <button type="submit" class="auth-btn auth-btn-primary" id="authForgotSubmitBtn">
+              <span class="auth-spinner" aria-hidden="true"></span>
+              <span>Send Reset Link</span>
+            </button>
+
+            <button type="button" class="auth-btn auth-btn-secondary" id="authBackToLoginBtn">
+              Back to Login
+            </button>
+          </form>
+        </div>
+
+        <!-- Card Footer -->
+        <footer class="auth-card-footer">
+          <span class="auth-tagline">Trade smarter. Track better.</span>
+        </footer>
+      </div>
+    </div>
+  </section>
 
   <!-- Full-Window Drag & Drop CSV Overlay -->
   <div id="windowDragOverlay" class="window-drag-overlay">
@@ -174,10 +439,10 @@
       </nav>
 
       <div class="sidebar-footer">
-        <div class="sidebar-bridge-card">
+        <div class="sidebar-bridge-card" id="sidebarStorageCard" title="Click to manage local &amp; Google Drive storage">
           <div class="bridge-card-top">
-            <span class="status-dot"></span>
-            <span class="bridge-card-title">LOCAL LEDGER ENGINE</span>
+            <span class="status-dot" id="sidebarStorageDot"></span>
+            <span class="bridge-card-title" id="sidebarStorageTitle">LOCAL LEDGER ENGINE</span>
           </div>
           <div class="storage-indicator">
             <span id="storageStatusText">0 trades stored</span>
@@ -309,6 +574,66 @@
             </svg>
             <span>Upload CSV</span>
           </button>
+
+          <!-- Google Account & Cloud Sync Control -->
+          <div class="google-account-control" id="googleAccountControl">
+            <button type="button" class="google-auth-trigger-btn" id="btnGoogleAccountTrigger" aria-expanded="false" aria-haspopup="true" title="Google Account &amp; Drive Sync">
+              <span class="google-g-icon" id="googleTriggerGIcon" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
+                  <path fill="#34A853" d="M12 24c3.3 0 6.08-1.09 8.1-2.96l-3.88-3.05c-1.09.73-2.49 1.16-4.22 1.16-3.25 0-6-2.19-6.98-5.14H1.02v3.14C3.05 21.17 7.21 24 12 24Z"/>
+                  <path fill="#FBBC05" d="M5.02 14.01c-.25-.73-.39-1.52-.39-2.33s.14-1.6.39-2.33V6.21H1.02A11.98 11.98 0 0 0 0 11.68c0 1.93.46 3.76 1.02 5.47l4-3.14Z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.79 0 3.4.62 4.67 1.83l3.5-3.5C18.07 1.19 15.3 0 12 0 7.21 0 3.05 2.83 1.02 6.86l4 3.14c.98-2.95 3.73-5.25 6.98-5.25Z"/>
+                </svg>
+              </span>
+              <img class="google-avatar-img" id="googleHeaderAvatar" alt="Google Profile" style="display: none;">
+              <span class="google-avatar-initials" id="googleHeaderInitials" style="display: none;">TF</span>
+              <span class="google-trigger-label" id="googleHeaderLabel">Continue with Google</span>
+              <span class="cloud-sync-dot local" id="googleHeaderSyncDot" style="display: none;"></span>
+            </button>
+
+            <div class="google-account-dropdown" id="googleAccountDropdown">
+              <div class="google-dropdown-profile">
+                <div class="google-dropdown-avatar-wrap">
+                  <img class="google-dropdown-avatar" id="googleDropdownAvatar" alt="Google Profile" style="display: none;">
+                  <span class="google-dropdown-initials" id="googleDropdownInitials">G</span>
+                </div>
+                <div class="google-dropdown-identity">
+                  <div class="google-dropdown-name" id="googleDropdownName">Google Account</div>
+                  <div class="google-dropdown-email" id="googleDropdownEmail">Not signed in</div>
+                </div>
+              </div>
+
+              <div class="google-dropdown-sync-box">
+                <div class="google-dropdown-sync-row">
+                  <span class="cloud-status-pill local" id="googleDropdownStatusBadge">LOCAL ONLY</span>
+                  <span class="google-dropdown-drive-path">My Drive / TradeForge</span>
+                </div>
+                <div class="google-dropdown-lastsync" id="googleDropdownLastSync">Waiting for sync</div>
+              </div>
+
+              <div class="google-dropdown-actions">
+                <button type="button" class="google-dropdown-btn highlight" id="btnGoogleDropdownResolveMig" style="display: none;">
+                  Resolve Data Migration
+                </button>
+                <button type="button" class="google-dropdown-btn highlight" id="btnGoogleDropdownReconnect" style="display: none;">
+                  Reconnect Google Session
+                </button>
+                <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownSync">
+                  Sync Now
+                </button>
+                <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownSwitch">
+                  Switch Google Account
+                </button>
+                <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownSettings">
+                  Cloud Storage Settings
+                </button>
+                <button type="button" class="google-dropdown-btn danger" id="btnGoogleDropdownSignOut">
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -761,6 +1086,26 @@
             </div>
             <div class="section-body">
               <div class="calendar-grid" id="calendarGrid"></div>
+              <div class="calendar-heatmap-legend" id="calendarHeatmapLegend" aria-label="Daily P&amp;L heatmap intensity scale">
+                <span class="heatmap-legend-note" id="calendarHeatmapLegendNote">Intensity scaled by daily P&amp;L % of starting capital (5 tiers each side)</span>
+                <div class="heatmap-legend-scale" aria-hidden="true">
+                  <span class="heatmap-scale-edge loss">Loss (&le;-2%)</span>
+                  <div class="heatmap-scale-swatches">
+                    <span class="heatmap-swatch neg-5" title="High Loss (&le; -2.0%)"></span>
+                    <span class="heatmap-swatch neg-4" title="Strong Loss (-1.0% to -2.0%)"></span>
+                    <span class="heatmap-swatch neg-3" title="Moderate Loss (-0.5% to -1.0%)"></span>
+                    <span class="heatmap-swatch neg-2" title="Mild Loss (-0.25% to -0.5%)"></span>
+                    <span class="heatmap-swatch neg-1" title="Small Loss (0% to -0.25%)"></span>
+                    <span class="heatmap-swatch neutral" title="Flat / No Net P&amp;L (0%)"></span>
+                    <span class="heatmap-swatch pos-1" title="Small Profit (0% to +0.25%)"></span>
+                    <span class="heatmap-swatch pos-2" title="Mild Profit (+0.25% to +0.5%)"></span>
+                    <span class="heatmap-swatch pos-3" title="Moderate Profit (+0.5% to +1.0%)"></span>
+                    <span class="heatmap-swatch pos-4" title="Strong Profit (+1.0% to +2.0%)"></span>
+                    <span class="heatmap-swatch pos-5" title="High Profit (&ge; +2.0%)"></span>
+                  </div>
+                  <span class="heatmap-scale-edge profit">Profit (&ge;+2%)</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -2001,6 +2346,125 @@
           </div>
 
           <div class="settings-grid">
+            <!-- Block 0: Global Appearance & Theme System -->
+            <div class="section-card appearance-settings-card" id="appearanceSettingsCard" style="grid-column: 1 / -1;">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">APPEARANCE &amp; THEME</div>
+                  <div class="section-subtitle">Select your workspace visual theme across charts, calendar heatmap, reports &amp; terminal surfaces</div>
+                </div>
+                <span class="appearance-active-pill" id="settingsActiveThemeLabel">Classic (Default)</span>
+              </div>
+              <div class="section-body">
+                <div class="appearance-theme-grid" id="appearanceThemeGrid" role="radiogroup" aria-label="Workspace Color Theme">
+                  <!-- Theme 1: Classic -->
+                  <button type="button" class="appearance-theme-card active" data-theme-choice="classic" role="radio" aria-checked="true">
+                    <div class="theme-preview-box classic" aria-hidden="true">
+                      <div class="theme-preview-sidebar">
+                        <span class="theme-preview-nav-dot active"></span>
+                        <span class="theme-preview-nav-dot"></span>
+                        <span class="theme-preview-nav-dot"></span>
+                      </div>
+                      <div class="theme-preview-main">
+                        <div class="theme-preview-topbar">
+                          <span class="theme-preview-pill"></span>
+                          <span class="theme-preview-cta"></span>
+                        </div>
+                        <div class="theme-preview-cards">
+                          <div class="theme-preview-mini-card">
+                            <span class="theme-preview-line"></span>
+                            <span class="theme-preview-metric pos"></span>
+                          </div>
+                          <div class="theme-preview-mini-card">
+                            <span class="theme-preview-line"></span>
+                            <span class="theme-preview-metric neg"></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="appearance-theme-meta">
+                      <div class="appearance-theme-title-row">
+                        <span class="appearance-theme-name">Classic</span>
+                        <span class="appearance-theme-check" aria-hidden="true">&#10003;</span>
+                      </div>
+                      <div class="appearance-theme-desc">Original obsidian slate terminal surfaces with crisp institutional contrast.</div>
+                      <div class="appearance-theme-badge">Default Dark Terminal</div>
+                    </div>
+                  </button>
+
+                  <!-- Theme 2: Midnight -->
+                  <button type="button" class="appearance-theme-card" data-theme-choice="midnight" role="radio" aria-checked="false">
+                    <div class="theme-preview-box midnight" aria-hidden="true">
+                      <div class="theme-preview-sidebar">
+                        <span class="theme-preview-nav-dot active"></span>
+                        <span class="theme-preview-nav-dot"></span>
+                        <span class="theme-preview-nav-dot"></span>
+                      </div>
+                      <div class="theme-preview-main">
+                        <div class="theme-preview-topbar">
+                          <span class="theme-preview-pill"></span>
+                          <span class="theme-preview-cta"></span>
+                        </div>
+                        <div class="theme-preview-cards">
+                          <div class="theme-preview-mini-card">
+                            <span class="theme-preview-line"></span>
+                            <span class="theme-preview-metric pos"></span>
+                          </div>
+                          <div class="theme-preview-mini-card">
+                            <span class="theme-preview-line"></span>
+                            <span class="theme-preview-metric neg"></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="appearance-theme-meta">
+                      <div class="appearance-theme-title-row">
+                        <span class="appearance-theme-name">Midnight</span>
+                        <span class="appearance-theme-check" aria-hidden="true">&#10003;</span>
+                      </div>
+                      <div class="appearance-theme-desc">Deep navy gradients, charcoal panels, cyan borders &amp; electric blue CTAs.</div>
+                      <div class="appearance-theme-badge">Auth Terminal Aesthetic</div>
+                    </div>
+                  </button>
+
+                  <!-- Theme 3: Light -->
+                  <button type="button" class="appearance-theme-card" data-theme-choice="light" role="radio" aria-checked="false">
+                    <div class="theme-preview-box light" aria-hidden="true">
+                      <div class="theme-preview-sidebar">
+                        <span class="theme-preview-nav-dot active"></span>
+                        <span class="theme-preview-nav-dot"></span>
+                        <span class="theme-preview-nav-dot"></span>
+                      </div>
+                      <div class="theme-preview-main">
+                        <div class="theme-preview-topbar">
+                          <span class="theme-preview-pill"></span>
+                          <span class="theme-preview-cta"></span>
+                        </div>
+                        <div class="theme-preview-cards">
+                          <div class="theme-preview-mini-card">
+                            <span class="theme-preview-line"></span>
+                            <span class="theme-preview-metric pos"></span>
+                          </div>
+                          <div class="theme-preview-mini-card">
+                            <span class="theme-preview-line"></span>
+                            <span class="theme-preview-metric neg"></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="appearance-theme-meta">
+                      <div class="appearance-theme-title-row">
+                        <span class="appearance-theme-name">Light</span>
+                        <span class="appearance-theme-check" aria-hidden="true">&#10003;</span>
+                      </div>
+                      <div class="appearance-theme-desc">Clean off-white canvas, pure white elevated cards &amp; accessible daylight tones.</div>
+                      <div class="appearance-theme-badge">Clean Daylight Workspace</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <!-- Block 1: Account & Currency Configuration -->
             <div class="section-card">
               <div class="section-header">
@@ -2060,6 +2524,75 @@
                   <div class="settings-action">
                     <button type="button" class="btn-secondary" onclick="StrategyBotManager.exportChat()">Export Chat</button>
                     <button type="button" class="btn-secondary" onclick="StrategyBotManager.clearChat()">Reset Chat</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Block 4: Google Account & Google Drive Cloud Storage -->
+            <div class="section-card cloud-settings-card" id="googleCloudSettingsCard" style="grid-column: 1 / -1;">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">GOOGLE ACCOUNT &amp; GOOGLE DRIVE CLOUD STORAGE</div>
+                  <div class="section-subtitle">Per-user cloud storage in My Drive / TradeForge / (isolated by Google account)</div>
+                </div>
+                <span class="cloud-status-pill local" id="cloudSettingsStatusBadge">LOCAL ONLY</span>
+              </div>
+              <div class="section-body settings-card-body">
+                <div class="settings-row">
+                  <div class="cloud-account-summary" id="cloudSettingsAccountSummary">
+                    <div class="cloud-account-avatar-box">
+                      <img id="cloudSettingsAvatar" class="google-dropdown-avatar" alt="Google Profile" style="display: none;">
+                      <span id="cloudSettingsInitials" class="google-dropdown-initials">G</span>
+                    </div>
+                    <div>
+                      <div class="settings-label" id="cloudSettingsAccountTitle">Not signed in to Google</div>
+                      <div class="settings-desc" id="cloudSettingsAccountSubtitle">
+                        Sign in with your Google account to create &amp; sync your journal in <code>My Drive / TradeForge</code> across devices.
+                      </div>
+                    </div>
+                  </div>
+                  <div class="settings-action">
+                    <button type="button" class="btn-google-signin" id="btnSettingsGoogleSignIn">
+                      <svg width="15" height="15" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
+                        <path fill="#34A853" d="M12 24c3.3 0 6.08-1.09 8.1-2.96l-3.88-3.05c-1.09.73-2.49 1.16-4.22 1.16-3.25 0-6-2.19-6.98-5.14H1.02v3.14C3.05 21.17 7.21 24 12 24Z"/>
+                        <path fill="#FBBC05" d="M5.02 14.01c-.25-.73-.39-1.52-.39-2.33s.14-1.6.39-2.33V6.21H1.02A11.98 11.98 0 0 0 0 11.68c0 1.93.46 3.76 1.02 5.47l4-3.14Z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.79 0 3.4.62 4.67 1.83l3.5-3.5C18.07 1.19 15.3 0 12 0 7.21 0 3.05 2.83 1.02 6.86l4 3.14c.98-2.95 3.73-5.25 6.98-5.25Z"/>
+                      </svg>
+                      <span>Continue with Google</span>
+                    </button>
+                    <button type="button" class="btn-upload-csv" id="btnSettingsGoogleReconnect" style="display: none;">Reconnect Google</button>
+                    <button type="button" class="btn-secondary" id="btnSettingsGoogleSwitch" style="display: none;">Switch Account</button>
+                    <button type="button" class="btn-danger-outline" id="btnSettingsGoogleSignOut" style="display: none;">Sign Out</button>
+                  </div>
+                </div>
+
+                <div class="settings-row" id="cloudSettingsSyncRow">
+                  <div>
+                    <div class="settings-label">Drive Folder &amp; Synchronization</div>
+                    <div class="settings-desc" id="cloudSettingsSyncDetail">
+                      Folder path: <code>My Drive / TradeForge / User Data/</code>, <code>Backups/</code> &amp; <code>Exports/</code> (drive.file permission)
+                    </div>
+                  </div>
+                  <div class="settings-action">
+                    <button type="button" class="btn-upload-csv" id="btnSettingsResolveMigration" style="display: none;">Resolve Migration</button>
+                    <button type="button" class="btn-secondary" id="btnSettingsSyncNow" style="display: none;">Sync Now</button>
+                    <button type="button" class="btn-secondary" id="btnSettingsBackupNow" style="display: none;">Backup Now</button>
+                    <button type="button" class="btn-secondary" id="btnSettingsRestoreCloud" style="display: none;">Restore from Cloud</button>
+                  </div>
+                </div>
+
+                <div class="settings-row cloud-backups-row" id="cloudBackupsRow" style="display: none; flex-direction: column; align-items: stretch;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; flex-wrap: wrap;">
+                    <div>
+                      <div class="settings-label">Google Drive Backups (<code>My Drive / TradeForge / Backups</code>)</div>
+                      <div class="settings-desc">Restore any automatic or manual snapshot created prior to migrations or restores.</div>
+                    </div>
+                    <button type="button" class="btn-secondary" id="btnSettingsRefreshBackups">Refresh Backups</button>
+                  </div>
+                  <div class="cloud-backups-list" id="cloudBackupsListContainer">
+                    <div class="cloud-backup-empty">No cloud backups listed yet.</div>
                   </div>
                 </div>
               </div>
@@ -2414,16 +2947,24 @@
     </div>
   </div>
 
-  <!-- 3. Trade Detail Inspection Modal -->
+  <!-- 3. Trade Detail Inspection & Edit Modal -->
   <div class="modal-overlay" id="tradeDetailModal">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">EXECUTION INSPECTION REPORT</div>
+        <div class="modal-title" id="tradeDetailModalTitle">EXECUTION INSPECTION REPORT</div>
         <button class="modal-close modal-close-btn">&times;</button>
       </div>
       <div class="modal-body" id="tradeDetailBody"></div>
-      <div class="modal-footer">
-        <button class="btn-secondary modal-cancel-btn">Close</button>
+      <div class="modal-footer" id="tradeDetailFooter" style="justify-content: space-between;">
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-danger-outline" id="btnDeleteDetailTrade">Delete Trade</button>
+          <button type="button" class="btn-secondary" id="btnEditDetailTrade">Edit Trade</button>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-secondary" id="btnCancelEditDetailTrade" style="display: none;">Cancel Edit</button>
+          <button type="button" class="btn-primary" id="btnSaveDetailTrade" style="display: none;">Save Changes</button>
+          <button type="button" class="btn-secondary modal-cancel-btn" id="btnCloseDetailModal">Close</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2521,13 +3062,79 @@
     </div>
   </div>
 
+  <!-- 7. Cloud Data Migration & Source Selection Modal -->
+  <div class="modal-overlay" id="cloudMigrationModal">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 10px;">
+          <span class="preview-badge-icon" style="color: var(--logo-blue); border-color: var(--logo-blue-border); background: var(--logo-blue-bg);">DRIVE</span>
+          <span id="cloudMigrationModalTitle">CONNECT GOOGLE DRIVE STORAGE</span>
+        </div>
+        <button class="modal-close" id="closeCloudMigrationModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="csv-preview-file-banner">
+          <div class="file-banner-left">
+            <div>
+              <div class="preview-filename" id="cloudMigrationAccountEmail">account@gmail.com</div>
+              <div class="preview-filesize" id="cloudMigrationSubtitle">
+                Review how you would like to sync your local browser journal with My Drive / TradeForge.
+              </div>
+            </div>
+          </div>
+          <span class="cloud-status-pill syncing" id="cloudMigrationScenarioPill">SAFE MIGRATION</span>
+        </div>
+
+        <div class="csv-preview-metrics-grid">
+          <div class="preview-metric-box">
+            <span class="preview-metric-lbl">LOCAL BROWSER TRADES</span>
+            <span class="preview-metric-val" id="migLocalCount">0</span>
+            <span class="preview-metric-sub" id="migLocalSub">Never auto-deleted</span>
+          </div>
+          <div class="preview-metric-box">
+            <span class="preview-metric-lbl">GOOGLE DRIVE TRADES</span>
+            <span class="preview-metric-val" id="migCloudCount">0</span>
+            <span class="preview-metric-sub" id="migCloudSub">In TradeForge / User Data</span>
+          </div>
+          <div class="preview-metric-box">
+            <span class="preview-metric-lbl">DUPLICATE CHECK</span>
+            <span class="preview-metric-val" id="migDupCount">0</span>
+            <span class="preview-metric-sub" id="migDupSub">Duplicates skipped</span>
+          </div>
+        </div>
+
+        <div class="csv-import-mode-box" id="cloudMigrationOptionsBox">
+          <!-- Populated dynamically based on migration scenario -->
+        </div>
+
+        <div class="csv-preview-daterange" id="cloudMigrationSafetyNote">
+          Your anonymous local browser data remains preserved untouched for offline / signed-out use.
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn-secondary" id="btnSignOutFromMigration">Sign Out</button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-secondary" id="btnDeferCloudMigration">Decide Later</button>
+          <button type="button" class="btn-primary" id="btnConfirmCloudMigration">Confirm &amp; Sync</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Application Scripts -->
   <script src="js/xlsx.full.min.js"></script>
   <script src="js/html2pdf.bundle.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/config.local.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/google-auth.js"></script>
+  <script src="js/google-drive.js"></script>
+  <script src="js/cloud-sync.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/parser.js"></script>
   <script src="js/analytics.js"></script>
   <script src="js/charts.js"></script>

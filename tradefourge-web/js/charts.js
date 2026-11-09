@@ -1,6 +1,6 @@
 /**
  * TradeForge V3.0 Institutional - Chart.js Visualizations Manager
- * Exness-Inspired Midnight & Controlled Performance Palette (#35B779 / #4CAF78 Positive, #E05260 / #E4777F Negative)
+ * Dynamically theme-aware via CSS Custom Properties across Classic, Midnight & Light themes
  */
 
 const ChartManager = {
@@ -19,11 +19,100 @@ const ChartManager = {
 
   currentPnLView: 'cumulative', // 'cumulative', 'daily', 'weekly', 'monthly'
   currentLotView: 'pnl', // 'pnl' or 'trades'
+  _lastMetrics: null,
+  _lastWeekly: null,
+  _lastPnlPerf: null,
+
+  /**
+   * Read active CSS custom properties from documentElement with safe Classic defaults
+   */
+  getThemeTokens() {
+    const fallback = {
+      profitChart: '#35B779',
+      lossChart: '#E05260',
+      profit: '#4CAF78',
+      loss: '#E4777F',
+      profitBorder: '#24563D',
+      lossBorder: '#63313A',
+      grid: '#243239',
+      tick: '#64748b',
+      tickStrong: '#94a3b8',
+      tooltipBg: '#141D21',
+      tooltipBorder: '#243239',
+      tooltipTitle: '#94a3b8',
+      tooltipBody: '#f1f5f9',
+      emptyTrack: '#141D21',
+      profitFill: 'rgba(18, 53, 38, 0.55)',
+      lossFill: 'rgba(58, 29, 37, 0.55)',
+      neutralAccent: '#c0c1ff',
+      bgCard: '#141D21',
+      bgLowest: '#141D21',
+      borderColor: '#283034',
+      textMain: '#E6ECEF'
+    };
+
+    if (typeof window === 'undefined' || typeof document === 'undefined' || typeof getComputedStyle !== 'function') {
+      return fallback;
+    }
+
+    const styles = getComputedStyle(document.documentElement);
+    const read = (prop, def) => {
+      const val = styles.getPropertyValue(prop);
+      return val && val.trim() ? val.trim() : def;
+    };
+
+    return {
+      profitChart: read('--profit-chart', fallback.profitChart),
+      lossChart: read('--loss-chart', fallback.lossChart),
+      profit: read('--profit', fallback.profit),
+      loss: read('--loss', fallback.loss),
+      profitBorder: read('--profit-border', fallback.profitBorder),
+      lossBorder: read('--loss-border', fallback.lossBorder),
+      grid: read('--chart-grid', fallback.grid),
+      tick: read('--chart-tick', fallback.tick),
+      tickStrong: read('--chart-tick-strong', fallback.tickStrong),
+      tooltipBg: read('--chart-tooltip-bg', fallback.tooltipBg),
+      tooltipBorder: read('--chart-tooltip-border', fallback.tooltipBorder),
+      tooltipTitle: read('--chart-tooltip-title', fallback.tooltipTitle),
+      tooltipBody: read('--chart-tooltip-body', fallback.tooltipBody),
+      emptyTrack: read('--chart-empty-track', fallback.emptyTrack),
+      profitFill: read('--chart-profit-fill', fallback.profitFill),
+      lossFill: read('--chart-loss-fill', fallback.lossFill),
+      neutralAccent: read('--chart-neutral-accent', fallback.neutralAccent),
+      bgCard: read('--bg-card', fallback.bgCard),
+      bgLowest: read('--bg-lowest', fallback.bgLowest),
+      borderColor: read('--border-color', fallback.borderColor),
+      textMain: read('--text-main', fallback.textMain)
+    };
+  },
+
+  /**
+   * Re-render all cached/active Chart.js visualizations when global theme changes
+   */
+  refreshTheme(metricsOverride = null) {
+    const metrics = metricsOverride || this._lastMetrics;
+    if (metrics) {
+      this.updateDashboardCharts(metrics);
+      if (this.instances.symbolBar || this.instances.weekdayBar) {
+        this.renderReportsCharts(metrics);
+      }
+      if (this.instances.durationDist || this.instances.durationOutcome || this.instances.lotSizeBar) {
+        this.updateAnalyticsCharts(metrics);
+      }
+    }
+    if (this._lastWeekly) {
+      this.renderWeeklyPerformanceChart(this._lastWeekly.trades, this._lastWeekly.filterConfig);
+    }
+    if (this._lastPnlPerf) {
+      this.renderPnLPerformanceChart(this._lastPnlPerf.trades, this._lastPnlPerf.filterConfig);
+    }
+  },
 
   /**
    * Render or update all charts from calculated metrics
    */
   updateDashboardCharts(metrics) {
+    this._lastMetrics = metrics;
     this.renderTradesDonut(metrics);
     this.renderDaysDonut(metrics);
     this.renderMainPnLChart(metrics);
@@ -33,6 +122,8 @@ const ChartManager = {
    * Render Winning % by Trades Donut Chart + Telemetry
    */
   renderTradesDonut(metrics) {
+    this._lastMetrics = metrics;
+    const t = this.getThemeTokens();
     const ctx = document.getElementById('tradesDonutCanvas') || document.getElementById('tradesDonutChart');
 
     const wins = metrics.winnersCount || 0;
@@ -46,12 +137,12 @@ const ChartManager = {
     const labelEl = document.getElementById('tradesDonutCenterVal') || document.getElementById('donutTradesWinPct');
     if (labelEl) {
       labelEl.innerText = `${metrics.winRate}%`;
-      labelEl.style.color = metrics.winRate >= 50 ? '#4CAF78' : (hasData ? '#E4777F' : '#f1f5f9');
+      labelEl.style.color = metrics.winRate >= 50 ? t.profit : (hasData ? t.loss : t.textMain);
     }
     const v3PctEl = document.getElementById('donutTradesWinPct');
     if (v3PctEl) {
       v3PctEl.innerText = winPctStr;
-      v3PctEl.style.color = metrics.winRate >= 50 ? '#4CAF78' : (hasData ? '#E4777F' : '#f1f5f9');
+      v3PctEl.style.color = metrics.winRate >= 50 ? t.profit : (hasData ? t.loss : t.textMain);
     }
 
     const badgeEl = document.getElementById('donutTradesBadge');
@@ -101,7 +192,7 @@ const ChartManager = {
     if (existing) existing.destroy();
 
     const dataValues = hasData ? [wins, losses] : [1];
-    const backgroundColors = hasData ? ['#35B779', '#E05260'] : ['#141D21'];
+    const backgroundColors = hasData ? [t.profitChart, t.lossChart] : [t.emptyTrack];
 
     this.instances.tradesDonut = new Chart(ctx, {
       type: 'doughnut',
@@ -121,11 +212,11 @@ const ChartManager = {
           legend: { display: false },
           tooltip: {
             enabled: hasData,
-            backgroundColor: '#141D21',
-            borderColor: '#243239',
+            backgroundColor: t.tooltipBg,
+            borderColor: t.tooltipBorder,
             borderWidth: 1,
-            titleColor: '#94a3b8',
-            bodyColor: '#f1f5f9',
+            titleColor: t.tooltipTitle,
+            bodyColor: t.tooltipBody,
             callbacks: {
               label: (context) => {
                 const label = context.dataIndex === 0 ? 'Winners' : 'Losers';
@@ -142,6 +233,8 @@ const ChartManager = {
    * Render Winning % by Days Donut Chart + Telemetry
    */
   renderDaysDonut(metrics) {
+    this._lastMetrics = metrics;
+    const t = this.getThemeTokens();
     const ctx = document.getElementById('daysDonutCanvas') || document.getElementById('daysDonutChart');
 
     const wins = metrics.winningDaysCount || 0;
@@ -156,12 +249,12 @@ const ChartManager = {
     const labelEl = document.getElementById('daysDonutCenterVal') || document.getElementById('donutDaysWinPct');
     if (labelEl) {
       labelEl.innerText = `${metrics.dayWinRate}%`;
-      labelEl.style.color = metrics.dayWinRate >= 50 ? '#4CAF78' : (hasData ? '#E4777F' : '#f1f5f9');
+      labelEl.style.color = metrics.dayWinRate >= 50 ? t.profit : (hasData ? t.loss : t.textMain);
     }
     const v3PctEl = document.getElementById('donutDaysWinPct');
     if (v3PctEl) {
       v3PctEl.innerText = dayPctStr;
-      v3PctEl.style.color = metrics.dayWinRate >= 50 ? '#4CAF78' : (hasData ? '#E4777F' : '#f1f5f9');
+      v3PctEl.style.color = metrics.dayWinRate >= 50 ? t.profit : (hasData ? t.loss : t.textMain);
     }
 
     const badgeEl = document.getElementById('donutDaysBadge');
@@ -202,7 +295,7 @@ const ChartManager = {
     if (existing) existing.destroy();
 
     const dataValues = hasData ? [wins, losses] : [1];
-    const backgroundColors = hasData ? ['#35B779', '#E05260'] : ['#141D21'];
+    const backgroundColors = hasData ? [t.profitChart, t.lossChart] : [t.emptyTrack];
 
     this.instances.daysDonut = new Chart(ctx, {
       type: 'doughnut',
@@ -222,11 +315,11 @@ const ChartManager = {
           legend: { display: false },
           tooltip: {
             enabled: hasData,
-            backgroundColor: '#141D21',
-            borderColor: '#243239',
+            backgroundColor: t.tooltipBg,
+            borderColor: t.tooltipBorder,
             borderWidth: 1,
-            titleColor: '#94a3b8',
-            bodyColor: '#f1f5f9',
+            titleColor: t.tooltipTitle,
+            bodyColor: t.tooltipBody,
             callbacks: {
               label: (context) => {
                 const label = context.dataIndex === 0 ? 'Winning Days' : 'Losing Days';
@@ -243,6 +336,8 @@ const ChartManager = {
    * Render Main P&L Chart (Cumulative Line, Daily Bar, Weekly Bar, or Monthly Bar)
    */
   renderMainPnLChart(metrics) {
+    this._lastMetrics = metrics;
+    const t = this.getThemeTokens();
     const ctx = document.getElementById('pnlMainCanvas') || document.getElementById('mainPnLChart');
     if (!ctx) return;
 
@@ -261,18 +356,18 @@ const ChartManager = {
       if (subtextEl) subtextEl.innerText = 'Realized Equity Growth';
       const timeseries = metrics.cumulativeTimeseries || [];
 
-      const labels = timeseries.map(t => {
-        const parts = t.date.split('-');
+      const labels = timeseries.map(pt => {
+        const parts = pt.date.split('-');
         if (parts.length === 3) {
           return `${parts[1]}/${parts[2]}/${parts[0].slice(2)}`;
         }
-        return t.date;
+        return pt.date;
       });
 
-      const values = timeseries.map(t => t.cumulativePnL);
+      const values = timeseries.map(pt => pt.cumulativePnL);
       const finalVal = values.length > 0 ? values[values.length - 1] : 0;
-      const lineColor = finalVal >= 0 ? '#35B779' : '#E05260';
-      const fillColor = finalVal >= 0 ? 'rgba(18, 53, 38, 0.55)' : 'rgba(58, 29, 37, 0.55)';
+      const lineColor = finalVal >= 0 ? t.profitChart : t.lossChart;
+      const fillColor = finalVal >= 0 ? t.profitFill : t.lossFill;
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'line',
@@ -289,7 +384,7 @@ const ChartManager = {
             pointRadius: values.length > 30 ? 0 : 3.5,
             pointHoverRadius: 6,
             pointBackgroundColor: lineColor,
-            pointBorderColor: '#141D21',
+            pointBorderColor: t.bgCard,
             pointBorderWidth: 1.5
           }]
         },
@@ -303,10 +398,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#141D21',
-              titleColor: '#94a3b8',
-              bodyColor: '#f1f5f9',
-              borderColor: '#243239',
+              backgroundColor: t.tooltipBg,
+              titleColor: t.tooltipTitle,
+              bodyColor: t.tooltipBody,
+              borderColor: t.tooltipBorder,
               borderWidth: 1,
               padding: 12,
               displayColors: false,
@@ -323,13 +418,13 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: '#243239', drawBorder: false },
-              ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 8 }
+              grid: { color: t.grid, drawBorder: false },
+              ticks: { color: t.tick, font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 8 }
             },
             y: {
-              grid: { color: '#243239', drawBorder: false },
+              grid: { color: t.grid, drawBorder: false },
               ticks: {
-                color: '#64748b',
+                color: t.tick,
                 font: { size: 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
@@ -344,10 +439,10 @@ const ChartManager = {
       if (subtextEl) subtextEl.innerText = 'Week-by-Week Net Profit / Loss';
       const timeseries = metrics.weeklyTimeseries || [];
 
-      const labels = timeseries.map(t => t.shortLabel || t.label || t.weekStart);
-      const values = timeseries.map(t => t.weeklyPnL);
-      const barColors = values.map(v => v >= 0 ? '#35B779' : '#E05260');
-      const borderColors = values.map(v => v >= 0 ? '#24563D' : '#63313A');
+      const labels = timeseries.map(pt => pt.shortLabel || pt.label || pt.weekStart);
+      const values = timeseries.map(pt => pt.weeklyPnL);
+      const barColors = values.map(v => v >= 0 ? t.profitChart : t.lossChart);
+      const borderColors = values.map(v => v >= 0 ? t.profitBorder : t.lossBorder);
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'bar',
@@ -368,10 +463,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#141D21',
-              titleColor: '#94a3b8',
-              bodyColor: '#f1f5f9',
-              borderColor: '#243239',
+              backgroundColor: t.tooltipBg,
+              titleColor: t.tooltipTitle,
+              bodyColor: t.tooltipBody,
+              borderColor: t.tooltipBorder,
               borderWidth: 1,
               padding: 12,
               callbacks: {
@@ -394,13 +489,13 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: '#243239', drawBorder: false },
-              ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 10 }
+              grid: { color: t.grid, drawBorder: false },
+              ticks: { color: t.tick, font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 10 }
             },
             y: {
-              grid: { color: '#243239', drawBorder: false },
+              grid: { color: t.grid, drawBorder: false },
               ticks: {
-                color: '#64748b',
+                color: t.tick,
                 font: { size: 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
@@ -415,10 +510,10 @@ const ChartManager = {
       if (subtextEl) subtextEl.innerText = 'Month-by-Month Net Profit / Loss';
       const timeseries = metrics.monthlyTimeseries || [];
 
-      const labels = timeseries.map(t => t.label);
-      const values = timeseries.map(t => t.monthlyPnL);
-      const barColors = values.map(v => v >= 0 ? '#35B779' : '#E05260');
-      const borderColors = values.map(v => v >= 0 ? '#24563D' : '#63313A');
+      const labels = timeseries.map(pt => pt.label);
+      const values = timeseries.map(pt => pt.monthlyPnL);
+      const barColors = values.map(v => v >= 0 ? t.profitChart : t.lossChart);
+      const borderColors = values.map(v => v >= 0 ? t.profitBorder : t.lossBorder);
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'bar',
@@ -439,10 +534,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#141D21',
-              titleColor: '#94a3b8',
-              bodyColor: '#f1f5f9',
-              borderColor: '#243239',
+              backgroundColor: t.tooltipBg,
+              titleColor: t.tooltipTitle,
+              bodyColor: t.tooltipBody,
+              borderColor: t.tooltipBorder,
               borderWidth: 1,
               padding: 12,
               callbacks: {
@@ -473,17 +568,17 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: '#243239', drawBorder: false },
+              grid: { color: t.grid, drawBorder: false },
               ticks: {
-                color: '#64748b',
+                color: t.tick,
                 font: { size: 11, family: "'JetBrains Mono', monospace" },
                 autoSkip: false
               }
             },
             y: {
-              grid: { color: '#243239', drawBorder: false },
+              grid: { color: t.grid, drawBorder: false },
               ticks: {
-                color: '#64748b',
+                color: t.tick,
                 font: { size: 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
@@ -499,17 +594,17 @@ const ChartManager = {
       if (subtextEl) subtextEl.innerText = 'Day-by-Day Net Profit / Loss';
       const timeseries = metrics.dailyTimeseries || [];
 
-      const labels = timeseries.map(t => {
-        const parts = t.date.split('-');
+      const labels = timeseries.map(pt => {
+        const parts = pt.date.split('-');
         if (parts.length === 3) {
           return `${parts[1]}/${parts[2]}/${parts[0].slice(2)}`;
         }
-        return t.date;
+        return pt.date;
       });
 
-      const values = timeseries.map(t => t.dailyPnL);
-      const barColors = values.map(v => v >= 0 ? '#35B779' : '#E05260');
-      const borderColors = values.map(v => v >= 0 ? '#24563D' : '#63313A');
+      const values = timeseries.map(pt => pt.dailyPnL);
+      const barColors = values.map(v => v >= 0 ? t.profitChart : t.lossChart);
+      const borderColors = values.map(v => v >= 0 ? t.profitBorder : t.lossBorder);
 
       this.instances.pnlMain = new Chart(ctx, {
         type: 'bar',
@@ -530,10 +625,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#141D21',
-              titleColor: '#94a3b8',
-              bodyColor: '#f1f5f9',
-              borderColor: '#243239',
+              backgroundColor: t.tooltipBg,
+              titleColor: t.tooltipTitle,
+              bodyColor: t.tooltipBody,
+              borderColor: t.tooltipBorder,
               borderWidth: 1,
               padding: 12,
               callbacks: {
@@ -548,13 +643,13 @@ const ChartManager = {
           },
           scales: {
             x: {
-              grid: { color: '#243239', drawBorder: false },
-              ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 8 }
+              grid: { color: t.grid, drawBorder: false },
+              ticks: { color: t.tick, font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 8 }
             },
             y: {
-              grid: { color: '#243239', drawBorder: false },
+              grid: { color: t.grid, drawBorder: false },
               ticks: {
-                color: '#64748b',
+                color: t.tick,
                 font: { size: 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
@@ -572,6 +667,8 @@ const ChartManager = {
    * Render Dashboard Weekly Performance 7-Day Bar Chart (Sunday -> Saturday)
    */
   renderWeeklyPerformanceChart(trades = [], filterConfig = { mode: 'all' }) {
+    this._lastWeekly = { trades, filterConfig };
+    const t = this.getThemeTokens();
     const canvas = document.getElementById('weeklyPerformanceCanvas') || document.getElementById('weeklyPerfChart');
     const emptyEl = document.getElementById('weeklyPerfEmpty');
     const canvasWrap = document.getElementById('weeklyPerfCanvasWrap');
@@ -593,13 +690,13 @@ const ChartManager = {
     // 1. Filter trades based on filterConfig
     let scopedTrades = trades;
     if (filterConfig.mode === 'month' && filterConfig.monthKey) {
-      scopedTrades = trades.filter(t => {
-        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+      scopedTrades = trades.filter(tr => {
+        const dStr = (tr.closeTime || tr.openTime || '').slice(0, 10);
         return dStr && dStr.startsWith(filterConfig.monthKey);
       });
     } else if (filterConfig.mode === 'week' && filterConfig.weekStart && filterConfig.weekEnd) {
-      scopedTrades = trades.filter(t => {
-        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+      scopedTrades = trades.filter(tr => {
+        const dStr = (tr.closeTime || tr.openTime || '').slice(0, 10);
         return dStr && dStr >= filterConfig.weekStart && dStr <= filterConfig.weekEnd;
       });
     }
@@ -647,8 +744,8 @@ const ChartManager = {
     if (canvasWrap) canvasWrap.style.display = 'block';
 
     const values = buckets.map(b => Math.round(b.pnl * 100) / 100);
-    const barColors = values.map(v => v > 0 ? '#35B779' : (v < 0 ? '#E05260' : '#141D21'));
-    const borderColors = values.map(v => v > 0 ? '#24563D' : (v < 0 ? '#63313A' : '#243239'));
+    const barColors = values.map(v => v > 0 ? t.profitChart : (v < 0 ? t.lossChart : t.bgLowest));
+    const borderColors = values.map(v => v > 0 ? t.profitBorder : (v < 0 ? t.lossBorder : t.borderColor));
     const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
 
     this.instances.weeklyPerformance = new Chart(canvas, {
@@ -671,10 +768,10 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#141D21',
-            titleColor: '#94a3b8',
-            bodyColor: '#f1f5f9',
-            borderColor: '#243239',
+            backgroundColor: t.tooltipBg,
+            titleColor: t.tooltipTitle,
+            bodyColor: t.tooltipBody,
+            borderColor: t.tooltipBorder,
             borderWidth: 1,
             padding: 12,
             callbacks: {
@@ -706,13 +803,13 @@ const ChartManager = {
         },
         scales: {
           x: {
-            grid: { color: '#243239', drawBorder: false },
-            ticks: { color: '#94a3b8', font: { size: 11, weight: '700', family: "'JetBrains Mono', monospace" } }
+            grid: { color: t.grid, drawBorder: false },
+            ticks: { color: t.tickStrong, font: { size: 11, weight: '700', family: "'JetBrains Mono', monospace" } }
           },
           y: {
-            grid: { color: '#243239', drawBorder: false },
+            grid: { color: t.grid, drawBorder: false },
             ticks: {
-              color: '#64748b',
+              color: t.tick,
               font: { size: 11, family: "'JetBrains Mono', monospace" },
               callback: (val) => {
                 const isNeg = val < 0;
@@ -729,6 +826,8 @@ const ChartManager = {
    * Render Dashboard Bottommost P&L Performance Line Chart (P&L Over Time)
    */
   renderPnLPerformanceChart(trades = [], filterConfig = { mode: 'all' }) {
+    this._lastPnlPerf = { trades, filterConfig };
+    const t = this.getThemeTokens();
     const canvas = document.getElementById('pnlPerformanceCanvas') || document.getElementById('pnlPerfChart');
     const emptyEl = document.getElementById('pnlPerfEmpty');
     const canvasWrap = document.getElementById('pnlPerfCanvasWrap');
@@ -752,20 +851,20 @@ const ChartManager = {
     // 1. Filter trades based on filterConfig
     let scopedTrades = trades;
     if (filterConfig.mode === 'monthly' && filterConfig.selectedMonth) {
-      scopedTrades = trades.filter(t => {
-        const dStr = (t.closeTime || t.openTime || '').slice(0, 7);
+      scopedTrades = trades.filter(tr => {
+        const dStr = (tr.closeTime || tr.openTime || '').slice(0, 7);
         return dStr === filterConfig.selectedMonth;
       });
     } else if (filterConfig.mode === 'yearly' && filterConfig.selectedYear) {
-      scopedTrades = trades.filter(t => {
-        const dStr = (t.closeTime || t.openTime || '').slice(0, 4);
+      scopedTrades = trades.filter(tr => {
+        const dStr = (tr.closeTime || tr.openTime || '').slice(0, 4);
         return dStr === String(filterConfig.selectedYear);
       });
     } else if (filterConfig.mode === 'custom') {
       const start = filterConfig.customStart;
       const end = filterConfig.customEnd;
-      scopedTrades = trades.filter(t => {
-        const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+      scopedTrades = trades.filter(tr => {
+        const dStr = (tr.closeTime || tr.openTime || '').slice(0, 10);
         return dStr && (!start || dStr >= start) && (!end || dStr <= end);
       });
     }
@@ -788,13 +887,13 @@ const ChartManager = {
 
     // 3. Group by unique date (YYYY-MM-DD)
     const dailyMap = {};
-    sortedTrades.forEach(t => {
-      const dStr = (t.closeTime || t.openTime || '').slice(0, 10);
+    sortedTrades.forEach(tr => {
+      const dStr = (tr.closeTime || tr.openTime || '').slice(0, 10);
       if (!dStr || dStr.length < 10) return;
       if (!dailyMap[dStr]) {
         dailyMap[dStr] = { date: dStr, pnl: 0, count: 0, wins: 0, losses: 0 };
       }
-      const pnl = Number(t.profit) || 0;
+      const pnl = Number(tr.profit) || 0;
       dailyMap[dStr].pnl += pnl;
       dailyMap[dStr].count += 1;
       if (pnl > 0) dailyMap[dStr].wins += 1;
@@ -825,14 +924,14 @@ const ChartManager = {
       };
     });
 
-    const labels = timeseries.map(t => t.shortLabel);
-    const values = timeseries.map(t => t.cumulativePnL);
+    const labels = timeseries.map(pt => pt.shortLabel);
+    const values = timeseries.map(pt => pt.cumulativePnL);
     const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
     const finalVal = values[values.length - 1] || 0;
     const isNetPositive = finalVal >= 0;
-    const lineColor = isNetPositive ? '#35B779' : '#E05260';
-    const pointColor = isNetPositive ? '#35B779' : '#E05260';
-    const fillColor = isNetPositive ? 'rgba(18, 53, 38, 0.55)' : 'rgba(58, 29, 37, 0.55)';
+    const lineColor = isNetPositive ? t.profitChart : t.lossChart;
+    const pointColor = isNetPositive ? t.profitChart : t.lossChart;
+    const fillColor = isNetPositive ? t.profitFill : t.lossFill;
 
     this.instances.pnlPerformance = new Chart(canvas, {
       type: 'line',
@@ -849,7 +948,7 @@ const ChartManager = {
           pointRadius: values.length > 35 ? 0 : 3.5,
           pointHoverRadius: 6,
           pointBackgroundColor: pointColor,
-          pointBorderColor: '#141D21',
+          pointBorderColor: t.bgCard,
           pointBorderWidth: 1.5
         }]
       },
@@ -863,10 +962,10 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#141D21',
-            titleColor: '#94a3b8',
-            bodyColor: '#f1f5f9',
-            borderColor: '#243239',
+            backgroundColor: t.tooltipBg,
+            titleColor: t.tooltipTitle,
+            bodyColor: t.tooltipBody,
+            borderColor: t.tooltipBorder,
             borderWidth: 1,
             padding: 12,
             callbacks: {
@@ -881,7 +980,7 @@ const ChartManager = {
                 const cumVal = item.raw;
                 const cumPrefix = cumVal > 0 ? '+' : (cumVal < 0 ? '-' : '');
                 const formattedCum = `${cumPrefix}${sym}${Math.abs(cumVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                
+
                 const dailyVal = tData ? tData.dailyPnL : 0;
                 const dailyPrefix = dailyVal > 0 ? '+' : (dailyVal < 0 ? '-' : '');
                 const formattedDaily = `${dailyPrefix}${sym}${Math.abs(dailyVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -896,13 +995,13 @@ const ChartManager = {
         },
         scales: {
           x: {
-            grid: { color: '#243239', drawBorder: false },
-            ticks: { color: '#94a3b8', font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 10 }
+            grid: { color: t.grid, drawBorder: false },
+            ticks: { color: t.tickStrong, font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 10 }
           },
           y: {
-            grid: { color: '#243239', drawBorder: false },
+            grid: { color: t.grid, drawBorder: false },
             ticks: {
-              color: '#64748b',
+              color: t.tick,
               font: { size: 11, family: "'JetBrains Mono', monospace" },
               callback: (val) => {
                 const isNeg = val < 0;
@@ -919,11 +1018,13 @@ const ChartManager = {
    * Render Reports View Charts (Symbol breakdown & Day of Week)
    */
   renderReportsCharts(metrics) {
+    this._lastMetrics = metrics;
     this.renderSymbolBarChart(metrics);
     this.renderWeekdayChart(metrics);
   },
 
   renderSymbolBarChart(metrics) {
+    const t = this.getThemeTokens();
     const ctx = document.getElementById('symbolBarCanvas');
     if (!ctx) return;
 
@@ -935,7 +1036,7 @@ const ChartManager = {
     const symbols = (metrics.symbolBreakdown || []).slice(0, 8);
     const labels = symbols.map(s => s.symbol);
     const pnls = symbols.map(s => s.pnl);
-    const colors = pnls.map(p => p >= 0 ? '#35B779' : '#E05260');
+    const colors = pnls.map(p => p >= 0 ? t.profitChart : t.lossChart);
 
     this.instances.symbolBar = new Chart(ctx, {
       type: 'bar',
@@ -955,8 +1056,10 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#141D21',
-            borderColor: '#243239',
+            backgroundColor: t.tooltipBg,
+            titleColor: t.tooltipTitle,
+            bodyColor: t.tooltipBody,
+            borderColor: t.tooltipBorder,
             borderWidth: 1,
             callbacks: {
               label: (item) => `P&L: ${sym}${item.raw.toFixed(2)}`
@@ -965,12 +1068,12 @@ const ChartManager = {
         },
         scales: {
           x: {
-            grid: { color: '#243239' },
-            ticks: { color: '#64748b', font: { family: "'JetBrains Mono', monospace" }, callback: v => `${sym}${v}` }
+            grid: { color: t.grid },
+            ticks: { color: t.tick, font: { family: "'JetBrains Mono', monospace" }, callback: v => `${sym}${v}` }
           },
           y: {
             grid: { display: false },
-            ticks: { color: '#f1f5f9', font: { weight: '600', family: "'JetBrains Mono', monospace" } }
+            ticks: { color: t.tooltipBody, font: { weight: '600', family: "'JetBrains Mono', monospace" } }
           }
         }
       }
@@ -978,6 +1081,7 @@ const ChartManager = {
   },
 
   renderWeekdayChart(metrics) {
+    const t = this.getThemeTokens();
     const ctx = document.getElementById('weekdayBarCanvas');
     if (!ctx) return;
 
@@ -989,7 +1093,7 @@ const ChartManager = {
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     const dayIndices = [1, 2, 3, 4, 5];
     const data = dayIndices.map(idx => Math.round((metrics.weekdayMap[idx] || 0) * 100) / 100);
-    const colors = data.map(d => d >= 0 ? '#35B779' : '#E05260');
+    const colors = data.map(d => d >= 0 ? t.profitChart : t.lossChart);
 
     this.instances.weekdayBar = new Chart(ctx, {
       type: 'bar',
@@ -1008,8 +1112,10 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#141D21',
-            borderColor: '#243239',
+            backgroundColor: t.tooltipBg,
+            titleColor: t.tooltipTitle,
+            bodyColor: t.tooltipBody,
+            borderColor: t.tooltipBorder,
             borderWidth: 1,
             callbacks: {
               label: (item) => `Net P&L: ${sym}${item.raw.toFixed(2)}`
@@ -1019,11 +1125,11 @@ const ChartManager = {
         scales: {
           x: {
             grid: { display: false },
-            ticks: { color: '#f1f5f9', font: { weight: '600', family: "'JetBrains Mono', monospace" } }
+            ticks: { color: t.tooltipBody, font: { weight: '600', family: "'JetBrains Mono', monospace" } }
           },
           y: {
-            grid: { color: '#243239' },
-            ticks: { color: '#64748b', font: { family: "'JetBrains Mono', monospace" }, callback: v => `${sym}${v}` }
+            grid: { color: t.grid },
+            ticks: { color: t.tick, font: { family: "'JetBrains Mono', monospace" }, callback: v => `${sym}${v}` }
           }
         }
       }
@@ -1035,6 +1141,7 @@ const ChartManager = {
    */
   updateAnalyticsCharts(metrics) {
     if (!metrics) return;
+    this._lastMetrics = metrics;
     this.renderDurationChart(metrics.durationMetrics);
     this.renderDurationOutcomeChart(metrics.durationMetrics);
     this.renderLotSizeChart(metrics.lotMetrics, this.currentLotView);
@@ -1044,6 +1151,7 @@ const ChartManager = {
    * Render Trade Duration Distribution Chart
    */
   renderDurationChart(durationMetrics) {
+    const t = this.getThemeTokens();
     const ctx = document.getElementById('durationDistCanvas') || document.getElementById('durationDistributionChart');
     if (!ctx) return;
 
@@ -1071,14 +1179,14 @@ const ChartManager = {
           {
             label: 'Winners',
             data: winData,
-            backgroundColor: '#35B779',
+            backgroundColor: t.profitChart,
             borderRadius: 3,
             stack: 'trades'
           },
           {
             label: 'Losers',
             data: lossData,
-            backgroundColor: '#E05260',
+            backgroundColor: t.lossChart,
             borderRadius: 3,
             stack: 'trades'
           }
@@ -1095,16 +1203,16 @@ const ChartManager = {
             labels: {
               boxWidth: 10,
               boxHeight: 10,
-              color: '#94a3b8',
+              color: t.tickStrong,
               font: { size: 11, family: "'Manrope', sans-serif" }
             }
           },
           tooltip: {
-            backgroundColor: '#141D21',
-            borderColor: '#243239',
+            backgroundColor: t.tooltipBg,
+            borderColor: t.tooltipBorder,
             borderWidth: 1,
-            titleColor: '#f1f5f9',
-            bodyColor: '#94a3b8',
+            titleColor: t.tooltipTitle,
+            bodyColor: t.tooltipBody,
             padding: 10,
             callbacks: {
               afterBody: (tooltipItems) => {
@@ -1125,15 +1233,15 @@ const ChartManager = {
             stacked: true,
             grid: { display: false },
             ticks: {
-              color: '#94a3b8',
+              color: t.tickStrong,
               font: { size: 11, family: "'JetBrains Mono', monospace" }
             }
           },
           y: {
             stacked: true,
-            grid: { color: '#243239', drawBorder: false },
+            grid: { color: t.grid, drawBorder: false },
             ticks: {
-              color: '#64748b',
+              color: t.tick,
               font: { size: 11, family: "'JetBrains Mono', monospace" },
               precision: 0
             }
@@ -1147,6 +1255,7 @@ const ChartManager = {
    * Render Hold Duration vs Trade Outcome Chart (Avg Win Hold vs Avg Loss Hold)
    */
   renderDurationOutcomeChart(durationMetrics) {
+    const t = this.getThemeTokens();
     const ctx = document.getElementById('durationOutcomeChart');
     if (!ctx) return;
 
@@ -1169,8 +1278,8 @@ const ChartManager = {
         datasets: [{
           label: 'Avg Hold Time (mins)',
           data: [winMins, lossMins],
-          backgroundColor: ['#35B779', '#E05260'],
-          borderColor: ['#24563D', '#63313A'],
+          backgroundColor: [t.profitChart, t.lossChart],
+          borderColor: [t.profitBorder, t.lossBorder],
           borderWidth: 1,
           borderRadius: 4,
           maxBarThickness: 36
@@ -1183,11 +1292,11 @@ const ChartManager = {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#141D21',
-            borderColor: '#243239',
+            backgroundColor: t.tooltipBg,
+            borderColor: t.tooltipBorder,
             borderWidth: 1,
-            titleColor: '#f1f5f9',
-            bodyColor: '#94a3b8',
+            titleColor: t.tooltipTitle,
+            bodyColor: t.tooltipBody,
             callbacks: {
               label: (item) => {
                 const isWin = item.dataIndex === 0;
@@ -1200,9 +1309,9 @@ const ChartManager = {
         },
         scales: {
           x: {
-            grid: { color: '#243239', drawBorder: false },
+            grid: { color: t.grid, drawBorder: false },
             ticks: {
-              color: '#64748b',
+              color: t.tick,
               font: { size: 10, family: "'JetBrains Mono', monospace" },
               callback: (v) => `${v}m`
             }
@@ -1210,7 +1319,7 @@ const ChartManager = {
           y: {
             grid: { display: false },
             ticks: {
-              color: '#f1f5f9',
+              color: t.tickStrong,
               font: { size: 11, weight: '700', family: "'Manrope', sans-serif" }
             }
           }
@@ -1224,6 +1333,7 @@ const ChartManager = {
    */
   renderLotSizeChart(lotMetrics, mode = 'pnl') {
     this.currentLotView = mode;
+    const t = this.getThemeTokens();
     const ctx = document.getElementById('lotSizeBarCanvas') || document.getElementById('lotSizeChart');
     if (!ctx) return;
 
@@ -1250,7 +1360,7 @@ const ChartManager = {
           datasets: [{
             label: 'Trade Count',
             data: counts,
-            backgroundColor: '#c0c1ff',
+            backgroundColor: t.neutralAccent,
             borderRadius: 4
           }]
         },
@@ -1260,8 +1370,10 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#141D21',
-              borderColor: '#243239',
+              backgroundColor: t.tooltipBg,
+              titleColor: t.tooltipTitle,
+              bodyColor: t.tooltipBody,
+              borderColor: t.tooltipBorder,
               borderWidth: 1,
               callbacks: {
                 label: (item) => `Trades: ${item.raw}`,
@@ -1277,11 +1389,11 @@ const ChartManager = {
           scales: {
             x: {
               grid: { display: false },
-              ticks: { color: '#94a3b8', font: { size: 11, family: "'JetBrains Mono', monospace" } }
+              ticks: { color: t.tickStrong, font: { size: 11, family: "'JetBrains Mono', monospace" } }
             },
             y: {
-              grid: { color: '#243239', drawBorder: false },
-              ticks: { color: '#64748b', font: { size: 11, family: "'JetBrains Mono', monospace" }, precision: 0 }
+              grid: { color: t.grid, drawBorder: false },
+              ticks: { color: t.tick, font: { size: 11, family: "'JetBrains Mono', monospace" }, precision: 0 }
             }
           }
         }
@@ -1290,8 +1402,8 @@ const ChartManager = {
       // Default: P&L by Lot Size
       const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
       const pnls = groups.map(g => g.netPnL);
-      const bgColors = pnls.map(p => p >= 0 ? '#35B779' : '#E05260');
-      const borderColors = pnls.map(p => p >= 0 ? '#24563D' : '#63313A');
+      const bgColors = pnls.map(p => p >= 0 ? t.profitChart : t.lossChart);
+      const borderColors = pnls.map(p => p >= 0 ? t.profitBorder : t.lossBorder);
 
       this.instances.lotSizeBar = new Chart(ctx, {
         type: 'bar',
@@ -1312,20 +1424,22 @@ const ChartManager = {
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#141D21',
-              borderColor: '#243239',
+              backgroundColor: t.tooltipBg,
+              titleColor: t.tooltipTitle,
+              bodyColor: t.tooltipBody,
+              borderColor: t.tooltipBorder,
               borderWidth: 1,
               callbacks: {
                 label: (item) => {
                   const val = item.raw;
-                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  const sym2 = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   const sign = val >= 0 ? '+' : '-';
-                  return ` Net P&L: ${sign}${sym}${Math.abs(val).toFixed(2)}`;
+                  return ` Net P&L: ${sign}${sym2}${Math.abs(val).toFixed(2)}`;
                 },
                 afterLabel: (item) => {
                   const g = groups[item.dataIndex];
-                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
-                  return `Trades: ${g.trades} | Win Rate: ${g.winRate}% | Avg: ${sym}${g.avgPnL.toFixed(2)}`;
+                  const sym2 = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  return `Trades: ${g.trades} | Win Rate: ${g.winRate}% | Avg: ${sym2}${g.avgPnL.toFixed(2)}`;
                 }
               }
             }
@@ -1333,16 +1447,16 @@ const ChartManager = {
           scales: {
             x: {
               grid: { display: false },
-              ticks: { color: '#94a3b8', font: { size: 11, family: "'JetBrains Mono', monospace" } }
+              ticks: { color: t.tickStrong, font: { size: 11, family: "'JetBrains Mono', monospace" } }
             },
             y: {
-              grid: { color: '#243239', drawBorder: false },
+              grid: { color: t.grid, drawBorder: false },
               ticks: {
-                color: '#64748b',
+                color: t.tick,
                 font: { size: 11, family: "'JetBrains Mono', monospace" },
                 callback: (v) => {
-                  const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
-                  return `${sym}${v}`;
+                  const sym2 = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+                  return `${sym2}${v}`;
                 }
               }
             }

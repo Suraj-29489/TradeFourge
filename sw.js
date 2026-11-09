@@ -3,23 +3,35 @@
  * Enables offline capability, instant load caching, and PWA installation.
  */
 
-const CACHE_NAME = 'tradeforge-v1.0.7';
+const CACHE_NAME = 'tradeforge-v1.4.1';
+const isLocalDevHost = () => {
+  const host = (self && self.location && self.location.hostname) || '';
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+};
 const PRECACHE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './css/style.css',
   './css/components.css',
+  './css/auth.css',
   './js/xlsx.full.min.js',
   './js/html2pdf.bundle.min.js',
-  './js/app.js',
-  './js/analytics.js',
-  './js/calendar.js',
-  './js/charts.js',
-  './js/parser.js',
+  './js/config.js',
   './js/storage.js',
+  './js/theme.js',
+  './js/google-auth.js',
+  './js/google-drive.js',
+  './js/cloud-sync.js',
+  './js/auth.js',
+  './js/parser.js',
+  './js/analytics.js',
+  './js/charts.js',
+  './js/calendar.js',
+  './js/offline-strategy-engine.js',
   './js/strategy-bot.js',
   './js/mt5.js',
+  './js/app.js',
   './assets/icons/icon.svg',
   './assets/icons/favicon.svg',
   './assets/icons/icon-192.png',
@@ -58,6 +70,23 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (!url.protocol.startsWith('http')) return;
 
+  // Never cache dynamic backend APIs, local runtime overrides, or Google Auth/Drive API traffic
+  if (
+    url.origin === self.location.origin &&
+    (url.pathname.startsWith('/api/') || url.pathname.endsWith('/js/config.local.js'))
+  ) {
+    return;
+  }
+
+  if (
+    url.hostname === 'accounts.google.com' ||
+    url.hostname.endsWith('.googleapis.com') ||
+    url.hostname.endsWith('.googleusercontent.com') ||
+    url.hostname === 'apis.google.com'
+  ) {
+    return;
+  }
+
   // Navigation requests: Network-first, fallback to cached index.html
   if (request.mode === 'navigate') {
     event.respondWith(
@@ -66,8 +95,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin assets: Cache-first with background revalidation
+  // Same-origin assets: Network-first on localhost so local edits apply immediately;
+  // Cache-first with background revalidation in production for offline PWA speed.
   if (url.origin === self.location.origin) {
+    if (isLocalDevHost()) {
+      event.respondWith(
+        fetch(request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache));
+            }
+            return networkResponse;
+          })
+          .catch(() => caches.match(request))
+      );
+      return;
+    }
+
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
         if (cachedResponse) {

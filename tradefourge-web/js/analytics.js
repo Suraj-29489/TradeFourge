@@ -820,15 +820,28 @@ const TradeAnalytics = {
    * Format currency values nicely (e.g. +$256.36 or -$112.36)
    * Currency State & Management ($ / ₹)
    */
-  currentCurrency: (typeof localStorage !== 'undefined' && localStorage.getItem('tradeforge_currency')) || 'USD',
+  currentCurrency: (typeof StorageManager !== 'undefined' && StorageManager.getCurrency)
+    ? StorageManager.getCurrency()
+    : ((typeof localStorage !== 'undefined' && localStorage.getItem('tradeforge_currency')) || 'USD'),
 
-  getCurrencySymbol() {
-    return this.currentCurrency === 'INR' ? '₹' : '$';
+  getCurrency() {
+    if (typeof StorageManager !== 'undefined' && StorageManager.getCurrency) {
+      this.currentCurrency = StorageManager.getCurrency();
+    }
+    return this.currentCurrency === 'INR' ? 'INR' : 'USD';
   },
 
-  setCurrency(curr) {
-    this.currentCurrency = curr === 'INR' ? 'INR' : 'USD';
-    if (typeof localStorage !== 'undefined') {
+  getCurrencySymbol() {
+    const curr = this.getCurrency();
+    return curr === 'INR' ? '₹' : '$';
+  },
+
+  setCurrency(curr, options = {}) {
+    const normalized = curr === 'INR' ? 'INR' : 'USD';
+    this.currentCurrency = normalized;
+    if (typeof StorageManager !== 'undefined' && StorageManager.saveCurrency) {
+      StorageManager.saveCurrency(normalized, options);
+    } else if (typeof localStorage !== 'undefined') {
       try {
         localStorage.setItem('tradeforge_currency', this.currentCurrency);
       } catch (e) {
@@ -856,9 +869,19 @@ const TradeAnalytics = {
    * Starting Capital State & Management
    */
   getStartingCapital() {
+    if (typeof StorageManager !== 'undefined' && StorageManager.state && StorageManager.activeNamespace !== 'anonymous') {
+      const val = StorageManager.state.startingCapital;
+      if (val !== null && val !== undefined && !isNaN(Number(val)) && Number(val) > 0) {
+        return Number(val);
+      }
+      return null;
+    }
     if (typeof localStorage !== 'undefined') {
       try {
-        const val = localStorage.getItem('tradeforge_starting_capital');
+        const key = (typeof StorageManager !== 'undefined' && StorageManager._getKeyForNamespace)
+          ? StorageManager._getKeyForNamespace('tradeforge_starting_capital')
+          : 'tradeforge_starting_capital';
+        const val = localStorage.getItem(key);
         if (val !== null && val !== '' && !isNaN(Number(val)) && Number(val) > 0) {
           return Number(val);
         }
@@ -869,8 +892,16 @@ const TradeAnalytics = {
     return null;
   },
 
-  setStartingCapital(val) {
-    if (val === null || val === undefined || val === '' || isNaN(Number(val)) || Number(val) <= 0) {
+  setStartingCapital(val, options = {}) {
+    const cleaned = (val === null || val === undefined || val === '' || isNaN(Number(val)) || Number(val) <= 0)
+      ? null
+      : Math.round(Number(val) * 100) / 100;
+
+    if (typeof StorageManager !== 'undefined' && StorageManager.saveStartingCapital) {
+      return StorageManager.saveStartingCapital(cleaned, options);
+    }
+
+    if (cleaned === null) {
       if (typeof localStorage !== 'undefined') {
         try {
           localStorage.removeItem('tradeforge_starting_capital');
@@ -880,15 +911,14 @@ const TradeAnalytics = {
       }
       return null;
     }
-    const num = Math.round(Number(val) * 100) / 100;
     if (typeof localStorage !== 'undefined') {
       try {
-        localStorage.setItem('tradeforge_starting_capital', String(num));
+        localStorage.setItem('tradeforge_starting_capital', String(cleaned));
       } catch (e) {
         console.warn('Unable to persist starting capital in localStorage:', e);
       }
     }
-    return num;
+    return cleaned;
   },
 
   /**

@@ -31,15 +31,19 @@ const MT5Manager = {
   },
 
   /**
-   * Load saved session from localStorage
+   * Load saved session from localStorage (namespaced via StorageManager when available)
    */
   loadSession() {
     try {
-      const saved = localStorage.getItem(this.storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        this.isConnected = Boolean(parsed.isConnected);
-        this.accountData = parsed.accountData || this.generateDefaultAccountData();
+      const saved = (typeof StorageManager !== 'undefined' && StorageManager.getMt5Session)
+        ? StorageManager.getMt5Session()
+        : (() => {
+            const raw = localStorage.getItem(this.storageKey);
+            return raw ? JSON.parse(raw) : null;
+          })();
+      if (saved && typeof saved === 'object') {
+        this.isConnected = Boolean(saved.isConnected);
+        this.accountData = saved.accountData || this.generateDefaultAccountData();
       } else {
         this.isConnected = false;
         this.accountData = this.generateDefaultAccountData();
@@ -51,14 +55,19 @@ const MT5Manager = {
   },
 
   /**
-   * Save session to localStorage
+   * Save session to localStorage (namespaced via StorageManager when available)
    */
-  saveSession() {
+  saveSession(options = {}) {
+    const payload = {
+      isConnected: this.isConnected,
+      accountData: this.accountData
+    };
     try {
-      localStorage.setItem(this.storageKey, JSON.stringify({
-        isConnected: this.isConnected,
-        accountData: this.accountData
-      }));
+      if (typeof StorageManager !== 'undefined' && StorageManager.saveMt5Session) {
+        StorageManager.saveMt5Session(payload, options);
+      } else {
+        localStorage.setItem(this.storageKey, JSON.stringify(payload));
+      }
     } catch (e) {
       console.warn('Could not save MT5 session to localStorage:', e);
     }
@@ -258,25 +267,42 @@ const MT5Manager = {
 
     const getTradeSig = t => `${t.ticket}|${t.openTime}|${t.closeTime}|${t.type}|${t.lots}|${t.symbol}|${t.openPrice}|${t.closePrice}|${t.profit}|${t.closeReason}`;
     const existingSignatures = new Set((App.trades || []).map(getTradeSig));
+    const existingFingerprints = new Set(
+      typeof StorageManager !== 'undefined' && StorageManager.getTradeFingerprint
+        ? (App.trades || []).map(t => StorageManager.getTradeFingerprint(t))
+        : []
+    );
     let addedCount = 0;
 
     mt5Trades.forEach(t => {
       const sig = getTradeSig(t);
-      if (!existingSignatures.has(sig)) {
+      const fp = typeof StorageManager !== 'undefined' && StorageManager.getTradeFingerprint
+        ? StorageManager.getTradeFingerprint(t)
+        : sig;
+      if (!existingSignatures.has(sig) && !existingFingerprints.has(fp)) {
         App.trades.push(t);
         existingSignatures.add(sig);
+        existingFingerprints.add(fp);
         addedCount++;
       }
     });
 
-    App.trades.sort((a, b) => new Date(a.closeTime || a.openTime) - new Date(b.closeTime || b.openTime));
-    if (typeof StorageManager !== 'undefined') {
-      StorageManager.saveTrades(App.trades, 'MT5 Import');
+    if (addedCount > 0) {
+      App.trades.sort((a, b) => new Date(a.closeTime || a.openTime) - new Date(b.closeTime || b.openTime));
+      if (typeof StorageManager !== 'undefined') {
+        StorageManager.saveTrades(App.trades, 'MT5 Import');
+        App.trades = StorageManager.getTrades();
+      }
+      App.processTrades();
     }
-    App.processTrades();
 
     if (typeof App.showToast === 'function') {
-      App.showToast(`Imported ${addedCount} MT5 trades into TradeForge!`, 'success');
+      App.showToast(
+        addedCount > 0
+          ? `Imported ${addedCount} MT5 trades into TradeForge!`
+          : 'All MT5 trades are already imported (0 new trades).',
+        addedCount > 0 ? 'success' : 'info'
+      );
     }
   },
 
@@ -368,7 +394,7 @@ const MT5Manager = {
         <div class="mt5-info-card">
           <span class="mt5-info-label">Server Ping & Status</span>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="status-dot" style="background:#35B779;"></span>
+            <span class="status-dot" style="background: var(--profit-chart);"></span>
             <span class="mt5-info-val" style="font-size: 1.15rem;">${acc.ping} ms (Optimal)</span>
           </div>
           <span class="mt5-info-sub">Data-center: Amsterdam DC-02</span>
@@ -465,7 +491,7 @@ const MT5Manager = {
         <td style="font-family: var(--font-mono);">${o.lots}</td>
         <td style="font-family: var(--font-mono); font-weight: 700;">${o.price}</td>
         <td style="font-family: var(--font-mono); color: var(--text-dim);">${o.currentPrice}</td>
-        <td><span class="analytics-tag" style="color:#818cf8; background:rgba(99,102,241,0.1); border-color:rgba(99,102,241,0.3);">${o.state}</span></td>
+        <td><span class="analytics-tag" style="color: var(--cal-days-pill-color); background: var(--cal-days-pill-bg); border-color: var(--cal-days-pill-border);">${o.state}</span></td>
       </tr>
     `).join('');
   },
@@ -486,7 +512,7 @@ const MT5Manager = {
         <td style="font-family: var(--font-mono); color: var(--text-muted);">#${t.ticket}</td>
         <td style="font-weight: 700;">${t.symbol}</td>
         <td><span class="type-badge ${t.type}">${t.type.toUpperCase()}</span></td>
-        <td><span style="font-size:0.75rem; font-weight:700; color:#818cf8;">OUT</span></td>
+        <td><span style="font-size:0.75rem; font-weight:700; color: var(--brand-accent);">OUT</span></td>
         <td style="font-family: var(--font-mono);">${t.lots}</td>
         <td style="font-family: var(--font-mono);">${t.closePrice}</td>
         <td class="${t.profit > 0 ? 'profit-text' : (t.profit < 0 ? 'loss-text' : 'neutral-text')}" style="font-family: var(--font-mono); font-weight:700; color: ${t.profit > 0 ? 'var(--profit)' : (t.profit < 0 ? 'var(--loss)' : 'var(--neutral)')};">${t.profit > 0 ? '+' : (t.profit < 0 ? '-' : '')}${sym}${Math.abs(t.profit).toFixed(2)}</td>

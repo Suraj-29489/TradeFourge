@@ -1,5 +1,9 @@
 {
   "cleanUrls": true,
-  "framework": null
+  "framework": null,
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 30
+    }
+  }
 }
-

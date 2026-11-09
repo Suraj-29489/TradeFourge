@@ -59,8 +59,65 @@ const App = {
    * Application Initialization
    */
   async init() {
+    this._deferredCloudMigration = false;
+    this._suppressNextUnlockToast = false;
+
+    const cbNotice = (typeof GoogleAuthManager !== 'undefined' && GoogleAuthManager.consumeCallbackParams)
+      ? GoogleAuthManager.consumeCallbackParams()
+      : null;
+
+    if (typeof AuthSessionManager !== 'undefined') {
+      const preAuthState = AuthSessionManager.init();
+      this._suppressNextUnlockToast = Boolean(
+        preAuthState &&
+        preAuthState.isAuthenticated &&
+        !(cbNotice && cbNotice.callbackSuccess)
+      );
+      this._authUnsubscribe = AuthSessionManager.subscribe((authSession) => {
+        this._handleAuthSessionEvent(authSession);
+      });
+    }
+    if (typeof AuthUIController !== 'undefined') {
+      AuthUIController.init();
+      if (cbNotice && !cbNotice.ok && (typeof AuthSessionManager === 'undefined' || !AuthSessionManager.isAuthenticated())) {
+        AuthUIController.showAlert({
+          type: cbNotice.errorCode === 'server_not_configured' ? 'info' : 'error',
+          title: cbNotice.errorCode === 'server_not_configured' ? 'Google Sign-In Unavailable' : 'Google Sign-In Did Not Complete',
+          message: cbNotice.message || 'Could not complete Google sign-in.'
+        });
+      }
+    }
+    if (typeof ThemeManager !== 'undefined') {
+      ThemeManager.init();
+      this._themeUnsubscribe = ThemeManager.subscribe(() => {
+        if (typeof ChartManager !== 'undefined') {
+          ChartManager.refreshTheme(this.currentMetrics);
+        }
+        if (typeof CalendarManager !== 'undefined' && this.currentMetrics) {
+          CalendarManager.update(this.currentMetrics);
+        }
+        this.renderExitBreakdown();
+        if (this.activeView === 'reports') {
+          this.renderReportsView();
+        }
+        const dayTradesModal = document.getElementById('dayTradesModal');
+        if (dayTradesModal && dayTradesModal.classList.contains('active') && this._activeDayKey && this._activeDayData) {
+          this.openDayTradesModal(this._activeDayKey, this._activeDayData);
+        }
+      });
+    }
+
+    let cloudBootPromise = null;
+    if (typeof CloudSyncManager !== 'undefined') {
+      this._cloudUnsubscribe = CloudSyncManager.subscribe((cloudState) => {
+        this._handleCloudSyncEvent(cloudState);
+      });
+      cloudBootPromise = CloudSyncManager.init();
+    }
+
     this.initCurrency();
     this.bindEvents();
+    this.bindCloudEvents();
     this.initPWA();
     if (typeof StrategyBotManager !== 'undefined') {
       StrategyBotManager.init();
@@ -70,7 +127,7 @@ const App = {
     }
     this.loadNotesAndRules();
 
-    // Restore persisted trade dataset from browser localStorage
+    // Restore persisted trade dataset from active StorageManager namespace (anonymous or isolated Google cache)
     const storedTrades = StorageManager.getTrades();
     if (Array.isArray(storedTrades) && storedTrades.length > 0) {
       this.trades = [...storedTrades];
@@ -78,6 +135,26 @@ const App = {
       this.trades = [];
     }
     this.processTrades();
+    this.updateCloudSyncUI();
+
+    if (cloudBootPromise) {
+      try {
+        await cloudBootPromise;
+      } catch (e) {
+        // Offline / auth expired states are tracked smoothly inside CloudSyncManager
+      }
+      this._suppressNextUnlockToast = false;
+      this.updateCloudSyncUI();
+    } else if (typeof AuthSessionManager !== 'undefined' && typeof AuthSessionManager.syncWithServerSession === 'function') {
+      try {
+        await AuthSessionManager.syncWithServerSession();
+      } catch (e) {}
+      this._suppressNextUnlockToast = false;
+    }
+
+    if (cbNotice && !cbNotice.ok && typeof AuthSessionManager !== 'undefined' && AuthSessionManager.isAuthenticated()) {
+      this.showToast(cbNotice.message || 'Google sign-in update did not complete.', 'info');
+    }
   },
 
   /**
@@ -974,21 +1051,18 @@ const App = {
     }
 
     const reasonMeta = {
-      'TP': { label: 'Take Profit', badgeClass: 'tp', fillClass: 'tp', bg: '#123526', color: '#4CAF78', border: '#24563D' },
-      'SL': { label: 'Stop Loss', badgeClass: 'sl', fillClass: 'sl', bg: '#3A1D25', color: '#E4777F', border: '#63313A' },
-      'USER': { label: 'Manual / Client', badgeClass: 'user', fillClass: 'user', bg: '#141D21', color: '#3b82f6', border: '#243239' },
-      'STOP OUT': { label: 'Margin Stop Out', badgeClass: 'so', fillClass: 'so', bg: '#141D21', color: '#a855f7', border: '#243239' },
-      'UNKNOWN': { label: 'Unspecified', badgeClass: 'unknown', fillClass: 'unknown', bg: '#141D21', color: '#94a3b8', border: '#243239' }
+      'TP': { label: 'Take Profit', badgeClass: 'tp', fillClass: 'tp' },
+      'SL': { label: 'Stop Loss', badgeClass: 'sl', fillClass: 'sl' },
+      'USER': { label: 'Manual / Client', badgeClass: 'user', fillClass: 'user' },
+      'STOP OUT': { label: 'Margin Stop Out', badgeClass: 'so', fillClass: 'so' },
+      'UNKNOWN': { label: 'Unspecified', badgeClass: 'unknown', fillClass: 'unknown' }
     };
 
     eb.forEach(item => {
       const meta = reasonMeta[item.reason] || {
         label: item.reason,
         badgeClass: 'unknown',
-        fillClass: 'unknown',
-        bg: '#141D21',
-        color: '#94a3b8',
-        border: '#243239'
+        fillClass: 'unknown'
       };
 
       const itemEl = document.createElement('div');
@@ -1001,7 +1075,7 @@ const App = {
       itemEl.innerHTML = `
         <div class="breakdown-item-header">
           <div class="breakdown-item-name">
-            <span class="breakdown-item-badge" style="background: ${meta.bg}; color: ${meta.color}; border: 1px solid ${meta.border};">${item.reason}</span>
+            <span class="breakdown-item-badge ${meta.badgeClass}">${item.reason}</span>
             <span style="font-size: 0.72rem; color: var(--text-dim);">${meta.label}</span>
           </div>
           <div class="breakdown-item-values">
@@ -2031,36 +2105,136 @@ const App = {
    */
   updateStorageIndicator() {
     const el = document.getElementById('storageStatusText');
+    const titleEl = document.getElementById('sidebarStorageTitle');
+    const dotEl = document.getElementById('sidebarStorageDot');
+    const tradeLabel = this.trades.length ? `${this.trades.length} trade${this.trades.length === 1 ? '' : 's'}` : 'No trades';
+
+    if (typeof CloudSyncManager !== 'undefined') {
+      const cState = CloudSyncManager.getState();
+      if (cState.isCloudActive) {
+        if (titleEl) titleEl.innerText = cState.status === 'offline' ? 'DRIVE OFFLINE CACHE' : 'GOOGLE DRIVE CLOUD';
+        const statusTextMap = {
+          synced: 'Synced',
+          syncing: 'Syncing...',
+          offline: 'Offline (queued)',
+          auth_expired: 'Reconnect Google',
+          migration_pending: 'Migration Pending',
+          sync_failed: 'Sync Error',
+          conflict: 'Conflict'
+        };
+        if (el) el.innerText = `${tradeLabel} • ${statusTextMap[cState.status] || 'Cloud'}`;
+        if (dotEl) {
+          dotEl.className = `status-dot ${cState.status === 'sync_failed' ? 'error' : (cState.status === 'auth_expired' ? 'expired' : cState.status)}`;
+        }
+        return;
+      }
+    }
+
+    if (titleEl) titleEl.innerText = 'LOCAL LEDGER ENGINE';
+    if (dotEl) dotEl.className = 'status-dot';
     if (el) {
       el.innerText = this.trades.length ? `${this.trades.length} trade${this.trades.length === 1 ? '' : 's'} stored` : 'No trades loaded';
     }
   },
 
   /**
-   * Delete trade by ticket identifier and persist changes
+   * Delete trade by ticket or object identifier and persist changes
    */
-  deleteTrade(ticket) {
-    this.trades = StorageManager.deleteTrade(ticket);
+  deleteTrade(identifier) {
+    const label = typeof identifier === 'object' ? (identifier.ticket || identifier.symbol || 'selected') : identifier;
+    this.trades = StorageManager.deleteTrade(identifier);
     this.processTrades();
-    this.showToast(`Trade #${ticket} deleted.`, 'info');
+    this.showToast(`Trade #${label} deleted.`, 'info');
   },
 
   /**
-   * Open Trade Detail Modal
+   * Resolve passed trade object/copy against live StorageManager trades when available
+   */
+  _resolveLiveTrade(trade) {
+    if (!trade) return null;
+    if (typeof StorageManager !== 'undefined' && StorageManager.findTradeIndex) {
+      const idx = StorageManager.findTradeIndex(trade);
+      if (idx !== -1 && Array.isArray(StorageManager.state.trades) && StorageManager.state.trades[idx]) {
+        return StorageManager.state.trades[idx];
+      }
+    }
+    return trade;
+  },
+
+  /**
+   * Open Trade Detail Modal (supports Inspect, Inline Edit & Delete)
    */
   openTradeDetailModal(trade) {
     const modal = document.getElementById('tradeDetailModal');
     const content = document.getElementById('tradeDetailBody');
-    if (!modal || !content) return;
+    if (!modal || !content || !trade) return;
+
+    const liveTrade = this._resolveLiveTrade(trade);
+    this._activeModalTrade = liveTrade;
+    this._detailEditMode = false;
+    this._bindTradeDetailFooterActions();
+    this._renderTradeDetailInspect(liveTrade);
+
+    modal.classList.add('active');
+  },
+
+  _bindTradeDetailFooterActions() {
+    if (this._tradeDetailFooterBound) return;
+    this._tradeDetailFooterBound = true;
+
+    const delBtn = document.getElementById('btnDeleteDetailTrade');
+    const editBtn = document.getElementById('btnEditDetailTrade');
+    const cancelEditBtn = document.getElementById('btnCancelEditDetailTrade');
+    const saveEditBtn = document.getElementById('btnSaveDetailTrade');
+
+    if (delBtn) {
+      delBtn.addEventListener('click', () => this.deleteActiveModalTrade());
+    }
+    if (editBtn) {
+      editBtn.addEventListener('click', () => this.enterTradeDetailEditMode());
+    }
+    if (cancelEditBtn) {
+      cancelEditBtn.addEventListener('click', () => {
+        this._detailEditMode = false;
+        if (this._activeModalTrade) {
+          this._renderTradeDetailInspect(this._activeModalTrade);
+        }
+      });
+    }
+    if (saveEditBtn) {
+      saveEditBtn.addEventListener('click', () => this.saveEditedDetailTrade());
+    }
+  },
+
+  _renderTradeDetailInspect(trade) {
+    const content = document.getElementById('tradeDetailBody');
+    const titleEl = document.getElementById('tradeDetailModalTitle');
+    const delBtn = document.getElementById('btnDeleteDetailTrade');
+    const editBtn = document.getElementById('btnEditDetailTrade');
+    const cancelEditBtn = document.getElementById('btnCancelEditDetailTrade');
+    const saveEditBtn = document.getElementById('btnSaveDetailTrade');
+    const closeBtn = document.getElementById('btnCloseDetailModal');
+    if (!content || !trade) return;
+
+    if (titleEl) titleEl.innerText = 'EXECUTION INSPECTION REPORT';
+    if (delBtn) delBtn.style.display = 'inline-flex';
+    if (editBtn) editBtn.style.display = 'inline-flex';
+    if (closeBtn) closeBtn.style.display = 'inline-flex';
+    if (cancelEditBtn) cancelEditBtn.style.display = 'none';
+    if (saveEditBtn) saveEditBtn.style.display = 'none';
 
     const pnlFormatted = TradeAnalytics.formatCurrency(trade.profit);
     const pnlColor = trade.profit >= 0 ? 'var(--profit)' : 'var(--loss)';
+    const safeSym = this.escapeHTML(trade.symbol || '-');
+    const safeType = this.escapeHTML((trade.type || 'buy').toLowerCase());
+    const safeTicket = this.escapeHTML(trade.ticket || '-');
+    const safeReason = this.escapeHTML(trade.closeReason || 'User Closed');
 
     content.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid var(--border-light); margin-bottom: 14px;">
         <div>
-          <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${trade.symbol} <span class="type-badge ${trade.type}">${trade.type.toUpperCase()}</span></h3>
-          <p style="font-size: 0.8rem; color: var(--text-dim); font-family: var(--font-mono);">Ticket: #${trade.ticket}</p>
+          <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${safeSym} <span class="type-badge ${safeType}">${safeType.toUpperCase()}</span></h3>
+          <p style="font-size: 0.8rem; color: var(--text-dim); font-family: var(--font-mono);">Ticket: #${safeTicket}</p>
         </div>
         <div style="text-align: right;">
           <div style="font-size: 1.5rem; font-weight: 700; color: ${pnlColor};">${pnlFormatted}</div>
@@ -2071,11 +2245,11 @@ const App = {
       <div class="trade-detail-grid">
         <div class="trade-detail-item">
           <span class="trade-detail-label">Position Volume</span>
-          <span class="trade-detail-value">${trade.lots} Lots</span>
+          <span class="trade-detail-value">${Number(trade.lots || 0)} Lots</span>
         </div>
         <div class="trade-detail-item">
           <span class="trade-detail-label">Close Reason</span>
-          <span class="trade-detail-value">${trade.closeReason || 'User Closed'}</span>
+          <span class="trade-detail-value">${safeReason}</span>
         </div>
         <div class="trade-detail-item">
           <span class="trade-detail-label">Entry Price</span>
@@ -2095,16 +2269,177 @@ const App = {
         </div>
         <div class="trade-detail-item" style="grid-column: 1 / -1;">
           <span class="trade-detail-label">Opening Time (UTC)</span>
-          <span class="trade-detail-value" style="font-size: 0.85rem;">${trade.openTime ? trade.openTime.replace('T', ' ') : '-'}</span>
+          <span class="trade-detail-value" style="font-size: 0.85rem;">${trade.openTime ? this.escapeHTML(String(trade.openTime).replace('T', ' ')) : '-'}</span>
         </div>
         <div class="trade-detail-item" style="grid-column: 1 / -1;">
           <span class="trade-detail-label">Closing Time (UTC)</span>
-          <span class="trade-detail-value" style="font-size: 0.85rem;">${trade.closeTime ? trade.closeTime.replace('T', ' ') : '-'}</span>
+          <span class="trade-detail-value" style="font-size: 0.85rem;">${trade.closeTime ? this.escapeHTML(String(trade.closeTime).replace('T', ' ')) : '-'}</span>
         </div>
       </div>
     `;
+  },
 
-    modal.classList.add('active');
+  enterTradeDetailEditMode() {
+    const trade = this._activeModalTrade;
+    const content = document.getElementById('tradeDetailBody');
+    const titleEl = document.getElementById('tradeDetailModalTitle');
+    const delBtn = document.getElementById('btnDeleteDetailTrade');
+    const editBtn = document.getElementById('btnEditDetailTrade');
+    const cancelEditBtn = document.getElementById('btnCancelEditDetailTrade');
+    const saveEditBtn = document.getElementById('btnSaveDetailTrade');
+    const closeBtn = document.getElementById('btnCloseDetailModal');
+    if (!trade || !content) return;
+
+    this._detailEditMode = true;
+    if (titleEl) titleEl.innerText = 'EDIT TRADE EXECUTION';
+    if (delBtn) delBtn.style.display = 'none';
+    if (editBtn) editBtn.style.display = 'none';
+    if (closeBtn) closeBtn.style.display = 'none';
+    if (cancelEditBtn) cancelEditBtn.style.display = 'inline-flex';
+    if (saveEditBtn) saveEditBtn.style.display = 'inline-flex';
+
+    const toDateTimeLocal = (iso) => {
+      if (!iso) return '';
+      const clean = String(iso).replace('Z', '');
+      return clean.slice(0, 16);
+    };
+
+    const sym = TradeAnalytics.getCurrencySymbol();
+    content.innerHTML = `
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Symbol</label>
+          <input type="text" class="form-control" id="editDetailSymbol" value="${this.escapeHTML(trade.symbol || '')}">
+        </div>
+        <div class="form-group">
+          <label>Direction</label>
+          <select class="form-control" id="editDetailType">
+            <option value="buy" ${(trade.type || '').toLowerCase() === 'buy' ? 'selected' : ''}>BUY (Long)</option>
+            <option value="sell" ${(trade.type || '').toLowerCase() === 'sell' ? 'selected' : ''}>SELL (Short)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Lot Volume</label>
+          <input type="number" step="0.01" class="form-control" id="editDetailLots" value="${Number(trade.lots || 0)}">
+        </div>
+        <div class="form-group">
+          <label>Realized Profit (${sym})</label>
+          <input type="number" step="0.01" class="form-control" id="editDetailProfit" value="${Number(trade.profit || 0)}">
+        </div>
+        <div class="form-group">
+          <label>Entry Price</label>
+          <input type="number" step="any" class="form-control" id="editDetailOpenPrice" value="${trade.openPrice !== undefined && trade.openPrice !== null ? Number(trade.openPrice) : ''}">
+        </div>
+        <div class="form-group">
+          <label>Exit Price</label>
+          <input type="number" step="any" class="form-control" id="editDetailClosePrice" value="${trade.closePrice !== undefined && trade.closePrice !== null ? Number(trade.closePrice) : ''}">
+        </div>
+        <div class="form-group">
+          <label>Stop Loss</label>
+          <input type="number" step="any" class="form-control" id="editDetailStopLoss" value="${trade.stopLoss !== undefined && trade.stopLoss !== null ? Number(trade.stopLoss) : ''}">
+        </div>
+        <div class="form-group">
+          <label>Take Profit</label>
+          <input type="number" step="any" class="form-control" id="editDetailTakeProfit" value="${trade.takeProfit !== undefined && trade.takeProfit !== null ? Number(trade.takeProfit) : ''}">
+        </div>
+        <div class="form-group">
+          <label>Open Time</label>
+          <input type="datetime-local" class="form-control" id="editDetailOpenTime" value="${this.escapeHTML(toDateTimeLocal(trade.openTime))}">
+        </div>
+        <div class="form-group">
+          <label>Close Time</label>
+          <input type="datetime-local" class="form-control" id="editDetailCloseTime" value="${this.escapeHTML(toDateTimeLocal(trade.closeTime))}">
+        </div>
+        <div class="form-group full">
+          <label>Close Reason</label>
+          <select class="form-control" id="editDetailCloseReason">
+            <option value="tp" ${trade.closeReason === 'tp' ? 'selected' : ''}>Take Profit (TP)</option>
+            <option value="sl" ${trade.closeReason === 'sl' ? 'selected' : ''}>Stop Loss (SL)</option>
+            <option value="user" ${(trade.closeReason || 'user') === 'user' ? 'selected' : ''}>Manual / User Exit</option>
+            <option value="so" ${trade.closeReason === 'so' ? 'selected' : ''}>Stop Out (SO)</option>
+          </select>
+        </div>
+      </div>
+    `;
+  },
+
+  saveEditedDetailTrade() {
+    if (!this._activeModalTrade) return;
+    const symbolVal = (document.getElementById('editDetailSymbol')?.value || this._activeModalTrade.symbol || 'XAUUSD').toUpperCase().trim();
+    const typeVal = document.getElementById('editDetailType')?.value || this._activeModalTrade.type || 'buy';
+    const lotsVal = parseFloat(document.getElementById('editDetailLots')?.value);
+    const profitVal = parseFloat(document.getElementById('editDetailProfit')?.value);
+    const openPriceRaw = document.getElementById('editDetailOpenPrice')?.value;
+    const closePriceRaw = document.getElementById('editDetailClosePrice')?.value;
+    const slRaw = document.getElementById('editDetailStopLoss')?.value;
+    const tpRaw = document.getElementById('editDetailTakeProfit')?.value;
+    const openTimeRaw = document.getElementById('editDetailOpenTime')?.value;
+    const closeTimeRaw = document.getElementById('editDetailCloseTime')?.value;
+    const closeReasonVal = document.getElementById('editDetailCloseReason')?.value || this._activeModalTrade.closeReason || 'user';
+
+    const patch = {
+      symbol: symbolVal,
+      type: typeVal,
+      lots: Number.isFinite(lotsVal) ? lotsVal : this._activeModalTrade.lots,
+      profit: Number.isFinite(profitVal) ? profitVal : this._activeModalTrade.profit,
+      openPrice: openPriceRaw !== '' ? Number(openPriceRaw) : this._activeModalTrade.openPrice,
+      closePrice: closePriceRaw !== '' ? Number(closePriceRaw) : this._activeModalTrade.closePrice,
+      stopLoss: slRaw !== '' ? Number(slRaw) : null,
+      takeProfit: tpRaw !== '' ? Number(tpRaw) : null,
+      openTime: openTimeRaw || this._activeModalTrade.openTime,
+      closeTime: closeTimeRaw || this._activeModalTrade.closeTime,
+      closeReason: closeReasonVal
+    };
+
+    const syncKey = StorageManager.getTradeSyncKey(this._activeModalTrade);
+    this.trades = StorageManager.updateTrade(this._activeModalTrade, patch);
+    this.processTrades();
+
+    const updatedTrade = this._resolveLiveTrade({ syncId: syncKey });
+    this._activeModalTrade = updatedTrade || this._activeModalTrade;
+    this._detailEditMode = false;
+    this._renderTradeDetailInspect(this._activeModalTrade);
+
+    // Refresh Day Drilldown Modal if open in background
+    const dayTradesModal = document.getElementById('dayTradesModal');
+    if (dayTradesModal && dayTradesModal.classList.contains('active') && this._activeDayKey) {
+      const updatedDayData = this.currentMetrics?.dailyMap?.[this._activeDayKey];
+      if (updatedDayData) {
+        this.openDayTradesModal(this._activeDayKey, updatedDayData);
+      } else {
+        dayTradesModal.classList.remove('active');
+      }
+    }
+
+    this.showToast('Trade execution updated!', 'success');
+  },
+
+  deleteActiveModalTrade() {
+    if (!this._activeModalTrade) return;
+    const target = this._activeModalTrade;
+    const label = target.ticket && target.ticket !== 'Not provided' ? `#${target.ticket}` : target.symbol;
+    if (!confirm(`Delete trade ${label} (${target.symbol})? This deletion will also sync to Google Drive if connected.`)) {
+      return;
+    }
+
+    this.trades = StorageManager.deleteTrade(target);
+    this._activeModalTrade = null;
+    const modal = document.getElementById('tradeDetailModal');
+    if (modal) modal.classList.remove('active');
+
+    this.processTrades();
+
+    const dayTradesModal = document.getElementById('dayTradesModal');
+    if (dayTradesModal && dayTradesModal.classList.contains('active') && this._activeDayKey) {
+      const updatedDayData = this.currentMetrics?.dailyMap?.[this._activeDayKey];
+      if (updatedDayData && updatedDayData.tradeList.length > 0) {
+        this.openDayTradesModal(this._activeDayKey, updatedDayData);
+      } else {
+        dayTradesModal.classList.remove('active');
+      }
+    }
+
+    this.showToast(`Trade ${label} deleted.`, 'info');
   },
 
   /**
@@ -2124,7 +2459,20 @@ const App = {
     const totalTrades = dayData.tradeList.length;
     const profitableCount = dayData.tradeList.filter(t => t.profit > 0).length;
     const losingCount = dayData.tradeList.filter(t => t.profit < 0).length;
-    const netPnLClass = dayData.pnl > 0 ? 'profit' : (dayData.pnl < 0 ? 'loss' : '');
+    const netPnLClass = dayData.pnl > 0 ? 'profit' : (dayData.pnl < 0 ? 'loss' : 'neutral');
+
+    const calMgr = (typeof CalendarManager !== 'undefined') ? CalendarManager : null;
+    const startingCap = calMgr ? calMgr.resolveStartingCapital() : TradeAnalytics.getStartingCapital();
+    const dailyPct = calMgr
+      ? calMgr.computeDailyReturnPercent(dayData.pnl, startingCap)
+      : ((startingCap && startingCap > 0) ? ((Number(dayData.pnl) || 0) / startingCap) * 100 : null);
+    const pctText = calMgr
+      ? calMgr.formatPercent(dailyPct)
+      : (dailyPct === null ? 'N/A' : `${dailyPct > 0 ? '+' : (dailyPct < 0 ? '-' : '')}${Math.abs(dailyPct).toFixed(2)}%`);
+    const dateDisplay = calMgr ? calMgr.formatDateDisplay(dateKey) : dateKey;
+    const capMeta = (startingCap && startingCap > 0)
+      ? `Capital Base: <strong>${TradeAnalytics.formatCurrency(startingCap, false)}</strong>`
+      : 'Starting Capital unset (set balance for exact %)';
 
     let cardsHtml = dayData.tradeList.map((t, idx) => {
       const timeOnly = (t.closeTime || t.openTime || '').slice(11, 16);
@@ -2153,6 +2501,10 @@ const App = {
     }).join('');
 
     body.innerHTML = `
+      <div class="day-trades-modal-date-bar">
+        <span>Session Date: <strong>${this.escapeHTML(dateDisplay)}</strong> (${this.escapeHTML(dateKey)})</span>
+        <span>${capMeta}</span>
+      </div>
       <div class="day-trades-summary-grid">
         <div class="day-summary-card">
           <div class="day-summary-label">Total Trades</div>
@@ -2169,6 +2521,10 @@ const App = {
         <div class="day-summary-card">
           <div class="day-summary-label">Net P&L</div>
           <div class="day-summary-value ${netPnLClass}">${pnlFormatted}</div>
+        </div>
+        <div class="day-summary-card">
+          <div class="day-summary-label">Daily P&amp;L %</div>
+          <div class="day-summary-value ${dailyPct === null ? 'neutral' : netPnLClass}">${pctText}</div>
         </div>
       </div>
       <div class="day-trades-scroll-container">
@@ -2188,9 +2544,12 @@ const App = {
     const notesEl = document.getElementById('notebookTextarea');
     if (notesEl) {
       notesEl.value = StorageManager.getNotes();
-      notesEl.addEventListener('input', (e) => {
-        StorageManager.saveNotes(e.target.value);
-      });
+      if (!notesEl._tfNotesBound) {
+        notesEl._tfNotesBound = true;
+        notesEl.addEventListener('input', (e) => {
+          StorageManager.saveNotes(e.target.value);
+        });
+      }
     }
 
     const rulesListEl = document.getElementById('rulesListContainer');
@@ -2202,7 +2561,7 @@ const App = {
         item.className = 'rule-item';
         item.innerHTML = `
           <input type="checkbox" ${rule.checked ? 'checked' : ''} data-id="${rule.id}">
-          <span style="font-size: 0.85rem; color: var(--text-main);">${rule.text}</span>
+          <span style="font-size: 0.85rem; color: var(--text-main);">${this.escapeHTML(rule.text)}</span>
         `;
         item.querySelector('input').addEventListener('change', (e) => {
           rule.checked = e.target.checked;
@@ -2217,8 +2576,10 @@ const App = {
    * Currency Switcher Management ($ / ₹)
    */
   initCurrency() {
-    const savedCurrency = (typeof localStorage !== 'undefined' && localStorage.getItem('tradeforge_currency')) || 'USD';
-    TradeAnalytics.setCurrency(savedCurrency);
+    const savedCurrency = (typeof StorageManager !== 'undefined' && StorageManager.getCurrency)
+      ? StorageManager.getCurrency()
+      : ((typeof localStorage !== 'undefined' && localStorage.getItem('tradeforge_currency')) || 'USD');
+    TradeAnalytics.setCurrency(savedCurrency, { silentSync: true, suppressEvent: true });
     this.updateCurrencyUI(savedCurrency);
   },
 
@@ -2463,6 +2824,20 @@ const App = {
     // If switching to analytics, re-render charts to fit container
     if (viewName === 'analytics' || viewName === 'journal') {
       this.renderAnalyticsView();
+    }
+
+    // If switching to settings, refresh Theme Selector & Cloud Sync UI and auto-fetch cloud backups if signed in
+    if (viewName === 'settings') {
+      if (typeof ThemeManager !== 'undefined') {
+        ThemeManager.updateSelectorUI();
+      }
+      this.updateCloudSyncUI();
+      if (typeof CloudSyncManager !== 'undefined') {
+        const st = CloudSyncManager.getState();
+        if (st.isCloudActive && st.auth.hasValidToken && st.status !== 'migration_pending') {
+          this.refreshCloudBackupsList();
+        }
+      }
     }
   },
 
@@ -3167,11 +3542,16 @@ const App = {
     link.href = URL.createObjectURL(blob);
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10);
-    link.download = `tradeforge_trades_${dateStr}.json`;
+    const exportFileName = `tradeforge_trades_${dateStr}.json`;
+    link.download = exportFileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
+
+    if (typeof CloudSyncManager !== 'undefined' && typeof CloudSyncManager.saveCloudExport === 'function') {
+      CloudSyncManager.saveCloudExport(exportFileName, dataStr, 'application/json').catch(() => {});
+    }
 
     this.showToast(`Exported ${tradesToExport.length} trades to JSON!`, 'success');
   },
@@ -3188,6 +3568,7 @@ const App = {
     let dragCounter = 0;
 
     window.addEventListener('dragenter', (e) => {
+      if (typeof document !== 'undefined' && document.body.classList.contains('auth-locked')) return;
       if (e.dataTransfer && e.dataTransfer.types && (Array.from(e.dataTransfer.types).includes('Files') || e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('application/x-moz-file'))) {
         dragCounter++;
         overlay.classList.add('active');
@@ -3195,6 +3576,11 @@ const App = {
     });
 
     window.addEventListener('dragleave', (e) => {
+      if (typeof document !== 'undefined' && document.body.classList.contains('auth-locked')) {
+        dragCounter = 0;
+        overlay.classList.remove('active');
+        return;
+      }
       dragCounter--;
       if (dragCounter <= 0) {
         dragCounter = 0;
@@ -3203,6 +3589,7 @@ const App = {
     });
 
     window.addEventListener('dragover', (e) => {
+      if (typeof document !== 'undefined' && document.body.classList.contains('auth-locked')) return;
       e.preventDefault();
       if (e.dataTransfer) {
         e.dataTransfer.dropEffect = 'copy';
@@ -3210,6 +3597,11 @@ const App = {
     });
 
     window.addEventListener('drop', (e) => {
+      if (typeof document !== 'undefined' && document.body.classList.contains('auth-locked')) {
+        dragCounter = 0;
+        overlay.classList.remove('active');
+        return;
+      }
       e.preventDefault();
       dragCounter = 0;
       overlay.classList.remove('active');
@@ -3607,11 +3999,19 @@ const App = {
     // Merge options description
     const existingCount = this.trades.length;
     if (existingCount > 0) {
-      const seen = new Set(this.trades.map(t => StorageManager.getTradeFingerprint(t)));
+      const seen = new Set();
+      this.trades.forEach(t => {
+        seen.add(StorageManager.getTradeFingerprint(t));
+        seen.add(StorageManager.getTradeSyncKey(t));
+      });
       let newCount = 0;
       let dupCount = 0;
       pending.parsedTrades.forEach(t => {
-        if (!seen.has(StorageManager.getTradeFingerprint(t))) {
+        const fp = StorageManager.getTradeFingerprint(t);
+        const sk = t.syncId || fp;
+        if (!seen.has(fp) && !seen.has(sk)) {
+          seen.add(fp);
+          seen.add(sk);
           newCount++;
         } else {
           dupCount++;
@@ -3656,8 +4056,8 @@ const App = {
       importedCount = res.addedCount;
     } else {
       StorageManager.saveTrades(parsedTrades, fileName);
-      this.trades = [...parsedTrades];
-      importedCount = parsedTrades.length;
+      this.trades = StorageManager.getTrades();
+      importedCount = this.trades.length;
     }
 
     if (typeof CalendarManager !== 'undefined') {
@@ -3761,7 +4161,7 @@ const App = {
       if (isIOS) {
         installInstructions.innerHTML = `
           <div class="install-guide-box">
-            <div style="font-weight: 700; color: #818cf8; font-size: 0.82rem; margin-bottom: 4px;">iOS Safari Installation:</div>
+            <div style="font-weight: 700; color: var(--brand-accent); font-size: 0.82rem; margin-bottom: 4px;">iOS Safari Installation:</div>
             <div class="install-guide-step">
               <div class="install-guide-num">1</div>
               <div>Tap the <strong>Share</strong> button <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="15" x2="12" y2="3"/></svg> in Safari's bottom toolbar.</div>
@@ -3779,7 +4179,7 @@ const App = {
       } else if (isMacSafari) {
         installInstructions.innerHTML = `
           <div class="install-guide-box">
-            <div style="font-weight: 700; color: #818cf8; font-size: 0.82rem; margin-bottom: 4px;">macOS Safari Installation:</div>
+            <div style="font-weight: 700; color: var(--brand-accent); font-size: 0.82rem; margin-bottom: 4px;">macOS Safari Installation:</div>
             <div class="install-guide-step">
               <div class="install-guide-num">1</div>
               <div>Click <strong>File</strong> in the macOS menu bar (or Share button).</div>
@@ -3797,7 +4197,7 @@ const App = {
       } else {
         installInstructions.innerHTML = `
           <div class="install-guide-box">
-            <div style="font-weight: 700; color: #818cf8; font-size: 0.82rem; margin-bottom: 4px;">Chrome / Edge / Android Installation:</div>
+            <div style="font-weight: 700; color: var(--brand-accent); font-size: 0.82rem; margin-bottom: 4px;">Chrome / Edge / Android Installation:</div>
             <div class="install-guide-step">
               <div class="install-guide-num">1</div>
               <div>Click the <strong>Install</strong> icon in the address bar (or browser menu <strong>⋮</strong>).</div>
@@ -4578,6 +4978,730 @@ const App = {
         customStart: this.pnlPerfState.customStart || (startInput ? startInput.value : null),
         customEnd: this.pnlPerfState.customEnd || (endInput ? endInput.value : null)
       });
+    }
+  },
+
+  /**
+   * Reload active workspace cleanly from current StorageManager namespace
+   */
+  reloadWorkspaceFromStorage() {
+    this.trades = StorageManager.getTrades();
+    this._miniCalInitialized = false;
+    this.customStartDate = '';
+    this.customEndDate = '';
+    if (typeof CalendarManager !== 'undefined') {
+      CalendarManager._initialized = false;
+    }
+
+    this.initCurrency();
+    this.loadNotesAndRules();
+    if (typeof MT5Manager !== 'undefined') {
+      MT5Manager.loadSession();
+      MT5Manager.render();
+    }
+
+    this.processTrades();
+    if (this.activeView === 'analytics' || this.activeView === 'journal') {
+      this.renderAnalyticsView();
+    }
+    this.updateCloudSyncUI();
+  },
+
+  /**
+   * Bind Google Auth & Google Drive Cloud Sync UI Event Listeners
+   */
+  bindCloudEvents() {
+    if (this._cloudEventsBound) return;
+    this._cloudEventsBound = true;
+
+    const triggerBtn = document.getElementById('btnGoogleAccountTrigger');
+    const dropdown = document.getElementById('googleAccountDropdown');
+    const control = document.getElementById('googleAccountControl');
+
+    const closeDropdown = () => {
+      if (dropdown) dropdown.classList.remove('active');
+      if (triggerBtn) triggerBtn.setAttribute('aria-expanded', 'false');
+    };
+
+    if (triggerBtn) {
+      triggerBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const state = typeof CloudSyncManager !== 'undefined' ? CloudSyncManager.getState() : { isCloudActive: false };
+        const hasAppSession = typeof AuthSessionManager !== 'undefined' && AuthSessionManager.isAuthenticated();
+        if (!state.isCloudActive && !hasAppSession) {
+          this.triggerGoogleSignIn({ selectAccount: true });
+          return;
+        }
+        if (dropdown) {
+          const next = !dropdown.classList.contains('active');
+          dropdown.classList.toggle('active', next);
+          triggerBtn.setAttribute('aria-expanded', next ? 'true' : 'false');
+        }
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      if (dropdown && dropdown.classList.contains('active') && control && !control.contains(e.target)) {
+        closeDropdown();
+      }
+    });
+
+    const sidebarStorageCard = document.getElementById('sidebarStorageCard');
+    if (sidebarStorageCard) {
+      sidebarStorageCard.addEventListener('click', () => {
+        this.switchView('settings');
+        setTimeout(() => {
+          const card = document.getElementById('googleCloudSettingsCard');
+          if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 60);
+      });
+    }
+
+    // Dropdown buttons
+    const dropResolve = document.getElementById('btnGoogleDropdownResolveMig');
+    const dropReconnect = document.getElementById('btnGoogleDropdownReconnect');
+    const dropSync = document.getElementById('btnGoogleDropdownSync');
+    const dropSwitch = document.getElementById('btnGoogleDropdownSwitch');
+    const dropSettings = document.getElementById('btnGoogleDropdownSettings');
+    const dropSignOut = document.getElementById('btnGoogleDropdownSignOut');
+
+    if (dropResolve) {
+      dropResolve.addEventListener('click', () => {
+        closeDropdown();
+        this.openCloudMigrationModal();
+      });
+    }
+    if (dropReconnect) {
+      dropReconnect.addEventListener('click', () => {
+        closeDropdown();
+        this.triggerGoogleReconnect();
+      });
+    }
+    if (dropSync) {
+      dropSync.addEventListener('click', () => {
+        closeDropdown();
+        this.triggerCloudSyncNow();
+      });
+    }
+    if (dropSwitch) {
+      dropSwitch.addEventListener('click', () => {
+        closeDropdown();
+        this.triggerGoogleSignIn({ selectAccount: true });
+      });
+    }
+    if (dropSettings) {
+      dropSettings.addEventListener('click', () => {
+        closeDropdown();
+        this.switchView('settings');
+      });
+    }
+    if (dropSignOut) {
+      dropSignOut.addEventListener('click', () => {
+        closeDropdown();
+        this.triggerGoogleSignOut();
+      });
+    }
+
+    // Settings panel buttons
+    const setSignIn = document.getElementById('btnSettingsGoogleSignIn');
+    const setReconnect = document.getElementById('btnSettingsGoogleReconnect');
+    const setSwitch = document.getElementById('btnSettingsGoogleSwitch');
+    const setSignOut = document.getElementById('btnSettingsGoogleSignOut');
+    const setResolveMig = document.getElementById('btnSettingsResolveMigration');
+    const setSyncNow = document.getElementById('btnSettingsSyncNow');
+    const setBackupNow = document.getElementById('btnSettingsBackupNow');
+    const setRestoreCloud = document.getElementById('btnSettingsRestoreCloud');
+    const setRefreshBackups = document.getElementById('btnSettingsRefreshBackups');
+
+    if (setSignIn) setSignIn.addEventListener('click', () => this.triggerGoogleSignIn({ selectAccount: true }));
+    if (setReconnect) setReconnect.addEventListener('click', () => this.triggerGoogleReconnect());
+    if (setSwitch) setSwitch.addEventListener('click', () => this.triggerGoogleSignIn({ selectAccount: true }));
+    if (setSignOut) setSignOut.addEventListener('click', () => this.triggerGoogleSignOut());
+    if (setResolveMig) setResolveMig.addEventListener('click', () => this.openCloudMigrationModal());
+    if (setSyncNow) setSyncNow.addEventListener('click', () => this.triggerCloudSyncNow());
+    if (setBackupNow) setBackupNow.addEventListener('click', () => this.triggerCreateCloudBackup());
+    if (setRestoreCloud) setRestoreCloud.addEventListener('click', () => this.triggerRestoreFromCloud());
+    if (setRefreshBackups) setRefreshBackups.addEventListener('click', () => this.refreshCloudBackupsList());
+
+    // Cloud Migration modal buttons
+    const migCloseBtn = document.getElementById('closeCloudMigrationModalBtn');
+    const migDeferBtn = document.getElementById('btnDeferCloudMigration');
+    const migSignOutBtn = document.getElementById('btnSignOutFromMigration');
+    const migConfirmBtn = document.getElementById('btnConfirmCloudMigration');
+
+    if (migCloseBtn) migCloseBtn.addEventListener('click', () => this.closeCloudMigrationModal());
+    if (migDeferBtn) migDeferBtn.addEventListener('click', () => this.closeCloudMigrationModal());
+    if (migSignOutBtn) {
+      migSignOutBtn.addEventListener('click', async () => {
+        this.closeCloudMigrationModal();
+        await this.triggerGoogleSignOut();
+      });
+    }
+    if (migConfirmBtn) {
+      migConfirmBtn.addEventListener('click', () => this.confirmCloudMigrationChoice());
+    }
+  },
+
+  async triggerGoogleSignIn(options = { selectAccount: true }) {
+    if (typeof GoogleAuthManager === 'undefined') return;
+    try {
+      const rememberMe = typeof AuthSessionManager !== 'undefined' ? AuthSessionManager.rememberMe : true;
+      const res = await GoogleAuthManager.signIn(Object.assign({ rememberMe }, options));
+      if (res && res.redirected) return;
+      if (res && res.account && res.account.email) {
+        this.showToast(`Signed in as ${res.account.email}`, 'success');
+      }
+    } catch (err) {
+      this.showToast((err && err.message) || 'Google Sign-In did not complete.', 'error');
+    }
+  },
+
+  async triggerGoogleReconnect() {
+    if (typeof GoogleAuthManager === 'undefined') return;
+    try {
+      const rememberMe = typeof AuthSessionManager !== 'undefined' ? AuthSessionManager.rememberMe : true;
+      const res = await GoogleAuthManager.reconnect({ selectAccount: false, rememberMe });
+      if (res && res.redirected) return;
+      if (res && res.account && res.account.email) {
+        this.showToast(`Reconnected ${res.account.email}`, 'success');
+      }
+    } catch (err) {
+      this.showToast((err && err.message) || 'Failed to reconnect Google session.', 'error');
+    }
+  },
+
+  _handleAuthSessionEvent(authSession) {
+    if (!authSession) return;
+    const ev = authSession.eventType;
+
+    if (ev === 'session_unlocked') {
+      if (typeof AuthUIController !== 'undefined') {
+        AuthUIController.setLocked(false);
+      }
+      this.updateCloudSyncUI();
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('resize'));
+          }
+          if (this.currentMetrics && typeof ChartManager !== 'undefined') {
+            ChartManager.updateDashboardCharts(this.currentMetrics);
+          }
+        });
+      }
+      if (this._deferredCloudMigration) {
+        this._deferredCloudMigration = false;
+        setTimeout(() => this.openCloudMigrationModal(), 80);
+      }
+      if (authSession.detail?.user?.email && !this._suppressNextUnlockToast) {
+        this.showToast(`Signed in as ${authSession.detail.user.email}`, 'success');
+      }
+      this._suppressNextUnlockToast = false;
+    } else if (ev === 'session_locked') {
+      this._deferredCloudMigration = false;
+      this.closeCloudMigrationModal();
+      const dropdown = document.getElementById('googleAccountDropdown');
+      const triggerBtn = document.getElementById('btnGoogleAccountTrigger');
+      if (dropdown) dropdown.classList.remove('active');
+      if (triggerBtn) triggerBtn.setAttribute('aria-expanded', 'false');
+
+      if (typeof AuthUIController !== 'undefined') {
+        AuthUIController.setLocked(true);
+        AuthUIController.syncFromSessionState();
+      }
+      this.updateCloudSyncUI();
+    }
+  },
+
+  async triggerGoogleSignOut() {
+    if (typeof AuthSessionManager !== 'undefined') {
+      await AuthSessionManager.signOut({ clearGoogle: true });
+      return;
+    }
+    if (typeof GoogleAuthManager === 'undefined') return;
+    await GoogleAuthManager.signOut();
+    this.showToast('Signed out of Google. Returned to local offline storage.', 'info');
+  },
+
+  async triggerCloudSyncNow() {
+    if (typeof CloudSyncManager === 'undefined') return;
+    const state = CloudSyncManager.getState();
+    if (state.status === 'auth_expired') {
+      await this.triggerGoogleReconnect();
+      return;
+    }
+    try {
+      await CloudSyncManager.syncNow({ fullCheck: true, reason: 'manual' });
+      this.showToast('Synced cleanly with My Drive / TradeForge!', 'success');
+      this.refreshCloudBackupsList();
+    } catch (err) {
+      this.showToast((err && err.message) || 'Cloud sync failed.', 'error');
+    }
+  },
+
+  async triggerCreateCloudBackup() {
+    if (typeof CloudSyncManager === 'undefined') return;
+    try {
+      const file = await CloudSyncManager.createManualBackup('manual');
+      this.showToast(`Saved backup ${file?.name || 'snapshot'} to TradeForge / Backups!`, 'success');
+      this.refreshCloudBackupsList();
+    } catch (err) {
+      this.showToast((err && err.message) || 'Could not create Drive backup.', 'error');
+    }
+  },
+
+  async triggerRestoreFromCloud() {
+    if (typeof CloudSyncManager === 'undefined') return;
+    if (!confirm('Restore latest data from My Drive / TradeForge / User Data? A safety backup of your current browser data will be saved to Backups/ first.')) {
+      return;
+    }
+    try {
+      const res = await CloudSyncManager.restoreFromCloud({ createSafetyBackupFirst: true });
+      this.showToast(`Restored ${res.restoredTrades} trades from Google Drive.`, 'success');
+      this.refreshCloudBackupsList();
+    } catch (err) {
+      this.showToast((err && err.message) || 'Failed to restore from Google Drive.', 'error');
+    }
+  },
+
+  async refreshCloudBackupsList() {
+    const container = document.getElementById('cloudBackupsListContainer');
+    if (!container || typeof CloudSyncManager === 'undefined') return;
+
+    const state = CloudSyncManager.getState();
+    if (!state.isCloudActive || !state.auth.hasValidToken) {
+      container.innerHTML = '<div class="cloud-backup-empty">Reconnect your Google session to list cloud backups.</div>';
+      return;
+    }
+
+    container.innerHTML = '<div class="cloud-backup-empty">Loading backups from My Drive / TradeForge / Backups...</div>';
+    try {
+      const backups = await CloudSyncManager.listCloudBackups(8);
+      if (!backups || backups.length === 0) {
+        container.innerHTML = '<div class="cloud-backup-empty">No backup snapshots yet in My Drive / TradeForge / Backups.</div>';
+        return;
+      }
+
+      container.innerHTML = backups.map(b => {
+        const dt = b.createdTime ? new Date(b.createdTime).toLocaleString() : '';
+        const sizeKb = b.size ? ` • ${(Number(b.size) / 1024).toFixed(1)} KB` : '';
+        return `
+          <div class="cloud-backup-item">
+            <div>
+              <div class="cloud-backup-name">${this.escapeHTML(b.name)}</div>
+              <div class="cloud-backup-meta">${this.escapeHTML(dt)}${sizeKb}</div>
+            </div>
+            <button type="button" class="btn-secondary" data-backup-id="${this.escapeHTML(b.id)}">Restore</button>
+          </div>
+        `;
+      }).join('');
+
+      container.querySelectorAll('button[data-backup-id]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const fileId = btn.getAttribute('data-backup-id');
+          if (!confirm('Restore from this backup snapshot? A safety backup of your current state will be saved first.')) {
+            return;
+          }
+          btn.disabled = true;
+          btn.innerText = 'Restoring...';
+          try {
+            const res = await CloudSyncManager.restoreFromBackupFileId(fileId);
+            this.showToast(`Restored ${res.restoredTrades} trades from selected backup.`, 'success');
+            this.refreshCloudBackupsList();
+          } catch (err) {
+            this.showToast((err && err.message) || 'Failed to restore backup.', 'error');
+          } finally {
+            btn.disabled = false;
+            btn.innerText = 'Restore';
+          }
+        });
+      });
+    } catch (err) {
+      container.innerHTML = `<div class="cloud-backup-empty">${this.escapeHTML((err && err.message) || 'Could not load cloud backups.')}</div>`;
+    }
+  },
+
+  _handleCloudSyncEvent(cloudState) {
+    if (!cloudState) return;
+    const ev = cloudState.eventType;
+
+    if (ev === 'workspace_reloaded') {
+      this.reloadWorkspaceFromStorage();
+      return;
+    }
+
+    if (ev === 'migration_required') {
+      this.updateCloudSyncUI();
+      this.openCloudMigrationModal();
+      return;
+    }
+
+    if (ev === 'conflict_resolved' && cloudState.detail?.conflicts?.length > 0) {
+      this.showToast(`Resolved ${cloudState.detail.conflicts.length} cloud sync conflict(s) safely; remote snapshot backed up.`, 'info');
+    } else if (ev === 'auth_expired') {
+      this.showToast('Google session expired — reconnect to resume Drive sync. Changes stay queued locally.', 'info');
+    } else if (ev === 'sync_error' && cloudState.lastError?.message) {
+      this.showToast(cloudState.lastError.message, 'error');
+    } else if (ev === 'migration_complete') {
+      const cnt = cloudState.detail?.tradeCount ?? 0;
+      const verified = cloudState.detail?.verified;
+      this.showToast(
+        verified
+          ? `Migration verified! ${cnt} trade${cnt === 1 ? '' : 's'} stored safely in My Drive / TradeForge.`
+          : `Migration uploaded (${cnt} trades).`,
+        'success'
+      );
+      this.refreshCloudBackupsList();
+    }
+
+    this.updateCloudSyncUI();
+    this.updateStorageIndicator();
+  },
+
+  openCloudMigrationModal() {
+    if (typeof AuthSessionManager !== 'undefined' && !AuthSessionManager.isAuthenticated()) {
+      this._deferredCloudMigration = true;
+      return;
+    }
+    if (typeof CloudSyncManager === 'undefined' || !CloudSyncManager.pendingMigration) return;
+    const modal = document.getElementById('cloudMigrationModal');
+    if (!modal) return;
+
+    const mig = CloudSyncManager.pendingMigration;
+    const { scenario, stats, account } = mig;
+
+    const titleEl = document.getElementById('cloudMigrationModalTitle');
+    const emailEl = document.getElementById('cloudMigrationAccountEmail');
+    const subtitleEl = document.getElementById('cloudMigrationSubtitle');
+    const pillEl = document.getElementById('cloudMigrationScenarioPill');
+    const localCountEl = document.getElementById('migLocalCount');
+    const cloudCountEl = document.getElementById('migCloudCount');
+    const dupCountEl = document.getElementById('migDupCount');
+    const dupSubEl = document.getElementById('migDupSub');
+    const optBox = document.getElementById('cloudMigrationOptionsBox');
+
+    if (emailEl) emailEl.innerText = account.email || 'Google Account';
+    if (localCountEl) localCountEl.innerText = String(stats.localTradeCount || 0);
+    if (cloudCountEl) cloudCountEl.innerText = String(stats.remoteTradeCount || 0);
+    if (dupCountEl) dupCountEl.innerText = String(stats.duplicateCount || 0);
+    if (dupSubEl) {
+      dupSubEl.innerText = scenario === 'MIGRATE_LOCAL'
+        ? `${stats.localTradeCount} new record(s) to upload`
+        : `${stats.newFromLocalCount} new + ${stats.duplicateCount} matched`;
+    }
+
+    if (scenario === 'MIGRATE_LOCAL') {
+      if (titleEl) titleEl.innerText = 'MIGRATE LOCAL JOURNAL TO GOOGLE DRIVE';
+      if (subtitleEl) subtitleEl.innerText = 'Your Google Drive has no TradeForge data yet. Choose whether to upload your existing browser journal.';
+      if (pillEl) pillEl.innerText = 'FIRST CLOUD SETUP';
+
+      if (optBox) {
+        optBox.innerHTML = `
+          <label class="import-mode-option selected">
+            <input type="radio" name="cloudMigChoice" value="migrate_local" checked>
+            <div>
+              <div class="mode-title">Upload Local Data to Google Drive (Recommended)</div>
+              <div class="mode-desc">Copies ${stats.localTradeCount} trade(s), notes, rules, currency &amp; settings to <code>My Drive / TradeForge / User Data</code> and verifies upload integrity.</div>
+            </div>
+          </label>
+          <label class="import-mode-option">
+            <input type="radio" name="cloudMigChoice" value="start_empty">
+            <div>
+              <div class="mode-title">Start Empty Cloud Journal for This Google Account</div>
+              <div class="mode-desc">Creates an empty cloud database on Drive. Your existing local browser data stays untouched when signed out.</div>
+            </div>
+          </label>
+        `;
+      }
+    } else {
+      if (titleEl) titleEl.innerText = 'MERGE OR CHOOSE GOOGLE DRIVE DATA';
+      if (subtitleEl) subtitleEl.innerText = 'Both this browser and your Google Drive have existing data. Choose how to proceed safely.';
+      if (pillEl) pillEl.innerText = 'CLOUD + LOCAL FOUND';
+
+      if (optBox) {
+        optBox.innerHTML = `
+          <label class="import-mode-option selected">
+            <input type="radio" name="cloudMigChoice" value="merge" checked>
+            <div>
+              <div class="mode-title">Merge Local &amp; Google Drive Data (Recommended)</div>
+              <div class="mode-desc">Combines both datasets (${stats.mergedTotalCount} total trades after skipping ${stats.duplicateCount} duplicate(s)) and creates a safety backup on Drive first.</div>
+            </div>
+          </label>
+          <label class="import-mode-option">
+            <input type="radio" name="cloudMigChoice" value="use_cloud">
+            <div>
+              <div class="mode-title">Load Google Drive Data Only</div>
+              <div class="mode-desc">Loads your ${stats.remoteTradeCount} cloud trade(s) cleanly. Anonymous local data stays preserved in offline mode.</div>
+            </div>
+          </label>
+          <label class="import-mode-option">
+            <input type="radio" name="cloudMigChoice" value="replace_cloud">
+            <div>
+              <div class="mode-title">Backup Drive &amp; Replace With Local Data</div>
+              <div class="mode-desc">Saves your current Drive database into <code>Backups/</code> first, then writes your local browser data to Drive.</div>
+            </div>
+          </label>
+        `;
+      }
+    }
+
+    if (optBox) {
+      optBox.querySelectorAll('.import-mode-option').forEach(label => {
+        label.addEventListener('click', () => {
+          optBox.querySelectorAll('.import-mode-option').forEach(l => l.classList.remove('selected'));
+          label.classList.add('selected');
+          const radio = label.querySelector('input[type="radio"]');
+          if (radio) radio.checked = true;
+        });
+      });
+    }
+
+    modal.classList.add('active');
+  },
+
+  closeCloudMigrationModal() {
+    const modal = document.getElementById('cloudMigrationModal');
+    if (modal) modal.classList.remove('active');
+  },
+
+  async confirmCloudMigrationChoice() {
+    if (typeof CloudSyncManager === 'undefined' || !CloudSyncManager.pendingMigration) {
+      this.closeCloudMigrationModal();
+      return;
+    }
+
+    const selected = document.querySelector('input[name="cloudMigChoice"]:checked')?.value || 'merge';
+    const confirmBtn = document.getElementById('btnConfirmCloudMigration');
+    const prevText = confirmBtn ? confirmBtn.innerText : 'Confirm & Sync';
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.innerText = 'Syncing & Verifying...';
+    }
+
+    try {
+      await CloudSyncManager.resolveMigration(selected);
+      this.closeCloudMigrationModal();
+    } catch (err) {
+      this.showToast((err && err.message) || 'Migration could not be completed.', 'error');
+    } finally {
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerText = prevText;
+      }
+    }
+  },
+
+  updateCloudSyncUI() {
+    if (typeof CloudSyncManager === 'undefined') return;
+    const state = CloudSyncManager.getState();
+    const acct = state.account;
+    const isSignedIn = Boolean(acct && acct.sub);
+
+    const statusBadgeMap = {
+      local_only: { text: 'LOCAL ONLY', cls: 'local' },
+      synced: { text: 'SYNCED', cls: 'synced' },
+      syncing: { text: 'SYNCING...', cls: 'syncing' },
+      offline: { text: state.hasDirtyChanges ? 'OFFLINE (QUEUED)' : 'OFFLINE', cls: 'offline' },
+      auth_expired: { text: 'RECONNECT NEEDED', cls: 'auth_expired' },
+      migration_pending: { text: 'MIGRATION PENDING', cls: 'migration_pending' },
+      sync_failed: { text: 'SYNC ERROR', cls: 'sync_failed' },
+      conflict: { text: 'CONFLICT', cls: 'auth_expired' }
+    };
+    const statusInfo = statusBadgeMap[state.status] || statusBadgeMap.local_only;
+    const lastSyncFmt = state.lastSyncedAt ? `Last synced: ${new Date(state.lastSyncedAt).toLocaleString()}` : 'Not synced with Drive yet';
+
+    // 1. Header Trigger & Dropdown
+    const gIcon = document.getElementById('googleTriggerGIcon');
+    const hAvatar = document.getElementById('googleHeaderAvatar');
+    const hInitials = document.getElementById('googleHeaderInitials');
+    const hLabel = document.getElementById('googleHeaderLabel');
+    const hDot = document.getElementById('googleHeaderSyncDot');
+    const dAvatar = document.getElementById('googleDropdownAvatar');
+    const dInitials = document.getElementById('googleDropdownInitials');
+    const dName = document.getElementById('googleDropdownName');
+    const dEmail = document.getElementById('googleDropdownEmail');
+    const dStatus = document.getElementById('googleDropdownStatusBadge');
+    const dLastSync = document.getElementById('googleDropdownLastSync');
+    const dropResolve = document.getElementById('btnGoogleDropdownResolveMig');
+    const dropReconnect = document.getElementById('btnGoogleDropdownReconnect');
+    const dropSync = document.getElementById('btnGoogleDropdownSync');
+
+    const initials = acct && acct.name
+      ? acct.name.split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase()
+      : 'G';
+
+    if (isSignedIn) {
+      if (gIcon) gIcon.style.display = 'none';
+      if (hLabel) hLabel.innerText = acct.email;
+      if (hDot) {
+        hDot.style.display = 'inline-block';
+        hDot.className = `cloud-sync-dot ${state.status}`;
+      }
+      if (acct.picture && hAvatar && dAvatar) {
+        hAvatar.src = acct.picture;
+        hAvatar.style.display = 'inline-block';
+        if (hInitials) hInitials.style.display = 'none';
+        dAvatar.src = acct.picture;
+        dAvatar.style.display = 'block';
+        if (dInitials) dInitials.style.display = 'none';
+      } else {
+        if (hAvatar) hAvatar.style.display = 'none';
+        if (hInitials) {
+          hInitials.innerText = initials;
+          hInitials.style.display = 'inline-flex';
+        }
+        if (dAvatar) dAvatar.style.display = 'none';
+        if (dInitials) {
+          dInitials.innerText = initials;
+          dInitials.style.display = 'block';
+        }
+      }
+      if (dName) dName.innerText = acct.name || acct.email;
+      if (dEmail) dEmail.innerText = acct.email;
+      if (dStatus) {
+        dStatus.innerText = statusInfo.text;
+        dStatus.className = `cloud-status-pill ${statusInfo.cls}`;
+      }
+      if (dLastSync) dLastSync.innerText = state.lastError?.message || lastSyncFmt;
+      if (dropResolve) dropResolve.style.display = state.status === 'migration_pending' ? 'block' : 'none';
+      if (dropReconnect) dropReconnect.style.display = state.status === 'auth_expired' ? 'block' : 'none';
+      if (dropSync) dropSync.style.display = state.status === 'auth_expired' ? 'none' : 'block';
+      const dropSwitchBtn = document.getElementById('btnGoogleDropdownSwitch');
+      if (dropSwitchBtn) dropSwitchBtn.innerText = 'Switch Google Account';
+    } else {
+      const appUser = (typeof AuthSessionManager !== 'undefined' && AuthSessionManager.isAuthenticated())
+        ? AuthSessionManager.getState().user
+        : null;
+      const appInitials = appUser && appUser.name
+        ? appUser.name.split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase()
+        : 'U';
+      const dropSwitchBtn = document.getElementById('btnGoogleDropdownSwitch');
+
+      if (appUser) {
+        if (gIcon) gIcon.style.display = 'none';
+        if (hAvatar) hAvatar.style.display = 'none';
+        if (hInitials) {
+          hInitials.innerText = appInitials;
+          hInitials.style.display = 'inline-flex';
+        }
+        if (hDot) {
+          hDot.style.display = 'inline-block';
+          hDot.className = 'cloud-sync-dot local';
+        }
+        if (hLabel) hLabel.innerText = appUser.email;
+        if (dAvatar) dAvatar.style.display = 'none';
+        if (dInitials) {
+          dInitials.innerText = appInitials;
+          dInitials.style.display = 'block';
+        }
+        if (dName) dName.innerText = appUser.name || appUser.email;
+        if (dEmail) dEmail.innerText = appUser.email;
+        if (dStatus) {
+          dStatus.innerText = 'LOCAL ONLY';
+          dStatus.className = 'cloud-status-pill local';
+        }
+        if (dLastSync) dLastSync.innerText = 'Connect Google Drive to sync across devices';
+        if (dropResolve) dropResolve.style.display = 'none';
+        if (dropReconnect) dropReconnect.style.display = 'none';
+        if (dropSync) dropSync.style.display = 'none';
+        if (dropSwitchBtn) dropSwitchBtn.innerText = 'Connect Google Drive';
+      } else {
+        if (gIcon) gIcon.style.display = 'inline-flex';
+        if (hAvatar) hAvatar.style.display = 'none';
+        if (hInitials) hInitials.style.display = 'none';
+        if (hDot) hDot.style.display = 'none';
+        if (hLabel) hLabel.innerText = 'Continue with Google';
+        if (dropSwitchBtn) dropSwitchBtn.innerText = 'Switch Google Account';
+      }
+    }
+
+    // 2. Settings Panel Card
+    const sBadge = document.getElementById('cloudSettingsStatusBadge');
+    const sAvatar = document.getElementById('cloudSettingsAvatar');
+    const sInitials = document.getElementById('cloudSettingsInitials');
+    const sTitle = document.getElementById('cloudSettingsAccountTitle');
+    const sSub = document.getElementById('cloudSettingsAccountSubtitle');
+    const sDetail = document.getElementById('cloudSettingsSyncDetail');
+    const btnSignIn = document.getElementById('btnSettingsGoogleSignIn');
+    const btnReconnect = document.getElementById('btnSettingsGoogleReconnect');
+    const btnSwitch = document.getElementById('btnSettingsGoogleSwitch');
+    const btnSignOut = document.getElementById('btnSettingsGoogleSignOut');
+    const btnResolve = document.getElementById('btnSettingsResolveMigration');
+    const btnSync = document.getElementById('btnSettingsSyncNow');
+    const btnBackup = document.getElementById('btnSettingsBackupNow');
+    const btnRestore = document.getElementById('btnSettingsRestoreCloud');
+    const backupsRow = document.getElementById('cloudBackupsRow');
+
+    if (sBadge) {
+      sBadge.innerText = statusInfo.text;
+      sBadge.className = `cloud-status-pill ${statusInfo.cls}`;
+    }
+
+    if (isSignedIn) {
+      if (acct.picture && sAvatar) {
+        sAvatar.src = acct.picture;
+        sAvatar.style.display = 'block';
+        if (sInitials) sInitials.style.display = 'none';
+      } else {
+        if (sAvatar) sAvatar.style.display = 'none';
+        if (sInitials) {
+          sInitials.innerText = initials;
+          sInitials.style.display = 'block';
+        }
+      }
+      if (sTitle) sTitle.innerText = `${acct.name || acct.email} (${acct.email})`;
+      if (sSub) sSub.innerText = `Account isolated via Google ID (${acct.sub.slice(0, 8)}...). Folder: My Drive / TradeForge`;
+      if (sDetail) {
+        sDetail.innerText = state.lastError?.message
+          ? `${state.lastError.message} • ${lastSyncFmt}`
+          : `${lastSyncFmt} • Stored in My Drive / TradeForge / User Data/, Backups/ & Exports/`;
+      }
+
+      if (btnSignIn) btnSignIn.style.display = 'none';
+      if (btnReconnect) btnReconnect.style.display = state.status === 'auth_expired' ? 'inline-flex' : 'none';
+      if (btnSwitch) btnSwitch.style.display = 'inline-flex';
+      if (btnSignOut) btnSignOut.style.display = 'inline-flex';
+      if (btnResolve) btnResolve.style.display = state.status === 'migration_pending' ? 'inline-flex' : 'none';
+      if (btnSync) btnSync.style.display = state.auth.hasValidToken && state.status !== 'migration_pending' ? 'inline-flex' : 'none';
+      if (btnBackup) btnBackup.style.display = state.auth.hasValidToken && state.status !== 'migration_pending' ? 'inline-flex' : 'none';
+      if (btnRestore) btnRestore.style.display = state.auth.hasValidToken && state.status !== 'migration_pending' ? 'inline-flex' : 'none';
+      if (backupsRow) backupsRow.style.display = 'flex';
+    } else {
+      const appUser = (typeof AuthSessionManager !== 'undefined' && AuthSessionManager.isAuthenticated())
+        ? AuthSessionManager.getState().user
+        : null;
+      const appInitials = appUser && appUser.name
+        ? appUser.name.split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase()
+        : 'G';
+
+      if (sAvatar) sAvatar.style.display = 'none';
+      if (sInitials) {
+        sInitials.innerText = appUser ? appInitials : 'G';
+        sInitials.style.display = 'block';
+      }
+      if (sTitle) {
+        sTitle.innerText = appUser
+          ? `${appUser.name || appUser.email} (${appUser.email})`
+          : 'Not signed in to Google';
+      }
+      if (sSub) {
+        sSub.innerHTML = appUser
+          ? 'Signed in with account credentials. Connect Google Drive anytime to sync <code>My Drive / TradeForge</code>.'
+          : 'Sign in with your Google account to create &amp; sync your journal in <code>My Drive / TradeForge</code> across devices.';
+      }
+      if (sDetail) {
+        sDetail.innerHTML = 'Folder path: <code>My Drive / TradeForge / User Data/</code>, <code>Backups/</code> &amp; <code>Exports/</code> (drive.file permission)';
+      }
+
+      if (btnSignIn) btnSignIn.style.display = 'inline-flex';
+      if (btnReconnect) btnReconnect.style.display = 'none';
+      if (btnSwitch) btnSwitch.style.display = 'none';
+      if (btnSignOut) btnSignOut.style.display = appUser ? 'inline-flex' : 'none';
+      if (btnResolve) btnResolve.style.display = 'none';
+      if (btnSync) btnSync.style.display = 'none';
+      if (btnBackup) btnBackup.style.display = 'none';
+      if (btnRestore) btnRestore.style.display = 'none';
+      if (backupsRow) backupsRow.style.display = 'none';
     }
   }
 };

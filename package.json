@@ -1,0 +1,19 @@
+{
+  "name": "tradeforge",
+  "version": "1.4.0",
+  "private": true,
+  "description": "TradeForge Trading Journal & AI Analytics Platform with Server-Side Google OAuth 2.0 and Google Drive Cloud Storage",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node scripts/dev-server.js",
+    "dev": "vercel dev --listen 3000",
+    "dev:local": "node scripts/dev-server.js",
+    "test:backend": "node test/backend_oauth_drive.test.js",
+    "test:sync": "node test/cloud_sync.test.js",
+    "test:auth": "node test/auth_ui.test.js",
+    "test:theme": "node test/theme_calendar.test.js",
+    "test": "node test/backend_oauth_drive.test.js && node test/cloud_sync.test.js && node test/auth_ui.test.js && node test/theme_calendar.test.js"
+  }
+}
