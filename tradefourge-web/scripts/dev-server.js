@@ -128,11 +128,91 @@ function resolveStaticFile(rootDir, pathname) {
   return null;
 }
 
-function createAppServer({ rootDir = path.resolve(__dirname, '..'), reloadEnv = true } = {}) {
-  const resolvedRoot = path.resolve(rootDir);
-  if (reloadEnv) {
-    loadLocalEnv();
+function _collectJsFingerprint(rootDir) {
+  if (!fs.existsSync(rootDir)) return '';
+  const entries = [];
+  function walk(dir, relPrefix) {
+    let dirents;
+    try {
+      dirents = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (e) {
+      return;
+    }
+    dirents.sort((a, b) => a.name.localeCompare(b.name));
+    for (const entry of dirents) {
+      if (entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      const rel = relPrefix ? `${relPrefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        walk(full, rel);
+      } else if (entry.isFile() && /\.(?:js|cjs|mjs)$/i.test(entry.name)) {
+        try {
+          const st = fs.statSync(full);
+          entries.push(`${rel}:${st.mtimeMs}:${st.size}`);
+        } catch (e) {}
+      }
+    }
   }
+  walk(rootDir, '');
+  return entries.join('|');
+}
+
+function _collectEnvFingerprint(resolvedRoot) {
+  const candidates = Array.from(new Set([
+    path.resolve(resolvedRoot, '.env.local'),
+    path.resolve(resolvedRoot, '../.env.local'),
+    path.resolve(resolvedRoot, '.env'),
+    path.resolve(resolvedRoot, '../.env')
+  ]));
+  const parts = [];
+  for (const file of candidates) {
+    try {
+      if (!fs.existsSync(file)) continue;
+      const st = fs.statSync(file);
+      parts.push(`${file}:${st.mtimeMs}:${st.size}`);
+    } catch (e) {}
+  }
+  return parts.join('|');
+}
+
+function _evictRequireCacheUnder(dirPath) {
+  const prefixes = new Set();
+  const addPrefix = (p) => {
+    const resolved = path.resolve(p);
+    prefixes.add(resolved.endsWith(path.sep) ? resolved : resolved + path.sep);
+  };
+  addPrefix(dirPath);
+  try {
+    addPrefix(fs.realpathSync(dirPath));
+  } catch (e) {}
+
+  let cleared = 0;
+  for (const cacheKey of Object.keys(require.cache)) {
+    for (const prefix of prefixes) {
+      if (cacheKey.startsWith(prefix)) {
+        delete require.cache[cacheKey];
+        cleared++;
+        break;
+      }
+    }
+  }
+  return cleared;
+}
+
+function createAppServer({
+  rootDir = path.resolve(__dirname, '..'),
+  reloadEnv = true,
+  hotReloadApi = true,
+  onApiReload = null
+} = {}) {
+  const resolvedRoot = path.resolve(rootDir);
+  const apiRoot = path.resolve(resolvedRoot, 'api');
+  if (reloadEnv) {
+    loadLocalEnv({ force: true, reloadFileKeys: true });
+  }
+
+  let lastApiFingerprint = hotReloadApi ? _collectJsFingerprint(apiRoot) : '';
+  let lastEnvFingerprint = reloadEnv ? _collectEnvFingerprint(resolvedRoot) : '';
 
   return http.createServer(async (req, res) => {
     try {
@@ -145,6 +225,7 @@ function createAppServer({ rootDir = path.resolve(__dirname, '..'), reloadEnv = 
         if (!apiRel || apiRel.startsWith('_') || apiRel.includes('..')) {
           res.statusCode = 404;
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
           res.end(JSON.stringify({ ok: false, code: 'NOT_FOUND', message: 'API route not found.' }));
           return;
         }
@@ -153,11 +234,11 @@ function createAppServer({ rootDir = path.resolve(__dirname, '..'), reloadEnv = 
         if (segments.some((s) => s.startsWith('_') || s.includes('..'))) {
           res.statusCode = 404;
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
           res.end(JSON.stringify({ ok: false, code: 'NOT_FOUND', message: 'API route not found.' }));
           return;
         }
 
-        const apiRoot = path.resolve(resolvedRoot, 'api');
         const directPath = path.resolve(resolvedRoot, 'api', ...segments) + '.js';
         let handlerPath = directPath;
         let rewrittenRoute = null;
@@ -175,8 +256,40 @@ function createAppServer({ rootDir = path.resolve(__dirname, '..'), reloadEnv = 
         if (!handlerPath.startsWith(apiRoot + path.sep) || !fs.existsSync(handlerPath)) {
           res.statusCode = 404;
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
           res.end(JSON.stringify({ ok: false, code: 'NOT_FOUND', message: 'API route not found.' }));
           return;
+        }
+
+        let apiChanged = false;
+        if (hotReloadApi) {
+          const nextApiFp = _collectJsFingerprint(apiRoot);
+          if (nextApiFp !== lastApiFingerprint) {
+            _evictRequireCacheUnder(apiRoot);
+            lastApiFingerprint = nextApiFp;
+            apiChanged = true;
+          }
+        }
+
+        if (reloadEnv) {
+          const nextEnvFp = _collectEnvFingerprint(resolvedRoot);
+          if (apiChanged || nextEnvFp !== lastEnvFingerprint) {
+            if (!apiChanged) {
+              _evictRequireCacheUnder(apiRoot);
+            }
+            const freshEnvPath = path.resolve(apiRoot, '_lib', 'env.js');
+            const envMod = fs.existsSync(freshEnvPath) ? require(freshEnvPath) : { loadLocalEnv };
+            if (typeof envMod.loadLocalEnv === 'function') {
+              envMod.loadLocalEnv({ force: true, reloadFileKeys: true });
+            }
+            lastEnvFingerprint = nextEnvFp;
+          }
+        }
+
+        if (apiChanged && typeof onApiReload === 'function') {
+          try {
+            onApiReload();
+          } catch (e) {}
         }
 
         attachQueryObject(req, urlObj);
@@ -223,6 +336,7 @@ function createAppServer({ rootDir = path.resolve(__dirname, '..'), reloadEnv = 
       if (!res.headersSent) {
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
         res.end(JSON.stringify({ ok: false, code: 'SERVER_ERROR', message: 'Internal server error.' }));
       } else {
         res.end();
@@ -233,7 +347,13 @@ function createAppServer({ rootDir = path.resolve(__dirname, '..'), reloadEnv = 
 
 if (require.main === module) {
   const port = Number(process.env.PORT || 3000);
-  const server = createAppServer({ reloadEnv: true });
+  const server = createAppServer({
+    reloadEnv: true,
+    hotReloadApi: true,
+    onApiReload: () => {
+      console.log(`[TradeFourge] Auto-reloaded updated /api handlers (${new Date().toLocaleTimeString()}).`);
+    }
+  });
 
   server.on('error', (err) => {
     if (err && err.code === 'EADDRINUSE') {
@@ -248,13 +368,17 @@ if (require.main === module) {
 
   server.listen(port, '127.0.0.1', () => {
     const cfg = getOAuthConfig({ headers: { host: `localhost:${port}` } });
-    const hasGemini = Boolean(process.env.GEMINI_API_KEY && String(process.env.GEMINI_API_KEY).trim());
+    const hasGemini = Boolean(
+      (process.env.GEMINI_API_KEY_PRIMARY && String(process.env.GEMINI_API_KEY_PRIMARY).trim()) ||
+      (process.env.GEMINI_API_KEY && String(process.env.GEMINI_API_KEY).trim())
+    );
 
     console.log('\n==============================================================');
     console.log('  TradeFourge Local Development Server');
     console.log('==============================================================');
     console.log(`  Open this URL in Chrome : http://localhost:${port}`);
     console.log(`  OAuth Callback URI      : http://localhost:${port}/api/auth/callback`);
+    console.log(`  API Hot-Reload          : Enabled (/api/* auto-reloads on edit)`);
     console.log('');
     console.log('  Google Cloud Console -> OAuth 2.0 Client ("TradeFourge Web Client"):');
     console.log(`    Authorized JavaScript origin : http://localhost:${port}`);

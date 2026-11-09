@@ -14,17 +14,19 @@
 
 const fs = require('fs');
 const path = require('path');
+const { parseJsonBody } = require('./_lib/http');
 const { recordGeminiUsage } = require('./_lib/usage-store');
 
 // Lightweight local .env.local loader for development environments
 function loadLocalEnv() {
   const cwd = (typeof process !== 'undefined' && typeof process.cwd === 'function') ? process.cwd() : '.';
   const baseDir = (typeof __dirname !== 'undefined') ? __dirname : '.';
-  const candidates = [
+  const candidates = Array.from(new Set([
     path.resolve(cwd, '.env.local'),
     path.resolve(baseDir, '../.env.local'),
+    path.resolve(baseDir, '../../.env.local'),
     path.resolve(baseDir, '.env.local')
-  ];
+  ]));
 
   for (const file of candidates) {
     try {
@@ -198,9 +200,21 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  // 2. Parse request body
+  // 2. Parse request body (handles both Vercel pre-parsed req.body and raw Node http streams)
   let body = req.body;
-  if (typeof body === 'string') {
+  if (body === undefined || body === null) {
+    try {
+      body = await parseJsonBody(req, { maxBytes: 1024 * 1024 });
+    } catch (err) {
+      const status = (err && Number(err.status)) || 400;
+      return res.status(status).json({
+        error: {
+          message: status === 413 ? 'Request payload exceeds maximum allowed size.' : 'Invalid JSON payload in request body.',
+          status
+        }
+      });
+    }
+  } else if (typeof body === 'string') {
     try {
       body = JSON.parse(body);
     } catch (err) {
@@ -213,7 +227,7 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  if (!body || typeof body !== 'object') {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return res.status(400).json({
       error: {
         message: 'Request body must be a valid JSON object.',

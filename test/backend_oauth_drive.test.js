@@ -11,6 +11,7 @@ const assert = require('assert');
 const crypto = require('crypto');
 const fs = require('fs');
 const http = require('http');
+const os = require('os');
 const path = require('path');
 
 function listVercelServerlessFunctions(rootDir) {
@@ -1887,8 +1888,101 @@ async function runTests() {
 
     console.log('✓ Test 12 passed\n');
 
+    // TEST 13: Localhost dev-server parity (/api/strategy-bot HTTP POST stream parsing & /api/* hot-reload)
+    console.log('[13/13] Testing localhost dev-server parity: /api/strategy-bot stream body & /api/* hot-reload...');
+    const [botEmptyPostRes, botInvalidJsonRes, privRes, tosRes] = await Promise.all([
+      rawRequest(appUrl, '/api/strategy-bot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: { input: '' }
+      }),
+      new Promise((resolve, reject) => {
+        const u = new URL('/api/strategy-bot', appUrl);
+        const r = http.request(u, { method: 'POST', headers: { 'Content-Type': 'application/json' } }, (resp) => {
+          const chunks = [];
+          resp.on('data', (c) => chunks.push(c));
+          resp.on('end', () => {
+            const text = Buffer.concat(chunks).toString('utf8');
+            resolve({ status: resp.statusCode, json: JSON.parse(text) });
+          });
+        });
+        r.on('error', reject);
+        r.write('{not valid json');
+        r.end();
+      }),
+      rawRequest(appUrl, '/privacy-policy'),
+      rawRequest(appUrl, '/terms-of-service')
+    ]);
+    assert.strictEqual(botEmptyPostRes.status, 400);
+    assert.ok(
+      botEmptyPostRes.json && botEmptyPostRes.json.error && botEmptyPostRes.json.error.message.includes('input'),
+      'POST /api/strategy-bot over HTTP on dev-server must parse stream body cleanly'
+    );
+    assert.strictEqual(botInvalidJsonRes.status, 400);
+    assert.ok(botInvalidJsonRes.json && botInvalidJsonRes.json.error && botInvalidJsonRes.json.error.message.includes('Invalid JSON'));
+    assert.strictEqual(privRes.status, 200, 'Clean URL /privacy-policy must work locally');
+    assert.strictEqual(tosRes.status, 200, 'Clean URL /terms-of-service must work locally');
+
+    // Hot-reload verification in isolated temp workspace
+    const tmpReloadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tf-dev-hotreload-'));
+    try {
+      const tmpApiDir = path.join(tmpReloadDir, 'api');
+      const tmpLibDir = path.join(tmpApiDir, '_lib');
+      fs.mkdirSync(tmpLibDir, { recursive: true });
+      const helperFile = path.join(tmpLibDir, 'helper.js');
+      const routeFile = path.join(tmpApiDir, 'ping.js');
+      fs.writeFileSync(helperFile, "module.exports = { ver: 'v1' };\n");
+      fs.writeFileSync(
+        routeFile,
+        "const h = require('./_lib/helper');\nmodule.exports = async (req, res) => res.status(200).json({ ok: true, ver: h.ver });\n"
+      );
+
+      let reloadEvents = 0;
+      const hotServer = createAppServer({
+        rootDir: tmpReloadDir,
+        reloadEnv: false,
+        hotReloadApi: true,
+        onApiReload: () => { reloadEvents++; }
+      });
+      await new Promise((resolve) => hotServer.listen(0, '127.0.0.1', resolve));
+      const hotPort = hotServer.address().port;
+      const hotUrl = `http://127.0.0.1:${hotPort}`;
+      try {
+        const resV1 = await rawRequest(hotUrl, '/api/ping');
+        assert.strictEqual(resV1.status, 200);
+        assert.strictEqual(resV1.json.ver, 'v1');
+        assert.strictEqual(reloadEvents, 0);
+
+        // Update nested api/_lib helper and advance mtime cleanly
+        fs.writeFileSync(helperFile, "module.exports = { ver: 'v2-updated' };\n");
+        const futureDate = new Date(Date.now() + 2000);
+        fs.utimesSync(helperFile, futureDate, futureDate);
+
+        const resV2 = await rawRequest(hotUrl, '/api/ping');
+        assert.strictEqual(resV2.status, 200);
+        assert.strictEqual(resV2.json.ver, 'v2-updated', 'dev-server must auto-reload updated /api/_lib modules without restart');
+        assert.strictEqual(reloadEvents, 1);
+      } finally {
+        await new Promise((r) => hotServer.close(r));
+      }
+    } finally {
+      fs.rmSync(tmpReloadDir, { recursive: true, force: true });
+    }
+
+    // Revoked JTI map persists on globalThis across module reloads
+    const cryptoSess = require(path.resolve(__dirname, '../api/_lib/crypto-session'));
+    cryptoSess.revokeSessionId('jti_hotreload_persist_test', Date.now() + 60000);
+    delete require.cache[require.resolve(path.resolve(__dirname, '../api/_lib/crypto-session'))];
+    const cryptoSessReloaded = require(path.resolve(__dirname, '../api/_lib/crypto-session'));
+    assert.strictEqual(
+      cryptoSessReloaded.isSessionRevoked('jti_hotreload_persist_test'),
+      true,
+      'Revoked session IDs must persist across hot-reloads'
+    );
+    console.log('✓ Test 13 passed\n');
+
     console.log('================================================================');
-    console.log('ALL 12 BACKEND OAUTH + ENCRYPTED COOKIE + DRIVE API TESTS PASSED!');
+    console.log('ALL 13 BACKEND OAUTH + ENCRYPTED COOKIE + DRIVE API TESTS PASSED!');
     console.log('================================================================');
   } finally {
     await new Promise((r) => appServer.close(r));

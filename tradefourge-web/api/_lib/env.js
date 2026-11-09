@@ -9,6 +9,9 @@ const fs = require('fs');
 const path = require('path');
 
 let _envLoaded = false;
+const _fileLoadedKeys = globalThis.__tfFileLoadedEnvKeys instanceof Set
+  ? globalThis.__tfFileLoadedEnvKeys
+  : (globalThis.__tfFileLoadedEnvKeys = new Set());
 
 function _cleanEnvValue(raw) {
   if (raw === undefined || raw === null) return '';
@@ -31,18 +34,25 @@ function _isPlaceholder(key, val) {
   return false;
 }
 
-function loadLocalEnv(force = false) {
+function loadLocalEnv(options = false) {
+  const force = typeof options === 'object' && options !== null ? Boolean(options.force) : Boolean(options);
+  const reloadFileKeys = typeof options === 'object' && options !== null ? Boolean(options.reloadFileKeys) : false;
+
   if (_envLoaded && !force) return;
   _envLoaded = true;
 
   const cwd = typeof process !== 'undefined' && typeof process.cwd === 'function' ? process.cwd() : '.';
   const baseDir = typeof __dirname !== 'undefined' ? __dirname : '.';
-  const candidates = [
+  const candidates = Array.from(new Set([
     path.resolve(cwd, '.env.local'),
     path.resolve(baseDir, '../../.env.local'),
+    path.resolve(baseDir, '../../../.env.local'),
     path.resolve(cwd, '.env'),
-    path.resolve(baseDir, '../../.env')
-  ];
+    path.resolve(baseDir, '../../.env'),
+    path.resolve(baseDir, '../../../.env')
+  ]));
+
+  const nextFileKeys = reloadFileKeys ? new Set() : null;
 
   for (const file of candidates) {
     try {
@@ -56,8 +66,14 @@ function loadLocalEnv(force = false) {
         const key = trimmed.slice(0, eqIdx).trim();
         const val = _cleanEnvValue(trimmed.slice(eqIdx + 1));
         if (!key) continue;
-        if (!_isPlaceholder(key, val) && (process.env[key] === undefined || process.env[key] === '')) {
+        const canSet =
+          process.env[key] === undefined ||
+          process.env[key] === '' ||
+          (reloadFileKeys && _fileLoadedKeys.has(key));
+        if (!_isPlaceholder(key, val) && canSet && !(nextFileKeys && nextFileKeys.has(key))) {
           process.env[key] = val;
+          _fileLoadedKeys.add(key);
+          if (nextFileKeys) nextFileKeys.add(key);
         }
       }
     } catch (e) {

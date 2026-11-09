@@ -22,8 +22,10 @@ const REMEMBER_ME_TTL_SEC = 30 * 24 * 60 * 60; // 30 days
 const SHORT_SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours max idle lifetime if not remembered
 const OAUTH_TX_TTL_SEC = 10 * 60; // 10 minutes
 
-// Per-warm-instance JTI revocation cache (cleared past expiry)
-const _revokedJtis = new Map(); // jti -> expiresAtMs
+// Per-warm-instance JTI revocation cache (preserved on globalThis across local dev hot-reloads)
+const _revokedJtis = globalThis.__tfRevokedJtis instanceof Map
+  ? globalThis.__tfRevokedJtis
+  : (globalThis.__tfRevokedJtis = new Map()); // jti -> expiresAtMs
 
 function _pruneRevoked() {
   const now = Date.now();

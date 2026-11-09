@@ -104,7 +104,10 @@ function _sortSubfoldersByPriority(folders, targetRole) {
 }
 
 // In-memory mutex per user `sub` to prevent concurrent duplicate folder creation within one worker
-const _ensureMutexes = new Map();
+// (Preserved on globalThis across local dev hot-reloads)
+const _ensureMutexes = globalThis.__tfDriveEnsureMutexes instanceof Map
+  ? globalThis.__tfDriveEnsureMutexes
+  : (globalThis.__tfDriveEnsureMutexes = new Map());
 
 function _escapeQueryValue(val) {
   return String(val || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");

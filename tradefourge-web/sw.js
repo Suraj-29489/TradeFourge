@@ -3,7 +3,7 @@
  * Enables offline capability, instant load caching, and PWA installation.
  */
 
-const CACHE_NAME = 'tradefourge-v1.4.6';
+const CACHE_NAME = 'tradefourge-v1.4.7';
 const PRECACHE_ASSETS = [
   './',
   './index.html',
