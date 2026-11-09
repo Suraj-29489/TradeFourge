@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Terms of Service — TradeForge</title>
+  <meta name="description" content="Read TradeForge's Terms of Service covering account security, acceptable use, broker data imports and backups, Google Drive integration, Fourge AI limitations, financial disclaimer, trading risk disclosure, and limitation of liability.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://tradefourge.vercel.app/terms-of-service">
+
+  <!-- Open Graph Metadata -->
+  <meta property="og:site_name" content="TradeForge">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Terms of Service — TradeForge">
+  <meta property="og:description" content="Terms governing use of TradeForge's trading journal, performance analytics, Google Drive sync, and Fourge AI features.">
+  <meta property="og:url" content="https://tradefourge.vercel.app/terms-of-service">
+
+  <!-- Icons & Theme Color -->
+  <meta name="theme-color" content="#141D21">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="apple-touch-icon" href="assets/icons/icon.svg">
+
+  <!-- Google Fonts matching TradeForge Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Pre-paint Theme Sync (Classic / Midnight / Light) without Dashboard JS -->
+  <script>
+    (function () {
+      var VALID = { classic: '#141D21', midnight: '#0B1218', light: '#F1F5F9' };
+      var theme = 'classic';
+      try {
+        var raw = localStorage.getItem('tradeforge_theme');
+        if (!raw) {
+          var s = localStorage.getItem('tradeforge_settings');
+          if (s) {
+            var parsed = JSON.parse(s);
+            if (parsed && parsed.theme) raw = parsed.theme;
+          }
+        }
+        var norm = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
+        if (VALID[norm]) theme = norm;
+      } catch (e) {}
+      document.documentElement.setAttribute('data-theme', theme);
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta && VALID[theme]) meta.setAttribute('content', VALID[theme]);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="css/legal.css">
+</head>
+<body>
+  <!-- Sticky Navigation Header -->
+  <header class="legal-header">
+    <div class="legal-header-inner">
+      <a href="/" class="legal-brand" aria-label="TradeForge Home">
+        <div class="legal-logo-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <defs>
+              <linearGradient id="tfGradTerms" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#B3D6FE"/>
+                <stop offset="50%" stop-color="#87AEFA"/>
+                <stop offset="100%" stop-color="#6E7AF4"/>
+              </linearGradient>
+            </defs>
+            <path d="M 5.06 5.11 C 4.75 5.11 4.5 5.36 4.5 5.67 L 4.5 7.36 C 4.5 7.67 4.75 7.92 5.06 7.92 L 10.59 7.92 L 10.59 18.33 C 10.59 18.64 10.85 18.89 11.16 18.89 L 12.84 18.89 C 13.15 18.89 13.41 18.64 13.41 18.33 L 13.41 13.97 L 17.72 13.97 C 18.03 13.97 18.28 13.72 18.28 13.41 L 18.28 11.91 C 18.28 11.6 18.03 11.34 17.72 11.34 L 13.41 11.34 L 13.41 7.92 L 18.94 7.92 C 19.25 7.92 19.5 7.67 19.5 7.36 L 19.5 5.67 C 19.5 5.36 19.25 5.11 18.94 5.11 Z" fill="url(#tfGradTerms)"/>
+          </svg>
+        </div>
+        <span class="legal-brand-name">TRADE<span class="legal-brand-accent">FORGE</span></span>
+      </a>
+
+      <div class="legal-header-actions">
+        <div class="legal-theme-switcher" role="group" aria-label="Theme selection">
+          <button type="button" class="legal-theme-btn" data-legal-theme="classic">Classic</button>
+          <button type="button" class="legal-theme-btn" data-legal-theme="midnight">Midnight</button>
+          <button type="button" class="legal-theme-btn" data-legal-theme="light">Light</button>
+        </div>
+        <a href="/privacy-policy" class="legal-nav-pill">Privacy Policy</a>
+        <a href="/" class="legal-return-btn" id="returnToAppTopBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          <span>Return to TradeForge</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="legal-main">
+    <!-- Hero Header -->
+    <section class="legal-hero">
+      <div class="legal-doc-eyebrow">PUBLIC LEGAL NOTICE &bull; TERMS OF SERVICE</div>
+      <h1 class="legal-title">TradeForge Terms of Service</h1>
+      <p class="legal-subtitle">
+        Please read these Terms of Service carefully before using TradeForge. They set out the rules for accessing our trading journal, analytics engine, Google Drive cloud synchronization, and Fourge AI assistant, alongside important financial and risk disclosures.
+      </p>
+      <div class="legal-meta-bar">
+        <span class="legal-meta-item">
+          <span class="legal-meta-label">Last Updated</span>
+          <strong>November 9, 2026</strong>
+        </span>
+        <span class="legal-meta-item">
+          <span class="legal-meta-label">Effective Date</span>
+          <strong>November 9, 2026</strong>
+        </span>
+        <span class="legal-meta-item">
+          <span class="legal-meta-label">Service URL</span>
+          <a href="https://tradefourge.vercel.app">https://tradefourge.vercel.app</a>
+        </span>
+        <span class="legal-meta-item">
+          <span class="legal-meta-label">Related</span>
+          <a href="/privacy-policy">Privacy Policy</a>
+        </span>
+      </div>
+
+      <div class="legal-mobile-theme-row">
+        <span class="legal-meta-label">Appearance</span>
+        <div class="legal-theme-switcher" role="group" aria-label="Theme selection mobile">
+          <button type="button" class="legal-theme-btn" data-legal-theme="classic">Classic</button>
+          <button type="button" class="legal-theme-btn" data-legal-theme="midnight">Midnight</button>
+          <button type="button" class="legal-theme-btn" data-legal-theme="light">Light</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mobile Table of Contents -->
+    <details class="legal-mobile-toc">
+      <summary>
+        <span>Table of Contents (16 Sections)</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </summary>
+      <div class="legal-mobile-toc-body">
+        <ul class="legal-toc-list">
+          <li><a class="legal-toc-link" href="#section-1">1. Acceptance of Terms</a></li>
+          <li><a class="legal-toc-link" href="#section-2">2. Description of TradeForge</a></li>
+          <li><a class="legal-toc-link" href="#section-3">3. User Accounts &amp; Security</a></li>
+          <li><a class="legal-toc-link" href="#section-4">4. User Responsibilities &amp; Acceptable Use</a></li>
+          <li><a class="legal-toc-link" href="#section-5">5. Trading Data Imports, Exports &amp; Backups</a></li>
+          <li><a class="legal-toc-link" href="#section-6">6. Google Account &amp; Drive Integrations</a></li>
+          <li><a class="legal-toc-link" href="#section-7">7. Fourge AI &amp; AI Limitations</a></li>
+          <li><a class="legal-toc-link" href="#section-8">8. Financial Disclaimer</a></li>
+          <li><a class="legal-toc-link" href="#section-9">9. No Guarantees</a></li>
+          <li><a class="legal-toc-link" href="#section-10">10. Trading Risk Disclosure</a></li>
+          <li><a class="legal-toc-link" href="#section-11">11. Intellectual Property &amp; Data Ownership</a></li>
+          <li><a class="legal-toc-link" href="#section-12">12. Service Availability &amp; Maintenance</a></li>
+          <li><a class="legal-toc-link" href="#section-13">13. Suspension &amp; Termination</a></li>
+          <li><a class="legal-toc-link" href="#section-14">14. Limitation of Liability</a></li>
+          <li><a class="legal-toc-link" href="#section-15">15. Changes &amp; Governing Law</a></li>
+          <li><a class="legal-toc-link" href="#section-16">16. Contact Information</a></li>
+        </ul>
+      </div>
+    </details>
+
+    <div class="legal-grid">
+      <!-- Desktop Sticky Table of Contents -->
+      <aside class="legal-toc-card" aria-label="Terms of Service Table of Contents">
+        <div class="legal-toc-title">On This Page</div>
+        <ul class="legal-toc-list" id="legalTocList">
+          <li><a class="legal-toc-link active" href="#section-1">1. Acceptance of Terms</a></li>
+          <li><a class="legal-toc-link" href="#section-2">2. Description of TradeForge</a></li>
+          <li><a class="legal-toc-link" href="#section-3">3. User Accounts &amp; Security</a></li>
+          <li><a class="legal-toc-link" href="#section-4">4. User Responsibilities &amp; Acceptable Use</a></li>
+          <li><a class="legal-toc-link" href="#section-5">5. Trading Data Imports, Exports &amp; Backups</a></li>
+          <li><a class="legal-toc-link" href="#section-6">6. Google Account &amp; Drive Integrations</a></li>
+          <li><a class="legal-toc-link" href="#section-7">7. Fourge AI &amp; AI Limitations</a></li>
+          <li><a class="legal-toc-link" href="#section-8">8. Financial Disclaimer</a></li>
+          <li><a class="legal-toc-link" href="#section-9">9. No Guarantees</a></li>
+          <li><a class="legal-toc-link" href="#section-10">10. Trading Risk Disclosure</a></li>
+          <li><a class="legal-toc-link" href="#section-11">11. Intellectual Property &amp; Data Ownership</a></li>
+          <li><a class="legal-toc-link" href="#section-12">12. Service Availability &amp; Maintenance</a></li>
+          <li><a class="legal-toc-link" href="#section-13">13. Suspension &amp; Termination</a></li>
+          <li><a class="legal-toc-link" href="#section-14">14. Limitation of Liability</a></li>
+          <li><a class="legal-toc-link" href="#section-15">15. Changes &amp; Governing Law</a></li>
+          <li><a class="legal-toc-link" href="#section-16">16. Contact Information</a></li>
+        </ul>
+        <div class="legal-toc-divider"></div>
+        <div class="legal-toc-actions">
+          <a href="/privacy-policy" class="legal-nav-pill">Read Privacy Policy</a>
+          <a href="/" class="legal-return-btn">Return to TradeForge</a>
+        </div>
+      </aside>
+
+      <!-- Main Terms of Service Body -->
+      <article class="legal-article">
+        <section class="legal-section" id="section-1">
+          <h2>1. Acceptance of the Terms</h2>
+          <p>
+            By accessing or using TradeForge (at <code>https://tradefourge.vercel.app</code> or any associated deployment operated by <span data-config-field="operatorName"><span class="legal-placeholder">[OPERATOR_NAME]</span></span>), you agree to be bound by these Terms of Service (&ldquo;Terms&rdquo;) and our <a href="/privacy-policy">Privacy Policy</a>. If you do not agree to these Terms, please discontinue use of TradeForge.
+          </p>
+          <p>
+            You confirm that you are of legal age in your jurisdiction to form a binding agreement (and in all cases at least 18 years old, or the age of majority for financial self-directed tools in your jurisdiction).
+          </p>
+        </section>
+
+        <section class="legal-section" id="section-2">
+          <h2>2. Description of TradeForge and Its Features</h2>
+          <p>
+            TradeForge is a web-based trading journal, statistical analytics workspace, and post-trade review tool. Key features currently include:
+          </p>
+          <ul>
+            <li><strong>Trade Journal &amp; Portfolio Telemetry:</strong> Tracking net P&amp;L, profit factor, win rate, drawdown metrics, calendar performance views, symbol/direction breakdowns, and trade logs.</li>
+            <li><strong>Statement Import &amp; Export:</strong> Client-side parsing of supported CSV, HTML, and Excel (XLSX) trade history exports (such as Exness, Zuperior, MT4/MT5 statement exports), alongside PDF, CSV, and JSON ledger exports.</li>
+            <li><strong>Playbooks, Notes &amp; Local MT5 Workspace:</strong> Personal discipline checklists, trading notes, and a client-side MetaTrader 5 preview/importer workspace.</li>
+            <li><strong>Optional Google Sign-In &amp; Google Drive Sync:</strong> OAuth 2.0 cloud persistence under <code>My Drive / TradeForge</code> in your personal Google Drive.</li>
+            <li><strong>Fourge AI Strategy Assistant:</strong> Quantitative insights running either locally via our offline rule-based engine or online via Google Gemini API integration.</li>
+          </ul>
+        </section>
+
+        <section class="legal-section" id="section-3">
+          <h2>3. User Accounts and Account Security</h2>
+          <p>
+            Account authentication in TradeForge is provided primarily through <strong>Google Sign-In (OAuth 2.0)</strong>. (While an email/password UI tab exists behind a configurable adapter, email/password accounts are unavailable unless explicitly enabled by an operator backend.)
+          </p>
+          <ul>
+            <li>You are responsible for safeguarding the Google Account credentials, two-factor authentication controls, and devices used to access TradeForge.</li>
+            <li>On shared or public devices, uncheck &ldquo;Remember me&rdquo; before signing in, use TradeForge&apos;s <strong>Sign Out</strong> option when finished, and purge local browser data if you do not wish local trade caches to remain on that device.</li>
+            <li>Notify us promptly via the contact details in Section 16 if you suspect unauthorized session activity or security misuse affecting TradeForge.</li>
+          </ul>
+        </section>
+
+        <section class="legal-section" id="section-4">
+          <h2>4. User Responsibilities and Acceptable Use</h2>
+          <p>
+            You agree to use TradeForge responsibly and in compliance with all applicable laws. You agree <strong>not</strong> to:
+          </p>
+          <ul>
+            <li>Probe, bypass, reverse-engineer, or disrupt authentication flows, CSRF protections, encrypted session cookies, origin checks, or API rate limits.</li>
+            <li>Send automated bulk traffic, denial-of-service loads, or unauthorized scraping requests to TradeForge endpoints or upstream Gemini AI / Google APIs.</li>
+            <li>Upload malicious files, unlawful content, infringing materials, or sensitive third-party personal data that you do not have the right to process.</li>
+            <li>Misrepresent TradeForge analytics, AI outputs, or exported reports as certified audits, institutional brokerage statements, or regulated financial advice.</li>
+          </ul>
+        </section>
+
+        <section class="legal-section" id="section-5">
+          <h2>5. Trading Data Uploads, Imports, Exports, and Backups</h2>
+          <ul>
+            <li>
+              <strong>Accuracy of Imports:</strong> Broker CSV/HTML/XLSX file formats change across brokers and account currencies. Always cross-check imported P&amp;L, swaps, commissions, timestamps, and timezone alignment against your official broker account statement before relying on calculated figures for tax, accounting, or trading decisions.
+            </li>
+            <li>
+              <strong>Your Backup Duty:</strong> Browser <code>localStorage</code> can be cleared by browser updates, incognito sessions, storage eviction, or device failure, and cloud backups in Google Drive remain subject to your Google Account quota and permissions. We strongly recommend exporting periodic JSON/CSV backups from Settings or Reports and storing copies in a safe location.
+            </li>
+          </ul>
+        </section>
+
+        <section class="legal-section" id="section-6">
+          <h2>6. Google Account and Google Drive Integrations</h2>
+          <p>
+            Using Google Sign-In and Google Drive sync is optional for local offline analytics and required only for cloud sync across devices.
+          </p>
+          <ul>
+            <li>By signing in with Google, you authorize TradeForge to access your basic Google identity (<code>openid email profile</code>) and manage journal data inside your Google Drive under the scoped <code>drive.file</code> permission (<code>My Drive / TradeForge</code>), as detailed in our <a href="/privacy-policy">Privacy Policy</a>.</li>
+            <li>Your use of Google Sign-In and Google Drive remains governed by Google&apos;s Terms of Service and Privacy Policy. We are not responsible for outages, quota limits, policy changes, or suspension of your Google Account by Google.</li>
+            <li>You may disconnect TradeForge at any time via in-app <strong>Sign Out</strong> and your Google Account permissions page, and you remain solely responsible for managing or deleting files inside <code>My Drive / TradeForge</code>.</li>
+          </ul>
+        </section>
+
+        <section class="legal-section" id="section-7">
+          <h2>7. Fourge AI and AI-Generated Analysis Limitations</h2>
+          <p>
+            Fourge AI can operate using an offline deterministic rule engine or Online Mode backed by Google&apos;s Gemini API:
+          </p>
+          <ul>
+            <li><strong>Experimental &amp; Probabilistic Output:</strong> Large language models and analytical summaries can misread metrics, omit edge cases, confuse currency units, or produce inaccurate or incomplete interpretations (&ldquo;hallucinations&rdquo;).</li>
+            <li><strong>Independent Verification Required:</strong> Never act blindly on any statement produced by Fourge AI without independently verifying underlying numbers against your actual trade history and risk limits.</li>
+            <li><strong>Token &amp; Quota Limits:</strong> Online Mode relies on configured API quotas and external availability from Google Gemini; when rate-limited, offline, or unconfigured, requests may fall back to the local offline engine or return an error.</li>
+          </ul>
+        </section>
+
+        <section class="legal-section" id="section-8">
+          <h2>8. Financial Disclaimer</h2>
+          <div class="legal-callout notice">
+            <div class="legal-callout-title">Not a Broker, Investment Adviser, or Trading Signal Provider</div>
+            <div>
+              TradeForge is strictly a <strong>personal trading journal, record-keeping, and performance analytics software tool</strong>. TradeForge is <strong>not</strong> a registered broker-dealer, investment adviser, financial adviser, tax consultant, wealth manager, commodity trading advisor, or trading signal service. Nothing displayed within dashboards, reports, calendars, charts, playbooks, or Fourge AI responses constitutes personalized financial, investment, legal, or tax advice, nor a recommendation or solicitation to buy, sell, or hold any security, currency, commodity, derivative, or digital asset.
+            </div>
+          </div>
+          <p>
+            Consult an appropriately licensed financial, legal, or tax professional before making investment or tax decisions.
+          </p>
+        </section>
+
+        <section class="legal-section" id="section-9">
+          <h2>9. No Guarantee of Profits, Accuracy, or Uninterrupted Service</h2>
+          <p>
+            TradeForge is provided strictly on an <strong>&ldquo;AS IS&rdquo;</strong> and <strong>&ldquo;AS AVAILABLE&rdquo;</strong> basis, without warranties of any kind, express or implied, including implied warranties of merchantability, fitness for a particular purpose, non-infringement, or uninterrupted availability.
+          </p>
+          <p>
+            Using a trading journal or AI analytics tool does <strong>not</strong> guarantee improved trading performance, positive returns, profitability, drawdown protection, bug-free chart rendering, or 100% calculation precision across all broker statement variations.
+          </p>
+        </section>
+
+        <section class="legal-section" id="section-10">
+          <h2>10. Trading Risk Disclosure</h2>
+          <div class="legal-callout warning">
+            <div class="legal-callout-title">Substantial Risk of Financial Loss</div>
+            <div>
+              Trading leveraged forex, CFDs, futures, options, equities, commodities, and cryptocurrencies involves a high degree of risk and is not suitable for every person. Market volatility and leverage can cause losses exceeding initial deposits. <strong>Past performance tracked in your journal does not predict or guarantee future results.</strong> You bear 100% responsibility for every trade, position size, stop-loss placement, and capital allocation decision you execute with any broker.
+            </div>
+          </div>
+        </section>
+
+        <section class="legal-section" id="section-11">
+          <h2>11. Intellectual Property and Ownership of User Data</h2>
+          <ul>
+            <li>
+              <strong>Your Data Belongs to You:</strong> You retain full ownership and intellectual property rights over all trade histories, CSV/XLSX/HTML files, journal notes, playbooks, backups, and exports that you submit, generate, store locally, or sync to your Google Drive. TradeForge claims no ownership interest over your trading records.
+            </li>
+            <li>
+              <strong>TradeForge Application Rights:</strong> TradeForge&apos;s interface design, source code, logos, visual assets, documentation, and underlying software remain the intellectual property of <span data-config-field="operatorName"><span class="legal-placeholder">[OPERATOR_NAME]</span></span> and applicable open-source/third-party library licensors (such as Chart.js and SheetJS/html2pdf components).
+            </li>
+            <li>
+              <strong>Feedback:</strong> If you voluntarily send suggestions or bug reports, we may use them to improve TradeForge without compensation or restriction.
+            </li>
+          </ul>
+        </section>
+
+        <section class="legal-section" id="section-12">
+          <h2>12. Service Availability and Maintenance</h2>
+          <p>
+            We may modify, update, temporarily suspend, or discontinue any part of TradeForge at any time for maintenance, bug fixes, hosting changes (Vercel infrastructure), security updates, or API quota limits without guaranteed uptime or Service Level Agreements (SLAs). Because your primary trade ledger resides in your browser and personal Google Drive, you retain direct access to your Google Drive JSON files independently of TradeForge web uptime.
+          </p>
+        </section>
+
+        <section class="legal-section" id="section-13">
+          <h2>13. Account Suspension and Termination</h2>
+          <ul>
+            <li>
+              <strong>Termination by You:</strong> You may stop using TradeForge anytime by signing out, revoking Google OAuth permissions in your Google Account settings, deleting the <code>TradeForge</code> folder in your Google Drive, and clearing browser site data.
+            </li>
+            <li>
+              <strong>Suspension or Restriction by Us:</strong> We reserve the right to restrict or block access to hosted endpoints (including AI proxy routes or OAuth sessions) if we detect abuse, automated attacks, attempts to bypass security boundaries, violations of these Terms, or misuse that risks third-party API quotas or hosting stability.
+            </li>
+          </ul>
+        </section>
+
+        <section class="legal-section" id="section-14">
+          <h2>14. Limitation of Liability</h2>
+          <p>
+            To the fullest extent permitted by applicable law, <span data-config-field="operatorName"><span class="legal-placeholder">[OPERATOR_NAME]</span></span> and TradeForge&apos;s contributors and maintainers shall not be liable for any indirect, incidental, special, consequential, exemplary, or punitive damages, nor for any direct or indirect financial or trading losses, lost profits, lost capital, missed trade opportunities, brokerage discrepancies, tax miscalculations, data loss, or service interruptions arising out of or related to your use of—or inability to use—TradeForge, Google APIs, Vercel hosting, or Fourge AI outputs.
+          </p>
+          <p>
+            Where statutory liability cannot be completely disclaimed under mandatory consumer laws in your jurisdiction, liability is limited to the maximum extent permitted by such law (and, because TradeForge is currently offered without subscription fees, limited to zero monetary fees paid to us unless otherwise mandated by statute).
+          </p>
+        </section>
+
+        <section class="legal-section" id="section-15">
+          <h2>15. Changes to the Service and Terms; Governing Law</h2>
+          <p>
+            We may revise these Terms periodically as TradeForge evolves. Updated Terms become effective upon posting on this page with an updated <strong>Last Updated</strong> date. Your continued use of TradeForge following updated Terms constitutes acceptance of those revisions.
+          </p>
+          <p>
+            Unless otherwise required by mandatory consumer protection laws in your country of residence, these Terms are governed by the laws of <span data-config-field="governingJurisdiction"><span class="legal-placeholder">[GOVERNING_JURISDICTION]</span></span>, without regard to conflict-of-law principles.
+          </p>
+        </section>
+
+        <section class="legal-section" id="section-16">
+          <h2>16. Contact Information</h2>
+          <p>
+            For questions regarding these Terms of Service, support requests, or legal notices, please contact us using the configurable details below:
+          </p>
+          <div class="legal-contact-card">
+            <div class="legal-contact-row">
+              <span class="legal-contact-label">Application</span>
+              <strong>TradeForge (<code>https://tradefourge.vercel.app</code>)</strong>
+            </div>
+            <div class="legal-contact-row">
+              <span class="legal-contact-label">Operator / Owner</span>
+              <span data-config-field="operatorName"><span class="legal-placeholder">[OPERATOR_NAME]</span></span>
+            </div>
+            <div class="legal-contact-row">
+              <span class="legal-contact-label">Support Email</span>
+              <span data-config-field="supportEmail"><span class="legal-placeholder">[SUPPORT_EMAIL]</span></span>
+            </div>
+            <div class="legal-contact-row">
+              <span class="legal-contact-label">Jurisdiction</span>
+              <span data-config-field="governingJurisdiction"><span class="legal-placeholder">[GOVERNING_JURISDICTION]</span></span>
+            </div>
+          </div>
+        </section>
+      </article>
+    </div>
+  </main>
+
+  <footer class="legal-footer">
+    <span>TradeForge &mdash; Trading Journal &amp; Performance Analytics</span>
+    <nav class="legal-footer-links" aria-label="Legal footer links">
+      <a href="/privacy-policy">Privacy Policy</a>
+      <a href="/terms-of-service">Terms of Service</a>
+      <a href="/">Return to TradeForge</a>
+    </nav>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script>
+    (function () {
+      var THEME_META = {
+        classic: '#141D21',
+        midnight: '#0B1218',
+        light: '#F1F5F9'
+      };
+
+      function normalizeTheme(val) {
+        var cleaned = typeof val === 'string' ? val.trim().toLowerCase() : '';
+        return THEME_META[cleaned] ? cleaned : 'classic';
+      }
+
+      function applyLegalTheme(theme, persist) {
+        var next = normalizeTheme(theme);
+        document.documentElement.setAttribute('data-theme', next);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', THEME_META[next]);
+        document.querySelectorAll('[data-legal-theme]').forEach(function (btn) {
+          var active = btn.getAttribute('data-legal-theme') === next;
+          btn.classList.toggle('active', active);
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        if (persist) {
+          try {
+            localStorage.setItem('tradeforge_theme', next);
+            var existing = {};
+            var raw = localStorage.getItem('tradeforge_settings');
+            if (raw) {
+              var parsed = JSON.parse(raw);
+              if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) existing = parsed;
+            }
+            existing.theme = next;
+            existing.updatedAt = new Date().toISOString();
+            localStorage.setItem('tradeforge_settings', JSON.stringify(existing));
+          } catch (e) {}
+        }
+      }
+
+      applyLegalTheme(document.documentElement.getAttribute('data-theme'), false);
+
+      document.querySelectorAll('[data-legal-theme]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          applyLegalTheme(btn.getAttribute('data-legal-theme'), true);
+        });
+      });
+
+      window.addEventListener('storage', function (ev) {
+        if (ev.key === 'tradeforge_theme' && ev.newValue) {
+          applyLegalTheme(ev.newValue, false);
+        }
+      });
+
+      // Populate configurable public contact fields if configured in TradeForgeConfig
+      try {
+        if (window.TradeForgeConfig && typeof window.TradeForgeConfig.getContactInfo === 'function') {
+          var contact = window.TradeForgeConfig.getContactInfo();
+          if (contact.supportEmail) {
+            document.querySelectorAll('[data-config-field="supportEmail"]').forEach(function (el) {
+              var a = document.createElement('a');
+              a.href = 'mailto:' + contact.supportEmail;
+              a.textContent = contact.supportEmail;
+              el.textContent = '';
+              el.appendChild(a);
+            });
+          }
+          if (contact.operatorName) {
+            document.querySelectorAll('[data-config-field="operatorName"]').forEach(function (el) {
+              el.textContent = contact.operatorName;
+            });
+          }
+          if (contact.governingJurisdiction) {
+            document.querySelectorAll('[data-config-field="governingJurisdiction"]').forEach(function (el) {
+              el.textContent = contact.governingJurisdiction;
+            });
+          }
+        }
+      } catch (e) {}
+
+      // Highlight active TOC item on scroll
+      var tocLinks = Array.prototype.slice.call(document.querySelectorAll('#legalTocList .legal-toc-link'));
+      var sections = Array.prototype.slice.call(document.querySelectorAll('.legal-section'));
+      if (tocLinks.length && sections.length && 'IntersectionObserver' in window) {
+        var observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              var id = '#' + entry.target.id;
+              tocLinks.forEach(function (link) {
+                link.classList.toggle('active', link.getAttribute('href') === id);
+              });
+            }
+          });
+        }, { rootMargin: '-20% 0px -65% 0px' });
+        sections.forEach(function (sec) { observer.observe(sec); });
+      }
+    })();
+  </script>
+</body>
+</html>

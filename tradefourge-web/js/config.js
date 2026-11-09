@@ -13,6 +13,10 @@
     GOOGLE_SCOPES: 'openid email profile https://www.googleapis.com/auth/drive.file',
     GOOGLE_DRIVE_REQUIRED_SCOPE: 'https://www.googleapis.com/auth/drive.file',
     SCHEMA_VERSION: '1.0.0',
+    // Public Support & Legal Contact Configuration (owner must set before Google OAuth verification)
+    SUPPORT_EMAIL: '',
+    OPERATOR_NAME: '',
+    GOVERNING_JURISDICTION: '',
     AUTH_ENDPOINTS: {
       googleStart: '/api/auth/google',
       callback: '/api/auth/callback',
@@ -84,6 +88,23 @@
     },
     getRequiredDriveScope() {
       return DEFAULTS.GOOGLE_DRIVE_REQUIRED_SCOPE;
+    },
+    getContactInfo() {
+      const localCfg = global.TRADEFORGE_LOCAL_CONFIG || {};
+      const appCfg = global.TRADEFORGE_CONFIG || {};
+      const supportEmail = String(localCfg.SUPPORT_EMAIL || appCfg.SUPPORT_EMAIL || DEFAULTS.SUPPORT_EMAIL || '').trim();
+      const operatorName = String(localCfg.OPERATOR_NAME || appCfg.OPERATOR_NAME || DEFAULTS.OPERATOR_NAME || '').trim();
+      const governingJurisdiction = String(
+        localCfg.GOVERNING_JURISDICTION || appCfg.GOVERNING_JURISDICTION || DEFAULTS.GOVERNING_JURISDICTION || ''
+      ).trim();
+      return {
+        supportEmail,
+        operatorName,
+        governingJurisdiction,
+        hasSupportEmail: Boolean(supportEmail),
+        hasOperatorName: Boolean(operatorName),
+        hasGoverningJurisdiction: Boolean(governingJurisdiction)
+      };
     },
     getProjectInfo() {
       return {

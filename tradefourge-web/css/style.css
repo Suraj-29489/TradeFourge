@@ -1198,7 +1198,7 @@ html, body {
 }
 
 .sidebar-footer {
-  max-height: 160px;
+  max-height: 210px;
   padding: 12px;
   border-top: 1px solid var(--border-color);
   background-color: var(--bg-sidebar);
@@ -1311,6 +1311,34 @@ html, body {
   color: var(--loss);
   border-color: var(--loss-border);
   background-color: var(--loss-hover);
+}
+
+.sidebar-legal-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 2px;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.sidebar-legal-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.14s ease;
+}
+
+.sidebar-legal-links a:hover {
+  color: var(--text-main);
+  text-decoration: underline;
+}
+
+.sidebar-legal-links a:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 
 /* Desktop Collapsed Rail (72px, 6 icon-only navigation items) */
@@ -2338,6 +2366,30 @@ html, body {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.settings-link-row {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background-color 0.14s ease;
+}
+
+.settings-link-row:hover {
+  border-color: var(--border-strong);
+  background-color: var(--bg-card-hover);
+  text-decoration: none;
+}
+
+.settings-link-row:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.settings-link-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* ==================== MOBILE BOTTOM NAVIGATION BAR ==================== */

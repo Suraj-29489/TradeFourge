@@ -243,7 +243,7 @@
                 </span>
               </label>
               <div class="auth-terms-inline" id="authTermsInlineBox" hidden>
-                TradeForge is a personal trading analytics journal. Your journal data is stored locally in your browser and, when connected with Google, synced privately inside your own Google Drive (<code>My Drive / TradeForge</code>) using <code>drive.file</code> scope. TradeForge provides analytics only and does not offer financial advice.
+                TradeForge is a personal trading analytics journal. Your journal data is stored locally in your browser and, when connected with Google, synced privately inside your own Google Drive (<code>My Drive / TradeForge</code>) using <code>drive.file</code> scope. TradeForge provides analytics only and does not offer financial advice. Read our full <a href="/terms-of-service">Terms of Service</a> and <a href="/privacy-policy">Privacy Policy</a>.
               </div>
               <div class="auth-field-error" id="authRegisterTermsError" aria-live="polite"></div>
             </div>
@@ -298,6 +298,11 @@
         <!-- Card Footer -->
         <footer class="auth-card-footer">
           <span class="auth-tagline">Trade smarter. Track better.</span>
+          <nav class="auth-legal-links" aria-label="Legal documents">
+            <a href="/privacy-policy" id="authFooterPrivacyLink">Privacy Policy</a>
+            <span aria-hidden="true">&bull;</span>
+            <a href="/terms-of-service" id="authFooterTermsLink">Terms of Service</a>
+          </nav>
         </footer>
       </div>
     </div>
@@ -614,6 +619,11 @@
           <div class="sidebar-footer-actions">
             <button type="button" class="btn-sidebar-util" id="btnSidebarUploadCSV">Import CSV</button>
             <button type="button" class="btn-sidebar-util danger" id="btnClearData">Clear Data</button>
+          </div>
+          <div class="sidebar-legal-links" aria-label="Legal documents">
+            <a href="/privacy-policy" id="sidebarPrivacyLink">Privacy Policy</a>
+            <span aria-hidden="true">&bull;</span>
+            <a href="/terms-of-service" id="sidebarTermsLink">Terms of Service</a>
           </div>
         </div>
       </aside>
@@ -2602,6 +2612,47 @@
                     <button type="button" class="btn-danger-outline" onclick="document.getElementById('btnClearData').click()">Purge All Trades</button>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Block 5: Legal & Information -->
+            <div class="section-card" id="legalSettingsCard" style="grid-column: 1 / -1;">
+              <div class="section-header">
+                <div>
+                  <div class="section-title">Legal &amp; Information</div>
+                  <div class="section-subtitle">Public privacy disclosures, OAuth/Drive scope documentation, and service terms</div>
+                </div>
+              </div>
+              <div class="section-body settings-card-body">
+                <a href="/privacy-policy" class="settings-row settings-link-row" id="settingsLinkPrivacyPolicy">
+                  <div>
+                    <div class="settings-label">Privacy Policy</div>
+                    <div class="settings-desc">Review how TradeForge handles Google Sign-In, <code>drive.file</code> Google Drive sync, Fourge AI, and browser storage</div>
+                  </div>
+                  <div class="settings-action">
+                    <span class="btn-secondary settings-link-cta">
+                      <span>View Policy</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                      </svg>
+                    </span>
+                  </div>
+                </a>
+
+                <a href="/terms-of-service" class="settings-row settings-link-row" id="settingsLinkTermsOfService">
+                  <div>
+                    <div class="settings-label">Terms of Service</div>
+                    <div class="settings-desc">Review usage rules, financial disclaimer, trading risk disclosure, and limitation of liability</div>
+                  </div>
+                  <div class="settings-action">
+                    <span class="btn-secondary settings-link-cta">
+                      <span>View Terms</span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                      </svg>
+                    </span>
+                  </div>
+                </a>
               </div>
             </div>
           </div>

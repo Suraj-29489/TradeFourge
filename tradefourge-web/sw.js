@@ -3,7 +3,7 @@
  * Enables offline capability, instant load caching, and PWA installation.
  */
 
-const CACHE_NAME = 'tradeforge-v1.4.1';
+const CACHE_NAME = 'tradeforge-v1.4.2';
 const isLocalDevHost = () => {
   const host = (self && self.location && self.location.hostname) || '';
   return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
@@ -11,10 +11,13 @@ const isLocalDevHost = () => {
 const PRECACHE_ASSETS = [
   './',
   './index.html',
+  './privacy-policy.html',
+  './terms-of-service.html',
   './manifest.json',
   './css/style.css',
   './css/components.css',
   './css/auth.css',
+  './css/legal.css',
   './js/xlsx.full.min.js',
   './js/html2pdf.bundle.min.js',
   './js/config.js',
@@ -87,10 +90,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests: Network-first, fallback to cached index.html
+  // Navigation requests: Network-first, fallback to matching cached page
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() => caches.match('./index.html'))
+      fetch(request).catch(() => {
+        if (url.pathname === '/privacy-policy' || url.pathname === '/privacy-policy.html') {
+          return caches.match('./privacy-policy.html');
+        }
+        if (url.pathname === '/terms-of-service' || url.pathname === '/terms-of-service.html') {
+          return caches.match('./terms-of-service.html');
+        }
+        return caches.match('./index.html');
+      })
     );
     return;
   }
