@@ -3895,14 +3895,20 @@ select.form-control option {
   .sidebar-backdrop {
     display: none !important;
   }
+  .app-layout,
+  .app-body,
   .app-container,
+  .main-wrapper,
   .main-content,
+  .content-scroll,
   .view-section,
   #view-reports {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
     display: block !important;
   }
   .trading-report-sheet {

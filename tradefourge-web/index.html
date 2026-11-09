@@ -50,6 +50,15 @@
   <link rel="stylesheet" href="css/auth.css">
 </head>
 <body class="auth-locked">
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('tradeforge_sidebar_collapsed') === 'true') {
+          document.body.classList.add('sidebar-collapsed');
+        }
+      } catch (e) {}
+    })();
+  </script>
 
   <!-- ==================== AUTHENTICATION GATE (LOGIN / CREATE ACCOUNT) ==================== -->
   <section id="authGateView" class="auth-gate-view" aria-label="TradeForge Authentication" aria-hidden="false">
@@ -313,310 +322,306 @@
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
   <div class="app-layout">
-    <!-- ==================== LEFT SIDEBAR NAVIGATION ==================== -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-inner">
-        <div class="sidebar-header">
-        <button type="button" class="brand-logo" id="sidebarBrandToggle" title="Collapse Sidebar">
-          <div class="logo-icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <defs>
-                <linearGradient id="tfGradSidebar" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#B3D6FE"/>
-                  <stop offset="50%" stop-color="#87AEFA"/>
-                  <stop offset="100%" stop-color="#6E7AF4"/>
-                </linearGradient>
-              </defs>
-              <path d="M 5.06 5.11 C 4.75 5.11 4.5 5.36 4.5 5.67 L 4.5 7.36 C 4.5 7.67 4.75 7.92 5.06 7.92 L 10.59 7.92 L 10.59 18.33 C 10.59 18.64 10.85 18.89 11.16 18.89 L 12.84 18.89 C 13.15 18.89 13.41 18.64 13.41 18.33 L 13.41 13.97 L 17.72 13.97 C 18.03 13.97 18.28 13.72 18.28 13.41 L 18.28 11.91 C 18.28 11.6 18.03 11.34 17.72 11.34 L 13.41 11.34 L 13.41 7.92 L 18.94 7.92 C 19.25 7.92 19.5 7.67 19.5 7.36 L 19.5 5.67 C 19.5 5.36 19.25 5.11 18.94 5.11 Z" fill="url(#tfGradSidebar)"/>
+    <!-- ==================== FIXED TOP HEADER BAR ==================== -->
+    <header class="top-header">
+      <div class="header-left">
+        <div class="header-brand-cluster">
+          <button type="button"
+                  class="sidebar-toggle-btn"
+                  id="sidebarToggleBtn"
+                  title="Toggle Navigation"
+                  aria-label="Toggle Navigation"
+                  aria-expanded="true"
+                  aria-controls="sidebar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true">
+              <line x1="4" y1="6" x2="20" y2="6"></line>
+              <line x1="4" y1="12" x2="20" y2="12"></line>
+              <line x1="4" y1="18" x2="20" y2="18"></line>
             </svg>
-          </div>
-          <div class="brand-text-stack">
-            <span class="brand-name">TRADE<span class="brand-name-accent">FORGE</span></span>
-          </div>
-        </button>
-        <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn" title="Close Navigation" aria-label="Close Navigation">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
+          </button>
 
-      <div class="sidebar-section-label">TERMINAL WORKSPACE</div>
-      <nav class="sidebar-nav">
-        <div class="nav-item active" data-view="dashboard">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-            <rect x="14" y="14" width="7" height="7" rx="1"></rect>
-            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
-          </svg>
-          <span>Dashboard</span>
-        </div>
-
-        <div class="nav-item" data-view="analytics">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="20" x2="18" y2="10"></line>
-            <line x1="12" y1="20" x2="12" y2="4"></line>
-            <line x1="6" y1="20" x2="6" y2="14"></line>
-          </svg>
-          <span>Analytics</span>
-        </div>
-
-        <div class="nav-item" data-view="tradelog">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="8" y1="6" x2="21" y2="6"></line>
-            <line x1="8" y1="12" x2="21" y2="12"></line>
-            <line x1="8" y1="18" x2="21" y2="18"></line>
-            <line x1="3" y1="6" x2="3.01" y2="6"></line>
-            <line x1="3" y1="12" x2="3.01" y2="12"></line>
-            <line x1="3" y1="18" x2="3.01" y2="18"></line>
-          </svg>
-          <span>Trade Log</span>
-        </div>
-
-        <div class="nav-item" data-view="reports">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
-          <span>Reports</span>
-        </div>
-
-        <div class="nav-item" data-view="strategy-bot">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"></path>
-            <circle cx="9" cy="13" r="1.25" fill="currentColor"></circle>
-            <circle cx="15" cy="13" r="1.25" fill="currentColor"></circle>
-          </svg>
-          <span style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-            Fourge AI
-            <span class="nav-badge-ai">AI</span>
-          </span>
-        </div>
-
-        <div class="nav-item" data-view="mt5">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-          </svg>
-          <span style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-            MT5 Sync
-            <span class="nav-badge-live">LIVE</span>
-          </span>
-        </div>
-
-        <div class="sidebar-section-label" style="margin-top: 12px;">SYSTEM &amp; JOURNAL</div>
-
-        <div class="nav-item" data-view="strategies">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-          </svg>
-          <span>Playbooks &amp; Notes</span>
-        </div>
-
-        <div class="nav-item" data-view="settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-          <span>Settings</span>
-        </div>
-
-        <div class="nav-item install-nav-item" id="sidebarInstallBtn" role="button" tabindex="0">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
-            <line x1="12" y1="18" x2="12.01" y2="18"></line>
-            <path d="M12 7v6m0 0-2.5-2.5M12 13l2.5-2.5"></path>
-          </svg>
-          <span style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-            <span id="installBtnLabel">Install App</span>
-            <span id="installStatusBadge" class="install-status-badge">App</span>
-          </span>
-        </div>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="sidebar-bridge-card" id="sidebarStorageCard" title="Click to manage local &amp; Google Drive storage">
-          <div class="bridge-card-top">
-            <span class="status-dot" id="sidebarStorageDot"></span>
-            <span class="bridge-card-title" id="sidebarStorageTitle">LOCAL LEDGER ENGINE</span>
-          </div>
-          <div class="storage-indicator">
-            <span id="storageStatusText">0 trades stored</span>
-          </div>
-        </div>
-        <div class="sidebar-footer-actions">
-          <button type="button" class="btn-sidebar-util" id="btnSidebarUploadCSV">Import CSV</button>
-          <button type="button" class="btn-sidebar-util danger" id="btnClearData">Clear Data</button>
-        </div>
-      </div>
-      </div>
-    </aside>
-
-    <!-- ==================== MAIN CONTENT AREA ==================== -->
-    <main class="main-wrapper">
-      <!-- Top Header Bar -->
-      <header class="top-header">
-        <div class="header-left">
-          <!-- Expand Sidebar Button (Shown when Sidebar is collapsed or on mobile) -->
-          <button type="button" class="sidebar-reveal-btn" id="sidebarRevealBtn" title="Open Navigation">
-            <span class="logo-icon-sm">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <div class="brand-logo" id="headerBrandLogo" role="link" tabindex="0" title="TradeForge Dashboard" aria-label="TradeForge Dashboard">
+            <div class="logo-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                 <defs>
-                  <linearGradient id="tfGradNav" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="tfGradSidebar" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stop-color="#B3D6FE"/>
                     <stop offset="50%" stop-color="#87AEFA"/>
                     <stop offset="100%" stop-color="#6E7AF4"/>
                   </linearGradient>
                 </defs>
-                <path d="M 5.06 5.11 C 4.75 5.11 4.5 5.36 4.5 5.67 L 4.5 7.36 C 4.5 7.67 4.75 7.92 5.06 7.92 L 10.59 7.92 L 10.59 18.33 C 10.59 18.64 10.85 18.89 11.16 18.89 L 12.84 18.89 C 13.15 18.89 13.41 18.64 13.41 18.33 L 13.41 13.97 L 17.72 13.97 C 18.03 13.97 18.28 13.72 18.28 13.41 L 18.28 11.91 C 18.28 11.6 18.03 11.34 17.72 11.34 L 13.41 11.34 L 13.41 7.92 L 18.94 7.92 C 19.25 7.92 19.5 7.67 19.5 7.36 L 19.5 5.67 C 19.5 5.36 19.25 5.11 18.94 5.11 Z" fill="url(#tfGradNav)"/>
+                <path d="M 5.06 5.11 C 4.75 5.11 4.5 5.36 4.5 5.67 L 4.5 7.36 C 4.5 7.67 4.75 7.92 5.06 7.92 L 10.59 7.92 L 10.59 18.33 C 10.59 18.64 10.85 18.89 11.16 18.89 L 12.84 18.89 C 13.15 18.89 13.41 18.64 13.41 18.33 L 13.41 13.97 L 17.72 13.97 C 18.03 13.97 18.28 13.72 18.28 13.41 L 18.28 11.91 C 18.28 11.6 18.03 11.34 17.72 11.34 L 13.41 11.34 L 13.41 7.92 L 18.94 7.92 C 19.25 7.92 19.5 7.67 19.5 7.36 L 19.5 5.67 C 19.5 5.36 19.25 5.11 18.94 5.11 Z" fill="url(#tfGradSidebar)"/>
+              </svg>
+            </div>
+            <div class="brand-text-stack">
+              <span class="brand-name">TRADE<span class="brand-name-accent">FORGE</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-title-block">
+          <div class="header-title-row">
+            <h1 class="page-title" id="pageTitle">Dashboard</h1>
+            <span class="terminal-status-pill" id="headerTerminalPill">
+              <span class="status-dot-sm"></span>
+              LIVE JOURNAL ENGINE
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- Date Range Filter + Custom Range Popover -->
+        <div class="date-filter-wrapper">
+          <div class="date-filter">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <select id="headerDateRangeSelect" aria-label="Date Range Filter">
+              <option value="all">All Time</option>
+              <option value="last30">Last 30 Days</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+
+          <!-- Custom Date Range Popover -->
+          <div id="customDatePopover" class="custom-date-popover" style="display: none;">
+            <div class="popover-header">
+              <span>SELECT DATE RANGE</span>
+              <button type="button" id="closeCustomDatePopover" class="popover-close">&times;</button>
+            </div>
+            <div class="popover-inputs">
+              <div class="popover-field">
+                <label>Start Date</label>
+                <input type="date" id="customStartDate">
+              </div>
+              <div class="popover-field">
+                <label>End Date</label>
+                <input type="date" id="customEndDate">
+              </div>
+            </div>
+            <div class="mini-cal-header">
+              <button type="button" id="miniCalPrevBtn" class="mini-cal-nav">&lsaquo;</button>
+              <span id="miniCalMonthTitle" class="mini-cal-title">August 2026</span>
+              <button type="button" id="miniCalNextBtn" class="mini-cal-nav">&rsaquo;</button>
+            </div>
+            <div id="miniCalGrid" class="mini-cal-grid"></div>
+            <div class="popover-hint">Click a date to set Start, click another to set End</div>
+            <div class="popover-actions">
+              <button type="button" id="btnCancelCustomDate" class="btn-popover-cancel">Cancel</button>
+              <button type="button" id="btnApplyCustomDate" class="btn-popover-apply">Apply Range</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile Quick Add Trade Button -->
+        <button type="button" class="btn-mobile-add-top" id="btnAddTradeMobileTop" title="Add Manual Trade" aria-label="Add Manual Trade">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+
+        <!-- Google Account & Cloud Sync Control -->
+        <div class="google-account-control" id="googleAccountControl">
+          <button type="button" class="google-auth-trigger-btn" id="btnGoogleAccountTrigger" aria-expanded="false" aria-haspopup="true" title="Google Account &amp; Drive Sync">
+            <span class="google-g-icon" id="googleTriggerGIcon" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
+                <path fill="#34A853" d="M12 24c3.3 0 6.08-1.09 8.1-2.96l-3.88-3.05c-1.09.73-2.49 1.16-4.22 1.16-3.25 0-6-2.19-6.98-5.14H1.02v3.14C3.05 21.17 7.21 24 12 24Z"/>
+                <path fill="#FBBC05" d="M5.02 14.01c-.25-.73-.39-1.52-.39-2.33s.14-1.6.39-2.33V6.21H1.02A11.98 11.98 0 0 0 0 11.68c0 1.93.46 3.76 1.02 5.47l4-3.14Z"/>
+                <path fill="#EA4335" d="M12 4.75c1.79 0 3.4.62 4.67 1.83l3.5-3.5C18.07 1.19 15.3 0 12 0 7.21 0 3.05 2.83 1.02 6.86l4 3.14c.98-2.95 3.73-5.25 6.98-5.25Z"/>
               </svg>
             </span>
-            <span class="brand-name-nav">TRADE<span class="brand-name-accent">FORGE</span></span>
-            <svg class="reveal-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
+            <img class="google-avatar-img" id="googleHeaderAvatar" alt="Google Profile" style="display: none;">
+            <span class="google-avatar-initials" id="googleHeaderInitials" style="display: none;">TF</span>
+            <span class="google-trigger-label" id="googleHeaderLabel">Continue with Google</span>
+            <span class="cloud-sync-dot local" id="googleHeaderSyncDot" style="display: none;"></span>
           </button>
 
-          <div class="header-title-block">
-            <div class="header-title-row">
-              <h1 class="page-title" id="pageTitle">Dashboard</h1>
-              <span class="terminal-status-pill" id="headerTerminalPill">
-                <span class="status-dot-sm"></span>
-                LIVE JOURNAL ENGINE
-              </span>
+          <div class="google-account-dropdown" id="googleAccountDropdown">
+            <div class="google-dropdown-profile">
+              <div class="google-dropdown-avatar-wrap">
+                <img class="google-dropdown-avatar" id="googleDropdownAvatar" alt="Google Profile" style="display: none;">
+                <span class="google-dropdown-initials" id="googleDropdownInitials">G</span>
+              </div>
+              <div class="google-dropdown-identity">
+                <div class="google-dropdown-name" id="googleDropdownName">Google Account</div>
+                <div class="google-dropdown-email" id="googleDropdownEmail">Not signed in</div>
+              </div>
+            </div>
+
+            <div class="google-dropdown-sync-box">
+              <div class="google-dropdown-sync-row">
+                <span class="cloud-status-pill local" id="googleDropdownStatusBadge">LOCAL ONLY</span>
+                <span class="google-dropdown-drive-path">My Drive / TradeForge</span>
+              </div>
+              <div class="google-dropdown-lastsync" id="googleDropdownLastSync">Waiting for sync</div>
+            </div>
+
+            <div class="google-dropdown-actions">
+              <button type="button" class="google-dropdown-btn highlight" id="btnGoogleDropdownResolveMig" style="display: none;">
+                Resolve Data Migration
+              </button>
+              <button type="button" class="google-dropdown-btn highlight" id="btnGoogleDropdownReconnect" style="display: none;">
+                Reconnect Google Session
+              </button>
+              <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownSync">
+                Sync Now
+              </button>
+              <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownUploadCSV">
+                Upload CSV
+              </button>
+              <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownSwitch">
+                Switch Google Account
+              </button>
+              <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownSettings">
+                Cloud Storage Settings
+              </button>
+              <button type="button" class="google-dropdown-btn danger" id="btnGoogleDropdownSignOut">
+                Sign Out
+              </button>
             </div>
           </div>
         </div>
+      </div>
+    </header>
 
-        <div class="header-right">
-          <!-- Date Range Filter + Custom Range Popover -->
-          <div class="date-filter-wrapper">
-            <div class="date-filter">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-              <select id="headerDateRangeSelect" aria-label="Date Range Filter">
-                <option value="all">All Time</option>
-                <option value="last30">Last 30 Days</option>
-                <option value="custom">Custom</option>
-              </select>
-            </div>
-
-            <!-- Custom Date Range Popover -->
-            <div id="customDatePopover" class="custom-date-popover" style="display: none;">
-              <div class="popover-header">
-                <span>SELECT DATE RANGE</span>
-                <button type="button" id="closeCustomDatePopover" class="popover-close">&times;</button>
-              </div>
-              <div class="popover-inputs">
-                <div class="popover-field">
-                  <label>Start Date</label>
-                  <input type="date" id="customStartDate">
-                </div>
-                <div class="popover-field">
-                  <label>End Date</label>
-                  <input type="date" id="customEndDate">
-                </div>
-              </div>
-              <div class="mini-cal-header">
-                <button type="button" id="miniCalPrevBtn" class="mini-cal-nav">&lsaquo;</button>
-                <span id="miniCalMonthTitle" class="mini-cal-title">August 2026</span>
-                <button type="button" id="miniCalNextBtn" class="mini-cal-nav">&rsaquo;</button>
-              </div>
-              <div id="miniCalGrid" class="mini-cal-grid"></div>
-              <div class="popover-hint">Click a date to set Start, click another to set End</div>
-              <div class="popover-actions">
-                <button type="button" id="btnCancelCustomDate" class="btn-popover-cancel">Cancel</button>
-                <button type="button" id="btnApplyCustomDate" class="btn-popover-apply">Apply Range</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Mobile Quick Add Trade Button -->
-          <button type="button" class="btn-mobile-add-top" id="btnAddTradeMobileTop" title="Add Manual Trade" aria-label="Add Manual Trade">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
+    <div class="app-body">
+      <!-- ==================== LEFT SIDEBAR NAVIGATION ==================== -->
+      <aside class="sidebar" id="sidebar" aria-label="Primary Navigation">
+        <div class="sidebar-mobile-header">
+          <span class="sidebar-mobile-title">NAVIGATION</span>
+          <button type="button" class="sidebar-close-btn" id="sidebarCloseBtn" title="Close Navigation" aria-label="Close Navigation">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
+        </div>
 
-          <!-- Google Account & Cloud Sync Control -->
-          <div class="google-account-control" id="googleAccountControl">
-            <button type="button" class="google-auth-trigger-btn" id="btnGoogleAccountTrigger" aria-expanded="false" aria-haspopup="true" title="Google Account &amp; Drive Sync">
-              <span class="google-g-icon" id="googleTriggerGIcon" aria-hidden="true">
-                <svg width="15" height="15" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
-                  <path fill="#34A853" d="M12 24c3.3 0 6.08-1.09 8.1-2.96l-3.88-3.05c-1.09.73-2.49 1.16-4.22 1.16-3.25 0-6-2.19-6.98-5.14H1.02v3.14C3.05 21.17 7.21 24 12 24Z"/>
-                  <path fill="#FBBC05" d="M5.02 14.01c-.25-.73-.39-1.52-.39-2.33s.14-1.6.39-2.33V6.21H1.02A11.98 11.98 0 0 0 0 11.68c0 1.93.46 3.76 1.02 5.47l4-3.14Z"/>
-                  <path fill="#EA4335" d="M12 4.75c1.79 0 3.4.62 4.67 1.83l3.5-3.5C18.07 1.19 15.3 0 12 0 7.21 0 3.05 2.83 1.02 6.86l4 3.14c.98-2.95 3.73-5.25 6.98-5.25Z"/>
-                </svg>
-              </span>
-              <img class="google-avatar-img" id="googleHeaderAvatar" alt="Google Profile" style="display: none;">
-              <span class="google-avatar-initials" id="googleHeaderInitials" style="display: none;">TF</span>
-              <span class="google-trigger-label" id="googleHeaderLabel">Continue with Google</span>
-              <span class="cloud-sync-dot local" id="googleHeaderSyncDot" style="display: none;"></span>
-            </button>
+        <nav class="sidebar-nav">
+          <div class="sidebar-section-label">TERMINAL WORKSPACE</div>
 
-            <div class="google-account-dropdown" id="googleAccountDropdown">
-              <div class="google-dropdown-profile">
-                <div class="google-dropdown-avatar-wrap">
-                  <img class="google-dropdown-avatar" id="googleDropdownAvatar" alt="Google Profile" style="display: none;">
-                  <span class="google-dropdown-initials" id="googleDropdownInitials">G</span>
-                </div>
-                <div class="google-dropdown-identity">
-                  <div class="google-dropdown-name" id="googleDropdownName">Google Account</div>
-                  <div class="google-dropdown-email" id="googleDropdownEmail">Not signed in</div>
-                </div>
-              </div>
+          <div class="nav-item active" data-view="dashboard" data-tooltip="Dashboard" role="button" tabindex="0" aria-label="Dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+              <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+            </svg>
+            <span class="nav-label">Dashboard</span>
+          </div>
 
-              <div class="google-dropdown-sync-box">
-                <div class="google-dropdown-sync-row">
-                  <span class="cloud-status-pill local" id="googleDropdownStatusBadge">LOCAL ONLY</span>
-                  <span class="google-dropdown-drive-path">My Drive / TradeForge</span>
-                </div>
-                <div class="google-dropdown-lastsync" id="googleDropdownLastSync">Waiting for sync</div>
-              </div>
+          <div class="nav-item" data-view="analytics" data-tooltip="Analytics" role="button" tabindex="0" aria-label="Analytics">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            <span class="nav-label">Analytics</span>
+          </div>
 
-              <div class="google-dropdown-actions">
-                <button type="button" class="google-dropdown-btn highlight" id="btnGoogleDropdownResolveMig" style="display: none;">
-                  Resolve Data Migration
-                </button>
-                <button type="button" class="google-dropdown-btn highlight" id="btnGoogleDropdownReconnect" style="display: none;">
-                  Reconnect Google Session
-                </button>
-                <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownSync">
-                  Sync Now
-                </button>
-                <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownUploadCSV">
-                  Upload CSV
-                </button>
-                <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownSwitch">
-                  Switch Google Account
-                </button>
-                <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownSettings">
-                  Cloud Storage Settings
-                </button>
-                <button type="button" class="google-dropdown-btn danger" id="btnGoogleDropdownSignOut">
-                  Sign Out
-                </button>
-              </div>
+          <div class="nav-item" data-view="tradelog" data-tooltip="Trade Log" role="button" tabindex="0" aria-label="Trade Log">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+            <span class="nav-label">Trade Log</span>
+          </div>
+
+          <div class="nav-item" data-view="reports" data-tooltip="Reports" role="button" tabindex="0" aria-label="Reports">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span class="nav-label">Reports</span>
+          </div>
+
+          <div class="nav-item" data-view="strategy-bot" data-tooltip="Fourge AI" role="button" tabindex="0" aria-label="Fourge AI">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"></path>
+              <circle cx="9" cy="13" r="1.25" fill="currentColor"></circle>
+              <circle cx="15" cy="13" r="1.25" fill="currentColor"></circle>
+            </svg>
+            <span class="nav-label nav-label-flex">
+              <span>Fourge AI</span>
+              <span class="nav-badge-ai">AI</span>
+            </span>
+          </div>
+
+          <div class="nav-item sidebar-expanded-only" data-view="mt5" role="button" tabindex="0" aria-label="MT5 Sync">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            </svg>
+            <span class="nav-label nav-label-flex">
+              <span>MT5 Sync</span>
+              <span class="nav-badge-live">LIVE</span>
+            </span>
+          </div>
+
+          <div class="sidebar-section-label sidebar-section-label-spaced">SYSTEM &amp; JOURNAL</div>
+
+          <div class="nav-item sidebar-expanded-only" data-view="strategies" role="button" tabindex="0" aria-label="Playbooks &amp; Notes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            <span class="nav-label">Playbooks &amp; Notes</span>
+          </div>
+
+          <div class="nav-item" data-view="settings" data-tooltip="Settings" role="button" tabindex="0" aria-label="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span class="nav-label">Settings</span>
+          </div>
+
+          <div class="nav-item install-nav-item sidebar-expanded-only" id="sidebarInstallBtn" role="button" tabindex="0" aria-label="Install App">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              <path d="M12 7v6m0 0-2.5-2.5M12 13l2.5-2.5"></path>
+            </svg>
+            <span class="nav-label nav-label-flex">
+              <span id="installBtnLabel">Install App</span>
+              <span id="installStatusBadge" class="install-status-badge">App</span>
+            </span>
+          </div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-bridge-card" id="sidebarStorageCard" title="Click to manage local &amp; Google Drive storage">
+            <div class="bridge-card-top">
+              <span class="status-dot" id="sidebarStorageDot"></span>
+              <span class="bridge-card-title" id="sidebarStorageTitle">LOCAL LEDGER ENGINE</span>
+            </div>
+            <div class="storage-indicator">
+              <span id="storageStatusText">0 trades stored</span>
             </div>
           </div>
+          <div class="sidebar-footer-actions">
+            <button type="button" class="btn-sidebar-util" id="btnSidebarUploadCSV">Import CSV</button>
+            <button type="button" class="btn-sidebar-util danger" id="btnClearData">Clear Data</button>
+          </div>
         </div>
-      </header>
+      </aside>
 
-      <!-- Scrollable Viewport -->
-      <div class="content-scroll">
+      <!-- ==================== MAIN CONTENT AREA ==================== -->
+      <main class="main-wrapper">
+        <!-- Scrollable Viewport -->
+        <div class="content-scroll">
 
         <!-- ==================== VIEW 1: DASHBOARD ==================== -->
         <section class="view-section active" id="view-dashboard">
@@ -2657,7 +2662,11 @@
         </button>
       </nav>
     </main>
+    </div>
   </div>
+
+  <!-- Collapsed Sidebar Rail Tooltip -->
+  <div class="sidebar-rail-tooltip" id="sidebarRailTooltip" role="tooltip" aria-hidden="true"></div>
 
   <!-- ==================== MODALS ==================== -->
 
