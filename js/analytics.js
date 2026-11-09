@@ -1,5 +1,5 @@
 /**
- * TradeForge - Analytics & Trading Performance Calculations
+ * TradeFourge - Analytics & Trading Performance Calculations
  */
 
 const TradeAnalytics = {
@@ -822,7 +822,7 @@ const TradeAnalytics = {
    */
   currentCurrency: (typeof StorageManager !== 'undefined' && StorageManager.getCurrency)
     ? StorageManager.getCurrency()
-    : ((typeof localStorage !== 'undefined' && localStorage.getItem('tradeforge_currency')) || 'USD'),
+    : ((typeof localStorage !== 'undefined' && localStorage.getItem('tradefourge_currency')) || 'USD'),
 
   getCurrency() {
     if (typeof StorageManager !== 'undefined' && StorageManager.getCurrency) {
@@ -843,7 +843,7 @@ const TradeAnalytics = {
       StorageManager.saveCurrency(normalized, options);
     } else if (typeof localStorage !== 'undefined') {
       try {
-        localStorage.setItem('tradeforge_currency', this.currentCurrency);
+        localStorage.setItem('tradefourge_currency', this.currentCurrency);
       } catch (e) {
         console.warn('Unable to persist currency in localStorage:', e);
       }
@@ -879,8 +879,8 @@ const TradeAnalytics = {
     if (typeof localStorage !== 'undefined') {
       try {
         const key = (typeof StorageManager !== 'undefined' && StorageManager._getKeyForNamespace)
-          ? StorageManager._getKeyForNamespace('tradeforge_starting_capital')
-          : 'tradeforge_starting_capital';
+          ? StorageManager._getKeyForNamespace('tradefourge_starting_capital')
+          : 'tradefourge_starting_capital';
         const val = localStorage.getItem(key);
         if (val !== null && val !== '' && !isNaN(Number(val)) && Number(val) > 0) {
           return Number(val);
@@ -904,7 +904,7 @@ const TradeAnalytics = {
     if (cleaned === null) {
       if (typeof localStorage !== 'undefined') {
         try {
-          localStorage.removeItem('tradeforge_starting_capital');
+          localStorage.removeItem('tradefourge_starting_capital');
         } catch (e) {
           console.warn('Unable to clear starting capital:', e);
         }
@@ -913,7 +913,7 @@ const TradeAnalytics = {
     }
     if (typeof localStorage !== 'undefined') {
       try {
-        localStorage.setItem('tradeforge_starting_capital', String(cleaned));
+        localStorage.setItem('tradefourge_starting_capital', String(cleaned));
       } catch (e) {
         console.warn('Unable to persist starting capital in localStorage:', e);
       }

@@ -1,7 +1,7 @@
 /**
- * TradeForge Backend - Cloud Data Normalization, Checksums & Backup Payloads
+ * TradeFourge Backend - Cloud Data Normalization, Checksums & Backup Payloads
  *
- * Keeps server-side `My Drive / TradeForge / User Data/` schemas & checksums
+ * Keeps server-side `My Drive / TradeFourge / User Data/` schemas & checksums
  * 100% consistent with frontend `CloudSyncUtils`.
  */
 
@@ -142,7 +142,7 @@ function buildMetadataPayload({
 }) {
   return {
     schemaVersion: SCHEMA_VERSION,
-    appName: 'TradeForge',
+    appName: 'TradeFourge',
     owner: owner
       ? {
           sub: String(owner.sub || ''),

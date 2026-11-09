@@ -1,5 +1,5 @@
 /**
- * TradeForge - Complete Mobile UI/UX Responsive Redesign Test Suite
+ * TradeFourge - Complete Mobile UI/UX Responsive Redesign Test Suite
  *
  * Verifies:
  * 1. Breakpoints (320-767px mobile, 768-1023px tablet, >=1024px desktop) & CSS isolation (PDF/print untouched)

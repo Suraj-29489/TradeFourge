@@ -1,5 +1,5 @@
 /**
- * TradeForge - Main Application Controller
+ * TradeFourge - Main Application Controller
  */
 
 const App = {
@@ -1915,7 +1915,7 @@ const App = {
 
     const start = this.reportState.startDate || 'start';
     const end = this.reportState.endDate || 'end';
-    const filename = `TradeForge_Report_${start}_to_${end}.pdf`;
+    const filename = `TradeFourge_Report_${start}_to_${end}.pdf`;
 
     // Apply PDF single-page fit mode
     sheet.classList.add('rep-pdf-single-page');
@@ -2656,7 +2656,7 @@ const App = {
   initCurrency() {
     const savedCurrency = (typeof StorageManager !== 'undefined' && StorageManager.getCurrency)
       ? StorageManager.getCurrency()
-      : ((typeof localStorage !== 'undefined' && localStorage.getItem('tradeforge_currency')) || 'USD');
+      : ((typeof localStorage !== 'undefined' && localStorage.getItem('tradefourge_currency')) || 'USD');
     TradeAnalytics.setCurrency(savedCurrency, { silentSync: true, suppressEvent: true });
     this.updateCurrencyUI(savedCurrency);
   },
@@ -2957,7 +2957,7 @@ const App = {
     if (addTradeModal) addTradeModal.classList.add('active');
   },
 
-  SIDEBAR_STORAGE_KEY: 'tradeforge_sidebar_collapsed',
+  SIDEBAR_STORAGE_KEY: 'tradefourge_sidebar_collapsed',
   _sidebarResizeTimer: null,
   _sidebarTooltipsBound: false,
   _mobileViewportBound: false,
@@ -3874,7 +3874,7 @@ const App = {
     link.href = URL.createObjectURL(blob);
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10);
-    const exportFileName = `tradeforge_trades_${dateStr}.json`;
+    const exportFileName = `tradefourge_trades_${dateStr}.json`;
     link.download = exportFileName;
     document.body.appendChild(link);
     link.click();
@@ -4480,7 +4480,7 @@ const App = {
       if (installModal) {
         installModal.classList.remove('active');
       }
-      this.showToast('TradeForge installed successfully! Welcome to the app! 🎉', 'success');
+      this.showToast('TradeFourge installed successfully! Welcome to the app! 🎉', 'success');
     });
 
     // 5. Render platform-tailored instructions in modal
@@ -4522,7 +4522,7 @@ const App = {
             </div>
             <div class="install-guide-step">
               <div class="install-guide-num">3</div>
-              <div>Click <strong>"Add"</strong> to launch TradeForge as a standalone application.</div>
+              <div>Click <strong>"Add"</strong> to launch TradeFourge as a standalone application.</div>
             </div>
           </div>
         `;
@@ -4536,7 +4536,7 @@ const App = {
             </div>
             <div class="install-guide-step">
               <div class="install-guide-num">2</div>
-              <div>Select <strong>"Install TradeForge"</strong> or <strong>"Add to Home screen"</strong>.</div>
+              <div>Select <strong>"Install TradeFourge"</strong> or <strong>"Add to Home screen"</strong>.</div>
             </div>
             <div class="install-guide-step">
               <div class="install-guide-num">3</div>
@@ -4554,7 +4554,7 @@ const App = {
         e.stopPropagation();
 
         if (isStandalone) {
-          this.showToast('TradeForge is already running as an installed standalone app! ✓', 'success');
+          this.showToast('TradeFourge is already running as an installed standalone app! ✓', 'success');
           return;
         }
 
@@ -4562,7 +4562,7 @@ const App = {
           this.deferredInstallPrompt.prompt();
           const choice = await this.deferredInstallPrompt.userChoice;
           if (choice && choice.outcome === 'accepted') {
-            this.showToast('Installing TradeForge... Welcome! 🎉', 'success');
+            this.showToast('Installing TradeFourge... Welcome! 🎉', 'success');
             if (installBadge) {
               installBadge.textContent = 'Installed';
               installBadge.classList.add('installed');
@@ -4588,7 +4588,7 @@ const App = {
           this.deferredInstallPrompt.prompt();
           const choice = await this.deferredInstallPrompt.userChoice;
           if (choice && choice.outcome === 'accepted') {
-            this.showToast('Installing TradeForge... Welcome! 🎉', 'success');
+            this.showToast('Installing TradeFourge... Welcome! 🎉', 'success');
             if (installModal) installModal.classList.remove('active');
           }
           this.deferredInstallPrompt = null;
@@ -5613,7 +5613,7 @@ const App = {
     }
     try {
       await CloudSyncManager.syncNow({ fullCheck: true, reason: 'manual' });
-      this.showToast('Synced cleanly with My Drive / TradeForge!', 'success');
+      this.showToast('Synced cleanly with My Drive / TradeFourge!', 'success');
       this.refreshCloudBackupsList();
     } catch (err) {
       this.showToast((err && err.message) || 'Cloud sync failed.', 'error');
@@ -5624,7 +5624,7 @@ const App = {
     if (typeof CloudSyncManager === 'undefined') return;
     try {
       const file = await CloudSyncManager.createManualBackup('manual');
-      this.showToast(`Saved backup ${file?.name || 'snapshot'} to TradeForge / Backups!`, 'success');
+      this.showToast(`Saved backup ${file?.name || 'snapshot'} to TradeFourge / Backups!`, 'success');
       this.refreshCloudBackupsList();
     } catch (err) {
       this.showToast((err && err.message) || 'Could not create Drive backup.', 'error');
@@ -5633,7 +5633,7 @@ const App = {
 
   async triggerRestoreFromCloud() {
     if (typeof CloudSyncManager === 'undefined') return;
-    if (!confirm('Restore latest data from My Drive / TradeForge / User Data? A safety backup of your current browser data will be saved to Backups/ first.')) {
+    if (!confirm('Restore latest data from My Drive / TradeFourge / User Data? A safety backup of your current browser data will be saved to Backups/ first.')) {
       return;
     }
     try {
@@ -5655,11 +5655,11 @@ const App = {
       return;
     }
 
-    container.innerHTML = '<div class="cloud-backup-empty">Loading backups from My Drive / TradeForge / Backups...</div>';
+    container.innerHTML = '<div class="cloud-backup-empty">Loading backups from My Drive / TradeFourge / Backups...</div>';
     try {
       const backups = await CloudSyncManager.listCloudBackups(8);
       if (!backups || backups.length === 0) {
-        container.innerHTML = '<div class="cloud-backup-empty">No backup snapshots yet in My Drive / TradeForge / Backups.</div>';
+        container.innerHTML = '<div class="cloud-backup-empty">No backup snapshots yet in My Drive / TradeFourge / Backups.</div>';
         return;
       }
 
@@ -5716,7 +5716,7 @@ const App = {
         btn.addEventListener('click', async () => {
           const fileId = btn.getAttribute('data-delete-backup-id');
           const backupName = btn.getAttribute('data-backup-name') || 'this backup';
-          if (!confirm(`Delete backup "${backupName}" permanently from My Drive / TradeForge / Backups? This cannot be undone.`)) {
+          if (!confirm(`Delete backup "${backupName}" permanently from My Drive / TradeFourge / Backups? This cannot be undone.`)) {
             return;
           }
           const row = btn.closest('.cloud-backup-item');
@@ -5768,7 +5768,7 @@ const App = {
       const verified = cloudState.detail?.verified;
       this.showToast(
         verified
-          ? `Migration verified! ${cnt} trade${cnt === 1 ? '' : 's'} stored safely in My Drive / TradeForge.`
+          ? `Migration verified! ${cnt} trade${cnt === 1 ? '' : 's'} stored safely in My Drive / TradeFourge.`
           : `Migration uploaded (${cnt} trades).`,
         'success'
       );
@@ -5813,7 +5813,7 @@ const App = {
 
     if (scenario === 'MIGRATE_LOCAL') {
       if (titleEl) titleEl.innerText = 'MIGRATE LOCAL JOURNAL TO GOOGLE DRIVE';
-      if (subtitleEl) subtitleEl.innerText = 'Your Google Drive has no TradeForge data yet. Choose whether to upload your existing browser journal.';
+      if (subtitleEl) subtitleEl.innerText = 'Your Google Drive has no TradeFourge data yet. Choose whether to upload your existing browser journal.';
       if (pillEl) pillEl.innerText = 'FIRST CLOUD SETUP';
 
       if (optBox) {
@@ -5822,7 +5822,7 @@ const App = {
             <input type="radio" name="cloudMigChoice" value="migrate_local" checked>
             <div>
               <div class="mode-title">Upload Local Data to Google Drive (Recommended)</div>
-              <div class="mode-desc">Copies ${stats.localTradeCount} trade(s), notes, rules, currency &amp; settings to <code>My Drive / TradeForge / User Data</code> and verifies upload integrity.</div>
+              <div class="mode-desc">Copies ${stats.localTradeCount} trade(s), notes, rules, currency &amp; settings to <code>My Drive / TradeFourge / User Data</code> and verifies upload integrity.</div>
             </div>
           </label>
           <label class="import-mode-option">
@@ -6120,11 +6120,11 @@ const App = {
         }
       }
       if (sTitle) sTitle.innerText = `${acct.name || acct.email} (${acct.email})`;
-      if (sSub) sSub.innerText = `Account isolated via Google ID (${acct.sub.slice(0, 8)}...). Folder: My Drive / TradeForge`;
+      if (sSub) sSub.innerText = `Account isolated via Google ID (${acct.sub.slice(0, 8)}...). Folder: My Drive / TradeFourge`;
       if (sDetail) {
         sDetail.innerText = state.lastError?.message
           ? `${state.lastError.message} • ${lastSyncFmt}`
-          : `${lastSyncFmt} • Stored in My Drive / TradeForge / User Data/, Backups/ & Exports/`;
+          : `${lastSyncFmt} • Stored in My Drive / TradeFourge / User Data/, Backups/ & Exports/`;
       }
 
       if (btnSignIn) btnSignIn.style.display = 'none';
@@ -6156,11 +6156,11 @@ const App = {
       }
       if (sSub) {
         sSub.innerHTML = appUser
-          ? 'Signed in with account credentials. Connect Google Drive anytime to sync <code>My Drive / TradeForge</code>.'
-          : 'Sign in with your Google account to create &amp; sync your journal in <code>My Drive / TradeForge</code> across devices.';
+          ? 'Signed in with account credentials. Connect Google Drive anytime to sync <code>My Drive / TradeFourge</code>.'
+          : 'Sign in with your Google account to create &amp; sync your journal in <code>My Drive / TradeFourge</code> across devices.';
       }
       if (sDetail) {
-        sDetail.innerHTML = 'Folder path: <code>My Drive / TradeForge / User Data/</code>, <code>Backups/</code> &amp; <code>Exports/</code> (drive.file permission)';
+        sDetail.innerHTML = 'Folder path: <code>My Drive / TradeFourge / User Data/</code>, <code>Backups/</code> &amp; <code>Exports/</code> (drive.file permission)';
       }
 
       if (btnSignIn) btnSignIn.style.display = 'inline-flex';

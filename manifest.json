@@ -1,6 +1,6 @@
 {
-  "name": "TradeForge - Trading Journal & Analytics",
-  "short_name": "TradeForge",
+  "name": "TradeFourge - Trading Journal & Analytics",
+  "short_name": "TradeFourge",
   "description": "Professional trading journal, performance analytics, MT5 sync, and AI strategy bot.",
   "start_url": "./index.html",
   "scope": "./",

@@ -1,13 +1,13 @@
 /**
- * TradeForge - Global Theme Manager
+ * TradeFourge - Global Theme Manager
  * Supports three persistent themes: 'classic' (default), 'midnight', and 'light'.
- * Early pre-paint initialization happens in <head> via localStorage['tradeforge_theme']
+ * Early pre-paint initialization happens in <head> via localStorage['tradefourge_theme']
  * to avoid any flash of unstyled or mismatched content.
  */
 
 const ThemeManager = {
-  STORAGE_KEY: 'tradeforge_theme',
-  SETTINGS_KEY: 'tradeforge_settings',
+  STORAGE_KEY: 'tradefourge_theme',
+  SETTINGS_KEY: 'tradefourge_settings',
   DEFAULT_THEME: 'classic',
   THEME_ORDER: ['classic', 'midnight', 'light'],
 

@@ -1,5 +1,5 @@
 /**
- * TradeForge - Public Privacy Policy & Terms of Service Verification Suite
+ * TradeFourge - Public Privacy Policy & Terms of Service Verification Suite
  *
  * Verifies:
  * - Clean URL HTTP serving without authentication (/privacy-policy & /terms-of-service -> 200 OK)
@@ -79,17 +79,17 @@ async function runTests() {
 
     // Standalone independence + SEO metadata checks
     [
-      { name: 'Privacy Policy', html: pp, canonical: 'https://tradefourge.vercel.app/privacy-policy', title: 'Privacy Policy — TradeForge' },
-      { name: 'Terms of Service', html: tos, canonical: 'https://tradefourge.vercel.app/terms-of-service', title: 'Terms of Service — TradeForge' }
+      { name: 'Privacy Policy', html: pp, canonical: 'https://tradefourge.vercel.app/privacy-policy', title: 'Privacy Policy — TradeFourge' },
+      { name: 'Terms of Service', html: tos, canonical: 'https://tradefourge.vercel.app/terms-of-service', title: 'Terms of Service — TradeFourge' }
     ].forEach((doc) => {
       assert.ok(doc.html.includes(`<title>${doc.title}</title>`), `${doc.name} title check`);
       assert.ok(doc.html.includes(`rel="canonical" href="${doc.canonical}"`), `${doc.name} canonical link check`);
       assert.ok(doc.html.includes('meta name="description"'), `${doc.name} meta description required`);
       assert.ok(doc.html.includes('property="og:title"'), `${doc.name} Open Graph metadata required`);
       assert.ok(doc.html.includes('Last Updated'), `${doc.name} Last Updated label required`);
-      assert.ok(doc.html.includes('Return to TradeForge'), `${doc.name} visible return link required`);
+      assert.ok(doc.html.includes('Return to TradeFourge'), `${doc.name} visible return link required`);
       assert.ok(doc.html.includes('href="/"'), `${doc.name} link back to / required`);
-      assert.ok(doc.html.includes("localStorage.getItem('tradeforge_theme')"), `${doc.name} pre-paint theme support required`);
+      assert.ok(doc.html.includes("localStorage.getItem('tradefourge_theme')"), `${doc.name} pre-paint theme support required`);
       assert.ok(doc.html.includes('data-legal-theme="classic"') && doc.html.includes('data-legal-theme="midnight"') && doc.html.includes('data-legal-theme="light"'), `${doc.name} must support switching all 3 themes`);
       // Must NOT load dashboard JS, auth JS, Chart.js, or gitignored local overrides
       ['js/app.js', 'js/auth.js', 'js/storage.js', 'js/charts.js', 'js/google-auth.js', 'js/config.local.js', 'chart.umd.min.js'].forEach((forbidden) => {
@@ -110,9 +110,9 @@ async function runTests() {
       'email',
       'profile',
       'https://www.googleapis.com/auth/drive.file',
-      'My Drive / TradeForge / User Data/',
-      'My Drive / TradeForge / Backups/',
-      'My Drive / TradeForge / Exports/',
+      'My Drive / TradeFourge / User Data/',
+      'My Drive / TradeFourge / Backups/',
+      'My Drive / TradeFourge / Exports/',
       'generativelanguage.googleapis.com',
       '/api/strategy-bot',
       'offline-strategy-engine.js',
@@ -132,7 +132,7 @@ async function runTests() {
     for (let i = 1; i <= 14; i++) {
       assert.ok(pp.includes(`id="section-${i}"`), `Privacy Policy missing section-${i}`);
     }
-    assert.ok(!/support@tradeforge\.(com|io|app)/i.test(pp), 'Privacy Policy must not invent a fake support email');
+    assert.ok(!/support@tradefourge\.(com|io|app)/i.test(pp), 'Privacy Policy must not invent a fake support email');
 
     // Terms of Service content assertions (all 16 sections + disclaimer + risk disclosure + placeholders)
     const tosPlain = tos.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
@@ -153,7 +153,7 @@ async function runTests() {
     ].forEach((phrase) => {
       assert.ok(tosPlain.includes(phrase) || tos.includes(phrase), `Terms of Service missing required clause: ${phrase}`);
     });
-    assert.ok(!/support@tradeforge\.(com|io|app)/i.test(tos), 'Terms of Service must not invent a fake support email');
+    assert.ok(!/support@tradefourge\.(com|io|app)/i.test(tos), 'Terms of Service must not invent a fake support email');
     console.log('PASS: 4. Privacy Policy (14 sections) & Terms of Service (16 sections) match implementation truth');
 
     // Settings, Auth Gate, Sidebar Footer & SW integration assertions
@@ -183,25 +183,25 @@ async function runTests() {
     assert.ok(swJs.includes('./privacy-policy.html') && swJs.includes('./terms-of-service.html') && swJs.includes('./css/legal.css'), 'Service worker must precache public legal pages and stylesheet');
     console.log('PASS: 5. Settings, Auth Gate, App Sidebar Footer & Service Worker integrations verified');
 
-    // TradeForgeConfig contact helper test
+    // TradeFourgeConfig contact helper test
     delete require.cache[require.resolve(path.join(ROOT, 'js/config.js'))];
-    const TradeForgeConfig = require(path.join(ROOT, 'js/config.js'));
-    const defaultContact = TradeForgeConfig.getContactInfo();
+    const TradeFourgeConfig = require(path.join(ROOT, 'js/config.js'));
+    const defaultContact = TradeFourgeConfig.getContactInfo();
     assert.strictEqual(defaultContact.supportEmail, '', 'Default SUPPORT_EMAIL must stay unconfigured until owner sets it');
     assert.strictEqual(defaultContact.hasSupportEmail, false);
 
-    global.TRADEFORGE_CONFIG = {
+    global.TRADEFOURGE_CONFIG = {
       SUPPORT_EMAIL: 'ops@example-owner.test',
       OPERATOR_NAME: 'Example Owner',
       GOVERNING_JURISDICTION: 'Example State'
     };
-    const configuredContact = TradeForgeConfig.getContactInfo();
+    const configuredContact = TradeFourgeConfig.getContactInfo();
     assert.strictEqual(configuredContact.supportEmail, 'ops@example-owner.test');
     assert.strictEqual(configuredContact.operatorName, 'Example Owner');
     assert.strictEqual(configuredContact.governingJurisdiction, 'Example State');
     assert.strictEqual(configuredContact.hasSupportEmail, true);
-    delete global.TRADEFORGE_CONFIG;
-    console.log('PASS: 6. TradeForgeConfig configurable support contact resolver verified');
+    delete global.TRADEFOURGE_CONFIG;
+    console.log('PASS: 6. TradeFourgeConfig configurable support contact resolver verified');
 
     console.log('\nSummary: 6 passed, 0 failed (6 total).');
   } finally {

@@ -1,5 +1,5 @@
 /**
- * TradeForge Drive - Bidirectional Cloud Synchronization Endpoint
+ * TradeFourge Drive - Bidirectional Cloud Synchronization Endpoint
  * GET  /api/drive/sync?mode=meta|full
  * POST /api/drive/sync  (action: 'push' | 'save_export')
  */
@@ -98,7 +98,7 @@ async function _handlePost(req, res) {
     }
     const created = await saveExportFile(driveCtx, {
       exportsFolderId: ensured.folderIds.exports,
-      fileName: body.fileName || `tradeforge-export-${new Date().toISOString().slice(0, 10)}.json`,
+      fileName: body.fileName || `tradefourge-export-${new Date().toISOString().slice(0, 10)}.json`,
       content: body.content,
       mimeType: body.mimeType || 'application/json'
     });

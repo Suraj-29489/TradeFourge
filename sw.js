@@ -1,9 +1,9 @@
 /**
- * TradeForge Service Worker
+ * TradeFourge Service Worker
  * Enables offline capability, instant load caching, and PWA installation.
  */
 
-const CACHE_NAME = 'tradeforge-v1.4.3';
+const CACHE_NAME = 'tradefourge-v1.4.4';
 const isLocalDevHost = () => {
   const host = (self && self.location && self.location.hostname) || '';
   return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';

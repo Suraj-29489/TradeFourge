@@ -1,5 +1,5 @@
 /**
- * TradeForge - Authentication Validation, Adapter Contract, Session State & UI Controller
+ * TradeFourge - Authentication Validation, Adapter Contract, Session State & UI Controller
  *
  * Architectural & Security Principles:
  * - Strict separation between application login session state (AuthSessionManager)
@@ -13,9 +13,9 @@
 (function (global) {
   'use strict';
 
-  const SESSION_STORAGE_KEY = 'tradeforge_auth_session';
-  const TEMP_SESSION_KEY = 'tradeforge_auth_session_tmp';
-  const PREFS_STORAGE_KEY = 'tradeforge_auth_prefs';
+  const SESSION_STORAGE_KEY = 'tradefourge_auth_session';
+  const TEMP_SESSION_KEY = 'tradefourge_auth_session_tmp';
+  const PREFS_STORAGE_KEY = 'tradefourge_auth_prefs';
 
   // ==================== 1. PURE FIELD VALIDATORS ====================
   const AuthValidators = {
@@ -154,8 +154,8 @@
 
     _getAuthConfig() {
       if (this._customConfig) return this._customConfig;
-      if (typeof TradeForgeConfig !== 'undefined' && typeof TradeForgeConfig.getAuthConfig === 'function') {
-        return TradeForgeConfig.getAuthConfig();
+      if (typeof TradeFourgeConfig !== 'undefined' && typeof TradeFourgeConfig.getAuthConfig === 'function') {
+        return TradeFourgeConfig.getAuthConfig();
       }
       return {
         enabled: false,

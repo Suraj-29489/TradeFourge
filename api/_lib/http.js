@@ -1,5 +1,5 @@
 /**
- * TradeForge Backend - HTTP Request/Response Security & Cookie Utilities
+ * TradeFourge Backend - HTTP Request/Response Security & Cookie Utilities
  */
 
 const { getRequestOrigin } = require('./env');
@@ -43,7 +43,7 @@ function escapeJsonForInlineScript(obj) {
 function sendPopupResultHtml(res, { ok, user = null, errorCode = '', errorMessage = '' }, statusCode = 200) {
   applySecurityHeaders(res, { contentType: 'text/html; charset=utf-8' });
   const payload = escapeJsonForInlineScript({
-    type: 'tradeforge_oauth_result',
+    type: 'tradefourge_oauth_result',
     ok: Boolean(ok),
     user: ok && user ? {
       sub: String(user.sub || ''),
@@ -58,7 +58,7 @@ function sendPopupResultHtml(res, { ok, user = null, errorCode = '', errorMessag
 
   const html = `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><title>TradeForge Authentication</title></head>
+<head><meta charset="utf-8"><title>TradeFourge Authentication</title></head>
 <body style="background:#0B1218;color:#E6ECEF;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;">
   <div style="text-align:center;padding:24px;">
     <p id="statusMsg">Completing authentication...</p>

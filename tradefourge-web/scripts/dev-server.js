@@ -1,5 +1,5 @@
 /**
- * TradeForge Local Development Server
+ * TradeFourge Local Development Server
  *
  * Serves static frontend assets AND Vercel-compatible `/api/*` serverless functions
  * on http://localhost:3000 (matching OAuth redirect URI http://localhost:3000/api/auth/callback).
@@ -237,12 +237,12 @@ if (require.main === module) {
 
   server.on('error', (err) => {
     if (err && err.code === 'EADDRINUSE') {
-      console.error(`\n[TradeForge] Port ${port} is already in use.`);
+      console.error(`\n[TradeFourge] Port ${port} is already in use.`);
       console.error(`Another local server may already be running at http://localhost:${port}`);
       console.error('Stop the other terminal window (Ctrl + C) and try again.\n');
       process.exit(1);
     }
-    console.error('[TradeForge] Server failed to start:', err && err.message ? err.message : err);
+    console.error('[TradeFourge] Server failed to start:', err && err.message ? err.message : err);
     process.exit(1);
   });
 
@@ -251,12 +251,12 @@ if (require.main === module) {
     const hasGemini = Boolean(process.env.GEMINI_API_KEY && String(process.env.GEMINI_API_KEY).trim());
 
     console.log('\n==============================================================');
-    console.log('  TradeForge Local Development Server');
+    console.log('  TradeFourge Local Development Server');
     console.log('==============================================================');
     console.log(`  Open this URL in Chrome : http://localhost:${port}`);
     console.log(`  OAuth Callback URI      : http://localhost:${port}/api/auth/callback`);
     console.log('');
-    console.log('  Google Cloud Console -> OAuth 2.0 Client ("TradeForge Web Client"):');
+    console.log('  Google Cloud Console -> OAuth 2.0 Client ("TradeFourge Web Client"):');
     console.log(`    Authorized JavaScript origin : http://localhost:${port}`);
     console.log(`    Authorized redirect URI      : http://localhost:${port}/api/auth/callback`);
     console.log('');
@@ -276,9 +276,9 @@ if (require.main === module) {
   });
 
   const shutdown = (signal) => {
-    console.log(`\n[TradeForge] Shutting down local server (${signal})...`);
+    console.log(`\n[TradeFourge] Shutting down local server (${signal})...`);
     server.close(() => {
-      console.log('[TradeForge] Local server stopped.');
+      console.log('[TradeFourge] Local server stopped.');
       process.exit(0);
     });
     setTimeout(() => process.exit(0), 1500).unref();

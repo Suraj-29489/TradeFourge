@@ -1,5 +1,5 @@
 /**
- * TradeForge Auth - Start Google OAuth 2.0 Authorization Code + PKCE Flow
+ * TradeFourge Auth - Start Google OAuth 2.0 Authorization Code + PKCE Flow
  * GET /api/auth/google
  */
 

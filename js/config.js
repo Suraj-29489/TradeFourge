@@ -1,5 +1,5 @@
 /**
- * TradeForge Runtime Configuration Resolver
+ * TradeFourge Runtime Configuration Resolver
  * Resolves public backend auth & Google Drive endpoint paths without any secrets or client-side tokens.
  */
 
@@ -7,9 +7,9 @@
   'use strict';
 
   const DEFAULTS = {
-    GOOGLE_PROJECT_NAME: 'TradeForge Authentication',
+    GOOGLE_PROJECT_NAME: 'TradeFourge Authentication',
     GOOGLE_PROJECT_ID: 'tradefourge-authentication',
-    GOOGLE_OAUTH_CLIENT_NAME: 'TradeForge Web Client',
+    GOOGLE_OAUTH_CLIENT_NAME: 'TradeFourge Web Client',
     GOOGLE_SCOPES: 'openid email profile https://www.googleapis.com/auth/drive.file',
     GOOGLE_DRIVE_REQUIRED_SCOPE: 'https://www.googleapis.com/auth/drive.file',
     SCHEMA_VERSION: '1.0.0',
@@ -39,8 +39,8 @@
   let _serverOAuthConfigured = true;
 
   function getAuthConfig() {
-    const localCfg = global.TRADEFORGE_LOCAL_CONFIG || {};
-    const appCfg = global.TRADEFORGE_CONFIG || {};
+    const localCfg = global.TRADEFOURGE_LOCAL_CONFIG || {};
+    const appCfg = global.TRADEFOURGE_CONFIG || {};
     const baseUrl = String(localCfg.AUTH_API_BASE || appCfg.AUTH_API_BASE || '').trim().replace(/\/+$/, '');
     const explicitlyEnabled = Boolean(localCfg.AUTH_API_ENABLED || appCfg.AUTH_API_ENABLED || baseUrl);
     return {
@@ -51,8 +51,8 @@
   }
 
   function getDriveEndpoints() {
-    const localCfg = global.TRADEFORGE_LOCAL_CONFIG || {};
-    const appCfg = global.TRADEFORGE_CONFIG || {};
+    const localCfg = global.TRADEFOURGE_LOCAL_CONFIG || {};
+    const appCfg = global.TRADEFOURGE_CONFIG || {};
     return Object.assign({}, DEFAULTS.DRIVE_ENDPOINTS, appCfg.DRIVE_ENDPOINTS || {}, localCfg.DRIVE_ENDPOINTS || {});
   }
 
@@ -69,7 +69,7 @@
     return Boolean(_serverOAuthConfigured);
   }
 
-  const TradeForgeConfig = {
+  const TradeFourgeConfig = {
     DEFAULTS,
     getAuthConfig,
     getDriveEndpoints,
@@ -90,8 +90,8 @@
       return DEFAULTS.GOOGLE_DRIVE_REQUIRED_SCOPE;
     },
     getContactInfo() {
-      const localCfg = global.TRADEFORGE_LOCAL_CONFIG || {};
-      const appCfg = global.TRADEFORGE_CONFIG || {};
+      const localCfg = global.TRADEFOURGE_LOCAL_CONFIG || {};
+      const appCfg = global.TRADEFOURGE_CONFIG || {};
       const supportEmail = String(localCfg.SUPPORT_EMAIL || appCfg.SUPPORT_EMAIL || DEFAULTS.SUPPORT_EMAIL || '').trim();
       const operatorName = String(localCfg.OPERATOR_NAME || appCfg.OPERATOR_NAME || DEFAULTS.OPERATOR_NAME || '').trim();
       const governingJurisdiction = String(
@@ -118,9 +118,9 @@
     }
   };
 
-  global.TradeForgeConfig = TradeForgeConfig;
+  global.TradeFourgeConfig = TradeFourgeConfig;
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = TradeForgeConfig;
+    module.exports = TradeFourgeConfig;
   }
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,5 +1,5 @@
 /**
- * TradeForge Auth - Google OAuth 2.0 Authorization Code Callback Handler
+ * TradeFourge Auth - Google OAuth 2.0 Authorization Code Callback Handler
  * GET /api/auth/callback
  */
 
@@ -91,7 +91,7 @@ module.exports = async function handler(req, res) {
       });
       return finishError(
         'drive_scope_denied',
-        'Google Drive permission is required so TradeForge can store your journal in My Drive / TradeForge.'
+        'Google Drive permission is required so TradeFourge can store your journal in My Drive / TradeFourge.'
       );
     }
 

@@ -1,5 +1,5 @@
 /**
- * TradeForge - Fourge AI Offline Strategy & Analytics Engine
+ * TradeFourge - Fourge AI Offline Strategy & Analytics Engine
  *
  * Deterministic local trading analytics assistant.
  * Operates 100% offline without Gemini or external network requests.
@@ -1124,7 +1124,7 @@
       }
 
       if (qLower.includes('are you online') || qLower.includes('are you offline') || qLower.includes('can you analyze my trades')) {
-        return "I am currently analyzing your trade data deterministically using TradeForge's quantitative dataset engine.";
+        return "I am currently analyzing your trade data deterministically using TradeFourge's quantitative dataset engine.";
       }
 
       return null;

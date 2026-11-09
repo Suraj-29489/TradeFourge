@@ -1,5 +1,5 @@
 /**
- * TradeForge Drive - Backups Listing, Manual Snapshot & Safe Restore Endpoint
+ * TradeFourge Drive - Backups Listing, Manual Snapshot & Safe Restore Endpoint
  * GET  /api/drive/backups
  * POST /api/drive/backups  (action: 'create' | 'restore' | 'delete')
  */
@@ -96,14 +96,14 @@ module.exports = async function handler(req, res) {
           return sendJson(res, 400, { ok: false, code: 'MISSING_FILE_ID', message: 'Backup fileId is required.' });
         }
 
-        // Enforces backup belongs strictly inside authenticated user's own TradeForge/Backups folder
+        // Enforces backup belongs strictly inside authenticated user's own TradeFourge/Backups folder
         const { data: backupData } = await readOwnedBackupFile(driveCtx, {
           fileId: body.fileId,
           backupsFolderId: folderIds.backups
         });
 
         if (!backupData || (!backupData.trades && !backupData.settings && !backupData.journal)) {
-          return sendJson(res, 400, { ok: false, code: 'INVALID_BACKUP', message: 'Selected backup file is not a valid TradeForge backup.' });
+          return sendJson(res, 400, { ok: false, code: 'INVALID_BACKUP', message: 'Selected backup file is not a valid TradeFourge backup.' });
         }
 
         const remoteDb = await readDatabase(driveCtx, {

@@ -1,5 +1,5 @@
 /**
- * TradeForge Backend - Encrypted HttpOnly Cookie Session & OAuth Transaction Store
+ * TradeFourge Backend - Encrypted HttpOnly Cookie Session & OAuth Transaction Store
  *
  * Security Properties:
  * - Zero secrets, access tokens, or refresh tokens ever leave the server or enter localStorage.
@@ -56,7 +56,7 @@ function _deriveEncKey(secret) {
     err.status = 500;
     throw err;
   }
-  return crypto.createHmac('sha256', String(secret)).update('tradeforge:cookie-aes256gcm:v1').digest();
+  return crypto.createHmac('sha256', String(secret)).update('tradefourge:cookie-aes256gcm:v1').digest();
 }
 
 function sealJson(payloadObj, secret) {

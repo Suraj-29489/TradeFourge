@@ -1,10 +1,10 @@
 /**
- * TradeForge Backend - Google Drive REST API v3 Server Storage Client
+ * TradeFourge Backend - Google Drive REST API v3 Server Storage Client
  *
  * Manages each authenticated user's isolated folder structure inside their own My Drive
  * using minimum `drive.file` scope (never accesses unrelated user files):
  *
- *   My Drive / TradeForge /
+ *   My Drive / TradeFourge /
  *   ├── User Data/
  *   │   ├── metadata.json
  *   │   ├── trades.json
@@ -13,14 +13,14 @@
  *   ├── Backups/
  *   └── Exports/
  *
- * Also bridges any existing legacy `TradeForge / Database/` files transparently so zero prior data is lost.
+ * Also bridges any existing legacy `TradeFourge / Database/` files transparently so zero prior data is lost.
  */
 
 const FOLDER_MIME = 'application/vnd.google-apps.folder';
 const JSON_MIME = 'application/json';
 
 const FOLDER_NAMES = {
-  ROOT: 'TradeForge',
+  ROOT: 'TradeFourge',
   USER_DATA: 'User Data',
   BACKUPS: 'Backups',
   EXPORTS: 'Exports',
@@ -177,7 +177,7 @@ async function findFolderOnly(ctx, { name, parentId = 'root', role = 'root' }) {
   const q = `name = '${escapedName}' and mimeType = '${FOLDER_MIME}' and '${escapedParent}' in parents and trashed = false`;
   const existing = await listFiles(ctx, { q, pageSize: 25 });
   if (existing.length === 0) return null;
-  const tagged = existing.find((f) => f.appProperties && f.appProperties.tradeforgeRole === role);
+  const tagged = existing.find((f) => f.appProperties && f.appProperties.tradefourgeRole === role);
   return tagged || existing[0];
 }
 
@@ -199,8 +199,8 @@ async function findOrCreateFolder(ctx, { name, parentId = 'root', role = 'root',
     mimeType: FOLDER_MIME,
     parents: [parentId],
     appProperties: {
-      tradeforgeApp: 'true',
-      tradeforgeRole: role
+      tradefourgeApp: 'true',
+      tradefourgeRole: role
     }
   };
 
@@ -320,7 +320,7 @@ async function listUserDataFiles(ctx, userDataFolderId) {
   };
 
   for (const file of files) {
-    const domain = (file.appProperties && file.appProperties.tradeforgeDomain) || domainByFilename[file.name];
+    const domain = (file.appProperties && file.appProperties.tradefourgeDomain) || domainByFilename[file.name];
     if (domain && Object.prototype.hasOwnProperty.call(map, domain) && !map[domain]) {
       map[domain] = file;
     }
@@ -353,7 +353,7 @@ async function createFileInFolder(ctx, { name, parentId, content, mimeType = JSO
     name,
     mimeType,
     parents: [parentId],
-    appProperties: Object.assign({ tradeforgeApp: 'true' }, appProperties)
+    appProperties: Object.assign({ tradefourgeApp: 'true' }, appProperties)
   };
   const bodyContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
 
@@ -413,7 +413,7 @@ async function writeDomainFile(ctx, { domainName, userDataFolderId, fileId = nul
     name: fileName,
     parentId: userDataFolderId,
     content: data,
-    appProperties: { tradeforgeDomain: domainName }
+    appProperties: { tradefourgeDomain: domainName }
   });
 }
 
@@ -424,7 +424,7 @@ async function readDatabase(ctx, { ownerSub, cachedFolderIds = {} } = {}) {
 
   const hasUserDataFiles = Boolean(filesMap.metadata || filesMap.trades || filesMap.journal || filesMap.settings);
 
-  // Backwards-compatibility bridge: check legacy `TradeForge/Database/` once if `User Data/` is empty
+  // Backwards-compatibility bridge: check legacy `TradeFourge/Database/` once if `User Data/` is empty
   let legacySource = false;
   if (!hasUserDataFiles) {
     const legacyFolder = await findFolderOnly(ctx, {
@@ -520,14 +520,14 @@ async function createBackupSnapshot(ctx, { backupsFolderId, reason = 'manual', b
   }
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
   const safeReason = String(reason || 'manual').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 32);
-  const name = `tradeforge-backup-${ts}-${safeReason}.json`;
+  const name = `tradefourge-backup-${ts}-${safeReason}.json`;
   return createFileInFolder(ctx, {
     name,
     parentId: backupsFolderId,
     content: bundle,
     mimeType: JSON_MIME,
     appProperties: {
-      tradeforgeRole: 'backup',
+      tradefourgeRole: 'backup',
       backupReason: safeReason
     }
   });
@@ -555,7 +555,7 @@ async function readOwnedBackupFile(ctx, { fileId, backupsFolderId }) {
   }
   const inUserBackups = Array.isArray(meta.parents) && meta.parents.includes(backupsFolderId);
   if (!inUserBackups) {
-    throw _makeDriveError('FORBIDDEN', 'Backup file does not belong to your TradeForge Backups folder.', 403);
+    throw _makeDriveError('FORBIDDEN', 'Backup file does not belong to your TradeFourge Backups folder.', 403);
   }
   const data = await readJsonFile(ctx, fileId);
   return { meta, data };
@@ -574,7 +574,7 @@ async function deleteOwnedBackupFile(ctx, { fileId, backupsFolderId }) {
   }
   const inUserBackups = Array.isArray(meta.parents) && meta.parents.includes(backupsFolderId);
   if (!inUserBackups) {
-    throw _makeDriveError('FORBIDDEN', 'Backup file does not belong to your TradeForge Backups folder.', 403);
+    throw _makeDriveError('FORBIDDEN', 'Backup file does not belong to your TradeFourge Backups folder.', 403);
   }
   await driveRequest({
     ...ctx,
@@ -592,14 +592,14 @@ async function saveExportFile(ctx, { exportsFolderId, fileName, content, mimeTyp
   if (!exportsFolderId) {
     throw _makeDriveError('MISSING_FOLDER', 'Exports folder is missing on Google Drive.', 400);
   }
-  const safeName = String(fileName || `tradeforge-export-${Date.now()}.json`).replace(/[\\/]/g, '_');
+  const safeName = String(fileName || `tradefourge-export-${Date.now()}.json`).replace(/[\\/]/g, '_');
   return createFileInFolder(ctx, {
     name: safeName,
     parentId: exportsFolderId,
     content,
     mimeType,
     appProperties: {
-      tradeforgeRole: 'export'
+      tradefourgeRole: 'export'
     }
   });
 }

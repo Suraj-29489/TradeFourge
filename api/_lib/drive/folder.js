@@ -1,9 +1,9 @@
 /**
- * TradeForge Drive - Idempotent Folder Hierarchy Initialization
+ * TradeFourge Drive - Idempotent Folder Hierarchy Initialization
  * POST /api/drive/folder
  *
  * Ensures inside authenticated user's My Drive:
- *   TradeForge / { User Data/, Backups/, Exports/ }
+ *   TradeFourge / { User Data/, Backups/, Exports/ }
  */
 
 const { sendJson, parseJsonBody, verifySameOriginMutation, sanitizeErrorForClient } = require('../http');

@@ -1,7 +1,7 @@
 /**
- * TradeForge - Full-Stack Google OAuth + Server Session + Google Drive Cloud Sync Suite
+ * TradeFourge - Full-Stack Google OAuth + Server Session + Google Drive Cloud Sync Suite
  *
- * Exercises REAL frontend modules (`TradeForgeConfig`, `StorageManager`, `GoogleAuthManager`,
+ * Exercises REAL frontend modules (`TradeFourgeConfig`, `StorageManager`, `GoogleAuthManager`,
  * `GoogleDriveStorage`, `CloudSyncManager`, `TradeAnalytics`, `MT5Manager`) wired directly over HTTP
  * to REAL `/api/*` Vercel serverless endpoints (`scripts/dev-server.js`) and an in-process
  * Mock Google OAuth 2.0 + Drive v3 HTTP server (`TF_ALLOW_TEST_ENDPOINTS=1`).
@@ -149,7 +149,7 @@ global.document = {
 };
 
 // Load frontend modules under Node harness
-global.TRADEFORGE_CONFIG = {};
+global.TRADEFOURGE_CONFIG = {};
 require(ROOT_PREFIX + 'js/config.js');
 require(ROOT_PREFIX + 'js/storage.js');
 require(ROOT_PREFIX + 'js/theme.js');
@@ -334,7 +334,7 @@ async function runAllTests() {
     process.env.GOOGLE_CLIENT_ID = CLIENT_ID;
     process.env.GOOGLE_CLIENT_SECRET = CLIENT_SECRET;
     GoogleAuthManager.serverConfigured = true;
-    TradeForgeConfig.setServerOAuthConfigured(true);
+    TradeFourgeConfig.setServerOAuthConfigured(true);
     simulateBrowserReload({ preserveCookieJar: false });
   }
 
@@ -481,11 +481,11 @@ async function runAllTests() {
 
     // Fresh request without cached IDs discovers and reuses exact same folders
     const f3 = await GoogleDriveStorage.ensureFolderStructure('sub_alice_1001', {});
-    assert.strictEqual(f3.root, f1.root, 'Subsequent discovery must reuse existing TradeForge folder');
+    assert.strictEqual(f3.root, f1.root, 'Subsequent discovery must reuse existing TradeFourge folder');
 
     const aliceDrive = mockGoogle.getDriveStore('sub_alice_1001');
-    const rootFolders = Array.from(aliceDrive.values()).filter((x) => x.name === 'TradeForge');
-    assert.strictEqual(rootFolders.length, 1, 'Zero duplicate TradeForge folders allowed');
+    const rootFolders = Array.from(aliceDrive.values()).filter((x) => x.name === 'TradeFourge');
+    assert.strictEqual(rootFolders.length, 1, 'Zero duplicate TradeFourge folders allowed');
 
     // Push initial data into User Data/ -> verifies trades.json ID reused in place
     const pushFirst = await GoogleDriveStorage.pushSnapshot({
@@ -751,7 +751,7 @@ async function runAllTests() {
     // TEST 8: Strict Multi-Account Isolation (Alice vs Bob vs Anonymous) & Exports/
     // ------------------------------------------------------------------
     console.log('[8/10] Testing Strict Multi-Account Isolation & Exports/ Storage...');
-    // Test saveCloudExport writes into Alice's TradeForge / Exports/
+    // Test saveCloudExport writes into Alice's TradeFourge / Exports/
     const exportSave = await CloudSyncManager.saveCloudExport({
       fileName: 'alice-oct-trades.json',
       content: JSON.stringify(StorageManager.getTrades()),

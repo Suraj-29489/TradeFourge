@@ -1,5 +1,5 @@
 /**
- * TradeForge - YouTube-Style Collapsible Sidebar Regression Test Suite
+ * TradeFourge - YouTube-Style Collapsible Sidebar Regression Test Suite
  *
  * Verifies HTML layout structure, CSS collapsed rail rules, tooltip attributes,
  * desktop toggle & persistence, view navigation state preservation, and mobile separation.
@@ -74,7 +74,7 @@ function createMockNode(id = '', tagName = 'DIV') {
 function loadAppController({ initialCollapsed = null, innerWidth = 1440 } = {}) {
   const store = new Map();
   if (initialCollapsed !== null) {
-    store.set('tradeforge_sidebar_collapsed', String(initialCollapsed));
+    store.set('tradefourge_sidebar_collapsed', String(initialCollapsed));
   }
 
   const toggleBtn = createMockNode('sidebarToggleBtn', 'BUTTON');
@@ -194,13 +194,13 @@ function runAll() {
 
   const sidebarHtml = html.slice(asideStart, asideEnd);
   assert.ok(!sidebarHtml.includes('brand-logo'), 'Brand logo must NEVER live inside width-changing sidebar container');
-  assert.ok(!sidebarHtml.includes('TRADE<span class="brand-name-accent">FORGE</span>'), 'Wordmark must NEVER live inside width-changing sidebar container');
+  assert.ok(!sidebarHtml.includes('TRADE<span class="brand-name-accent">FOURGE</span>'), 'Wordmark must NEVER live inside width-changing sidebar container');
 
   const headerHtml = html.slice(headerStart, appBodyStart);
   assert.ok(headerHtml.includes('id="sidebarToggleBtn"'), 'Hamburger toggle button #sidebarToggleBtn must be in fixed top header');
   assert.ok(headerHtml.includes('id="headerBrandLogo"'), 'Stationary #headerBrandLogo must be in fixed top header');
-  assert.ok(headerHtml.includes('TRADE<span class="brand-name-accent">FORGE</span>'), 'TRADEFORGE wordmark must be in fixed top header');
-  assert.ok(html.includes("localStorage.getItem('tradeforge_sidebar_collapsed')"), 'Pre-paint sidebar state loader must exist in HTML');
+  assert.ok(headerHtml.includes('TRADE<span class="brand-name-accent">FOURGE</span>'), 'TRADEFOURGE wordmark must be in fixed top header');
+  assert.ok(html.includes("localStorage.getItem('tradefourge_sidebar_collapsed')"), 'Pre-paint sidebar state loader must exist in HTML');
 
   // Exact 6 collapsed icons vs 3 expanded-only nav items
   const collapsedAllowed = ['dashboard', 'analytics', 'tradelog', 'reports', 'strategy-bot', 'settings'];
@@ -236,7 +236,7 @@ function runAll() {
 
   env1.App.toggleSidebar();
   assert.strictEqual(env1.document.body.classList.contains('sidebar-collapsed'), true, 'Hamburger click collapses sidebar');
-  assert.strictEqual(env1.localStorage.getItem('tradeforge_sidebar_collapsed'), 'true', 'Collapsed preference saved');
+  assert.strictEqual(env1.localStorage.getItem('tradefourge_sidebar_collapsed'), 'true', 'Collapsed preference saved');
   assert.strictEqual(env1.toggleBtn.getAttribute('aria-expanded'), 'false');
 
   // Navigating across all 6 collapsed views MUST keep sidebar collapsed
@@ -264,7 +264,7 @@ function runAll() {
   envReload.setInnerWidth(390);
   envReload.App.toggleSidebar();
   assert.strictEqual(envReload.document.body.classList.contains('sidebar-mobile-open'), true, 'Mobile toggle opens off-canvas drawer');
-  assert.strictEqual(envReload.localStorage.getItem('tradeforge_sidebar_collapsed'), 'true', 'Mobile drawer must not overwrite desktop collapse preference');
+  assert.strictEqual(envReload.localStorage.getItem('tradefourge_sidebar_collapsed'), 'true', 'Mobile drawer must not overwrite desktop collapse preference');
   envReload.App.toggleSidebar();
   assert.strictEqual(envReload.document.body.classList.contains('sidebar-mobile-open'), false, 'Second mobile toggle closes drawer');
   console.log('PASS: 4. Reload persistence & mobile drawer isolation verified');

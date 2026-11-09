@@ -1,20 +1,20 @@
 /**
- * TradeForge - Local Storage & Account-Isolated Cache Persistence Manager.
+ * TradeFourge - Local Storage & Account-Isolated Cache Persistence Manager.
  * Persists trade datasets, notes, rules, settings, and MT5 sessions in browser localStorage,
  * supporting both anonymous local mode and per-Google-account isolated cloud caches.
  */
 
 const StorageManager = {
   KEYS: {
-    TRADES: 'tradeforge_trades',
-    LAST_IMPORT: 'tradeforge_last_import',
-    NOTES: 'tradeforge_notes',
-    RULES: 'tradeforge_rules',
-    USER_SETTINGS: 'tradeforge_settings',
-    CURRENCY: 'tradeforge_currency',
-    STARTING_CAPITAL: 'tradeforge_starting_capital',
-    MT5_SESSION: 'tradeforge_mt5_session',
-    DELETED_UIDS: 'tradeforge_deleted_uids'
+    TRADES: 'tradefourge_trades',
+    LAST_IMPORT: 'tradefourge_last_import',
+    NOTES: 'tradefourge_notes',
+    RULES: 'tradefourge_rules',
+    USER_SETTINGS: 'tradefourge_settings',
+    CURRENCY: 'tradefourge_currency',
+    STARTING_CAPITAL: 'tradefourge_starting_capital',
+    MT5_SESSION: 'tradefourge_mt5_session',
+    DELETED_UIDS: 'tradefourge_deleted_uids'
   },
 
   DEFAULT_RULES: [
@@ -73,14 +73,14 @@ const StorageManager = {
 
   /**
    * Resolve the storage key name for the current or explicit namespace.
-   * Anonymous namespace preserves exact legacy `tradeforge_*` keys untouched.
+   * Anonymous namespace preserves exact legacy `tradefourge_*` keys untouched.
    */
   _getKeyForNamespace(baseKey, namespace = this.activeNamespace) {
     if (!namespace || namespace === 'anonymous') {
       return baseKey;
     }
-    const prefix = `tradeforge_acct_${this._hashNamespace(namespace)}_`;
-    return prefix + baseKey.replace(/^tradeforge_/, '');
+    const prefix = `tradefourge_acct_${this._hashNamespace(namespace)}_`;
+    return prefix + baseKey.replace(/^tradefourge_/, '');
   },
 
   /**

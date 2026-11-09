@@ -1,5 +1,5 @@
 /**
- * TradeForge - Google Authentication Manager (Server-Side OAuth 2.0 Session Client)
+ * TradeFourge - Google Authentication Manager (Server-Side OAuth 2.0 Session Client)
  *
  * Security Invariants:
  * - Zero OAuth access_tokens, refresh_tokens, or client_secrets ever touch browser JS or web storage.
@@ -11,12 +11,12 @@
 (function (global) {
   'use strict';
 
-  const ACCOUNT_STORAGE_KEY = 'tradeforge_google_account';
-  const KNOWN_ACCOUNTS_KEY = 'tradeforge_google_accounts_index';
+  const ACCOUNT_STORAGE_KEY = 'tradefourge_google_account';
+  const KNOWN_ACCOUNTS_KEY = 'tradefourge_google_accounts_index';
 
   const AUTH_ERROR_MESSAGES = {
     access_denied: 'Google sign-in was cancelled. You can continue using local mode or try again anytime.',
-    drive_scope_denied: 'Google Drive access is required so TradeForge can store and sync your trading journal in My Drive / TradeForge.',
+    drive_scope_denied: 'Google Drive access is required so TradeFourge can store and sync your trading journal in My Drive / TradeFourge.',
     server_not_configured: 'Google sign-in is temporarily unavailable on this server. Please check back shortly.',
     invalid_state: 'Your sign-in request expired or could not be verified. Please click Continue with Google again.',
     missing_code: 'Google sign-in did not complete cleanly. Please try again.',
@@ -42,8 +42,8 @@
   }
 
   function _getEndpoints() {
-    if (typeof TradeForgeConfig !== 'undefined' && typeof TradeForgeConfig.getAuthConfig === 'function') {
-      return TradeForgeConfig.getAuthConfig().endpoints;
+    if (typeof TradeFourgeConfig !== 'undefined' && typeof TradeFourgeConfig.getAuthConfig === 'function') {
+      return TradeFourgeConfig.getAuthConfig().endpoints;
     }
     return {
       googleStart: '/api/auth/google',
@@ -54,8 +54,8 @@
   }
 
   function _getDriveEndpoints() {
-    if (typeof TradeForgeConfig !== 'undefined' && typeof TradeForgeConfig.getDriveEndpoints === 'function') {
-      return TradeForgeConfig.getDriveEndpoints();
+    if (typeof TradeFourgeConfig !== 'undefined' && typeof TradeFourgeConfig.getDriveEndpoints === 'function') {
+      return TradeFourgeConfig.getDriveEndpoints();
     }
     return {
       authorize: '/api/drive/authorize'
@@ -145,15 +145,15 @@
     },
 
     getScopes() {
-      if (typeof TradeForgeConfig !== 'undefined' && TradeForgeConfig.getGoogleScopes) {
-        return TradeForgeConfig.getGoogleScopes();
+      if (typeof TradeFourgeConfig !== 'undefined' && TradeFourgeConfig.getGoogleScopes) {
+        return TradeFourgeConfig.getGoogleScopes();
       }
       return 'openid email profile https://www.googleapis.com/auth/drive.file';
     },
 
     getRequiredDriveScope() {
-      if (typeof TradeForgeConfig !== 'undefined' && TradeForgeConfig.getRequiredDriveScope) {
-        return TradeForgeConfig.getRequiredDriveScope();
+      if (typeof TradeFourgeConfig !== 'undefined' && TradeFourgeConfig.getRequiredDriveScope) {
+        return TradeFourgeConfig.getRequiredDriveScope();
       }
       return 'https://www.googleapis.com/auth/drive.file';
     },
@@ -345,8 +345,8 @@
 
           if (typeof data.configured === 'boolean') {
             this.serverConfigured = data.configured;
-            if (typeof TradeForgeConfig !== 'undefined' && TradeForgeConfig.setServerOAuthConfigured) {
-              TradeForgeConfig.setServerOAuthConfigured(data.configured);
+            if (typeof TradeFourgeConfig !== 'undefined' && TradeFourgeConfig.setServerOAuthConfigured) {
+              TradeFourgeConfig.setServerOAuthConfigured(data.configured);
             }
           }
 
@@ -468,7 +468,7 @@
       const h = 640;
       const left = typeof global.screenX === 'number' ? Math.max(0, global.screenX + ((global.outerWidth || 1000) - w) / 2) : 100;
       const top = typeof global.screenY === 'number' ? Math.max(0, global.screenY + ((global.outerHeight || 700) - h) / 2) : 80;
-      const popup = global.open(url, 'tradeforge_google_oauth', `width=${w},height=${h},left=${left},top=${top},popup=yes`);
+      const popup = global.open(url, 'tradefourge_google_oauth', `width=${w},height=${h},left=${left},top=${top},popup=yes`);
 
       if (!popup) {
         this._navigateToUrl(url);
@@ -511,7 +511,7 @@
         const onMessage = async (event) => {
           if (event.origin !== global.location.origin) return;
           const payload = event.data;
-          if (!payload || payload.type !== 'tradeforge_oauth_result' || settled) return;
+          if (!payload || payload.type !== 'tradefourge_oauth_result' || settled) return;
           settled = true;
           cleanup();
           if (!payload.ok) {
@@ -623,7 +623,7 @@
     },
 
     /**
-     * Sign out from TradeForge on both server (revokes Google token + clears HttpOnly cookies) and client cache.
+     * Sign out from TradeFourge on both server (revokes Google token + clears HttpOnly cookies) and client cache.
      */
     async signOut() {
       const fetchFn = _getFetchFn();

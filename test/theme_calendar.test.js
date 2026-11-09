@@ -1,5 +1,5 @@
 /**
- * TradeForge - Global Theme System & Dynamic P&L Calendar Heatmap Test Suite
+ * TradeFourge - Global Theme System & Dynamic P&L Calendar Heatmap Test Suite
  *
  * Compatible with macOS JavaScriptCore (`jsc test/theme_calendar.test.js`)
  * and Node.js (`node test/theme_calendar.test.js`).

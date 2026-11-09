@@ -1,8 +1,8 @@
 /**
- * TradeForge - Cloud Synchronization Engine & Conflict Resolver
+ * TradeFourge - Cloud Synchronization Engine & Conflict Resolver
  *
  * Bridges StorageManager (account-isolated localStorage cache) with server-backed GoogleDriveStorage
- * (`My Drive / TradeForge / { User Data/, Backups/, Exports/ }`), providing:
+ * (`My Drive / TradeFourge / { User Data/, Backups/, Exports/ }`), providing:
  * - Automatic offline-first persistence & queued retry backoff
  * - Safe first-login migration (never deletes anonymous localStorage automatically)
  * - Post-write verification readback
@@ -15,8 +15,8 @@
   'use strict';
 
   const SCHEMA_VERSION = '1.0.0';
-  const META_PREFIX = 'tradeforge_cloud_meta_';
-  const BASE_PREFIX = 'tradeforge_cloud_base_';
+  const META_PREFIX = 'tradefourge_cloud_meta_';
+  const BASE_PREFIX = 'tradefourge_cloud_base_';
   const DEBOUNCE_MS = 1200;
   const RETRY_DELAYS_MS = [2000, 5000, 15000];
 
@@ -221,7 +221,7 @@
     buildMetadataPayload({ owner, folderIds, revisions, checksums, counts, migratedLocalHash, nowIso = new Date().toISOString() }) {
       return {
         schemaVersion: SCHEMA_VERSION,
-        appName: 'TradeForge',
+        appName: 'TradeFourge',
         owner: owner
           ? {
               sub: String(owner.sub || ''),
@@ -1142,7 +1142,7 @@
           return this.getState();
         }
 
-        // INIT_EMPTY: Create initial empty User Data files cleanly in My Drive / TradeForge / User Data /
+        // INIT_EMPTY: Create initial empty User Data files cleanly in My Drive / TradeFourge / User Data /
         await this._pushSnapshotToDrive(account, accountSnap, {
           forceAllDomains: true,
           force: true,
@@ -1729,7 +1729,7 @@
         const remoteDb = await GoogleDriveStorage.readDatabase({ ownerSub: sub, folderIds: meta.folderIds });
 
         if (!remoteDb.exists) {
-          throw new Error('No cloud data exists yet in My Drive / TradeForge / User Data.');
+          throw new Error('No cloud data exists yet in My Drive / TradeFourge / User Data.');
         }
 
         if (createSafetyBackupFirst) {

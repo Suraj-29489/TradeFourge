@@ -1,10 +1,10 @@
 /**
- * TradeForge - MetaTrader 5 (MT5) Integration Module
+ * TradeFourge - MetaTrader 5 (MT5) Integration Module
  * Frontend terminal connection, live account dashboard, and trade importer.
  */
 
 const MT5Manager = {
-  storageKey: 'tradeforge_mt5_session',
+  storageKey: 'tradefourge_mt5_session',
   isConnected: false,
   activeSubTab: 'overview', // 'overview', 'positions', 'history', 'orders', 'deals', 'sync'
 
@@ -122,11 +122,11 @@ const MT5Manager = {
       });
     }
 
-    // Import to TradeForge button
-    const btnImport = document.getElementById('btnMT5ImportToTradeForge');
+    // Import to TradeFourge button
+    const btnImport = document.getElementById('btnMT5ImportToTradeFourge');
     if (btnImport) {
       btnImport.addEventListener('click', () => {
-        this.importToTradeForge();
+        this.importToTradeFourge();
       });
     }
 
@@ -232,9 +232,9 @@ const MT5Manager = {
   },
 
   /**
-   * Import all MT5 closed trade history directly into TradeForge's trade model
+   * Import all MT5 closed trade history directly into TradeFourge's trade model
    */
-  importToTradeForge() {
+  importToTradeFourge() {
     if (!this.accountData || !this.accountData.historyTrades || this.accountData.historyTrades.length === 0) {
       if (window.App && typeof App.showToast === 'function') {
         App.showToast('No MT5 trade history available to import.', 'warning');
@@ -299,7 +299,7 @@ const MT5Manager = {
     if (typeof App.showToast === 'function') {
       App.showToast(
         addedCount > 0
-          ? `Imported ${addedCount} MT5 trades into TradeForge!`
+          ? `Imported ${addedCount} MT5 trades into TradeFourge!`
           : 'All MT5 trades are already imported (0 new trades).',
         addedCount > 0 ? 'success' : 'info'
       );
@@ -548,7 +548,7 @@ const MT5Manager = {
           <div class="mt5-info-card">
             <span class="mt5-info-label">Import Status</span>
             <span class="mt5-info-val" style="font-size: 1.15rem; color: var(--profit);">${acc.historyTrades.length} Trades Ready</span>
-            <span class="mt5-info-sub">Ready to convert to TradeForge</span>
+            <span class="mt5-info-sub">Ready to convert to TradeFourge</span>
           </div>
         </div>
       </div>

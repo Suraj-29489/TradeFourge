@@ -1,5 +1,5 @@
 /**
- * TradeForge Auth - Logout & Token Revocation Endpoint
+ * TradeFourge Auth - Logout & Token Revocation Endpoint
  * POST /api/auth/logout
  */
 

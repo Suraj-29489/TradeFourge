@@ -1,5 +1,5 @@
 /**
- * TradeForge - Authentication UI, Validation, Adapter & Session Verification Suite
+ * TradeFourge - Authentication UI, Validation, Adapter & Session Verification Suite
  *
  * Compatible with macOS JavaScriptCore (`jsc test/auth_ui.test.js`) and Node.js.
  */
@@ -142,9 +142,9 @@
     global.sessionStorage.clear();
     global.navigator.onLine = true;
     global.location = { origin: 'http://localhost:3000', pathname: '/', search: '', hash: '' };
-    global.TRADEFORGE_CONFIG = {};
-    global.TRADEFORGE_LOCAL_CONFIG = {};
-    TradeForgeConfig.setServerOAuthConfigured(true);
+    global.TRADEFOURGE_CONFIG = {};
+    global.TRADEFOURGE_LOCAL_CONFIG = {};
+    TradeFourgeConfig.setServerOAuthConfigured(true);
 
     GoogleAuthManager._customFetch = null;
     GoogleAuthManager._customNavigate = null;
@@ -529,7 +529,7 @@
     });
     const st = await GoogleAuthManager.checkSession();
     assert.strictEqual(st.isConfigured, false);
-    assert.strictEqual(TradeForgeConfig.isGoogleAuthConfigured(), false);
+    assert.strictEqual(TradeFourgeConfig.isGoogleAuthConfigured(), false);
 
     let thrown = null;
     try {

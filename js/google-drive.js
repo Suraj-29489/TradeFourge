@@ -1,11 +1,11 @@
 /**
- * TradeForge - Google Drive Cloud Storage Client (Server-Proxied API)
+ * TradeFourge - Google Drive Cloud Storage Client (Server-Proxied API)
  *
  * Communicates strictly with same-origin Vercel serverless `/api/drive/*` routes
  * authenticated by encrypted `HttpOnly` cookies (zero OAuth tokens ever reach frontend JS).
  *
  * Manages each authenticated user's isolated Drive layout:
- *   My Drive / TradeForge /
+ *   My Drive / TradeFourge /
  *   ├── User Data/
  *   │   ├── metadata.json
  *   │   ├── trades.json
@@ -19,7 +19,7 @@
   'use strict';
 
   const FOLDER_NAMES = {
-    ROOT: 'TradeForge',
+    ROOT: 'TradeFourge',
     USER_DATA: 'User Data',
     BACKUPS: 'Backups',
     EXPORTS: 'Exports'
@@ -32,8 +32,8 @@
   }
 
   function _getDriveEndpoints() {
-    if (typeof TradeForgeConfig !== 'undefined' && typeof TradeForgeConfig.getDriveEndpoints === 'function') {
-      return TradeForgeConfig.getDriveEndpoints();
+    if (typeof TradeFourgeConfig !== 'undefined' && typeof TradeFourgeConfig.getDriveEndpoints === 'function') {
+      return TradeFourgeConfig.getDriveEndpoints();
     }
     return {
       authorize: '/api/drive/authorize',

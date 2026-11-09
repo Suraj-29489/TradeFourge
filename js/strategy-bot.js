@@ -1,11 +1,11 @@
 /**
- * TradeForge - Strategy Bot (AI Trading Co-pilot & Data Analyst)
+ * TradeFourge - Strategy Bot (AI Trading Co-pilot & Data Analyst)
  * Powered by Google AI Studio (Gemini 3.8 Flash - Interactions API) & Local Quantitative Engine
  */
 
 const StrategyBotManager = {
   STORAGE_KEYS: {
-    CHAT_HISTORY: 'tradeforge_bot_chat_history',
+    CHAT_HISTORY: 'tradefourge_bot_chat_history',
     AI_MODE: 'fourge_ai_mode',
     GEMINI_API_KEY: 'fourge_gemini_api_key',
     TOKEN_USAGE: 'fourge_ai_token_usage',
@@ -936,7 +936,7 @@ const StrategyBotManager = {
       }
     }
 
-    return `You are TradeForge Strategy Bot, a trading performance analytics assistant.
+    return `You are TradeFourge Strategy Bot, a trading performance analytics assistant.
 Your job is to answer the user's exact question using the available trading data.
 
 CURRENT TRADING JOURNAL DATA & METRICS:
@@ -963,7 +963,7 @@ STRICT OUTPUT RULES:
 1. Answer the user's question directly.
 2. Be precise and data-driven.
 3. Use the user's trading data whenever relevant.
-4. Do not repeat information already visible in the TradeForge UI.
+4. Do not repeat information already visible in the TradeFourge UI.
 5. Do not restate the user's question.
 6. Do not add introductions such as:
    "Sure!"
@@ -1298,7 +1298,7 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
     }
 
     const currSym = typeof TradeAnalytics !== 'undefined' ? TradeAnalytics.getCurrencySymbol() : '$';
-    let output = `# TradeForge - Fourge AI - Conversation Export\n`;
+    let output = `# TradeFourge - Fourge AI - Conversation Export\n`;
     output += `Export Date: ${new Date().toLocaleString()}\n`;
     output += `Currency: ${currSym}\n\n---\n\n`;
 
@@ -1318,7 +1318,7 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `TradeForge-FourgeAI-${new Date().toISOString().slice(0, 10)}.md`;
+    link.download = `TradeFourge-FourgeAI-${new Date().toISOString().slice(0, 10)}.md`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

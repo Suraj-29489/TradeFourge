@@ -1,5 +1,5 @@
 /**
- * TradeForge Auth - Active Verified Session & Public User Info Endpoint
+ * TradeFourge Auth - Active Verified Session & Public User Info Endpoint
  * GET /api/auth/session (also exposed at GET /api/auth/me)
  *
  * Security Invariants:

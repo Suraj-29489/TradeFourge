@@ -1,5 +1,5 @@
 /**
- * TradeForge - End-to-End Backend Server OAuth 2.0 (PKCE) & Google Drive API Tests
+ * TradeFourge - End-to-End Backend Server OAuth 2.0 (PKCE) & Google Drive API Tests
  *
  * Uses zero external dependencies: runs real `/api/*` handlers through `scripts/dev-server.js`
  * against an in-process Mock Google OAuth + Drive v3 HTTP server (`TF_ALLOW_TEST_ENDPOINTS=1`).
@@ -716,7 +716,7 @@ async function runTests() {
     assert.strictEqual(fldA.json.folderIds.exports, fldB.json.folderIds.exports);
 
     const aliceDriveFiles = Array.from(mockGoogle.getDriveStore('sub_alice_1001').values());
-    assert.strictEqual(aliceDriveFiles.filter((f) => f.name === 'TradeForge').length, 1);
+    assert.strictEqual(aliceDriveFiles.filter((f) => f.name === 'TradeFourge').length, 1);
     assert.strictEqual(aliceDriveFiles.filter((f) => f.name === 'User Data').length, 1);
     assert.strictEqual(aliceDriveFiles.filter((f) => f.name === 'Backups').length, 1);
     assert.strictEqual(aliceDriveFiles.filter((f) => f.name === 'Exports').length, 1);
@@ -810,13 +810,13 @@ async function runTests() {
       headers: { Origin: appUrl },
       body: {
         action: 'save_export',
-        fileName: 'tradeforge-test-export.json',
+        fileName: 'tradefourge-test-export.json',
         content: JSON.stringify(initialSnap.trades),
         mimeType: 'application/json'
       }
     });
     assert.strictEqual(exportRes.status, 200);
-    assert.strictEqual(exportRes.json.file.name, 'tradeforge-test-export.json');
+    assert.strictEqual(exportRes.json.file.name, 'tradefourge-test-export.json');
     console.log('✓ Test 6 passed\n');
 
     // TEST 7: Backups, cross-user isolation & Legacy Database/ compatibility bridge
@@ -924,14 +924,14 @@ async function runTests() {
     });
     assert.strictEqual(dupDel.status, 404);
 
-    // Sign in Bob with pre-existing legacy TradeForge/Database/* files
+    // Sign in Bob with pre-existing legacy TradeFourge/Database/* files
     const bobStore = mockGoogle.getDriveStore('sub_bob_2002');
     bobStore.set('bob_root', {
       id: 'bob_root',
-      name: 'TradeForge',
+      name: 'TradeFourge',
       mimeType: 'application/vnd.google-apps.folder',
       parents: ['root'],
-      appProperties: { tradeforgeRole: 'root' },
+      appProperties: { tradefourgeRole: 'root' },
       trashed: false,
       createdTime: '2026-01-01T00:00:00Z',
       modifiedTime: '2026-01-01T00:00:00Z'
@@ -941,7 +941,7 @@ async function runTests() {
       name: 'Database',
       mimeType: 'application/vnd.google-apps.folder',
       parents: ['bob_root'],
-      appProperties: { tradeforgeRole: 'database' },
+      appProperties: { tradefourgeRole: 'database' },
       trashed: false,
       createdTime: '2026-01-01T00:00:01Z',
       modifiedTime: '2026-01-01T00:00:01Z'
@@ -951,7 +951,7 @@ async function runTests() {
       name: 'trades.json',
       mimeType: 'application/json',
       parents: ['bob_legacy_db'],
-      appProperties: { tradeforgeDomain: 'trades' },
+      appProperties: { tradefourgeDomain: 'trades' },
       trashed: false,
       createdTime: '2026-01-01T00:00:02Z',
       modifiedTime: '2026-01-01T00:00:02Z',
@@ -962,7 +962,7 @@ async function runTests() {
       name: 'settings.json',
       mimeType: 'application/json',
       parents: ['bob_legacy_db'],
-      appProperties: { tradeforgeDomain: 'settings' },
+      appProperties: { tradefourgeDomain: 'settings' },
       trashed: false,
       createdTime: '2026-01-01T00:00:03Z',
       modifiedTime: '2026-01-01T00:00:03Z',

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>TradeForge</title>
+  <title>TradeFourge</title>
   <!-- Google Fonts: Space Grotesk (Display), Manrope (UI), JetBrains Mono (Financial Metrics) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,8 +15,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="TradeForge">
-  <meta name="application-name" content="TradeForge">
+  <meta name="apple-mobile-web-app-title" content="TradeFourge">
+  <meta name="application-name" content="TradeFourge">
   <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
@@ -30,9 +30,9 @@
       var VALID = { classic: '#141D21', midnight: '#0B1218', light: '#F1F5F9' };
       var theme = 'classic';
       try {
-        var raw = localStorage.getItem('tradeforge_theme');
+        var raw = localStorage.getItem('tradefourge_theme');
         if (!raw) {
-          var s = localStorage.getItem('tradeforge_settings');
+          var s = localStorage.getItem('tradefourge_settings');
           if (s) {
             var parsed = JSON.parse(s);
             if (parsed && parsed.theme) raw = parsed.theme;
@@ -54,7 +54,7 @@
   <script>
     (function () {
       try {
-        if (localStorage.getItem('tradeforge_sidebar_collapsed') === 'true') {
+        if (localStorage.getItem('tradefourge_sidebar_collapsed') === 'true') {
           document.body.classList.add('sidebar-collapsed');
         }
       } catch (e) {}
@@ -62,7 +62,7 @@
   </script>
 
   <!-- ==================== AUTHENTICATION GATE (LOGIN / CREATE ACCOUNT) ==================== -->
-  <section id="authGateView" class="auth-gate-view" aria-label="TradeForge Authentication" aria-hidden="false">
+  <section id="authGateView" class="auth-gate-view" aria-label="TradeFourge Authentication" aria-hidden="false">
     <div class="auth-gate-grid-glow" aria-hidden="true"></div>
 
     <div class="auth-shell">
@@ -72,7 +72,7 @@
           <div class="auth-logo-badge" aria-hidden="true">
             <img src="assets/icons/logo.png" alt="" class="logo-icon-img" width="48" height="48">
           </div>
-          <h1 class="auth-brand-title">TradeForge</h1>
+          <h1 class="auth-brand-title">TradeFourge</h1>
           <p class="auth-brand-subtitle">Your Trading Performance. One Workspace.</p>
         </header>
 
@@ -235,7 +235,7 @@
                 </span>
               </label>
               <div class="auth-terms-inline" id="authTermsInlineBox" hidden>
-                TradeForge is a personal trading analytics journal. Your journal data is stored locally in your browser and, when connected with Google, synced privately inside your own Google Drive (<code>My Drive / TradeForge</code>) using <code>drive.file</code> scope. TradeForge provides analytics only and does not offer financial advice. Read our full <a href="/terms-of-service">Terms of Service</a> and <a href="/privacy-policy">Privacy Policy</a>.
+                TradeFourge is a personal trading analytics journal. Your journal data is stored locally in your browser and, when connected with Google, synced privately inside your own Google Drive (<code>My Drive / TradeFourge</code>) using <code>drive.file</code> scope. TradeFourge provides analytics only and does not offer financial advice. Read our full <a href="/terms-of-service">Terms of Service</a> and <a href="/privacy-policy">Privacy Policy</a>.
               </div>
               <div class="auth-field-error" id="authRegisterTermsError" aria-live="polite"></div>
             </div>
@@ -337,12 +337,12 @@
             </svg>
           </button>
 
-          <div class="brand-logo" id="headerBrandLogo" role="link" tabindex="0" title="TradeForge Dashboard" aria-label="TradeForge Dashboard">
+          <div class="brand-logo" id="headerBrandLogo" role="link" tabindex="0" title="TradeFourge Dashboard" aria-label="TradeFourge Dashboard">
             <div class="logo-icon">
               <img src="assets/icons/logo.png" alt="" class="logo-icon-img" width="34" height="34">
             </div>
             <div class="brand-text-stack">
-              <span class="brand-name">TRADE<span class="brand-name-accent">FORGE</span></span>
+              <span class="brand-name">TRADE<span class="brand-name-accent">FOURGE</span></span>
             </div>
           </div>
         </div>
@@ -445,7 +445,7 @@
             <div class="google-dropdown-sync-box">
               <div class="google-dropdown-sync-row">
                 <span class="cloud-status-pill local" id="googleDropdownStatusBadge">LOCAL ONLY</span>
-                <span class="google-dropdown-drive-path">My Drive / TradeForge</span>
+                <span class="google-dropdown-drive-path">My Drive / TradeFourge</span>
               </div>
               <div class="google-dropdown-lastsync" id="googleDropdownLastSync">Waiting for sync</div>
             </div>
@@ -1685,7 +1685,7 @@
                     <input type="checkbox" id="mt5ReadOnlyCheck" checked>
                     <div>
                       <strong>Enforce Read-Only Investor Mode (Recommended)</strong>
-                      <p>TradeForge only reads account metrics, open positions, and closed trade history. No orders can ever be executed or modified.</p>
+                      <p>TradeFourge only reads account metrics, open positions, and closed trade history. No orders can ever be executed or modified.</p>
                     </div>
                   </label>
 
@@ -1742,7 +1742,7 @@
               </div>
               <div class="mt5-terminal-actions">
                 <button type="button" id="btnMT5Sync" class="btn-secondary">↻ Sync Live Data</button>
-                <button type="button" id="btnMT5ImportToTradeForge" class="btn-upload-csv">↓ Import History to TradeForge</button>
+                <button type="button" id="btnMT5ImportToTradeFourge" class="btn-upload-csv">↓ Import History to TradeFourge</button>
                 <button type="button" id="btnMT5Disconnect" class="btn-danger-outline">Disconnect</button>
               </div>
             </div>
@@ -2004,7 +2004,7 @@
             <div class="rep-sheet-header">
               <div class="rep-header-top">
                 <div class="rep-brand-box">
-                  <div class="rep-brand-title">TRADEFORGE</div>
+                  <div class="rep-brand-title">TRADEFOURGE</div>
                   <div class="rep-brand-sub">TRADING JOURNAL</div>
                 </div>
                 <div class="rep-instrument-badge-box">
@@ -2528,7 +2528,7 @@
               <div class="section-header">
                 <div>
                   <div class="section-title">GOOGLE ACCOUNT &amp; GOOGLE DRIVE CLOUD STORAGE</div>
-                  <div class="section-subtitle">Per-user cloud storage in My Drive / TradeForge / (isolated by Google account)</div>
+                  <div class="section-subtitle">Per-user cloud storage in My Drive / TradeFourge / (isolated by Google account)</div>
                 </div>
                 <span class="cloud-status-pill local" id="cloudSettingsStatusBadge">LOCAL ONLY</span>
               </div>
@@ -2542,7 +2542,7 @@
                     <div>
                       <div class="settings-label" id="cloudSettingsAccountTitle">Not signed in to Google</div>
                       <div class="settings-desc" id="cloudSettingsAccountSubtitle">
-                        Sign in with your Google account to create &amp; sync your journal in <code>My Drive / TradeForge</code> across devices.
+                        Sign in with your Google account to create &amp; sync your journal in <code>My Drive / TradeFourge</code> across devices.
                       </div>
                     </div>
                   </div>
@@ -2566,7 +2566,7 @@
                   <div>
                     <div class="settings-label">Drive Folder &amp; Synchronization</div>
                     <div class="settings-desc" id="cloudSettingsSyncDetail">
-                      Folder path: <code>My Drive / TradeForge / User Data/</code>, <code>Backups/</code> &amp; <code>Exports/</code> (drive.file permission)
+                      Folder path: <code>My Drive / TradeFourge / User Data/</code>, <code>Backups/</code> &amp; <code>Exports/</code> (drive.file permission)
                     </div>
                   </div>
                   <div class="settings-action">
@@ -2580,7 +2580,7 @@
                 <div class="settings-row cloud-backups-row" id="cloudBackupsRow" style="display: none; flex-direction: column; align-items: stretch;">
                   <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; flex-wrap: wrap;">
                     <div>
-                      <div class="settings-label">Google Drive Backups (<code>My Drive / TradeForge / Backups</code>)</div>
+                      <div class="settings-label">Google Drive Backups (<code>My Drive / TradeFourge / Backups</code>)</div>
                       <div class="settings-desc">Restore any automatic or manual snapshot created prior to migrations or restores.</div>
                     </div>
                     <button type="button" class="btn-secondary" id="btnSettingsRefreshBackups">Refresh Backups</button>
@@ -2645,7 +2645,7 @@
                 <a href="/privacy-policy" class="settings-row settings-link-row" id="settingsLinkPrivacyPolicy">
                   <div>
                     <div class="settings-label">Privacy Policy</div>
-                    <div class="settings-desc">Review how TradeForge handles Google Sign-In, <code>drive.file</code> Google Drive sync, Fourge AI, and browser storage</div>
+                    <div class="settings-desc">Review how TradeFourge handles Google Sign-In, <code>drive.file</code> Google Drive sync, Fourge AI, and browser storage</div>
                   </div>
                   <div class="settings-action">
                     <span class="btn-secondary settings-link-cta">
@@ -2882,7 +2882,7 @@
       </div>
       <div class="modal-body">
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
-          Choose which broker format matches your uploaded CSV file so TradeForge can map all columns accurately:
+          Choose which broker format matches your uploaded CSV file so TradeFourge can map all columns accurately:
         </p>
         <div class="csv-import-mode-box">
           <label class="import-mode-option selected" id="brokerOptExnessCard">
@@ -3058,23 +3058,23 @@
   <div class="modal-overlay" id="installModal">
     <div class="modal-card" style="max-width: 440px;">
       <div class="modal-header">
-        <div class="modal-title">INSTALL TRADEFORGE TERMINAL</div>
+        <div class="modal-title">INSTALL TRADEFOURGE TERMINAL</div>
         <button class="modal-close" id="installModalCloseBtn">&times;</button>
       </div>
       <div class="modal-body">
         <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
           <div class="logo-icon" style="width: 48px; height: 48px; flex-shrink: 0;">
-            <img src="assets/icons/logo.png" alt="TradeForge logo" class="logo-icon-img" width="48" height="48">
+            <img src="assets/icons/logo.png" alt="TradeFourge logo" class="logo-icon-img" width="48" height="48">
           </div>
           <div>
-            <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 3px;">TradeForge Desktop &amp; Mobile App</h4>
+            <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 3px;">TradeFourge Desktop &amp; Mobile App</h4>
             <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">Launch directly from your home screen or dock with full-screen institutional layout and offline access.</p>
           </div>
         </div>
 
         <div id="installNativeAction" style="display: none; margin-bottom: 16px;">
           <button type="button" class="btn-primary" id="btnTriggerPrompt" style="width: 100%; padding: 11px; font-size: 0.9rem;">
-            Install TradeForge Now
+            Install TradeFourge Now
           </button>
         </div>
 
@@ -3102,7 +3102,7 @@
             <div>
               <div class="preview-filename" id="cloudMigrationAccountEmail">account@gmail.com</div>
               <div class="preview-filesize" id="cloudMigrationSubtitle">
-                Review how you would like to sync your local browser journal with My Drive / TradeForge.
+                Review how you would like to sync your local browser journal with My Drive / TradeFourge.
               </div>
             </div>
           </div>
@@ -3118,7 +3118,7 @@
           <div class="preview-metric-box">
             <span class="preview-metric-lbl">GOOGLE DRIVE TRADES</span>
             <span class="preview-metric-val" id="migCloudCount">0</span>
-            <span class="preview-metric-sub" id="migCloudSub">In TradeForge / User Data</span>
+            <span class="preview-metric-sub" id="migCloudSub">In TradeFourge / User Data</span>
           </div>
           <div class="preview-metric-box">
             <span class="preview-metric-lbl">DUPLICATE CHECK</span>

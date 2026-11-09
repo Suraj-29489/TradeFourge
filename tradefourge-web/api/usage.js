@@ -1,5 +1,5 @@
 /**
- * TradeForge - Shared Gemini API Usage Endpoint
+ * TradeFourge - Shared Gemini API Usage Endpoint
  * GET /api/usage
  * Returns the current server-side aggregated Gemini API usage for the active project.
  */

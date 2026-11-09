@@ -1,5 +1,5 @@
 /**
- * TradeForge CSV parser.
+ * TradeFourge CSV parser.
  * One unique ticket is treated as one trade.
  * Supports Exness and Zuperior broker CSV formats.
  */

@@ -1,5 +1,5 @@
 /**
- * TradeForge Auth - Consolidated Authentication Router
+ * TradeFourge Auth - Consolidated Authentication Router
  *
  * Exposes all authentication endpoints through a single Vercel Serverless Function:
  *   GET  /api/auth/google

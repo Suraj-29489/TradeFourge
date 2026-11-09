@@ -1,5 +1,5 @@
 /**
- * TradeForge Backend - Google OAuth 2.0 Authorization Code Flow + PKCE & Token Lifecycle
+ * TradeFourge Backend - Google OAuth 2.0 Authorization Code Flow + PKCE & Token Lifecycle
  *
  * Security Invariants:
  * - Client Secret stays exclusively on the server and is sent only in server-to-server POSTs.

@@ -1,5 +1,5 @@
 /**
- * TradeForge Backend - Environment & OAuth Configuration Loader
+ * TradeFourge Backend - Environment & OAuth Configuration Loader
  *
  * Loads local `.env.local` variables (when not already populated by Vercel/Node)
  * and resolves Google OAuth 2.0 + session security settings strictly on the server.

@@ -1,5 +1,5 @@
 /**
- * TradeForge - Fourge AI Server-Side Gemini Router & Failover Proxy
+ * TradeFourge - Fourge AI Server-Side Gemini Router & Failover Proxy
  *
  * Secure serverless endpoint for Google Gemini Interactions API (gemini-3.8-flash).
  * Supports up to 5 separately configured Gemini API projects with automatic failover:

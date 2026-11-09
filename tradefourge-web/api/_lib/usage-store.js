@@ -1,5 +1,5 @@
 /**
- * TradeForge - Shared Gemini API Usage Server-Side Store
+ * TradeFourge - Shared Gemini API Usage Server-Side Store
  * Handles persistent tracking of real Gemini API tokens across projects.
  */
 

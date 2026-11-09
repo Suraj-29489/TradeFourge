@@ -1,5 +1,5 @@
 /**
- * TradeForge - Interactive Monthly Calendar & Dynamic P&L Heatmap Component
+ * TradeFourge - Interactive Monthly Calendar & Dynamic P&L Heatmap Component
  * Progressive 5-Tier Positive/Negative Intensity Scaling Based on Daily P&L %
  */
 

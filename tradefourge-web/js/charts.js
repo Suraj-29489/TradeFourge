@@ -1,5 +1,5 @@
 /**
- * TradeForge V3.0 Institutional - Chart.js Visualizations Manager
+ * TradeFourge V3.0 Institutional - Chart.js Visualizations Manager
  * Dynamically theme-aware via CSS Custom Properties across Classic, Midnight & Light themes
  */
 
