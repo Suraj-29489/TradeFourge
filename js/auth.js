@@ -566,7 +566,7 @@
       const ls = _getLocalStorage();
       if (!ls) return { rememberMe: false, lastEmail: '' };
       try {
-        const raw = ls.getItem(PREFS_STORAGE_KEY);
+        const raw = ls.getItem(PREFS_STORAGE_KEY) || ls.getItem('tradeforge_auth_prefs');
         if (!raw) return { rememberMe: false, lastEmail: '' };
         const parsed = JSON.parse(raw);
         return {
@@ -612,13 +612,13 @@
 
       const ss = _getSessionStorage();
       if (ss) {
-        const tempHit = parseRaw(ss.getItem(TEMP_SESSION_KEY), false);
+        const tempHit = parseRaw(ss.getItem(TEMP_SESSION_KEY) || ss.getItem('tradeforge_auth_session_tmp'), false);
         if (tempHit) return tempHit;
       }
 
       const ls = _getLocalStorage();
       if (ls) {
-        const persistentHit = parseRaw(ls.getItem(SESSION_STORAGE_KEY), true);
+        const persistentHit = parseRaw(ls.getItem(SESSION_STORAGE_KEY) || ls.getItem('tradeforge_auth_session'), true);
         if (persistentHit) return persistentHit;
       }
 

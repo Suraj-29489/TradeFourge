@@ -635,14 +635,24 @@
     _retryTimer: null,
     _retryAttempt: 0,
     _syncPromise: null,
+    _signedInFlowPromise: null,
+    _signedInSub: null,
     _resyncRequested: false,
 
     _getMetaKey(sub) {
       return `${META_PREFIX}${_hashNamespace(sub)}`;
     },
 
+    _getLegacyMetaKey(sub) {
+      return `tradeforge_cloud_meta_${_hashNamespace(sub)}`;
+    },
+
     _getBaseKey(sub) {
       return `${BASE_PREFIX}${_hashNamespace(sub)}`;
+    },
+
+    _getLegacyBaseKey(sub) {
+      return `tradeforge_cloud_base_${_hashNamespace(sub)}`;
     },
 
     _exportActiveWithTheme() {
@@ -667,15 +677,22 @@
       };
       if (!storage || !sub) return defaults;
       try {
-        const raw = storage.getItem(this._getMetaKey(sub));
+        let raw = storage.getItem(this._getMetaKey(sub));
+        let fromLegacyKey = false;
+        if (!raw) {
+          raw = storage.getItem(this._getLegacyMetaKey(sub));
+          fromLegacyKey = Boolean(raw);
+        }
         if (!raw) return defaults;
         const parsed = JSON.parse(raw);
         const rev = parsed.revisions || {};
         const sums = parsed.checksums || {};
         const dirty = parsed.dirtyDomains || {};
         return {
-          folderIds: parsed.folderIds || null,
-          fileIds: Object.assign({}, defaults.fileIds, parsed.fileIds || {}),
+          folderIds: fromLegacyKey ? null : (parsed.folderIds || null),
+          fileIds: fromLegacyKey
+            ? Object.assign({}, defaults.fileIds)
+            : Object.assign({}, defaults.fileIds, parsed.fileIds || {}),
           revisions: {
             trades: Number(rev.trades) || 0,
             journal: Number(rev.journal !== undefined ? rev.journal : rev.settings) || 0,
@@ -726,7 +743,10 @@
       const storage = _getStorage();
       if (!storage || !sub) return null;
       try {
-        const raw = storage.getItem(this._getBaseKey(sub));
+        let raw = storage.getItem(this._getBaseKey(sub));
+        if (!raw) {
+          raw = storage.getItem(this._getLegacyBaseKey(sub));
+        }
         return raw ? JSON.parse(raw) : null;
       } catch (e) {
         return null;
@@ -1043,118 +1063,180 @@
     },
 
     async _handleSignedInFlow(account, detail = {}) {
-      const sub = account.sub;
-      this._clearTimers();
-      this._retryAttempt = 0;
-      this.lastError = null;
-      this.pendingMigration = null;
+      const sub = account && account.sub;
+      if (!sub) return this.getState();
 
-      if (typeof StorageManager !== 'undefined' && StorageManager.setActiveNamespace) {
-        StorageManager.setActiveNamespace(sub, { silent: true });
+      if (this._signedInFlowPromise && this._signedInSub === sub) {
+        return this._signedInFlowPromise;
       }
-      this._emit('workspace_reloaded', { reason: 'account_switch', account });
 
-      this.status = 'syncing';
-      this._emit('status');
+      const prevFlow = this._signedInFlowPromise;
+      this._signedInSub = sub;
 
-      try {
-        const meta = this._readMeta(sub);
-        const remoteDb = await GoogleDriveStorage.readDatabase({
-          ownerSub: sub,
-          folderIds: meta.folderIds
-        });
+      const isCurrentAccount = () =>
+        typeof GoogleAuthManager === 'undefined' ||
+        (GoogleAuthManager.account && GoogleAuthManager.account.sub === sub);
 
-        this.folderIds = remoteDb.folderIds;
-        this._writeMeta(sub, {
-          folderIds: remoteDb.folderIds,
-          fileIds: remoteDb.fileIds
-        });
+      const run = (async () => {
+        if (prevFlow) {
+          await prevFlow.catch(() => {});
+        }
+        if (!isCurrentAccount()) {
+          return this.getState();
+        }
 
-        const accountSnap = this._exportActiveWithTheme();
-        const accountHasData = _snapshotHasData(accountSnap);
-        const hasDirty = meta.dirtyDomains.trades || meta.dirtyDomains.journal || meta.dirtyDomains.settings;
+        this._clearTimers();
+        this._retryAttempt = 0;
+        this.lastError = null;
+        this.pendingMigration = null;
 
-        const anonInfo = StorageManager.getAnonymousBaselineInfo
-          ? StorageManager.getAnonymousBaselineInfo()
-          : { hasAnyData: false, snapshot: {} };
+        if (typeof StorageManager !== 'undefined' && StorageManager.setActiveNamespace) {
+          StorageManager.setActiveNamespace(sub, { silent: true });
+        }
+        this._emit('workspace_reloaded', { reason: 'account_switch', account });
 
-        // Returning account session on this browser: sync/merge account namespace with Drive cleanly first
-        if (accountHasData || hasDirty || meta.lastSyncedAt) {
-          await this._reconcileAccountWithRemote(account, remoteDb, { allowConflictAutoResolve: true });
+        this.status = 'syncing';
+        this._emit('status');
 
-          // Also check if anonymous local storage holds separate unmigrated local trades
-          if (anonInfo.hasAnyData) {
-            const updatedRemote = await GoogleDriveStorage.readDatabase({
-              ownerSub: sub,
-              folderIds: remoteDb.folderIds
-            });
-            const refreshedMeta = this._readMeta(sub);
-            const migEval = CloudSyncUtils.evaluateMigration({
-              localSnapshot: anonInfo.snapshot,
-              remoteDb: updatedRemote,
-              previousMigratedHash: refreshedMeta.migratedLocalHash,
-              dismissedLocalHash: refreshedMeta.dismissedLocalHash
-            });
+        try {
+          const meta = this._readMeta(sub);
+          const remoteDb = await GoogleDriveStorage.readDatabase({
+            ownerSub: sub,
+            folderIds: meta.folderIds
+          });
 
-            if (migEval.scenario === 'MERGE_OR_CHOOSE' || migEval.scenario === 'MIGRATE_LOCAL') {
-              this.pendingMigration = {
-                ...migEval,
-                account,
-                remoteDb: updatedRemote,
-                localSnapshot: anonInfo.snapshot
-              };
-              this.status = 'migration_pending';
-              this._emit('migration_required', this.pendingMigration);
-              return this.getState();
-            }
+          if (!isCurrentAccount()) {
+            return this.getState();
           }
 
-          this.status = 'synced';
-          this._emit('synced', { reason: detail.switchedAccount ? 'account_switched' : 'reconnected' });
-          return this.getState();
-        }
+          this.folderIds = remoteDb.folderIds;
+          this._writeMeta(sub, {
+            folderIds: remoteDb.folderIds,
+            fileIds: remoteDb.fileIds
+          });
 
-        // First login for this Google account on this browser: inspect anonymous local storage safely
-        const evaluation = CloudSyncUtils.evaluateMigration({
-          localSnapshot: anonInfo.snapshot,
-          remoteDb,
-          previousMigratedHash: meta.migratedLocalHash,
-          dismissedLocalHash: meta.dismissedLocalHash
-        });
+          const accountSnap = this._exportActiveWithTheme();
+          const accountHasData = _snapshotHasData(accountSnap);
+          const hasDirty = meta.dirtyDomains.trades || meta.dirtyDomains.journal || meta.dirtyDomains.settings;
 
-        if (evaluation.scenario === 'MIGRATE_LOCAL' || evaluation.scenario === 'MERGE_OR_CHOOSE') {
-          this.pendingMigration = {
-            ...evaluation,
-            account,
+          const anonInfo = StorageManager.getAnonymousBaselineInfo
+            ? StorageManager.getAnonymousBaselineInfo()
+            : { hasAnyData: false, snapshot: {} };
+
+          // Returning account session on this browser: sync/merge account namespace with Drive cleanly first
+          if (accountHasData || hasDirty || meta.lastSyncedAt) {
+            await this._reconcileAccountWithRemote(account, remoteDb, { allowConflictAutoResolve: true });
+
+            if (!isCurrentAccount()) {
+              return this.getState();
+            }
+
+            // Also check if anonymous local storage holds separate unmigrated local trades
+            if (anonInfo.hasAnyData) {
+              const updatedRemote = await GoogleDriveStorage.readDatabase({
+                ownerSub: sub,
+                folderIds: remoteDb.folderIds
+              });
+              if (!isCurrentAccount()) {
+                return this.getState();
+              }
+              const refreshedMeta = this._readMeta(sub);
+              const migEval = CloudSyncUtils.evaluateMigration({
+                localSnapshot: anonInfo.snapshot,
+                remoteDb: updatedRemote,
+                previousMigratedHash: refreshedMeta.migratedLocalHash,
+                dismissedLocalHash: refreshedMeta.dismissedLocalHash
+              });
+
+              if (migEval.scenario === 'MERGE_OR_CHOOSE' || migEval.scenario === 'MIGRATE_LOCAL') {
+                this.pendingMigration = {
+                  ...migEval,
+                  account,
+                  remoteDb: updatedRemote,
+                  localSnapshot: anonInfo.snapshot
+                };
+                this.status = 'migration_pending';
+                this._emit('migration_required', this.pendingMigration);
+                return this.getState();
+              }
+            }
+
+            this.status = 'synced';
+            this._emit('synced', { reason: detail.switchedAccount ? 'account_switched' : 'reconnected' });
+            return this.getState();
+          }
+
+          // First login for this Google account on this browser: inspect anonymous local storage safely
+          const evaluation = CloudSyncUtils.evaluateMigration({
+            localSnapshot: anonInfo.snapshot,
             remoteDb,
-            localSnapshot: anonInfo.snapshot
-          };
-          this.status = 'migration_pending';
-          this._emit('migration_required', this.pendingMigration);
-          return this.getState();
-        }
+            previousMigratedHash: meta.migratedLocalHash,
+            dismissedLocalHash: meta.dismissedLocalHash
+          });
 
-        if (evaluation.scenario === 'RESTORE_CLOUD') {
-          await this._applyRemoteDbToAccount(sub, remoteDb);
+          if (evaluation.scenario === 'MIGRATE_LOCAL' || evaluation.scenario === 'MERGE_OR_CHOOSE') {
+            this.pendingMigration = {
+              ...evaluation,
+              account,
+              remoteDb,
+              localSnapshot: anonInfo.snapshot
+            };
+            this.status = 'migration_pending';
+            this._emit('migration_required', this.pendingMigration);
+            return this.getState();
+          }
+
+          if (evaluation.scenario === 'RESTORE_CLOUD') {
+            await this._applyRemoteDbToAccount(sub, remoteDb);
+            this._emit('workspace_reloaded', {
+              reason: (remoteDb.legacySource && remoteDb.legacyRootName === 'TradeForge') ? 'legacy_migrated' : 'cloud_loaded'
+            });
+            if (remoteDb.legacySource && remoteDb.legacyRootName === 'TradeForge') {
+              try {
+                const pulledSnap = CloudSyncUtils.extractSnapshotFromRemoteDb(remoteDb);
+                await this._pushSnapshotToDrive(account, pulledSnap, {
+                  forceAllDomains: true,
+                  force: true,
+                  folderIds: remoteDb.folderIds,
+                  fileIds: remoteDb.fileIds
+                });
+              } catch (adoptErr) {
+                if (typeof console !== 'undefined' && console.warn) {
+                  console.warn('Could not mirror legacy TradeForge data to TradeFourge:', adoptErr);
+                }
+              }
+            }
+            this.status = 'synced';
+            this._emit('synced', { reason: 'cloud_loaded' });
+            return this.getState();
+          }
+
+          // INIT_EMPTY: Create initial empty User Data files cleanly in My Drive / TradeFourge / User Data /
+          await this._pushSnapshotToDrive(account, accountSnap, {
+            forceAllDomains: true,
+            force: true,
+            folderIds: remoteDb.folderIds,
+            fileIds: remoteDb.fileIds
+          });
           this.status = 'synced';
-          this._emit('workspace_reloaded', { reason: 'cloud_loaded' });
-          this._emit('synced', { reason: 'cloud_loaded' });
+          this._emit('synced', { reason: 'initialized_empty' });
+          return this.getState();
+        } catch (err) {
+          if (isCurrentAccount()) {
+            this._handleSyncError(sub, err);
+          }
           return this.getState();
         }
+      })();
 
-        // INIT_EMPTY: Create initial empty User Data files cleanly in My Drive / TradeFourge / User Data /
-        await this._pushSnapshotToDrive(account, accountSnap, {
-          forceAllDomains: true,
-          force: true,
-          folderIds: remoteDb.folderIds,
-          fileIds: remoteDb.fileIds
-        });
-        this.status = 'synced';
-        this._emit('synced', { reason: 'initialized_empty' });
-        return this.getState();
-      } catch (err) {
-        this._handleSyncError(sub, err);
-        return this.getState();
+      this._signedInFlowPromise = run;
+      try {
+        return await run;
+      } finally {
+        if (this._signedInFlowPromise === run) {
+          this._signedInFlowPromise = null;
+          this._signedInSub = null;
+        }
       }
     },
 
@@ -1425,20 +1507,65 @@
         checksumDrifted
       );
 
-      // No local dirty edits -> fast-forward pull from Drive if remote drifted
-      if (!hasDirty && remoteDrifted) {
+      const localDataHash = CloudSyncUtils.computeLocalDataHash(localSnap);
+      const remoteDataHash = CloudSyncUtils.computeLocalDataHash(remoteSnap);
+      const contentDiffers = localDataHash !== remoteDataHash;
+      const localHasData = _snapshotHasData(localSnap);
+      const remoteHasData = _snapshotHasData(remoteSnap);
+      const forceAdoptLegacy = Boolean(remoteDb.legacySource && remoteDb.legacyRootName === 'TradeForge');
+      const remoteCountMismatch = Boolean(
+        Number(remoteDb.metadata?.counts?.trades || 0) > 0 &&
+        (!Array.isArray(localSnap.trades) || localSnap.trades.length === 0)
+      );
+      const checksumUnavailableAndContentDiffers = Boolean(
+        contentDiffers && remoteHasData && options.fullCheck && (!remoteSums.trades || !meta.checksums.trades)
+      );
+      const shouldPullRemote = Boolean(
+        remoteDrifted ||
+        (forceAdoptLegacy && (!localHasData || contentDiffers)) ||
+        (contentDiffers && remoteHasData && (!localHasData || remoteCountMismatch || checksumUnavailableAndContentDiffers))
+      );
+
+      // No local dirty edits -> fast-forward pull from Drive when remote drifted, differs, or bridges TradeForge
+      if (!hasDirty && shouldPullRemote) {
         await this._applyRemoteDbToAccount(sub, remoteDb);
-        this._emit('workspace_reloaded', { reason: 'remote_pulled' });
+        this._emit('workspace_reloaded', { reason: forceAdoptLegacy ? 'legacy_migrated' : 'remote_pulled' });
+        if (forceAdoptLegacy) {
+          try {
+            await this._pushSnapshotToDrive(account, remoteSnap, {
+              forceAllDomains: true,
+              force: true,
+              folderIds: remoteDb.folderIds,
+              fileIds: remoteDb.fileIds
+            });
+          } catch (adoptErr) {
+            if (typeof console !== 'undefined' && console.warn) {
+              console.warn('Could not mirror legacy TradeForge data to TradeFourge immediately:', adoptErr);
+            }
+          }
+          return { merged: false, pulled: true, adoptedLegacy: true };
+        }
         return { merged: false, pulled: true };
       }
 
+      // Remote exists only as an empty shell while local browser has unsaved data -> heal Drive safely
+      if (!hasDirty && !shouldPullRemote && !remoteHasData && localHasData && contentDiffers) {
+        await this._pushSnapshotToDrive(account, localSnap, {
+          forceAllDomains: true,
+          force: true,
+          folderIds: remoteDb.folderIds,
+          fileIds: remoteDb.fileIds
+        });
+        return { merged: false, pushed: true };
+      }
+
       // No remote drift & no local edits -> already in sync
-      if (!hasDirty && !remoteDrifted) {
+      if (!hasDirty) {
         return { merged: false, clean: true };
       }
 
       // Local dirty & remote has NOT drifted -> straight push of dirty domains
-      if (hasDirty && !remoteDrifted) {
+      if (hasDirty && !shouldPullRemote && !forceAdoptLegacy) {
         await this._pushSnapshotToDrive(account, localSnap, {
           folderIds: remoteDb.folderIds,
           fileIds: remoteDb.fileIds,
@@ -1456,14 +1583,30 @@
         localDeleted: localSnap.deletedUids || []
       });
 
+      const hasBaseSnap = Boolean(baseSnap && Object.keys(baseSnap).length > 0);
+      const mergeBaseSettings = hasBaseSnap
+        ? baseSnap
+        : (forceAdoptLegacy
+            ? {
+                currency: 'USD',
+                startingCapital: null,
+                notes: '',
+                rules: _defaultRules(),
+                theme: undefined
+              }
+            : baseSnap);
+      const mergeBaseAccounts = hasBaseSnap
+        ? baseSnap
+        : (forceAdoptLegacy ? { mt5Session: null } : baseSnap);
+
       const settingsMerge = CloudSyncUtils.mergeSettings({
-        baseSettings: baseSnap,
+        baseSettings: mergeBaseSettings,
         remoteSettings: { ...remoteSnap, updatedAt: remoteDb.journal?.updatedAt || remoteDb.settings?.updatedAt },
         localSettings: { ...localSnap, updatedAt: new Date().toISOString() }
       });
 
       const acctMerge = CloudSyncUtils.mergeAccounts({
-        baseAccounts: baseSnap,
+        baseAccounts: mergeBaseAccounts,
         remoteAccounts: { mt5Session: remoteSnap.mt5Session, updatedAt: remoteDb.settings?.updatedAt || remoteDb.accounts?.updatedAt },
         localAccounts: { mt5Session: localSnap.mt5Session, updatedAt: new Date().toISOString() }
       });
@@ -1520,6 +1663,9 @@
     },
 
     async syncNow(options = {}) {
+      if (this._signedInFlowPromise) {
+        await this._signedInFlowPromise.catch(() => {});
+      }
       if (typeof GoogleAuthManager === 'undefined' || !GoogleAuthManager.account) {
         return { skipped: true, reason: 'signed_out' };
       }
@@ -1595,9 +1741,16 @@
             checksumDrifted
           );
 
-          if (options.fullCheck || remoteDrifted) {
+          const localTradeCount = typeof StorageManager !== 'undefined' && typeof StorageManager.getTrades === 'function'
+            ? StorageManager.getTrades().length
+            : 0;
+          const remoteReportedTrades = Number(remoteMeta?.counts?.trades || 0);
+          const countMismatch = Boolean(remoteReportedTrades > 0 && localTradeCount === 0);
+
+          let reconcileRes = null;
+          if (options.fullCheck || remoteDrifted || metaCheck.legacyAvailable || countMismatch) {
             const remoteDb = await GoogleDriveStorage.readDatabase({ ownerSub: sub, folderIds });
-            await this._reconcileAccountWithRemote(account, remoteDb, options);
+            reconcileRes = await this._reconcileAccountWithRemote(account, remoteDb, options);
           } else if (hasDirty) {
             const localSnap = this._exportActiveWithTheme();
             await this._pushSnapshotToDrive(account, localSnap, { folderIds });
@@ -1605,8 +1758,8 @@
 
           this._retryAttempt = 0;
           this.status = 'synced';
-          this._emit('synced', { reason: options.reason || 'sync' });
-          return { ok: true, lastSyncedAt: this.lastSyncedAt };
+          this._emit('synced', { reason: options.reason || 'sync', result: reconcileRes });
+          return { ok: true, lastSyncedAt: this.lastSyncedAt, result: reconcileRes };
         } catch (err) {
           this._handleSyncError(sub, err);
           throw err;

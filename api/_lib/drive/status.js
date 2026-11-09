@@ -26,6 +26,7 @@ module.exports = async function handler(req, res) {
       ok: true,
       connected: true,
       folderExists: inspected.exists,
+      legacyFolderDetected: Boolean(inspected.legacyFolderDetected),
       folderIds: inspected.folderIds,
       metadata,
       user: session.user

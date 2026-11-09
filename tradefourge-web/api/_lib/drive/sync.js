@@ -16,6 +16,7 @@ const {
   ensureFolderStructure,
   readDatabase,
   readMetadataOnly,
+  hasLegacyDataHint,
   readJsonFile,
   writeDomainFile,
   createBackupSnapshot,
@@ -47,12 +48,17 @@ async function _handleGet(req, res) {
     };
     const ensured = await ensureFolderStructure(driveCtx, session.user.sub, cachedFolderIds);
     const metaRes = await readMetadataOnly(driveCtx, { folderIds: ensured.folderIds });
+    let legacyAvailable = false;
+    if (!metaRes.metadata || Number((metaRes.metadata.counts && metaRes.metadata.counts.trades) || 0) === 0) {
+      legacyAvailable = await hasLegacyDataHint(driveCtx, ensured.folderIds);
+    }
     return sendJson(res, 200, {
       ok: true,
       mode: 'meta',
       folderIds: ensured.folderIds,
       metadataFileId: metaRes.fileId,
       metadata: metaRes.metadata,
+      legacyAvailable,
       user: session.user
     });
   }
@@ -68,6 +74,7 @@ async function _handleGet(req, res) {
     fileIds: remoteDb.fileIds,
     exists: remoteDb.exists,
     legacySource: remoteDb.legacySource,
+    legacyRootName: remoteDb.legacyRootName || null,
     metadata: remoteDb.metadata,
     trades: remoteDb.trades,
     journal: remoteDb.journal,

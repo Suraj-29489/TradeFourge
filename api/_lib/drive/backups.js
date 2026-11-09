@@ -14,6 +14,7 @@ const {
 const { requireDriveContext } = require('../drive-session');
 const {
   ensureFolderStructure,
+  inspectLegacyBackupsFolderIds,
   listBackups,
   createBackupSnapshot,
   readOwnedBackupFile,
@@ -40,7 +41,8 @@ module.exports = async function handler(req, res) {
       const query = getQueryParams(req);
       const limit = Math.min(50, Math.max(1, Number(query.get('limit')) || 15));
       const ensured = await ensureFolderStructure(driveCtx, session.user.sub);
-      const backups = await listBackups(driveCtx, ensured.folderIds.backups, limit);
+      const legacyBackupIds = await inspectLegacyBackupsFolderIds(driveCtx, ensured.folderIds.root);
+      const backups = await listBackups(driveCtx, [ensured.folderIds.backups, ...legacyBackupIds], limit);
 
       return sendJson(res, 200, {
         ok: true,
@@ -96,13 +98,15 @@ module.exports = async function handler(req, res) {
           return sendJson(res, 400, { ok: false, code: 'MISSING_FILE_ID', message: 'Backup fileId is required.' });
         }
 
-        // Enforces backup belongs strictly inside authenticated user's own TradeFourge/Backups folder
+        // Enforces backup belongs strictly inside authenticated user's own TradeFourge/Backups or legacy TradeForge/Backups folder
+        const legacyBackupIds = await inspectLegacyBackupsFolderIds(driveCtx, folderIds.root);
         const { data: backupData } = await readOwnedBackupFile(driveCtx, {
           fileId: body.fileId,
-          backupsFolderId: folderIds.backups
+          backupsFolderId: folderIds.backups,
+          allowedFolderIds: [folderIds.backups, ...legacyBackupIds].filter(Boolean)
         });
 
-        if (!backupData || (!backupData.trades && !backupData.settings && !backupData.journal)) {
+        if (!backupData || (!backupData.trades && !backupData.settings && !backupData.journal && !backupData.accounts)) {
           return sendJson(res, 400, { ok: false, code: 'INVALID_BACKUP', message: 'Selected backup file is not a valid TradeFourge backup.' });
         }
 
@@ -212,9 +216,11 @@ module.exports = async function handler(req, res) {
           return sendJson(res, 400, { ok: false, code: 'MISSING_FILE_ID', message: 'Backup fileId is required.' });
         }
 
+        const legacyBackupIds = await inspectLegacyBackupsFolderIds(driveCtx, folderIds.root);
         const deleted = await deleteOwnedBackupFile(driveCtx, {
           fileId: body.fileId,
-          backupsFolderId: folderIds.backups
+          backupsFolderId: folderIds.backups,
+          allowedFolderIds: [folderIds.backups, ...legacyBackupIds].filter(Boolean)
         });
 
         return sendJson(res, 200, {

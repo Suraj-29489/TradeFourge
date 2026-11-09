@@ -176,7 +176,8 @@
       return {
         fileId: data.metadataFileId || null,
         metadata: data.metadata || null,
-        folderIds: data.folderIds || null
+        folderIds: data.folderIds || null,
+        legacyAvailable: Boolean(data.legacyAvailable)
       };
     },
 

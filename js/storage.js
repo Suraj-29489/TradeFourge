@@ -83,6 +83,23 @@ const StorageManager = {
     return prefix + baseKey.replace(/^tradefourge_/, '');
   },
 
+  _getLegacyKeyForNamespace(baseKey, namespace = this.activeNamespace) {
+    const legacyBase = String(baseKey || '').replace(/^tradefourge_/, 'tradeforge_');
+    if (!namespace || namespace === 'anonymous') {
+      return legacyBase;
+    }
+    const prefix = `tradeforge_acct_${this._hashNamespace(namespace)}_`;
+    return prefix + legacyBase.replace(/^tradeforge_/, '');
+  },
+
+  _getItemWithLegacyFallback(storage, baseKey, namespace = this.activeNamespace) {
+    if (!storage) return null;
+    const primary = storage.getItem(this._getKeyForNamespace(baseKey, namespace));
+    if (primary !== null && primary !== undefined) return primary;
+    const legacyKey = this._getLegacyKeyForNamespace(baseKey, namespace);
+    return legacyKey ? storage.getItem(legacyKey) : null;
+  },
+
   /**
    * Subscribe to storage domain mutations: 'trades' | 'settings' | 'accounts' | 'all' | 'namespace'
    */
@@ -152,10 +169,10 @@ const StorageManager = {
     };
     if (!storage) return empty;
 
-    const k = (baseKey) => this._getKeyForNamespace(baseKey, namespace);
+    const kGet = (baseKey) => this._getItemWithLegacyFallback(storage, baseKey, namespace);
 
     try {
-      const rawTrades = storage.getItem(k(this.KEYS.TRADES));
+      const rawTrades = kGet(this.KEYS.TRADES);
       if (rawTrades) {
         const parsed = JSON.parse(rawTrades);
         if (Array.isArray(parsed)) {
@@ -165,7 +182,7 @@ const StorageManager = {
         }
       }
 
-      const rawImport = storage.getItem(k(this.KEYS.LAST_IMPORT));
+      const rawImport = kGet(this.KEYS.LAST_IMPORT);
       if (rawImport) {
         try {
           empty.lastImport = JSON.parse(rawImport);
@@ -174,12 +191,12 @@ const StorageManager = {
         }
       }
 
-      const rawNotes = storage.getItem(k(this.KEYS.NOTES));
+      const rawNotes = kGet(this.KEYS.NOTES);
       if (rawNotes !== null) {
         empty.notes = rawNotes;
       }
 
-      const rawRules = storage.getItem(k(this.KEYS.RULES));
+      const rawRules = kGet(this.KEYS.RULES);
       if (rawRules) {
         try {
           const parsedRules = JSON.parse(rawRules);
@@ -189,17 +206,17 @@ const StorageManager = {
         }
       }
 
-      const rawCurrency = storage.getItem(k(this.KEYS.CURRENCY));
+      const rawCurrency = kGet(this.KEYS.CURRENCY);
       if (rawCurrency === 'INR' || rawCurrency === 'USD') {
         empty.currency = rawCurrency;
       }
 
-      const rawCapital = storage.getItem(k(this.KEYS.STARTING_CAPITAL));
+      const rawCapital = kGet(this.KEYS.STARTING_CAPITAL);
       if (rawCapital !== null && rawCapital !== '' && !isNaN(Number(rawCapital)) && Number(rawCapital) > 0) {
         empty.startingCapital = Number(rawCapital);
       }
 
-      const rawMt5 = storage.getItem(k(this.KEYS.MT5_SESSION));
+      const rawMt5 = kGet(this.KEYS.MT5_SESSION);
       if (rawMt5) {
         try {
           empty.mt5Session = JSON.parse(rawMt5);
@@ -208,7 +225,7 @@ const StorageManager = {
         }
       }
 
-      const rawDeleted = storage.getItem(k(this.KEYS.DELETED_UIDS));
+      const rawDeleted = kGet(this.KEYS.DELETED_UIDS);
       if (rawDeleted) {
         try {
           const parsedDel = JSON.parse(rawDeleted);

@@ -64,11 +64,11 @@ const ThemeManager = {
     const storage = this._getStorage();
     if (!storage) return false;
     try {
-      const direct = storage.getItem(this.STORAGE_KEY);
+      const direct = storage.getItem(this.STORAGE_KEY) || storage.getItem('tradeforge_theme');
       if (direct && this.isValidTheme(direct.trim().toLowerCase())) {
         return true;
       }
-      const rawSettings = storage.getItem(this.SETTINGS_KEY);
+      const rawSettings = storage.getItem(this.SETTINGS_KEY) || storage.getItem('tradeforge_settings');
       if (rawSettings) {
         const parsed = JSON.parse(rawSettings);
         if (parsed && parsed.theme && this.isValidTheme(String(parsed.theme).trim().toLowerCase())) {
@@ -86,12 +86,12 @@ const ThemeManager = {
     if (!storage) return this.DEFAULT_THEME;
 
     try {
-      const direct = storage.getItem(this.STORAGE_KEY);
+      const direct = storage.getItem(this.STORAGE_KEY) || storage.getItem('tradeforge_theme');
       if (direct && this.isValidTheme(direct.trim().toLowerCase())) {
         return this.normalizeTheme(direct);
       }
 
-      const rawSettings = storage.getItem(this.SETTINGS_KEY);
+      const rawSettings = storage.getItem(this.SETTINGS_KEY) || storage.getItem('tradeforge_settings');
       if (rawSettings) {
         const parsed = JSON.parse(rawSettings);
         if (parsed && parsed.theme && this.isValidTheme(String(parsed.theme).trim().toLowerCase())) {

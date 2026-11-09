@@ -4421,9 +4421,12 @@ const App = {
     // 1. Register Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
+        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
           .then((reg) => {
             console.log('[PWA] Service Worker registered with scope:', reg.scope);
+            if (typeof reg.update === 'function') {
+              reg.update().catch(() => {});
+            }
           })
           .catch((err) => {
             console.warn('[PWA] Service Worker registration failed:', err);
@@ -5612,7 +5615,22 @@ const App = {
       return;
     }
     try {
-      await CloudSyncManager.syncNow({ fullCheck: true, reason: 'manual' });
+      const res = await CloudSyncManager.syncNow({ fullCheck: true, reason: 'manual' });
+      if (res && res.skipped) {
+        if (res.reason === 'migration_pending') {
+          this.openCloudMigrationModal();
+          return;
+        }
+        if (res.reason === 'auth_expired') {
+          await this.triggerGoogleReconnect();
+          return;
+        }
+        if (res.reason === 'offline') {
+          this.showToast('You are offline. Changes stay saved locally and will sync when back online.', 'info');
+          return;
+        }
+        return;
+      }
       this.showToast('Synced cleanly with My Drive / TradeFourge!', 'success');
       this.refreshCloudBackupsList();
     } catch (err) {

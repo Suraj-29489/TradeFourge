@@ -3,11 +3,7 @@
  * Enables offline capability, instant load caching, and PWA installation.
  */
 
-const CACHE_NAME = 'tradefourge-v1.4.4';
-const isLocalDevHost = () => {
-  const host = (self && self.location && self.location.hostname) || '';
-  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
-};
+const CACHE_NAME = 'tradefourge-v1.4.5';
 const PRECACHE_ASSETS = [
   './',
   './index.html',
@@ -49,7 +45,13 @@ const PRECACHE_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS);
+      return Promise.all(
+        PRECACHE_ASSETS.map((assetUrl) =>
+          fetch(new Request(assetUrl, { cache: 'reload' }))
+            .then((res) => (res && res.ok ? cache.put(assetUrl, res) : null))
+            .catch(() => null)
+        )
+      );
     }).then(() => self.skipWaiting())
   );
 });
@@ -94,58 +96,39 @@ self.addEventListener('fetch', (event) => {
 
   // Navigation requests: Network-first, fallback to matching cached page
   if (request.mode === 'navigate') {
+    const targetCacheKey =
+      (url.pathname === '/privacy-policy' || url.pathname === '/privacy-policy.html')
+        ? './privacy-policy.html'
+        : (url.pathname === '/terms-of-service' || url.pathname === '/terms-of-service.html')
+          ? './terms-of-service.html'
+          : './index.html';
     event.respondWith(
-      fetch(request).catch(() => {
-        if (url.pathname === '/privacy-policy' || url.pathname === '/privacy-policy.html') {
-          return caches.match('./privacy-policy.html');
-        }
-        if (url.pathname === '/terms-of-service' || url.pathname === '/terms-of-service.html') {
-          return caches.match('./terms-of-service.html');
-        }
-        return caches.match('./index.html');
-      })
+      fetch(request, { cache: 'no-cache' })
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(targetCacheKey, responseToCache));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(targetCacheKey))
     );
     return;
   }
 
-  // Same-origin assets: Network-first on localhost so local edits apply immediately;
-  // Cache-first with background revalidation in production for offline PWA speed.
+  // Same-origin assets: Network-first with revalidation everywhere so deployments apply
+  // immediately on refresh while preserving full offline PWA fallback from cache.
   if (url.origin === self.location.origin) {
-    if (isLocalDevHost()) {
-      event.respondWith(
-        fetch(request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-              const responseToCache = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache));
-            }
-            return networkResponse;
-          })
-          .catch(() => caches.match(request))
-      );
-      return;
-    }
-
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          fetch(request).then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, networkResponse));
-            }
-          }).catch(() => {/* offline */});
-          return cachedResponse;
-        }
-
-        return fetch(request).then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-            return networkResponse;
+      fetch(request, { cache: 'no-cache' })
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache));
           }
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, responseToCache));
           return networkResponse;
-        });
-      })
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }

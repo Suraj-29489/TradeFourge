@@ -30,9 +30,9 @@
       var VALID = { classic: '#141D21', midnight: '#0B1218', light: '#F1F5F9' };
       var theme = 'classic';
       try {
-        var raw = localStorage.getItem('tradefourge_theme');
+        var raw = localStorage.getItem('tradefourge_theme') || localStorage.getItem('tradeforge_theme');
         if (!raw) {
-          var s = localStorage.getItem('tradefourge_settings');
+          var s = localStorage.getItem('tradefourge_settings') || localStorage.getItem('tradeforge_settings');
           if (s) {
             var parsed = JSON.parse(s);
             if (parsed && parsed.theme) raw = parsed.theme;
@@ -54,7 +54,9 @@
   <script>
     (function () {
       try {
-        if (localStorage.getItem('tradefourge_sidebar_collapsed') === 'true') {
+        var col = localStorage.getItem('tradefourge_sidebar_collapsed');
+        if (col === null) col = localStorage.getItem('tradeforge_sidebar_collapsed');
+        if (col === 'true') {
           document.body.classList.add('sidebar-collapsed');
         }
       } catch (e) {}

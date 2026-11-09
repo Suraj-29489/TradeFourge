@@ -174,7 +174,7 @@
       const storage = _getStorage();
       if (!storage) return null;
       try {
-        const raw = storage.getItem(ACCOUNT_STORAGE_KEY);
+        const raw = storage.getItem(ACCOUNT_STORAGE_KEY) || storage.getItem('tradeforge_google_account');
         if (!raw) return null;
         const parsed = JSON.parse(raw);
         if (!parsed || !parsed.sub || !parsed.email) return null;
@@ -250,12 +250,20 @@
       if (!storage) return [];
       try {
         const raw = storage.getItem(KNOWN_ACCOUNTS_KEY);
+        const legacyRaw = storage.getItem('tradeforge_google_accounts_index');
         const parsed = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(parsed)) return [];
+        const legacyParsed = legacyRaw ? JSON.parse(legacyRaw) : [];
         const map = new Map();
-        parsed.forEach((a) => {
-          if (a && a.sub && !map.has(a.sub)) map.set(a.sub, a);
-        });
+        if (Array.isArray(legacyParsed)) {
+          legacyParsed.forEach((a) => {
+            if (a && a.sub && !map.has(a.sub)) map.set(a.sub, a);
+          });
+        }
+        if (Array.isArray(parsed)) {
+          parsed.forEach((a) => {
+            if (a && a.sub) map.set(a.sub, a);
+          });
+        }
         return Array.from(map.values());
       } catch (e) {
         return [];

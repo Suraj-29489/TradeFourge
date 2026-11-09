@@ -1274,8 +1274,226 @@ async function runTests() {
     assert.ok(botBody && botBody.error && botBody.error.message);
     console.log('✓ Test 10 passed\n');
 
+    // TEST 11: Legacy `TradeForge` & `TradeFourge` Dual-Folder Bridging, Empty Shell Override & Legacy Backups
+    console.log('[11/11] Testing legacy TradeForge + TradeFourge dual-folder search, fetch & backups...');
+    const carolSub = 'sub_carol_legacy_3003';
+    mockGoogle.state.nextUser = {
+      sub: carolSub,
+      email: 'carol.drive@gmail.com',
+      name: 'Carol Drive',
+      picture: 'https://example.com/carol.png',
+      email_verified: true
+    };
+    const carolDrive = mockGoogle.getDriveStore(carolSub);
+    carolDrive.set('c_old_root', {
+      id: 'c_old_root',
+      name: 'TradeForge',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'root' },
+      trashed: false,
+      createdTime: '2026-07-01T00:00:00Z',
+      modifiedTime: '2026-07-01T00:00:00Z'
+    });
+    carolDrive.set('c_old_ud', {
+      id: 'c_old_ud',
+      name: 'User Data',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['c_old_root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'user_data' },
+      trashed: false,
+      createdTime: '2026-07-01T00:00:01Z',
+      modifiedTime: '2026-07-01T00:00:01Z'
+    });
+    carolDrive.set('c_old_bk_dir', {
+      id: 'c_old_bk_dir',
+      name: 'Backups',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['c_old_root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'backups' },
+      trashed: false,
+      createdTime: '2026-07-01T00:00:02Z',
+      modifiedTime: '2026-07-01T00:00:02Z'
+    });
+    carolDrive.set('c_old_trades', {
+      id: 'c_old_trades',
+      name: 'trades.json',
+      mimeType: 'application/json',
+      parents: ['c_old_ud'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeDomain: 'trades' },
+      trashed: false,
+      createdTime: '2026-07-01T00:00:03Z',
+      modifiedTime: '2026-07-01T00:00:03Z',
+      _content: JSON.stringify({
+        trades: [
+          { ticket: 'TF_OLD_1', symbol: 'XAUUSD', profit: 420 },
+          { ticket: 'TF_OLD_2', symbol: 'GBPUSD', profit: -50 }
+        ]
+      })
+    });
+    carolDrive.set('c_old_settings', {
+      id: 'c_old_settings',
+      name: 'settings.json',
+      mimeType: 'application/json',
+      parents: ['c_old_ud'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeDomain: 'settings' },
+      trashed: false,
+      createdTime: '2026-07-01T00:00:03Z',
+      modifiedTime: '2026-07-01T00:00:03Z',
+      _content: JSON.stringify({ currency: 'INR', startingCapital: 90000, notes: 'From old TradeForge folder' })
+    });
+    carolDrive.set('c_old_bk_file', {
+      id: 'c_old_bk_file',
+      name: 'tradeforge-backup-2026-07-01-manual.json',
+      mimeType: 'application/json',
+      parents: ['c_old_bk_dir'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'backup' },
+      trashed: false,
+      createdTime: '2026-07-01T00:05:00Z',
+      modifiedTime: '2026-07-01T00:05:00Z',
+      size: '300',
+      _content: JSON.stringify({
+        schemaVersion: '1.0.0',
+        backupReason: 'manual',
+        trades: { trades: [{ ticket: 'BK_OLD_1', symbol: 'EURUSD', profit: 88 }] },
+        settings: { currency: 'USD', startingCapital: 12000 }
+      })
+    });
+
+    // Empty post-rename TradeFourge/User Data/ shell created after login (simulates hosted bug!)
+    carolDrive.set('c_new_root', {
+      id: 'c_new_root',
+      name: 'TradeFourge',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['root'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'root' },
+      trashed: false,
+      createdTime: '2026-11-09T00:00:00Z',
+      modifiedTime: '2026-11-09T00:00:00Z'
+    });
+    carolDrive.set('c_new_ud', {
+      id: 'c_new_ud',
+      name: 'User Data',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['c_new_root'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'user_data' },
+      trashed: false,
+      createdTime: '2026-11-09T00:00:01Z',
+      modifiedTime: '2026-11-09T00:00:01Z'
+    });
+    carolDrive.set('c_new_bk', {
+      id: 'c_new_bk',
+      name: 'Backups',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['c_new_root'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'backups' },
+      trashed: false,
+      createdTime: '2026-11-09T00:00:02Z',
+      modifiedTime: '2026-11-09T00:00:02Z'
+    });
+    carolDrive.set('c_new_exp', {
+      id: 'c_new_exp',
+      name: 'Exports',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['c_new_root'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'exports' },
+      trashed: false,
+      createdTime: '2026-11-09T00:00:03Z',
+      modifiedTime: '2026-11-09T00:00:03Z'
+    });
+    carolDrive.set('c_new_trades', {
+      id: 'c_new_trades',
+      name: 'trades.json',
+      mimeType: 'application/json',
+      parents: ['c_new_ud'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeDomain: 'trades' },
+      trashed: false,
+      createdTime: '2026-11-09T00:00:04Z',
+      modifiedTime: '2026-11-09T00:00:04Z',
+      _content: JSON.stringify({ schemaVersion: '1.0.0', trades: [], deletedUids: [] })
+    });
+    carolDrive.set('c_new_meta', {
+      id: 'c_new_meta',
+      name: 'metadata.json',
+      mimeType: 'application/json',
+      parents: ['c_new_ud'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeDomain: 'metadata' },
+      trashed: false,
+      createdTime: '2026-11-09T00:00:04Z',
+      modifiedTime: '2026-11-09T00:00:04Z',
+      _content: JSON.stringify({
+        appName: 'TradeFourge',
+        revisions: { trades: 1, journal: 1, settings: 1 },
+        counts: { trades: 0 }
+      })
+    });
+
+    const carolJar = new CookieJar();
+    await performFullOAuthLogin(appUrl, googleUrl, carolJar);
+
+    const carolStatus = await rawRequest(appUrl, '/api/drive/status', { jar: carolJar });
+    assert.strictEqual(carolStatus.status, 200);
+    assert.strictEqual(carolStatus.json.legacyFolderDetected, true, 'Status must report legacy TradeForge folder presence');
+
+    const carolMeta = await rawRequest(appUrl, '/api/drive/sync?mode=meta', { jar: carolJar });
+    assert.strictEqual(carolMeta.status, 200);
+    assert.strictEqual(carolMeta.json.legacyAvailable, true, 'Meta must advertise legacyAvailable when TradeFourge has 0 trades and TradeForge has data');
+
+    const carolFull = await rawRequest(appUrl, '/api/drive/sync?mode=full', { jar: carolJar });
+    assert.strictEqual(carolFull.status, 200);
+    assert.strictEqual(carolFull.json.legacySource, true);
+    assert.strictEqual(carolFull.json.legacyRootName, 'TradeForge');
+    assert.strictEqual(carolFull.json.trades.trades.length, 2);
+    assert.strictEqual(carolFull.json.trades.trades[0].ticket, 'TF_OLD_1');
+    assert.strictEqual(carolFull.json.journal.notes, 'From old TradeForge folder');
+    assert.strictEqual(carolFull.json.settings.currency, 'INR');
+    // File IDs must remain anchored to TradeFourge/User Data/, never pointing writes to TradeForge/
+    assert.strictEqual(carolFull.json.fileIds.trades, 'c_new_trades');
+    assert.strictEqual(carolFull.json.fileIds.metadata, 'c_new_meta');
+
+    // Non-backup file in TradeForge/User Data/ must still fail with 403 FORBIDDEN on restore/delete
+    const nonBackupRes = await rawRequest(appUrl, '/api/drive/backups', {
+      method: 'POST',
+      jar: carolJar,
+      headers: { Origin: appUrl },
+      body: { action: 'restore', fileId: 'c_old_trades' }
+    });
+    assert.strictEqual(nonBackupRes.status, 403, 'Non-backup file inside legacy User Data must still return 403 FORBIDDEN');
+
+    // Legacy backups inside TradeForge/Backups/ must appear in listing & support restore + delete
+    const carolBkList = await rawRequest(appUrl, '/api/drive/backups?limit=10', { jar: carolJar });
+    assert.strictEqual(carolBkList.status, 200);
+    assert.ok(carolBkList.json.backups.some((b) => b.id === 'c_old_bk_file'), 'Legacy TradeForge/Backups snapshot must appear in list');
+
+    const carolBkRestore = await rawRequest(appUrl, '/api/drive/backups', {
+      method: 'POST',
+      jar: carolJar,
+      headers: { Origin: appUrl },
+      body: { action: 'restore', fileId: 'c_old_bk_file', createSafetyBackupFirst: false }
+    });
+    assert.strictEqual(carolBkRestore.status, 200);
+    assert.strictEqual(carolBkRestore.json.restoredTrades, 1);
+    assert.strictEqual(carolBkRestore.json.restoredSnapshot.trades[0].ticket, 'BK_OLD_1');
+
+    // Once TradeFourge/User Data/ is populated, populated TradeFourge takes precedence over older TradeForge
+    const carolMetaAfter = await rawRequest(appUrl, '/api/drive/sync?mode=meta', { jar: carolJar });
+    assert.strictEqual(carolMetaAfter.json.legacyAvailable, false, 'legacyAvailable becomes false once TradeFourge has trades');
+    const carolFullAfter = await rawRequest(appUrl, '/api/drive/sync?mode=full', { jar: carolJar });
+    assert.strictEqual(carolFullAfter.json.legacySource, false);
+    assert.strictEqual(carolFullAfter.json.trades.trades[0].ticket, 'BK_OLD_1');
+
+    const carolBkDel = await rawRequest(appUrl, '/api/drive/backups', {
+      method: 'POST',
+      jar: carolJar,
+      headers: { Origin: appUrl },
+      body: { action: 'delete', fileId: 'c_old_bk_file' }
+    });
+    assert.strictEqual(carolBkDel.status, 200);
+    assert.strictEqual(carolBkDel.json.deletedFileId, 'c_old_bk_file');
+    console.log('✓ Test 11 passed\n');
+
     console.log('================================================================');
-    console.log('ALL 10 BACKEND OAUTH + ENCRYPTED COOKIE + DRIVE API TESTS PASSED!');
+    console.log('ALL 11 BACKEND OAUTH + ENCRYPTED COOKIE + DRIVE API TESTS PASSED!');
     console.log('================================================================');
   } finally {
     await new Promise((r) => appServer.close(r));

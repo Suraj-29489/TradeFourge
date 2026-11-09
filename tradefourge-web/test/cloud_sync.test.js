@@ -296,11 +296,23 @@ async function runAllTests() {
     CloudSyncManager.lastSyncedAt = null;
     CloudSyncManager.lastConflicts = [];
     CloudSyncManager.lastError = null;
+    CloudSyncManager._signedInFlowPromise = null;
+    CloudSyncManager._signedInSub = null;
+    CloudSyncManager._syncPromise = null;
     CloudSyncManager._clearTimers();
 
     StorageManager._listeners = [];
     StorageManager.activeNamespace = 'anonymous';
     StorageManager.loadFromStorage();
+  }
+
+  async function waitForCloudIdle() {
+    if (CloudSyncManager._signedInFlowPromise) {
+      await CloudSyncManager._signedInFlowPromise.catch(() => {});
+    }
+    if (CloudSyncManager._syncPromise) {
+      await CloudSyncManager._syncPromise.catch(() => {});
+    }
   }
 
   function resetAllTestState() {
@@ -430,6 +442,7 @@ async function runAllTests() {
     // Valid sign-in via real OAuth -> HttpOnly cookie + /api/auth/me + Drive initialized
     mockGoogle.state.nextOAuthBehavior.grantDriveScope = true;
     await signInViaOAuth();
+    await waitForCloudIdle();
     assert.strictEqual(GoogleAuthManager.account.email, 'alice.trader@gmail.com');
     assert.strictEqual(GoogleAuthManager.hasValidToken(), true);
     assert.ok(browserJar.cookies.get('tf_sess').httpOnly, 'Session stored in HttpOnly cookie');
@@ -445,6 +458,7 @@ async function runAllTests() {
     // Re-signing same Google sub updates profile without duplicating account index
     mockGoogle.state.nextUser.name = 'Alice Pro Trader';
     await signInViaOAuth();
+    await waitForCloudIdle();
     assert.strictEqual(GoogleAuthManager.getKnownAccounts().length, 1, 'Same sub must deduplicate cleanly');
     assert.strictEqual(GoogleAuthManager.getKnownAccounts()[0].name, 'Alice Pro Trader');
 
@@ -950,8 +964,284 @@ async function runAllTests() {
     unsubThemeIsolation();
     console.log('✓ Test 11 passed\n');
 
+    // ------------------------------------------------------------------
+    // TEST 12: Legacy `TradeForge` Drive Bridge (Empty `TradeFourge` Shell + `tradeforge_*` Storage Fallback)
+    // ------------------------------------------------------------------
+    console.log('[12/12] Testing Legacy TradeForge Drive Bridge & tradeforge_* Storage Fallback...');
+    resetAllTestState();
+    const legacySub = 'sub_legacy_carol_3003';
+    mockGoogle.state.nextUser = {
+      sub: legacySub,
+      email: 'carol.legacy@gmail.com',
+      name: 'Carol Legacy',
+      picture: 'https://example.com/carol.png',
+      email_verified: true
+    };
+    const carolDrive = mockGoogle.getDriveStore(legacySub);
+
+    // 1) Pre-rename `TradeForge / { User Data/, Backups/ }` with Carol's real trades & settings
+    carolDrive.set('carol_leg_root', {
+      id: 'carol_leg_root',
+      name: 'TradeForge',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'root' },
+      trashed: false,
+      createdTime: '2026-08-01T00:00:00Z',
+      modifiedTime: '2026-08-01T00:00:00Z'
+    });
+    carolDrive.set('carol_leg_ud', {
+      id: 'carol_leg_ud',
+      name: 'User Data',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['carol_leg_root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'user_data' },
+      trashed: false,
+      createdTime: '2026-08-01T00:00:01Z',
+      modifiedTime: '2026-08-01T00:00:01Z'
+    });
+    carolDrive.set('carol_leg_bk_dir', {
+      id: 'carol_leg_bk_dir',
+      name: 'Backups',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['carol_leg_root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'backups' },
+      trashed: false,
+      createdTime: '2026-08-01T00:00:02Z',
+      modifiedTime: '2026-08-01T00:00:02Z'
+    });
+    const carolLegacyTradesPayload = {
+      schemaVersion: '1.0.0',
+      updatedAt: '2026-10-01T12:00:00Z',
+      trades: [
+        {
+          ticket: 'LEG_101',
+          symbol: 'XAUUSD',
+          type: 'buy',
+          lots: 0.2,
+          openPrice: 2510,
+          closePrice: 2535,
+          openTime: '2026-09-20T09:00:00Z',
+          closeTime: '2026-09-20T12:00:00Z',
+          profit: 500,
+          broker: 'exness',
+          syncId: 'EXNESS_LEG_101_2026-09-20T12:00:00Z_0.2_500'
+        },
+        {
+          ticket: 'LEG_102',
+          symbol: 'EURUSD',
+          type: 'sell',
+          lots: 0.1,
+          openPrice: 1.11,
+          closePrice: 1.10,
+          openTime: '2026-09-21T09:00:00Z',
+          closeTime: '2026-09-21T12:00:00Z',
+          profit: 100,
+          broker: 'exness',
+          syncId: 'EXNESS_LEG_102_2026-09-21T12:00:00Z_0.1_100'
+        }
+      ],
+      deletedUids: []
+    };
+    const originalLegacyTradesJson = JSON.stringify(carolLegacyTradesPayload);
+    carolDrive.set('carol_leg_trades', {
+      id: 'carol_leg_trades',
+      name: 'trades.json',
+      mimeType: 'application/json',
+      parents: ['carol_leg_ud'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeDomain: 'trades' },
+      trashed: false,
+      createdTime: '2026-10-01T12:00:00Z',
+      modifiedTime: '2026-10-01T12:00:00Z',
+      size: String(originalLegacyTradesJson.length),
+      _content: originalLegacyTradesJson
+    });
+    carolDrive.set('carol_leg_settings', {
+      id: 'carol_leg_settings',
+      name: 'settings.json',
+      mimeType: 'application/json',
+      parents: ['carol_leg_ud'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeDomain: 'settings' },
+      trashed: false,
+      createdTime: '2026-10-01T12:00:00Z',
+      modifiedTime: '2026-10-01T12:00:00Z',
+      _content: JSON.stringify({
+        currency: 'INR',
+        startingCapital: 75000,
+        notes: 'Legacy TradeForge notebook entry',
+        rules: [{ id: 1, text: 'Protect capital first', checked: true }]
+      })
+    });
+    carolDrive.set('carol_leg_meta', {
+      id: 'carol_leg_meta',
+      name: 'metadata.json',
+      mimeType: 'application/json',
+      parents: ['carol_leg_ud'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeDomain: 'metadata' },
+      trashed: false,
+      createdTime: '2026-10-01T12:00:00Z',
+      modifiedTime: '2026-10-01T12:00:00Z',
+      _content: JSON.stringify({
+        appName: 'TradeForge',
+        revisions: { trades: 1, journal: 1, settings: 1 },
+        counts: { trades: 2 },
+        lastSyncedAt: '2026-10-01T12:00:00Z'
+      })
+    });
+    carolDrive.set('carol_leg_bk_file', {
+      id: 'carol_leg_bk_file',
+      name: 'tradeforge-backup-2026-10-01-manual.json',
+      mimeType: 'application/json',
+      parents: ['carol_leg_bk_dir'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'backup' },
+      trashed: false,
+      createdTime: '2026-10-01T12:05:00Z',
+      modifiedTime: '2026-10-01T12:05:00Z',
+      size: '512',
+      _content: JSON.stringify({
+        schemaVersion: '1.0.0',
+        backupReason: 'manual',
+        trades: { trades: [carolLegacyTradesPayload.trades[0]] },
+        settings: { currency: 'USD', startingCapital: 40000 }
+      })
+    });
+
+    // 2) Post-rename empty `TradeFourge / User Data/` placeholder created by INIT_EMPTY (rev=1, trades=[])
+    carolDrive.set('carol_new_root', {
+      id: 'carol_new_root',
+      name: 'TradeFourge',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['root'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'root' },
+      trashed: false,
+      createdTime: '2026-11-09T10:00:00Z',
+      modifiedTime: '2026-11-09T10:00:00Z'
+    });
+    carolDrive.set('carol_new_ud', {
+      id: 'carol_new_ud',
+      name: 'User Data',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['carol_new_root'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'user_data' },
+      trashed: false,
+      createdTime: '2026-11-09T10:00:01Z',
+      modifiedTime: '2026-11-09T10:00:01Z'
+    });
+    carolDrive.set('carol_new_bk', {
+      id: 'carol_new_bk',
+      name: 'Backups',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['carol_new_root'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'backups' },
+      trashed: false,
+      createdTime: '2026-11-09T10:00:02Z',
+      modifiedTime: '2026-11-09T10:00:02Z'
+    });
+    carolDrive.set('carol_new_exp', {
+      id: 'carol_new_exp',
+      name: 'Exports',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['carol_new_root'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'exports' },
+      trashed: false,
+      createdTime: '2026-11-09T10:00:03Z',
+      modifiedTime: '2026-11-09T10:00:03Z'
+    });
+    carolDrive.set('carol_new_trades', {
+      id: 'carol_new_trades',
+      name: 'trades.json',
+      mimeType: 'application/json',
+      parents: ['carol_new_ud'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeDomain: 'trades' },
+      trashed: false,
+      createdTime: '2026-11-09T10:00:04Z',
+      modifiedTime: '2026-11-09T10:00:04Z',
+      _content: JSON.stringify({ schemaVersion: '1.0.0', trades: [], deletedUids: [] })
+    });
+    carolDrive.set('carol_new_meta', {
+      id: 'carol_new_meta',
+      name: 'metadata.json',
+      mimeType: 'application/json',
+      parents: ['carol_new_ud'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeDomain: 'metadata' },
+      trashed: false,
+      createdTime: '2026-11-09T10:00:04Z',
+      modifiedTime: '2026-11-09T10:00:04Z',
+      _content: JSON.stringify({
+        appName: 'TradeFourge',
+        revisions: { trades: 1, journal: 1, settings: 1 },
+        counts: { trades: 0 },
+        lastSyncedAt: '2026-11-09T10:00:04Z'
+      })
+    });
+
+    // Sign in Carol once in an empty browser session while empty TradeFourge metadata is already tracked in localStorage
+    await CloudSyncManager.init();
+    const carolMetaKey = CloudSyncManager._getMetaKey(legacySub);
+    localStorage.setItem(carolMetaKey, JSON.stringify({
+      folderIds: { root: 'carol_new_root', userData: 'carol_new_ud', backups: 'carol_new_bk', exports: 'carol_new_exp' },
+      fileIds: { metadata: 'carol_new_meta', trades: 'carol_new_trades', journal: null, settings: null },
+      revisions: { trades: 1, journal: 1, settings: 1 },
+      checksums: { trades: '', journal: '', settings: '' },
+      dirtyDomains: { trades: false, journal: false, settings: false },
+      lastSyncedAt: '2026-11-09T10:00:04Z'
+    }));
+
+    let legacyReloadEvents = 0;
+    const unsubLegacy = CloudSyncManager.subscribe((ev) => {
+      if (ev.eventType === 'workspace_reloaded' && ev.detail && ev.detail.reason === 'legacy_migrated') {
+        legacyReloadEvents++;
+      }
+    });
+
+    await signInViaOAuth();
+    await waitForCloudIdle();
+    unsubLegacy();
+
+    assert.strictEqual(CloudSyncManager.status, 'synced');
+    assert.strictEqual(StorageManager.getTrades().length, 2, 'Reload/sign-in must bridge legacy TradeForge trades despite empty TradeFourge shell');
+    assert.strictEqual(StorageManager.getCurrency(), 'INR', 'Must restore currency from legacy TradeForge settings');
+    assert.strictEqual(StorageManager.getStartingCapital(), 75000, 'Must restore startingCapital from legacy TradeForge settings');
+    assert.strictEqual(StorageManager.getNotes(), 'Legacy TradeForge notebook entry', 'Must restore journal notes from legacy TradeForge');
+    assert.ok(legacyReloadEvents >= 1, 'workspace_reloaded (legacy_migrated) event must fire');
+
+    // Verify canonical TradeFourge/User Data/ was adopted and legacy TradeForge/ remained untouched!
+    const adoptedTradesObj = JSON.parse(carolDrive.get('carol_new_trades')._content);
+    assert.strictEqual(adoptedTradesObj.trades.length, 2, 'TradeFourge / User Data / trades.json must now hold adopted trades');
+    assert.strictEqual(carolDrive.get('carol_leg_trades')._content, originalLegacyTradesJson, 'Legacy TradeForge / User Data must remain completely untouched');
+
+    // Next syncNow({ fullCheck: true }) sees populated TradeFourge and clears legacyAvailable
+    const postAdoptMeta = await GoogleDriveStorage.readMetadataOnly({ folderIds: CloudSyncManager.folderIds });
+    assert.strictEqual(postAdoptMeta.legacyAvailable, false, 'legacyAvailable must become false once TradeFourge holds adopted trades');
+
+    // Verify legacy `tradeforge-backup-*` in TradeForge/Backups is visible & restorable alongside TradeFourge/Backups
+    const carolBackups = await CloudSyncManager.listCloudBackups(10);
+    assert.ok(carolBackups.some((b) => b.id === 'carol_leg_bk_file'), 'Legacy TradeForge/Backups snapshots must appear in listCloudBackups');
+
+    // Scenario 12B: Clear local account cache keeping only lastSyncedAt/meta and reload -> must restore from populated TradeFourge
+    simulateBrowserReload({ preserveCookieJar: true });
+    const carolTradesKey = StorageManager._getKeyForNamespace(StorageManager.KEYS.TRADES, legacySub);
+    localStorage.setItem(carolTradesKey, JSON.stringify([]));
+    await CloudSyncManager.init();
+    await waitForCloudIdle();
+    assert.strictEqual(StorageManager.getTrades().length, 2, 'Reload with cleared local trades must still restore from populated TradeFourge');
+
+    // Scenario 12C: Verify non-destructive legacy `tradeforge_*` localStorage read fallback
+    localStorage.removeItem(carolTradesKey);
+    const legacyTradesKey = StorageManager._getLegacyKeyForNamespace(StorageManager.KEYS.TRADES, legacySub);
+    localStorage.setItem(legacyTradesKey, JSON.stringify([
+      { ticket: 'LOCAL_LEG_9', symbol: 'NAS100', type: 'buy', lots: 0.1, openTime: '2026-07-01T00:00:00Z', closeTime: '2026-07-01T01:00:00Z', profit: 55, broker: 'exness' }
+    ]));
+    StorageManager.loadFromStorage();
+    assert.strictEqual(StorageManager.getTrades()[0].ticket, 'LOCAL_LEG_9', 'Must read legacy tradeforge_acct_* when tradefourge_acct_* is absent');
+    // Setting canonical tradefourge_* key must always take precedence over legacy key
+    localStorage.setItem(carolTradesKey, JSON.stringify(carolLegacyTradesPayload.trades));
+    StorageManager.loadFromStorage();
+    assert.strictEqual(StorageManager.getTrades().length, 2, 'Canonical tradefourge_acct_* must take precedence over legacy key');
+    console.log('✓ Test 12 passed\n');
+
     console.log('================================================================');
-    console.log('ALL 11 FULL-STACK GOOGLE OAUTH & DRIVE SYNC TESTS PASSED!');
+    console.log('ALL 12 FULL-STACK GOOGLE OAUTH & DRIVE SYNC TESTS PASSED!');
     console.log('================================================================');
   } finally {
     await new Promise((r) => appServer.close(r));
