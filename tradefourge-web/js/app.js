@@ -117,6 +117,7 @@ const App = {
 
     this.initCurrency();
     this.initSidebarState();
+    this.initMobileViewportHandling();
     this.bindEvents();
     this.bindCloudEvents();
     this.initPWA();
@@ -429,14 +430,15 @@ const App = {
     this.dateFilter = 'custom';
     this.customRangeSelectionStep = 0;
 
-    const dateSelect = document.getElementById('headerDateRangeSelect');
-    if (dateSelect) {
-      dateSelect.value = 'custom';
-      const customOpt = dateSelect.querySelector('option[value="custom"]');
+    const customLabel = `Custom (${this.formatDateShort(start)} - ${this.formatDateShort(end)})`;
+    [document.getElementById('headerDateRangeSelect'), document.getElementById('mobileDateRangeSelect')].forEach((sel) => {
+      if (!sel) return;
+      sel.value = 'custom';
+      const customOpt = sel.querySelector('option[value="custom"]');
       if (customOpt) {
-        customOpt.innerText = `Custom (${this.formatDateShort(start)} - ${this.formatDateShort(end)})`;
+        customOpt.innerText = customLabel;
       }
-    }
+    });
 
     const customPopover = document.getElementById('customDatePopover');
     if (customPopover) {
@@ -861,40 +863,73 @@ const App = {
   },
 
   /**
-   * Render Recent Trades Table on Dashboard
+   * Render Recent Trades Table on Dashboard (plus clickable mobile cards on <=767px)
    */
   renderRecentTradesTable() {
     const tbody = document.getElementById('recentTradesTableBody');
-    if (!tbody) return;
+    const mobileList = document.getElementById('recentTradesMobileList');
+    if (!tbody && !mobileList) return;
 
-    tbody.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
+    if (mobileList) mobileList.innerHTML = '';
     const recent = [...this.filteredTrades].reverse().slice(0, 7);
 
     if (recent.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">No trade data available</td></tr>`;
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">No trade data available</td></tr>`;
+      }
+      if (mobileList) {
+        mobileList.innerHTML = `<div class="mobile-trade-empty">No trade data available</div>`;
+      }
       return;
     }
 
     recent.forEach(trade => {
-      const tr = document.createElement('tr');
       const dateFormatted = trade.closeTime ? trade.closeTime.replace('T', ' ').slice(0, 16) : (trade.openTime ? trade.openTime.replace('T', ' ').slice(0, 16) : '-');
       const pnlFormatted = TradeAnalytics.formatCurrency(trade.profit);
       const pnlClass = trade.profit > 0 ? 'profit-text' : (trade.profit < 0 ? 'loss-text' : 'neutral-text');
+      const pnlCardCls = trade.profit > 0 ? 'profit' : (trade.profit < 0 ? 'loss' : 'neutral');
       const pnlColor = trade.profit > 0 ? 'var(--profit)' : (trade.profit < 0 ? 'var(--loss)' : 'var(--neutral)');
       const reasonRaw = (trade.closeReason || 'USER').toUpperCase();
       const reasonClass = reasonRaw === 'TP' ? 'tp' : (reasonRaw === 'SL' ? 'sl' : (reasonRaw.includes('SO') || reasonRaw.includes('STOP') ? 'so' : 'user'));
+      const typeUpper = (trade.type || 'BUY').toUpperCase();
 
-      tr.innerHTML = `
-        <td><span class="symbol-badge">${trade.symbol}</span></td>
-        <td><span class="type-badge ${trade.type}">${(trade.type || 'BUY').toUpperCase()}</span></td>
-        <td style="font-family: var(--font-mono);">${trade.lots}</td>
-        <td style="color: var(--text-muted); font-size: 0.78rem; font-family: var(--font-mono);">${dateFormatted}</td>
-        <td><span class="reason-badge ${reasonClass}">${reasonRaw}</span></td>
-        <td class="${pnlClass}" style="color: ${pnlColor}; font-weight: 700; font-family: var(--font-mono); text-align: right;">${pnlFormatted}</td>
-      `;
+      if (tbody) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="symbol-badge">${this.escapeHTML(trade.symbol)}</span></td>
+          <td><span class="type-badge ${this.escapeHTML(trade.type)}">${this.escapeHTML(typeUpper)}</span></td>
+          <td style="font-family: var(--font-mono);">${this.escapeHTML(String(trade.lots))}</td>
+          <td style="color: var(--text-muted); font-size: 0.78rem; font-family: var(--font-mono);">${this.escapeHTML(dateFormatted)}</td>
+          <td><span class="reason-badge ${this.escapeHTML(reasonClass)}">${this.escapeHTML(reasonRaw)}</span></td>
+          <td class="${pnlClass}" style="color: ${pnlColor}; font-weight: 700; font-family: var(--font-mono); text-align: right;">${this.escapeHTML(pnlFormatted)}</td>
+        `;
 
-      tr.addEventListener('click', () => this.openTradeDetailModal(trade));
-      tbody.appendChild(tr);
+        tr.addEventListener('click', () => this.openTradeDetailModal(trade));
+        tbody.appendChild(tr);
+      }
+
+      if (mobileList) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'mobile-trade-card';
+        card.innerHTML = `
+          <div class="mobile-trade-card-top">
+            <div class="mobile-trade-card-left">
+              <span class="symbol-badge">${this.escapeHTML(trade.symbol)}</span>
+              <span class="type-badge ${this.escapeHTML(trade.type)}">${this.escapeHTML(typeUpper)}</span>
+              <span class="reason-badge ${this.escapeHTML(reasonClass)}">${this.escapeHTML(reasonRaw)}</span>
+            </div>
+            <span class="mobile-trade-card-pnl ${pnlCardCls}">${this.escapeHTML(pnlFormatted)}</span>
+          </div>
+          <div class="mobile-trade-card-mid">
+            <span class="mobile-trade-card-meta-group">${this.escapeHTML(String(trade.lots))} lots</span>
+            <span>${this.escapeHTML(dateFormatted)}</span>
+          </div>
+        `;
+        card.addEventListener('click', () => this.openTradeDetailModal(trade));
+        mobileList.appendChild(card);
+      }
     });
   },
 
@@ -1097,7 +1132,8 @@ const App = {
    */
   renderTradeLogTable() {
     const tbody = document.getElementById('tradeLogTableBody');
-    if (!tbody) return;
+    const mobileList = document.getElementById('tradeLogMobileList');
+    if (!tbody && !mobileList) return;
 
     let trades = [...this.filteredTrades];
     const { search, symbol, type, outcome, sortField, sortAsc, currentPage, pageSize } = this.tradeLogState;
@@ -1213,38 +1249,79 @@ const App = {
     const startIdx = (currentPage - 1) * pageSize;
     const paginated = trades.slice(startIdx, startIdx + pageSize);
 
-    tbody.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
+    if (mobileList) mobileList.innerHTML = '';
 
     if (paginated.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 32px;">No matching trades found.</td></tr>`;
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-dim); padding: 32px;">No matching trades found.</td></tr>`;
+      }
+      if (mobileList) {
+        mobileList.innerHTML = `<div class="mobile-trade-empty">No matching trades found.</div>`;
+      }
       const pageInfoEl = document.getElementById('tradeLogPageInfo');
       if (pageInfoEl) pageInfoEl.innerText = `Showing 0-0 of 0 trades`;
       return;
     }
 
     paginated.forEach(trade => {
-      const tr = document.createElement('tr');
       const openTimeFmt = trade.openTime ? trade.openTime.replace('T', ' ').slice(0, 16) : '-';
       const closeTimeFmt = trade.closeTime ? trade.closeTime.replace('T', ' ').slice(0, 16) : '-';
       const pnlFormatted = TradeAnalytics.formatCurrency(trade.profit);
       const pnlClass = trade.profit > 0 ? 'profit-text' : (trade.profit < 0 ? 'loss-text' : 'neutral-text');
+      const pnlCardCls = trade.profit > 0 ? 'profit' : (trade.profit < 0 ? 'loss' : 'neutral');
       const pnlColor = trade.profit > 0 ? 'var(--profit)' : (trade.profit < 0 ? 'var(--loss)' : 'var(--neutral)');
+      const typeUpper = (trade.type || 'BUY').toUpperCase();
+      const reasonRaw = (trade.closeReason || 'USER').toUpperCase();
+      const reasonClass = reasonRaw === 'TP' ? 'tp' : (reasonRaw === 'SL' ? 'sl' : (reasonRaw.includes('SO') || reasonRaw.includes('STOP') ? 'so' : 'user'));
 
-      tr.innerHTML = `
-        <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim);">${trade.ticket}</td>
-        <td><span class="symbol-badge">${trade.symbol}</span></td>
-        <td><span class="type-badge ${trade.type}">${trade.type.toUpperCase()}</span></td>
-        <td style="font-family: var(--font-mono);">${trade.lots}</td>
-        <td style="font-family: var(--font-mono);">${trade.openPrice || '-'}</td>
-        <td style="font-family: var(--font-mono);">${trade.closePrice || '-'}</td>
-        <td style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">${openTimeFmt}</td>
-        <td style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">${closeTimeFmt}</td>
-        <td class="${pnlClass}" style="color: ${pnlColor}; font-weight: 700; font-family: var(--font-mono);">${pnlFormatted}</td>
-        <td><button class="btn-sample" style="padding: 3px 8px; font-size: 0.72rem;">View</button></td>
-      `;
+      if (tbody) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-dim);">${this.escapeHTML(trade.ticket)}</td>
+          <td><span class="symbol-badge">${this.escapeHTML(trade.symbol)}</span></td>
+          <td><span class="type-badge ${this.escapeHTML(trade.type)}">${this.escapeHTML(typeUpper)}</span></td>
+          <td style="font-family: var(--font-mono);">${this.escapeHTML(String(trade.lots))}</td>
+          <td style="font-family: var(--font-mono);">${this.escapeHTML(String(trade.openPrice || '-'))}</td>
+          <td style="font-family: var(--font-mono);">${this.escapeHTML(String(trade.closePrice || '-'))}</td>
+          <td style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">${this.escapeHTML(openTimeFmt)}</td>
+          <td style="font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono);">${this.escapeHTML(closeTimeFmt)}</td>
+          <td class="${pnlClass}" style="color: ${pnlColor}; font-weight: 700; font-family: var(--font-mono);">${this.escapeHTML(pnlFormatted)}</td>
+          <td><button class="btn-sample" style="padding: 3px 8px; font-size: 0.72rem;">View</button></td>
+        `;
 
-      tr.addEventListener('click', () => this.openTradeDetailModal(trade));
-      tbody.appendChild(tr);
+        tr.addEventListener('click', () => this.openTradeDetailModal(trade));
+        tbody.appendChild(tr);
+      }
+
+      if (mobileList) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'mobile-trade-card';
+        card.innerHTML = `
+          <div class="mobile-trade-card-top">
+            <div class="mobile-trade-card-left">
+              <span class="symbol-badge">${this.escapeHTML(trade.symbol)}</span>
+              <span class="type-badge ${this.escapeHTML(trade.type)}">${this.escapeHTML(typeUpper)}</span>
+              <span class="mobile-trade-card-ticket">#${this.escapeHTML(trade.ticket)}</span>
+            </div>
+            <span class="mobile-trade-card-pnl ${pnlCardCls}">${this.escapeHTML(pnlFormatted)}</span>
+          </div>
+          <div class="mobile-trade-card-mid">
+            <span class="mobile-trade-card-meta-group">
+              <span>${this.escapeHTML(String(trade.lots))} lots</span>
+              <span class="reason-badge ${this.escapeHTML(reasonClass)}">${this.escapeHTML(reasonRaw)}</span>
+            </span>
+            <span>${this.escapeHTML(closeTimeFmt)}</span>
+          </div>
+          <div class="mobile-trade-card-foot">
+            <span>Open: ${this.escapeHTML(openTimeFmt)}</span>
+            <span class="mobile-trade-card-cta">View &rarr;</span>
+          </div>
+        `;
+        card.addEventListener('click', () => this.openTradeDetailModal(trade));
+        mobileList.appendChild(card);
+      }
     });
 
     // Update pagination indicators
@@ -2767,6 +2844,15 @@ const App = {
   switchView(viewName) {
     this.activeView = viewName;
 
+    if (typeof CalendarManager !== 'undefined' && typeof CalendarManager.hideTooltip === 'function') {
+      CalendarManager.hideTooltip();
+    }
+
+    if (typeof document !== 'undefined' && this.isMobileViewport()) {
+      const contentScroll = document.querySelector('.content-scroll');
+      if (contentScroll) contentScroll.scrollTop = 0;
+    }
+
     try {
       if (window.location.hash !== `#${viewName}`) {
         history.replaceState(null, '', `#${viewName}`);
@@ -2862,16 +2948,22 @@ const App = {
   },
 
   openUploadModal() {
-    const uploadModal = document.getElementById('uploadModal');
+    const uploadModal = typeof document !== 'undefined' ? document.getElementById('uploadModal') : null;
     if (uploadModal) uploadModal.classList.add('active');
+  },
+
+  openAddTradeModal() {
+    const addTradeModal = typeof document !== 'undefined' ? document.getElementById('addTradeModal') : null;
+    if (addTradeModal) addTradeModal.classList.add('active');
   },
 
   SIDEBAR_STORAGE_KEY: 'tradeforge_sidebar_collapsed',
   _sidebarResizeTimer: null,
   _sidebarTooltipsBound: false,
+  _mobileViewportBound: false,
 
   isMobileViewport() {
-    return typeof window !== 'undefined' && window.innerWidth <= 768;
+    return typeof window !== 'undefined' && window.innerWidth <= 767;
   },
 
   _getSidebarTooltipEl() {
@@ -3001,6 +3093,65 @@ const App = {
         });
       }
     }
+  },
+
+  initMobileViewportHandling() {
+    if (this._mobileViewportBound || typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+    this._mobileViewportBound = true;
+
+    const isTextInputEl = (el) => {
+      if (!el || !el.tagName) return false;
+      const tag = el.tagName.toUpperCase();
+      if (tag === 'TEXTAREA') return true;
+      if (el.isContentEditable || (typeof el.getAttribute === 'function' && el.getAttribute('contenteditable') === 'true')) {
+        return true;
+      }
+      if (tag === 'INPUT') {
+        const type = String(el.type || 'text').toLowerCase();
+        return ['text', 'search', 'email', 'number', 'password', 'url', 'tel'].includes(type);
+      }
+      return false;
+    };
+
+    let blurTimer = null;
+    const syncViewportState = () => {
+      const vv = window.visualViewport;
+      const vvHeight = vv && Number(vv.height) > 0 ? vv.height : window.innerHeight;
+      if (vvHeight && document.documentElement && document.documentElement.style && typeof document.documentElement.style.setProperty === 'function') {
+        document.documentElement.style.setProperty('--mobile-vv-height', `${Math.round(vvHeight)}px`);
+      }
+
+      if (!this.isMobileViewport()) {
+        document.body.classList.remove('mobile-keyboard-open');
+        return;
+      }
+
+      const activeEl = document.activeElement;
+      const isInputFocused = isTextInputEl(activeEl);
+      const isViewportShrunk = Boolean(vv && window.innerHeight > 0 && vv.height < window.innerHeight * 0.78);
+      document.body.classList.toggle('mobile-keyboard-open', Boolean(isInputFocused || isViewportShrunk));
+    };
+
+    document.addEventListener('focusin', (e) => {
+      if (!this.isMobileViewport()) return;
+      if (isTextInputEl(e.target)) {
+        clearTimeout(blurTimer);
+        document.body.classList.add('mobile-keyboard-open');
+      }
+    });
+
+    document.addEventListener('focusout', () => {
+      clearTimeout(blurTimer);
+      blurTimer = setTimeout(syncViewportState, 120);
+    });
+
+    window.addEventListener('resize', syncViewportState);
+    if (window.visualViewport && typeof window.visualViewport.addEventListener === 'function') {
+      window.visualViewport.addEventListener('resize', syncViewportState);
+    }
+    syncViewportState();
   },
 
   /**
@@ -3287,10 +3438,24 @@ const App = {
       });
     });
 
-    // Close active modal on Escape key press
+    // Close active modal, mobile sidebar drawer, or custom date popover on Escape key press
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' || e.key === 'Esc') {
         document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+        if (document.body && document.body.classList.contains('sidebar-mobile-open')) {
+          closeMobileSidebar();
+        }
+        const customPop = document.getElementById('customDatePopover');
+        if (customPop && customPop.style.display !== 'none') {
+          customPop.style.display = 'none';
+          this.customRangeSelectionStep = 0;
+          if (this.dateFilter !== 'custom') {
+            const ds = document.getElementById('headerDateRangeSelect');
+            const mds = document.getElementById('mobileDateRangeSelect');
+            if (ds) ds.value = this.dateFilter;
+            if (mds) mds.value = this.dateFilter;
+          }
+        }
       }
     });
 
@@ -3410,17 +3575,25 @@ const App = {
       });
     }
 
-    // Add Trade Modal (Sidebar + Mobile Top Button)
+    // Add Trade Modal (Sidebar + Mobile Top Button + Mobile Quick Toolbar)
     const addTradeBtn = document.getElementById('btnAddTradeSidebar');
     const addTradeMobileBtn = document.getElementById('btnAddTradeMobileTop');
+    const addTradeQuickMobileBtn = document.getElementById('btnAddTradeMobileQuick');
+    const importCsvQuickMobileBtn = document.getElementById('btnImportCsvMobileQuick');
     const addTradeModal = document.getElementById('addTradeModal');
     const addTradeForm = document.getElementById('addTradeForm');
 
     if (addTradeBtn && addTradeModal) {
-      addTradeBtn.addEventListener('click', () => addTradeModal.classList.add('active'));
+      addTradeBtn.addEventListener('click', () => this.openAddTradeModal());
     }
     if (addTradeMobileBtn && addTradeModal) {
-      addTradeMobileBtn.addEventListener('click', () => addTradeModal.classList.add('active'));
+      addTradeMobileBtn.addEventListener('click', () => this.openAddTradeModal());
+    }
+    if (addTradeQuickMobileBtn) {
+      addTradeQuickMobileBtn.addEventListener('click', () => this.openAddTradeModal());
+    }
+    if (importCsvQuickMobileBtn) {
+      importCsvQuickMobileBtn.addEventListener('click', () => this.openUploadModal());
     }
 
     if (addTradeForm) {
@@ -3449,8 +3622,9 @@ const App = {
       });
     }
 
-    // Date Range Presets Dropdown & Custom Range Handler
+    // Date Range Presets Dropdown & Custom Range Handler (Desktop + Mobile Toolbar bidirectional sync)
     const dateSelect = document.getElementById('headerDateRangeSelect');
+    const mobileDateSelect = document.getElementById('mobileDateRangeSelect');
     const customPopover = document.getElementById('customDatePopover');
     const closePopoverBtn = document.getElementById('closeCustomDatePopover');
     const cancelCustomBtn = document.getElementById('btnCancelCustomDate');
@@ -3466,6 +3640,17 @@ const App = {
         e.stopPropagation();
       });
     }
+
+    const syncDateSelectElements = (value, customLabelText) => {
+      [dateSelect, mobileDateSelect].forEach((sel) => {
+        if (!sel) return;
+        sel.value = value;
+        if (typeof customLabelText === 'string') {
+          const customOpt = sel.querySelector('option[value="custom"]');
+          if (customOpt) customOpt.innerText = customLabelText;
+        }
+      });
+    };
 
     const openCustomPopover = () => {
       if (customPopover) {
@@ -3484,33 +3669,38 @@ const App = {
 
     const cancelCustomSelection = () => {
       closeCustomPopover();
-      if (this.dateFilter !== 'custom' && dateSelect) {
-        dateSelect.value = this.dateFilter;
+      if (this.dateFilter !== 'custom') {
+        syncDateSelectElements(this.dateFilter);
       }
     };
 
-    if (dateSelect) {
-      dateSelect.addEventListener('change', (e) => {
-        const val = e.target.value;
-        if (val === 'custom') {
-          openCustomPopover();
-        } else {
-          closeCustomPopover();
-          this.dateFilter = val;
-          const customOpt = dateSelect.querySelector('option[value="custom"]');
-          if (customOpt) customOpt.innerText = 'Custom';
-          this.processTrades();
-        }
+    const handleDateFilterChange = (val) => {
+      if (val === 'custom') {
+        syncDateSelectElements('custom');
+        openCustomPopover();
+      } else {
+        closeCustomPopover();
+        this.dateFilter = val;
+        syncDateSelectElements(val, 'Custom');
+        this.processTrades();
+      }
+    };
+
+    [dateSelect, mobileDateSelect].forEach((sel) => {
+      if (!sel) return;
+      sel.addEventListener('change', (e) => {
+        handleDateFilterChange(e.target.value);
       });
 
-      dateSelect.addEventListener('click', () => {
-        if (dateSelect.value === 'custom') {
+      sel.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (sel.value === 'custom') {
           if (!customPopover || customPopover.style.display === 'none') {
             openCustomPopover();
           }
         }
       });
-    }
+    });
 
     if (closePopoverBtn) {
       closePopoverBtn.addEventListener('click', (e) => {
@@ -3598,7 +3788,10 @@ const App = {
     document.addEventListener('click', (e) => {
       if (customPopover && customPopover.style.display !== 'none') {
         const wrapper = document.querySelector('.date-filter-wrapper');
-        if (wrapper && !wrapper.contains(e.target)) {
+        const mobileFilterWrap = document.querySelector('.mobile-date-filter');
+        const inDesktop = wrapper && wrapper.contains(e.target);
+        const inMobile = mobileFilterWrap && mobileFilterWrap.contains(e.target);
+        if (!inDesktop && !inMobile) {
           cancelCustomSelection();
         }
       }

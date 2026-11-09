@@ -927,9 +927,10 @@ body:not(.auth-locked) #authGateView {
 }
 
 /* ==================== RESPONSIVE DESIGN ==================== */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .auth-gate-view {
     padding: 22px 14px;
+    min-height: 100dvh;
   }
 
   .auth-card {
@@ -958,7 +959,7 @@ body:not(.auth-locked) #authGateView {
 
   .auth-input {
     height: 44px;
-    font-size: 15px; /* Prevents unintentional iOS auto-zoom while keeping crisp sizing */
+    font-size: 16px; /* Prevents iOS Safari auto-zoom on focus while keeping crisp sizing */
   }
 
   .auth-password-toggle {

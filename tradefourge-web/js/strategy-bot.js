@@ -361,9 +361,15 @@ const StrategyBotManager = {
     this.updateModeUI();
     this.updateTokenGauge();
     this.updateContext();
-    this.scrollToBottom();
+    if (this.messages && this.messages.length > 0) {
+      this.scrollToBottom();
+    } else {
+      const container = document.getElementById('botChatMessages');
+      if (container) container.scrollTop = 0;
+    }
     const input = document.getElementById('botChatInput');
-    if (input) {
+    const isMobile = typeof App !== 'undefined' && typeof App.isMobileViewport === 'function' && App.isMobileViewport();
+    if (input && !isMobile) {
       setTimeout(() => input.focus(), 150);
     }
   },
@@ -1423,7 +1429,7 @@ NEVER produce long-form essays unless the user explicitly asks for a detailed ex
     `;
 
     container.appendChild(welcomeCard);
-    this.scrollToBottom();
+    container.scrollTop = 0;
   }
 };
 

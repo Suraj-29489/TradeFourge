@@ -216,6 +216,12 @@ a {
   text-decoration: none;
 }
 
+.legal-main a,
+.legal-footer a {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 a:hover {
   text-decoration: underline;
 }
@@ -394,6 +400,11 @@ code {
   padding: 32px 24px 56px;
 }
 
+.legal-main > *,
+.legal-grid > * {
+  min-width: 0;
+}
+
 .legal-hero {
   background: var(--bg-card);
   background-image: var(--card-bg-gradient);
@@ -407,6 +418,8 @@ code {
 .legal-doc-eyebrow {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
   gap: 8px;
   padding: 4px 10px;
   border-radius: 999px;
@@ -417,6 +430,7 @@ code {
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.08em;
+  line-height: 1.4;
   text-transform: uppercase;
   margin-bottom: 12px;
 }
@@ -453,7 +467,10 @@ code {
 .legal-meta-item {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
   gap: 6px;
+  overflow-wrap: anywhere;
 }
 
 .legal-meta-label {
@@ -772,6 +789,7 @@ code {
 
 .legal-placeholder {
   display: inline-block;
+  max-width: 100%;
   font-family: var(--font-mono);
   font-size: 0.84em;
   font-weight: 600;
@@ -780,6 +798,8 @@ code {
   background: var(--warning-bg);
   border: 1px dashed var(--warning-border);
   color: var(--warning);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* ==================== FOOTER ==================== */
@@ -887,6 +907,85 @@ code {
 
   .legal-footer {
     padding: 18px 14px 32px;
+  }
+}
+
+@media (max-width: 420px) {
+  .legal-header-inner {
+    min-height: 54px;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .legal-brand {
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .legal-logo-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+  }
+
+  .legal-logo-icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .legal-brand-name {
+    font-size: 0.88rem;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  .legal-return-btn {
+    padding: 6px 9px;
+    font-size: 0.72rem;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .legal-return-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .legal-main {
+    padding: 14px 10px 36px;
+  }
+
+  .legal-hero {
+    padding: 16px 14px;
+  }
+
+  .legal-title {
+    font-size: 1.48rem;
+  }
+
+  .legal-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .legal-article {
+    padding: 18px 14px;
+  }
+
+  .legal-callout {
+    padding: 12px 14px;
+  }
+
+  .legal-mobile-theme-row {
+    gap: 8px;
+  }
+
+  .legal-theme-btn {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+  }
+
+  .legal-footer {
+    padding: 16px 10px 28px;
   }
 }
 

@@ -1342,7 +1342,7 @@ html, body {
 }
 
 /* Desktop Collapsed Rail (72px, 6 icon-only navigation items) */
-@media (min-width: 769px) {
+@media (min-width: 768px) {
   body.sidebar-collapsed .sidebar {
     width: var(--sidebar-collapsed-width);
   }
@@ -2399,13 +2399,15 @@ html, body {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 62px;
+  height: auto;
+  min-height: calc(60px + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background-color: var(--bg-sidebar);
   border-top: 1px solid var(--border-color);
   z-index: 940;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: stretch;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.14);
 }
 
 .mobile-nav-item {
@@ -2418,12 +2420,23 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 3px;
+  min-width: 0;
+  min-height: 54px;
+  padding: 6px 2px;
   font-family: var(--font-display);
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: color 0.14s ease, background-color 0.14s ease;
+  transition: color 0.14s ease, background-color 0.14s ease, border-color 0.14s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mobile-nav-item:hover {
@@ -2432,14 +2445,29 @@ html, body {
 }
 
 .mobile-nav-item svg {
-  width: 18px;
-  height: 18px;
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
 }
 
 .mobile-nav-item.active {
   color: var(--nav-active-text);
   border-top-color: var(--nav-active-border);
   background-color: var(--bg-nav-selected);
+}
+
+body.mobile-keyboard-open .mobile-bottom-nav {
+  display: none !important;
+}
+
+body.mobile-keyboard-open .content-scroll {
+  padding-bottom: 16px;
+}
+
+@media (min-width: 768px) {
+  .mobile-bottom-nav {
+    display: none !important;
+  }
 }
 
 /* ==================== RESPONSIVE BREAKPOINTS ==================== */
@@ -2466,6 +2494,21 @@ html, body {
   }
 }
 
+@media (max-width: 1023px) {
+  .content-scroll {
+    padding: 18px 18px 32px;
+  }
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .secondary-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tradelog-telemetry-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 900px) {
   .side-donuts-stack,
   .settings-grid {
@@ -2477,7 +2520,18 @@ html, body {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
+  /* Lock background scroll when mobile slide-in drawer is open */
+  html:has(body.sidebar-mobile-open),
+  body.sidebar-mobile-open {
+    overflow: hidden;
+  }
+
+  body.sidebar-mobile-open .content-scroll {
+    overflow: hidden;
+    touch-action: none;
+  }
+
   /* Off-canvas Slide-Out Drawer on Mobile */
   .sidebar {
     position: fixed;
@@ -2485,8 +2539,10 @@ html, body {
     left: 0;
     bottom: 0;
     width: 276px !important;
+    height: 100vh;
     height: 100dvh;
     max-width: 84vw;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     z-index: 1000;
     transform: translateX(-100%);
     border-right: 1px solid var(--border-strong);
@@ -2514,18 +2570,25 @@ html, body {
     pointer-events: auto;
   }
 
-  .btn-mobile-add-top {
-    display: inline-flex;
-  }
-
   .mobile-bottom-nav {
     display: grid;
   }
 
+  /* Compact Native-App Top Header */
   .top-header {
-    padding: 0 10px 0 8px;
+    position: sticky;
+    top: 0;
+    z-index: 950;
+    padding: 0 12px 0 8px;
     height: 56px;
     gap: 8px;
+  }
+
+  .header-title-block,
+  #headerTerminalPill,
+  .top-header .date-filter,
+  .btn-mobile-add-top {
+    display: none !important;
   }
 
   .header-left {
@@ -2535,17 +2598,21 @@ html, body {
   }
 
   .header-brand-cluster {
-    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    gap: 8px;
+    justify-content: flex-start;
   }
 
   .sidebar-toggle-btn {
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
   }
 
   .brand-logo {
     gap: 8px;
     padding: 2px 4px;
+    min-width: 0;
   }
 
   .logo-icon {
@@ -2560,38 +2627,20 @@ html, body {
   }
 
   .brand-name {
-    font-size: 0.9rem;
+    font-size: 0.92rem;
   }
 
-  .header-title-row {
-    min-width: 0;
-  }
-
-  .page-title {
-    font-size: 0.94rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .brand-version {
+    font-size: 0.5rem;
+    margin-top: 2px;
   }
 
   .header-right {
     gap: 6px;
   }
 
-  .date-filter {
-    height: 32px;
-    padding: 0 8px;
-  }
-
-  .date-filter svg {
-    display: none;
-  }
-
-  .date-filter select {
-    font-size: 0.72rem;
-  }
-
   .content-scroll {
-    padding: 12px 12px 84px;
+    padding: 12px 12px calc(84px + env(safe-area-inset-bottom, 0px));
   }
 
   .view-section {
@@ -2613,7 +2662,11 @@ html, body {
 
   .secondary-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 10px;
+  }
+
+  .mini-kpi {
+    padding: 12px 14px;
   }
 
   .tradelog-telemetry-grid {
@@ -2621,8 +2674,17 @@ html, body {
     gap: 10px;
   }
 
+  .side-donuts-stack {
+    grid-template-columns: 1fr;
+  }
+
   .main-chart-container {
     min-height: 240px;
+    height: 250px;
+  }
+
+  .card-tabs {
+    flex-wrap: wrap;
   }
 
   .section-header {
@@ -2633,9 +2695,35 @@ html, body {
     padding: 14px;
   }
 
+  .breakdown-body {
+    padding: 12px 14px 14px;
+  }
+
+  .breakdown-item-header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .donut-card-body {
+    padding: 12px 14px;
+    gap: 14px;
+  }
+
+  .donut-card-footer {
+    padding: 8px 14px;
+    gap: 6px;
+  }
+
+  .donut-footer-stat .val {
+    font-size: 0.72rem;
+    overflow-wrap: anywhere;
+  }
+
   .settings-row {
     flex-direction: column;
     align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
   }
 
   .settings-action {
@@ -2645,19 +2733,24 @@ html, body {
   }
 }
 
-@media (max-width: 580px) {
-  .header-title-block {
-    display: none;
-  }
-}
-
-@media (max-width: 420px) {
+@media (max-width: 429px) {
   .top-header {
-    padding: 0 8px 0 6px;
+    padding: 0 10px 0 6px;
   }
 
   .brand-name {
-    font-size: 0.84rem;
+    font-size: 0.86rem;
+  }
+
+  .secondary-kpi-grid,
+  .tradelog-telemetry-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .mini-kpi-label,
+  .mini-kpi-sub {
+    white-space: normal;
   }
 
   .donut-card-body {
@@ -2666,12 +2759,17 @@ html, body {
     gap: 12px;
   }
 
-  .tradelog-telemetry-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+  .donut-stats-col {
+    width: 100%;
+  }
+
+  .donut-card-footer {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 8px 10px;
+    gap: 4px;
   }
 
   .tradelog-kpi-block .kpi-value {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
   }
 }

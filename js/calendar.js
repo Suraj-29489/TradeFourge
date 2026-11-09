@@ -274,9 +274,28 @@ const CalendarManager = {
   },
 
   /**
+   * Hover tooltips belong strictly to pointer/hover desktop viewports, never mobile/touch
+   */
+  supportsHoverTooltip() {
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+        return false;
+      }
+    }
+    if (typeof App !== 'undefined' && typeof App.isMobileViewport === 'function' && App.isMobileViewport()) {
+      return false;
+    }
+    return true;
+  },
+
+  /**
    * Show and position tooltip for a specific trading day cell
    */
   showTooltipForCell(cell, info) {
+    if (!this.supportsHoverTooltip()) {
+      this.hideTooltip();
+      return;
+    }
     const tooltip = this.ensureTooltipElement();
     if (!tooltip || !cell || !info) return;
 
@@ -638,10 +657,12 @@ const CalendarManager = {
               hasPercentage: intensity.hasPercentage
             };
 
-            cell.addEventListener('mouseenter', () => this.showTooltipForCell(cell, tooltipInfo));
-            cell.addEventListener('focus', () => this.showTooltipForCell(cell, tooltipInfo));
-            cell.addEventListener('mouseleave', () => this.hideTooltip());
-            cell.addEventListener('blur', () => this.hideTooltip());
+            if (this.supportsHoverTooltip()) {
+              cell.addEventListener('mouseenter', () => this.showTooltipForCell(cell, tooltipInfo));
+              cell.addEventListener('focus', () => this.showTooltipForCell(cell, tooltipInfo));
+              cell.addEventListener('mouseleave', () => this.hideTooltip());
+              cell.addEventListener('blur', () => this.hideTooltip());
+            }
 
             const openModal = () => {
               this.hideTooltip();

@@ -2310,8 +2310,12 @@ select.form-control option {
 }
 
 .btn-danger-outline {
-  height: 34px;
-  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  min-height: 34px;
+  padding: 7px 12px;
   background-color: var(--loss-bg);
   border: 1px solid var(--loss-border);
   color: var(--loss);
@@ -2458,7 +2462,7 @@ select.form-control option {
   width: 100%;
   max-width: 540px;
   max-height: 90dvh;
-  overflow-y: auto;
+  overflow: hidden;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
@@ -2471,6 +2475,14 @@ select.form-control option {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
+}
+
+#addTradeForm {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .modal-title {
@@ -2506,6 +2518,10 @@ select.form-control option {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-footer {
@@ -2516,6 +2532,8 @@ select.form-control option {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .upload-dropzone {
@@ -2860,6 +2878,11 @@ select.form-control option {
 }
 
 .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
   background-color: var(--btn-primary-bg);
   background-image: var(--btn-primary-bg-image);
   color: var(--btn-primary-text);
@@ -2883,6 +2906,11 @@ select.form-control option {
 }
 
 .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
   background-color: var(--btn-subtle-bg);
   color: var(--btn-subtle-text);
   border: 1px solid var(--btn-subtle-border);
@@ -3192,6 +3220,206 @@ select.form-control option {
 .loss-text { color: var(--loss) !important; font-weight: 700; }
 .neutral-text { color: var(--neutral) !important; font-weight: 600; }
 
+/* ==================== 12. MOBILE TOOLBAR, CARD LISTS & RESPONSIVE WRAPPERS ==================== */
+.mobile-dashboard-toolbar {
+  display: none;
+  background-color: var(--bg-card);
+  background-image: var(--card-bg-gradient);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  gap: 8px;
+  box-shadow: var(--card-shadow);
+}
+
+.mobile-date-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 11px;
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+  border-radius: var(--radius-sm);
+  color: var(--btn-subtle-text);
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-date-filter svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.mobile-date-filter select {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 16px;
+  outline: none;
+  cursor: pointer;
+  color-scheme: var(--color-scheme);
+}
+
+.mobile-date-filter select option {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+}
+
+.mobile-toolbar-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mobile-toolbar-btn {
+  min-height: 38px;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+/* Mobile Card Lists for Recent Executions & Trade Log */
+.mobile-trades-card-list {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
+.mobile-trade-empty {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 26px 12px;
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+}
+
+.mobile-trade-card {
+  width: 100%;
+  text-align: left;
+  background-color: var(--bg-lowest);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: background-color 0.14s ease, border-color 0.14s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-trade-card:hover,
+.mobile-trade-card:active {
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-strong);
+}
+
+.mobile-trade-card:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.mobile-trade-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mobile-trade-card-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.mobile-trade-card-pnl {
+  font-family: var(--font-mono);
+  font-size: 0.96rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mobile-trade-card-pnl.profit { color: var(--profit); }
+.mobile-trade-card-pnl.loss { color: var(--loss); }
+.mobile-trade-card-pnl.neutral { color: var(--neutral); }
+
+.mobile-trade-card-mid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.mobile-trade-card-meta-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mobile-trade-card-ticket {
+  color: var(--text-dim);
+  font-size: 0.68rem;
+}
+
+.mobile-trade-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+}
+
+.mobile-trade-card-cta {
+  color: var(--accent-primary);
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+/* Analytics & Section Grid Wrappers (Desktop Defaults) */
+.analytics-outcome-chart-wrap {
+  height: 150px;
+  position: relative;
+}
+
+.analytics-dist-chart-wrap {
+  height: 290px;
+  position: relative;
+}
+
+.analytics-lot-chart-wrap {
+  height: 280px;
+  position: relative;
+}
+
+.strategies-kpi-grid,
+.insights-kpi-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 /* ==================== 11. MOBILE & TABLET RESPONSIVE REFINEMENTS ==================== */
 @media (max-width: 1200px) {
   .analytics-kpi-row-4 {
@@ -3213,14 +3441,68 @@ select.form-control option {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1023px) {
+  .strategies-kpi-grid,
+  .insights-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-dashboard-toolbar {
+    display: flex;
+    flex-direction: column;
+  }
+  #cardRecentTrades .table-container,
+  #view-tradelog .table-container {
+    display: none;
+  }
+  #recentTradesMobileList,
+  #tradeLogMobileList {
+    display: flex;
+  }
+  .search-input-wrap {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+  }
+  .search-input-wrap input {
+    font-size: 16px;
+    height: 40px;
+  }
+  .filter-group {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .filter-select {
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    font-size: 14px;
+  }
+  .pagination-bar {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .page-btns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .page-btn {
+    min-height: 36px;
+    text-align: center;
+  }
   .currency-slider-toggle {
     min-width: 96px;
-    height: 32px;
+    height: 34px;
   }
   .currency-opt {
-    font-size: 0.66rem;
-    padding: 0 5px;
+    font-size: 0.68rem;
+    padding: 0 6px;
   }
   .custom-date-popover {
     position: fixed;
@@ -3228,6 +3510,37 @@ select.form-control option {
     left: 12px;
     right: 12px;
     width: auto;
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 84px);
+    overflow-y: auto;
+    z-index: 1200;
+  }
+  .weekly-perf-menu,
+  .pnl-perf-menu {
+    left: 0;
+    right: auto;
+    max-width: calc(100vw - 48px);
+  }
+  .pnl-perf-custom-controls {
+    width: 100%;
+  }
+  .pnl-perf-date-input {
+    flex: 1;
+    min-width: 120px;
+    height: 36px;
+    font-size: 16px;
+  }
+  .analytics-page-header {
+    padding: 14px 16px;
+  }
+  .analytics-main-title {
+    font-size: 1.15rem;
+  }
+  .analytics-dist-chart-wrap {
+    height: 230px;
+  }
+  .analytics-lot-chart-wrap {
+    height: 230px;
   }
   .analytics-kpi-row-4,
   .analytics-kpi-row-5 {
@@ -3238,100 +3551,261 @@ select.form-control option {
   .csv-preview-metrics-grid {
     grid-template-columns: 1fr;
   }
+  .strategies-kpi-grid,
+  .insights-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .mt5-connect-card {
+    padding: 16px;
+  }
+  .mt5-connect-actions {
+    flex-direction: column;
+  }
   .mt5-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .mt5-overview-grid,
   .mt5-form-row,
   .form-grid,
+  .trade-detail-grid,
   .day-trades-card-grid {
     grid-template-columns: 1fr;
   }
   .day-trades-summary-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  .modal-overlay {
+    padding: 12px;
+  }
+  .modal-card {
+    max-width: 100%;
+    max-height: min(88dvh, calc(var(--mobile-vv-height, 100dvh) - 24px));
+  }
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 12px 14px;
+  }
+  .modal-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #tradeDetailFooter {
+    justify-content: space-between !important;
+    gap: 8px;
+  }
+  #tradeDetailFooter > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #tradeDetailFooter button {
+    min-height: 36px;
+    padding: 6px 11px;
+    font-size: 0.74rem;
+  }
+  .form-control,
+  .popover-field input {
+    font-size: 16px;
+  }
   .bot-workspace {
-    height: calc(100dvh - 56px - 88px);
-    min-height: 400px;
+    height: calc(100dvh - 56px - 62px - env(safe-area-inset-bottom, 0px) - 20px);
+    min-height: 360px;
+  }
+  body.mobile-keyboard-open .bot-workspace {
+    height: calc(var(--mobile-vv-height, 100dvh) - 56px - 16px);
+    min-height: 240px;
   }
   .bot-chat-header {
-    padding: 10px 12px;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .bot-avatar-badge {
+    width: 32px;
+    height: 32px;
+  }
+  .bot-main-title {
+    font-size: 0.94rem;
+  }
+  .bot-subtitle {
+    font-size: 0.7rem;
+    line-height: 1.35;
+  }
+  .bot-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+  .bot-model-select,
+  .bot-mode-toggle-btn,
+  .bot-action-btn {
+    height: 30px;
+    font-size: 0.7rem;
+    padding: 0 8px;
   }
   .bot-token-gauge {
     display: none;
   }
+  .bot-chat-messages {
+    padding: 12px;
+    gap: 10px;
+  }
+  .bot-welcome-card {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .bot-welcome-title {
+    font-size: 0.96rem;
+  }
+  .bot-welcome-desc {
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
   .bot-message {
-    max-width: 95%;
+    max-width: 94%;
+  }
+  .bot-prompt-chip {
+    width: 100%;
+    text-align: left;
+    padding: 7px 10px;
+    font-size: 0.74rem;
+  }
+  .bot-input-area {
+    padding: 8px 10px;
+    flex-shrink: 0;
+  }
+  #botChatInput {
+    font-size: 16px;
+    min-height: 54px;
+    padding: 8px 12px;
+    line-height: 1.32;
+    overflow-y: auto;
+  }
+  .bot-send-btn {
+    width: 42px;
+    height: 54px;
   }
   .calendar-grid {
     gap: 4px;
   }
   .calendar-section-header {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .calendar-header-main {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .cal-nav-group {
+    gap: 6px;
+  }
+  .cal-month-title {
+    min-width: 0;
+    font-size: 0.88rem;
   }
   .cal-stats-group {
     width: 100%;
     justify-content: space-between;
+    gap: 6px;
+  }
+  .cal-stat-pill {
+    padding: 0 8px;
+    font-size: 0.72rem;
   }
   .calendar-week-row {
     grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
   }
   .calendar-weekday-summary {
     display: none;
   }
   .calendar-week-summary-cell {
     grid-column: 1 / -1;
-    padding: 6px 12px;
+    padding: 6px 10px;
+    box-shadow: none !important;
   }
   .week-summary-inner {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
     width: 100%;
   }
   .week-summary-pnl {
-    margin: 0 8px;
-    font-size: 0.86rem;
+    margin: 0 4px;
+    font-size: 0.84rem;
   }
   .calendar-day-cell {
     min-height: 44px;
-    padding: 4px;
+    min-width: 0;
+    padding: 4px 3px;
+    aspect-ratio: auto;
+    overflow: hidden;
+    box-shadow: none !important;
+  }
+  .day-number {
+    font-size: 0.64rem;
   }
   .day-pnl {
-    font-size: 0.68rem;
+    font-size: 0.6rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .day-trade-count .trade-count-word {
     display: none;
   }
   .toast-container {
-    bottom: 74px;
+    bottom: calc(74px + env(safe-area-inset-bottom, 0px));
     right: 12px;
     left: 12px;
   }
-  #strategiesListContainer {
-    grid-template-columns: 1fr !important;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .cal-heatmap-tooltip {
+    display: none !important;
   }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 520px) {
+  .filter-group {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 429px) {
   .currency-slider-toggle {
     min-width: 108px;
   }
   .analytics-kpi-row-4,
-  .analytics-kpi-row-5 {
+  .analytics-kpi-row-5,
+  .duration-outcome-split,
+  .day-trades-summary-grid,
+  .mt5-kpi-grid {
     grid-template-columns: 1fr;
   }
-  .duration-outcome-split {
-    grid-template-columns: 1fr;
+  .calendar-week-row {
+    gap: 2px;
   }
   .calendar-day-cell {
     min-height: 38px;
+    min-width: 0;
     padding: 3px 2px;
+    overflow: hidden;
+  }
+  .day-number {
+    font-size: 0.6rem;
   }
   .day-pnl {
-    font-size: 0.6rem;
+    font-size: 0.54rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -3983,27 +4457,66 @@ select.form-control option {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+  .trading-report-sheet:not(.rep-pdf-single-page) .rep-grid-2,
+  .trading-report-sheet:not(.rep-pdf-single-page) .rep-bottom-grid,
+  .trading-report-sheet:not(.rep-pdf-single-page) .rep-split-tables-wrap {
+    grid-template-columns: 1fr;
+  }
+  .trading-report-sheet:not(.rep-pdf-single-page) .rep-sub-table-col {
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 767px) {
   .report-controls-banner {
     flex-direction: column;
     align-items: stretch;
+    padding: 14px;
+    gap: 12px;
   }
   .report-controls-right {
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
+  }
+  .report-date-pickers-wrap {
+    flex-wrap: wrap;
   }
   .report-select, .report-date-input {
     width: 100%;
+    min-width: 0;
+    font-size: 16px;
   }
-  .rep-grid-2 {
-    grid-template-columns: 1fr;
+  .report-actions-wrap {
+    flex-wrap: wrap;
   }
-  .rep-split-tables-wrap {
-    grid-template-columns: 1fr;
+  .report-actions-wrap > button {
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
   }
-  .trading-report-sheet {
-    padding: 16px 14px;
+  .trading-report-sheet:not(.rep-pdf-single-page) {
+    padding: 14px 12px;
     margin: 10px 0 30px 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .trading-report-sheet:not(.rep-pdf-single-page) .rep-specs-list .spec-label {
+    width: 110px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 429px) {
+  .trading-report-sheet:not(.rep-pdf-single-page) .rep-specs-list .spec-label {
+    width: 92px;
+    font-size: 0.66rem;
+  }
+  .trading-report-sheet:not(.rep-pdf-single-page) .rep-main-title {
+    font-size: 1.05rem;
   }
 }
 
@@ -4448,14 +4961,14 @@ select.form-control option {
   padding: 8px 0;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .google-auth-trigger-btn {
-    height: 32px;
-    padding: 0 8px;
+    height: 34px;
+    padding: 0 9px;
   }
   .google-auth-trigger-btn.is-signed-in {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     padding: 0;
   }
   .google-trigger-label {
@@ -4463,16 +4976,23 @@ select.form-control option {
     font-size: 0.72rem;
   }
   .google-account-dropdown {
-    width: 268px;
-    right: -4px;
+    width: min(280px, calc(100vw - 24px));
+    right: 0;
   }
   .cloud-clientid-input-row {
     flex-direction: column;
     align-items: stretch;
   }
+  .cloud-backup-item {
+    flex-wrap: wrap;
+  }
+  .cloud-backup-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 520px) {
   .google-trigger-label {
     display: none;
   }

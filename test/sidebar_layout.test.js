@@ -224,7 +224,7 @@ function runAll() {
   // 2. CSS Scoping & Dimensions Checks
   assert.ok(css.includes('--sidebar-width: 248px;'), 'Expanded sidebar width must be fixed at 248px');
   assert.ok(css.includes('--sidebar-collapsed-width: 72px;'), 'Collapsed sidebar width must be fixed at 72px');
-  assert.ok(/@media \(min-width: 769px\)\s*\{[\s\S]*body\.sidebar-collapsed \.sidebar\s*\{[\s\S]*width:\s*var\(--sidebar-collapsed-width\);/.test(css), 'Desktop collapsed width rule must apply cleanly on >=769px');
+  assert.ok(/@media \(min-width: 768px\)\s*\{[\s\S]*body\.sidebar-collapsed \.sidebar\s*\{[\s\S]*width:\s*var\(--sidebar-collapsed-width\);/.test(css), 'Desktop collapsed width rule must apply cleanly on >=768px');
   assert.ok(css.includes('.sidebar-rail-tooltip.visible'), 'Collapsed hover tooltip styles must be defined');
   console.log('PASS: 2. CSS defines 248px/72px widths, scoped desktop collapse, and tooltip styling');
 

@@ -23,6 +23,10 @@ const ChartManager = {
   _lastWeekly: null,
   _lastPnlPerf: null,
 
+  isCompactViewport() {
+    return typeof window !== 'undefined' && window.innerWidth <= 767;
+  },
+
   /**
    * Read active CSS custom properties from documentElement with safe Classic defaults
    */
@@ -350,6 +354,7 @@ const ChartManager = {
       existing.destroy();
     }
 
+    const compact = this.isCompactViewport();
     const subtextEl = document.getElementById('pnlChartSubtext');
 
     if (this.currentPnLView === 'cumulative') {
@@ -419,13 +424,13 @@ const ChartManager = {
           scales: {
             x: {
               grid: { color: t.grid, drawBorder: false },
-              ticks: { color: t.tick, font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 8 }
+              ticks: { color: t.tick, font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: compact ? 5 : 8 }
             },
             y: {
               grid: { color: t.grid, drawBorder: false },
               ticks: {
                 color: t.tick,
-                font: { size: 11, family: "'JetBrains Mono', monospace" },
+                font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   return `${sym}${val}`;
@@ -490,13 +495,13 @@ const ChartManager = {
           scales: {
             x: {
               grid: { color: t.grid, drawBorder: false },
-              ticks: { color: t.tick, font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 10 }
+              ticks: { color: t.tick, font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: compact ? 5 : 10 }
             },
             y: {
               grid: { color: t.grid, drawBorder: false },
               ticks: {
                 color: t.tick,
-                font: { size: 11, family: "'JetBrains Mono', monospace" },
+                font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   return `${sym}${val}`;
@@ -571,15 +576,16 @@ const ChartManager = {
               grid: { color: t.grid, drawBorder: false },
               ticks: {
                 color: t.tick,
-                font: { size: 11, family: "'JetBrains Mono', monospace" },
-                autoSkip: false
+                font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" },
+                autoSkip: compact,
+                maxTicksLimit: compact ? 6 : undefined
               }
             },
             y: {
               grid: { color: t.grid, drawBorder: false },
               ticks: {
                 color: t.tick,
-                font: { size: 11, family: "'JetBrains Mono', monospace" },
+                font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   return `${sym}${val}`;
@@ -644,13 +650,13 @@ const ChartManager = {
           scales: {
             x: {
               grid: { color: t.grid, drawBorder: false },
-              ticks: { color: t.tick, font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 8 }
+              ticks: { color: t.tick, font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: compact ? 5 : 8 }
             },
             y: {
               grid: { color: t.grid, drawBorder: false },
               ticks: {
                 color: t.tick,
-                font: { size: 11, family: "'JetBrains Mono', monospace" },
+                font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" },
                 callback: (val) => {
                   const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   return `${sym}${val}`;
@@ -747,6 +753,7 @@ const ChartManager = {
     const barColors = values.map(v => v > 0 ? t.profitChart : (v < 0 ? t.lossChart : t.bgLowest));
     const borderColors = values.map(v => v > 0 ? t.profitBorder : (v < 0 ? t.lossBorder : t.borderColor));
     const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+    const compact = this.isCompactViewport();
 
     this.instances.weeklyPerformance = new Chart(canvas, {
       type: 'bar',
@@ -804,13 +811,13 @@ const ChartManager = {
         scales: {
           x: {
             grid: { color: t.grid, drawBorder: false },
-            ticks: { color: t.tickStrong, font: { size: 11, weight: '700', family: "'JetBrains Mono', monospace" } }
+            ticks: { color: t.tickStrong, font: { size: compact ? 10 : 11, weight: '700', family: "'JetBrains Mono', monospace" } }
           },
           y: {
             grid: { color: t.grid, drawBorder: false },
             ticks: {
               color: t.tick,
-              font: { size: 11, family: "'JetBrains Mono', monospace" },
+              font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" },
               callback: (val) => {
                 const isNeg = val < 0;
                 return `${isNeg ? '-' : ''}${sym}${Math.abs(val)}`;
@@ -927,6 +934,7 @@ const ChartManager = {
     const labels = timeseries.map(pt => pt.shortLabel);
     const values = timeseries.map(pt => pt.cumulativePnL);
     const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+    const compact = this.isCompactViewport();
     const finalVal = values[values.length - 1] || 0;
     const isNetPositive = finalVal >= 0;
     const lineColor = isNetPositive ? t.profitChart : t.lossChart;
@@ -996,13 +1004,13 @@ const ChartManager = {
         scales: {
           x: {
             grid: { color: t.grid, drawBorder: false },
-            ticks: { color: t.tickStrong, font: { size: 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 10 }
+            ticks: { color: t.tickStrong, font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: compact ? 5 : 10 }
           },
           y: {
             grid: { color: t.grid, drawBorder: false },
             ticks: {
               color: t.tick,
-              font: { size: 11, family: "'JetBrains Mono', monospace" },
+              font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" },
               callback: (val) => {
                 const isNeg = val < 0;
                 return `${isNeg ? '-' : ''}${sym}${Math.abs(val)}`;
@@ -1033,6 +1041,7 @@ const ChartManager = {
     }
 
     const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+    const compact = this.isCompactViewport();
     const symbols = (metrics.symbolBreakdown || []).slice(0, 8);
     const labels = symbols.map(s => s.symbol);
     const pnls = symbols.map(s => s.pnl);
@@ -1069,11 +1078,11 @@ const ChartManager = {
         scales: {
           x: {
             grid: { color: t.grid },
-            ticks: { color: t.tick, font: { family: "'JetBrains Mono', monospace" }, callback: v => `${sym}${v}` }
+            ticks: { color: t.tick, font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: compact ? 5 : 8, callback: v => `${sym}${v}` }
           },
           y: {
             grid: { display: false },
-            ticks: { color: t.tooltipBody, font: { weight: '600', family: "'JetBrains Mono', monospace" } }
+            ticks: { color: t.tooltipBody, font: { size: compact ? 10 : 11, weight: '600', family: "'JetBrains Mono', monospace" } }
           }
         }
       }
@@ -1090,6 +1099,7 @@ const ChartManager = {
     }
 
     const sym = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
+    const compact = this.isCompactViewport();
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
     const dayIndices = [1, 2, 3, 4, 5];
     const data = dayIndices.map(idx => Math.round((metrics.weekdayMap[idx] || 0) * 100) / 100);
@@ -1125,11 +1135,11 @@ const ChartManager = {
         scales: {
           x: {
             grid: { display: false },
-            ticks: { color: t.tooltipBody, font: { weight: '600', family: "'JetBrains Mono', monospace" } }
+            ticks: { color: t.tooltipBody, font: { size: compact ? 10 : 11, weight: '600', family: "'JetBrains Mono', monospace" } }
           },
           y: {
             grid: { color: t.grid },
-            ticks: { color: t.tick, font: { family: "'JetBrains Mono', monospace" }, callback: v => `${sym}${v}` }
+            ticks: { color: t.tick, font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" }, maxTicksLimit: compact ? 5 : 8, callback: v => `${sym}${v}` }
           }
         }
       }
@@ -1166,6 +1176,7 @@ const ChartManager = {
       return;
     }
 
+    const compact = this.isCompactViewport();
     const dist = durationMetrics.distribution;
     const labels = dist.map(d => d.label);
     const winData = dist.map(d => d.wins);
@@ -1234,7 +1245,9 @@ const ChartManager = {
             grid: { display: false },
             ticks: {
               color: t.tickStrong,
-              font: { size: 11, family: "'JetBrains Mono', monospace" }
+              autoSkip: compact,
+              maxTicksLimit: compact ? 5 : undefined,
+              font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" }
             }
           },
           y: {
@@ -1242,7 +1255,7 @@ const ChartManager = {
             grid: { color: t.grid, drawBorder: false },
             ticks: {
               color: t.tick,
-              font: { size: 11, family: "'JetBrains Mono', monospace" },
+              font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" },
               precision: 0
             }
           }
@@ -1348,6 +1361,7 @@ const ChartManager = {
       return;
     }
 
+    const compact = this.isCompactViewport();
     const groups = lotMetrics.lotBreakdown;
     const labels = groups.map(g => `${g.lotLabel} lots`);
 
@@ -1389,11 +1403,11 @@ const ChartManager = {
           scales: {
             x: {
               grid: { display: false },
-              ticks: { color: t.tickStrong, font: { size: 11, family: "'JetBrains Mono', monospace" } }
+              ticks: { color: t.tickStrong, autoSkip: compact, maxTicksLimit: compact ? 5 : undefined, font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" } }
             },
             y: {
               grid: { color: t.grid, drawBorder: false },
-              ticks: { color: t.tick, font: { size: 11, family: "'JetBrains Mono', monospace" }, precision: 0 }
+              ticks: { color: t.tick, font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" }, precision: 0 }
             }
           }
         }
@@ -1447,13 +1461,13 @@ const ChartManager = {
           scales: {
             x: {
               grid: { display: false },
-              ticks: { color: t.tickStrong, font: { size: 11, family: "'JetBrains Mono', monospace" } }
+              ticks: { color: t.tickStrong, autoSkip: compact, maxTicksLimit: compact ? 5 : undefined, font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" } }
             },
             y: {
               grid: { color: t.grid, drawBorder: false },
               ticks: {
                 color: t.tick,
-                font: { size: 11, family: "'JetBrains Mono', monospace" },
+                font: { size: compact ? 10 : 11, family: "'JetBrains Mono', monospace" },
                 callback: (v) => {
                   const sym2 = (typeof TradeAnalytics !== 'undefined') ? TradeAnalytics.getCurrencySymbol() : '$';
                   return `${sym2}${v}`;
