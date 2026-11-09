@@ -4,7 +4,7 @@
   "private": true,
   "description": "TradeForge Trading Journal & AI Analytics Platform with Server-Side Google OAuth 2.0 and Google Drive Cloud Storage",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=24 <25"
   },
   "scripts": {
     "start": "node scripts/dev-server.js",

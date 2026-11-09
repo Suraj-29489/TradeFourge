@@ -150,15 +150,28 @@ function createAppServer({ rootDir = path.resolve(__dirname, '..'), reloadEnv = 
         }
 
         const segments = apiRel.split('/').filter(Boolean);
-        if (segments.some((s) => s.startsWith('_'))) {
+        if (segments.some((s) => s.startsWith('_') || s.includes('..'))) {
           res.statusCode = 404;
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
           res.end(JSON.stringify({ ok: false, code: 'NOT_FOUND', message: 'API route not found.' }));
           return;
         }
 
-        const handlerPath = path.resolve(resolvedRoot, 'api', ...segments) + '.js';
         const apiRoot = path.resolve(resolvedRoot, 'api');
+        const directPath = path.resolve(resolvedRoot, 'api', ...segments) + '.js';
+        let handlerPath = directPath;
+        let rewrittenRoute = null;
+
+        if (!directPath.startsWith(apiRoot + path.sep) || !fs.existsSync(directPath)) {
+          if (segments.length === 2 && (segments[0] === 'auth' || segments[0] === 'drive')) {
+            const routerPath = path.resolve(resolvedRoot, 'api', `${segments[0]}.js`);
+            if (routerPath.startsWith(apiRoot + path.sep) && fs.existsSync(routerPath)) {
+              handlerPath = routerPath;
+              rewrittenRoute = segments[1];
+            }
+          }
+        }
+
         if (!handlerPath.startsWith(apiRoot + path.sep) || !fs.existsSync(handlerPath)) {
           res.statusCode = 404;
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -167,6 +180,9 @@ function createAppServer({ rootDir = path.resolve(__dirname, '..'), reloadEnv = 
         }
 
         attachQueryObject(req, urlObj);
+        if (rewrittenRoute !== null) {
+          req.query.__route = rewrittenRoute;
+        }
         augmentResponseForVercel(res);
 
         const handler = require(handlerPath);

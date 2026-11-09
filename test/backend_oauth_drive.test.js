@@ -9,8 +9,28 @@
 
 const assert = require('assert');
 const crypto = require('crypto');
+const fs = require('fs');
 const http = require('http');
 const path = require('path');
+
+function listVercelServerlessFunctions(rootDir) {
+  const apiDir = path.join(rootDir, 'api');
+  const results = [];
+  function walk(dir, relPrefix) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith('_') || entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      const rel = relPrefix ? `${relPrefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        walk(full, rel);
+      } else if (entry.isFile() && /\.(?:js|mjs|cjs|ts)$/i.test(entry.name)) {
+        results.push(`api/${rel}`);
+      }
+    }
+  }
+  walk(apiDir, '');
+  return results.sort();
+}
 
 function _makeJsonRes(res, status, obj) {
   const body = typeof obj === 'string' ? obj : JSON.stringify(obj);
@@ -544,13 +564,15 @@ async function runTests() {
 
   try {
     // TEST 1: Static security & frontend HTML cleanliness & Gemini route check
-    console.log('[1/8] Testing static file protection, HTML cleanup & existing Gemini route...');
-    const [envRes, libRes, scriptRes, pkgRes, usageRes, indexRes] = await Promise.all([
+    console.log('[1/10] Testing static file protection, HTML cleanup & existing Gemini route...');
+    const [envRes, libRes, scriptRes, pkgRes, usageRes, botOptRes, botGetRes, indexRes] = await Promise.all([
       rawRequest(appUrl, '/.env.local'),
       rawRequest(appUrl, '/api/_lib/env.js'),
       rawRequest(appUrl, '/scripts/dev-server.js'),
       rawRequest(appUrl, '/package.json'),
       rawRequest(appUrl, '/api/usage'),
+      rawRequest(appUrl, '/api/strategy-bot', { method: 'OPTIONS' }),
+      rawRequest(appUrl, '/api/strategy-bot', { method: 'GET' }),
       rawRequest(appUrl, '/')
     ]);
     assert.strictEqual(envRes.status, 404, '.env.local must NEVER be served');
@@ -558,6 +580,8 @@ async function runTests() {
     assert.strictEqual(scriptRes.status, 404, '/scripts must return 404');
     assert.strictEqual(pkgRes.status, 404, '/package.json must return 404');
     assert.strictEqual(usageRes.status, 200, 'Existing /api/usage route must work');
+    assert.strictEqual(botOptRes.status, 204, 'Existing /api/strategy-bot OPTIONS must return 204');
+    assert.strictEqual(botGetRes.status, 405, 'Existing /api/strategy-bot GET must return 405');
     assert.strictEqual(indexRes.status, 200, '/ must serve index.html');
     assert.ok(!indexRes.text.includes('accounts.google.com/gsi/client'), 'GIS script must be removed');
     assert.ok(!indexRes.text.includes('authOAuthSetupDrawer'), 'Client ID setup drawer must be removed');
@@ -565,7 +589,7 @@ async function runTests() {
     console.log('✓ Test 1 passed\n');
 
     // TEST 2: Unconfigured server behavior -> clean fallback redirect
-    console.log('[2/8] Testing unconfigured OAuth fallback behavior...');
+    console.log('[2/10] Testing unconfigured OAuth fallback behavior...');
     const jarUnconf = new CookieJar();
     const unconfStart = await rawRequest(appUrl, '/api/auth/google', { jar: jarUnconf });
     assert.strictEqual(unconfStart.status, 302);
@@ -580,7 +604,7 @@ async function runTests() {
     process.env.GOOGLE_CLIENT_SECRET = CLIENT_SECRET;
 
     // TEST 3: PKCE + CSRF state + consent scope enforcement
-    console.log('[3/8] Testing PKCE, CSRF state validation, access_denied & drive.file scope enforcement...');
+    console.log('[3/10] Testing PKCE, CSRF state validation, access_denied & drive.file scope enforcement...');
     const badStateJar = new CookieJar();
     const badStart = await rawRequest(appUrl, '/api/auth/google', { jar: badStateJar });
     const badAuthUrl = new URL(badStart.location);
@@ -605,7 +629,7 @@ async function runTests() {
     console.log('✓ Test 3 passed\n');
 
     // TEST 4: Full OAuth login -> Encrypted HttpOnly Cookie Session -> No secrets leaked -> Tamper rejection
-    console.log('[4/8] Testing full OAuth login, HttpOnly cookie security & tamper resistance...');
+    console.log('[4/10] Testing full OAuth login, HttpOnly cookie security & tamper resistance...');
     const aliceJar = new CookieJar();
     const loginCb = await performFullOAuthLogin(appUrl, googleUrl, aliceJar, '?prompt=select_account&remember=1');
     assert.strictEqual(loginCb.location, '/?auth=success');
@@ -637,7 +661,7 @@ async function runTests() {
     console.log('✓ Test 4 passed\n');
 
     // TEST 5: Transparent server-side refresh_token rotation & 5xx resilience
-    console.log('[5/8] Testing transparent token refresh on expiration & 5xx resilience...');
+    console.log('[5/10] Testing transparent token refresh on expiration & 5xx resilience...');
     for (const [tok, entry] of mockGoogle.state.accessTokens.entries()) {
       if (entry.user.sub === 'sub_alice_1001') entry.expired = true;
     }
@@ -660,7 +684,7 @@ async function runTests() {
     console.log('✓ Test 5 passed\n');
 
     // TEST 6: Concurrent folder creation idempotency + CSRF Origin check + Push/Verify + Conflicts + Exports
-    console.log('[6/8] Testing concurrent Drive folder creation, push verification, conflicts & exports...');
+    console.log('[6/10] Testing concurrent Drive folder creation, push verification, conflicts & exports...');
     const evilPost = await rawRequest(appUrl, '/api/drive/folder', {
       method: 'POST',
       jar: aliceJar,
@@ -784,7 +808,7 @@ async function runTests() {
     console.log('✓ Test 6 passed\n');
 
     // TEST 7: Backups, cross-user isolation & Legacy Database/ compatibility bridge
-    console.log('[7/8] Testing Backups, cross-user isolation & legacy Database/ read bridge...');
+    console.log('[7/10] Testing Backups, cross-user isolation & legacy Database/ read bridge...');
     const manualBk = await rawRequest(appUrl, '/api/drive/backups', {
       method: 'POST',
       jar: aliceJar,
@@ -887,7 +911,7 @@ async function runTests() {
     console.log('✓ Test 7 passed\n');
 
     // TEST 8: Logout, Google Token Revocation & JTI Session Replay Protection
-    console.log('[8/8] Testing logout, token revocation & JTI cookie replay prevention...');
+    console.log('[8/10] Testing logout, token revocation & JTI cookie replay prevention...');
     const savedAliceCookieHeader = aliceJar.headerString();
     const badLogout = await rawRequest(appUrl, '/api/auth/logout', {
       method: 'POST',
@@ -920,8 +944,235 @@ async function runTests() {
     assert.strictEqual(replayDrive.status, 401, 'Replayed cookie must receive 401 on Drive endpoints');
     console.log('✓ Test 8 passed\n');
 
+    // TEST 9: Vercel Hobby function count limit (<= 12) + consolidated route validation
+    console.log('[9/10] Testing Vercel Serverless Function limit (<= 12) & consolidated route guards...');
+    const rootDir = path.resolve(__dirname, '..');
+    const detectedFunctions = listVercelServerlessFunctions(rootDir);
+    assert.ok(detectedFunctions.length <= 12, `Expected <= 12 Vercel Serverless Functions, found ${detectedFunctions.length}`);
+    assert.deepStrictEqual(detectedFunctions, [
+      'api/auth.js',
+      'api/drive.js',
+      'api/strategy-bot.js',
+      'api/usage.js'
+    ]);
+
+    const vercelConfig = JSON.parse(fs.readFileSync(path.join(rootDir, 'vercel.json'), 'utf8'));
+    assert.deepStrictEqual(Object.keys(vercelConfig.functions || {}).sort(), detectedFunctions);
+    assert.ok(
+      Array.isArray(vercelConfig.rewrites) &&
+      vercelConfig.rewrites.some((r) => r.source === '/api/auth/:route' && r.destination === '/api/auth?__route=:route') &&
+      vercelConfig.rewrites.some((r) => r.source === '/api/drive/:route' && r.destination === '/api/drive?__route=:route'),
+      'vercel.json must rewrite /api/auth/:route and /api/drive/:route cleanly'
+    );
+
+    const invalidRoutes = [
+      '/api/auth',
+      '/api/auth/',
+      '/api/auth/nonexistent',
+      '/api/auth/constructor',
+      '/api/auth/__proto__',
+      '/api/auth/a/b',
+      '/api/auth/a/b?__route=google',
+      '/api/drive',
+      '/api/drive/',
+      '/api/drive/nonexistent',
+      '/api/drive/constructor',
+      '/api/drive/x/y',
+      '/api/usage-store',
+      '/api/_lib/usage-store',
+      '/api/_lib/auth/session'
+    ];
+    for (const badPath of invalidRoutes) {
+      const badRes = await rawRequest(appUrl, badPath);
+      assert.strictEqual(badRes.status, 404, `Expected 404 for ${badPath}, got ${badRes.status}`);
+    }
+
+    const [sessOut, meOut] = await Promise.all([
+      rawRequest(appUrl, '/api/auth/session'),
+      rawRequest(appUrl, '/api/auth/me')
+    ]);
+    assert.strictEqual(sessOut.status, 200);
+    assert.strictEqual(meOut.status, 200);
+    assert.deepStrictEqual(sessOut.json, meOut.json, '/api/auth/session and /api/auth/me must stay identical');
+    console.log('✓ Test 9 passed\n');
+
+    // TEST 10: Vercel rewrite destination simulation (?__route=...) end-to-end
+    console.log('[10/10] Testing Vercel rewrite destination (?__route=...) end-to-end flow...');
+    const rwJar = new CookieJar();
+    const rwStart = await rawRequest(appUrl, '/api/auth?__route=google&mode=redirect&remember=1', { jar: rwJar });
+    assert.strictEqual(rwStart.status, 302);
+    const rwAuthUrl = new URL(rwStart.location);
+    assert.strictEqual(rwAuthUrl.searchParams.get('redirect_uri'), `${appUrl}/api/auth/callback`);
+    assert.ok(!rwAuthUrl.searchParams.has('__route'), '__route must not leak into Google auth redirect');
+
+    const rwGoogle = await rawRequest(googleUrl, rwStart.location);
+    assert.strictEqual(rwGoogle.status, 302);
+    const gCbUrl = new URL(rwGoogle.location);
+    assert.strictEqual(gCbUrl.pathname, '/api/auth/callback');
+
+    // Simulate Vercel Edge rewriting /api/auth/callback?... -> /api/auth?__route=callback&...
+    const rewrittenCbPath = `/api/auth?__route=callback&${gCbUrl.searchParams.toString()}`;
+    const rwCbRes = await rawRequest(appUrl, rewrittenCbPath, { jar: rwJar });
+    assert.strictEqual(rwCbRes.status, 302);
+    assert.strictEqual(rwCbRes.location, '/?auth=success');
+    assert.ok(rwJar.cookies.has('tf_sess'), 'Rewritten OAuth callback must issue session cookie');
+
+    const [rwSess, rwMe] = await Promise.all([
+      rawRequest(appUrl, '/api/auth?__route=session', { jar: rwJar }),
+      rawRequest(appUrl, '/api/auth?__route=me', { jar: rwJar })
+    ]);
+    assert.strictEqual(rwSess.status, 200);
+    assert.strictEqual(rwSess.json.authenticated, true);
+    assert.deepStrictEqual(rwSess.json.user, rwMe.json.user);
+
+    const rwAuthz = await rawRequest(appUrl, '/api/drive?__route=authorize&mode=redirect', { jar: rwJar });
+    assert.strictEqual(rwAuthz.status, 302);
+    assert.ok(rwAuthz.location.startsWith(googleUrl + '/o/oauth2/v2/auth'));
+
+    const rwStatus = await rawRequest(appUrl, '/api/drive?__route=status', { jar: rwJar });
+    assert.strictEqual(rwStatus.status, 200);
+    assert.strictEqual(rwStatus.json.connected, true);
+
+    const rwFolder = await rawRequest(appUrl, '/api/drive?__route=folder', {
+      method: 'POST',
+      jar: rwJar,
+      headers: { Origin: appUrl },
+      body: {}
+    });
+    assert.strictEqual(rwFolder.status, 200);
+    assert.ok(rwFolder.json.folderIds && rwFolder.json.folderIds.root);
+
+    const rwMeta = await rawRequest(appUrl, `/api/drive?__route=sync&mode=meta&rootId=${encodeURIComponent(rwFolder.json.folderIds.root)}`, {
+      jar: rwJar
+    });
+    assert.strictEqual(rwMeta.status, 200);
+    assert.strictEqual(rwMeta.json.mode, 'meta');
+
+    const rwSync = await rawRequest(appUrl, '/api/drive?__route=sync', {
+      method: 'POST',
+      jar: rwJar,
+      headers: { Origin: appUrl },
+      body: { action: 'push', snapshot: initialSnap, forceAllDomains: true, force: true, verify: true }
+    });
+    assert.strictEqual(rwSync.status, 200);
+    assert.strictEqual(rwSync.json.verified, true);
+
+    const rwFull = await rawRequest(appUrl, '/api/drive?__route=sync&mode=full', { jar: rwJar });
+    assert.strictEqual(rwFull.status, 200);
+    assert.strictEqual(rwFull.json.mode, 'full');
+    assert.strictEqual(rwFull.json.trades.trades[0].ticket, 'EX_700');
+
+    const rwExport = await rawRequest(appUrl, '/api/drive?__route=sync', {
+      method: 'POST',
+      jar: rwJar,
+      headers: { Origin: appUrl },
+      body: { action: 'save_export', fileName: 'rw-export.json', content: '[]', mimeType: 'application/json' }
+    });
+    assert.strictEqual(rwExport.status, 200);
+    assert.strictEqual(rwExport.json.file.name, 'rw-export.json');
+
+    const rwBkCreate = await rawRequest(appUrl, '/api/drive?__route=backups', {
+      method: 'POST',
+      jar: rwJar,
+      headers: { Origin: appUrl },
+      body: { action: 'create', reason: 'rw-test', snapshot: initialSnap }
+    });
+    assert.strictEqual(rwBkCreate.status, 200);
+    assert.ok(rwBkCreate.json.file && rwBkCreate.json.file.id);
+
+    const rwBackups = await rawRequest(appUrl, '/api/drive?__route=backups&limit=5', { jar: rwJar });
+    assert.strictEqual(rwBackups.status, 200);
+    assert.ok(Array.isArray(rwBackups.json.backups) && rwBackups.json.backups.length >= 1);
+
+    const rwBkRestore = await rawRequest(appUrl, '/api/drive?__route=backups', {
+      method: 'POST',
+      jar: rwJar,
+      headers: { Origin: appUrl },
+      body: { action: 'restore', fileId: rwBkCreate.json.file.id, createSafetyBackupFirst: true }
+    });
+    assert.strictEqual(rwBkRestore.status, 200);
+    assert.strictEqual(rwBkRestore.json.restoredTrades, 1);
+
+    const rwLogout = await rawRequest(appUrl, '/api/auth?__route=logout', {
+      method: 'POST',
+      jar: rwJar,
+      headers: { Origin: appUrl },
+      body: {}
+    });
+    assert.strictEqual(rwLogout.status, 200);
+    assert.strictEqual(rwJar.cookies.has('tf_sess'), false);
+
+    // Production proxy headers + fallback redirect URI check (https://tradefourge.vercel.app/api/auth/callback)
+    const prevRedirectUri = process.env.GOOGLE_REDIRECT_URI;
+    try {
+      process.env.GOOGLE_REDIRECT_URI = '';
+      const prodHeaders = {
+        'X-Forwarded-Host': 'tradefourge.vercel.app',
+        'X-Forwarded-Proto': 'https'
+      };
+      const prodJar = new CookieJar();
+      const prodStart = await rawRequest(appUrl, '/api/auth?__route=google&mode=redirect&remember=1', {
+        jar: prodJar,
+        headers: prodHeaders
+      });
+      assert.strictEqual(prodStart.status, 302);
+      const prodAuthUrl = new URL(prodStart.location);
+      assert.strictEqual(
+        prodAuthUrl.searchParams.get('redirect_uri'),
+        'https://tradefourge.vercel.app/api/auth/callback',
+        'Production redirect_uri must resolve to https://tradefourge.vercel.app/api/auth/callback'
+      );
+      assert.ok(prodJar.cookies.get('tf_oauth_tx').raw.includes('Secure'), 'Production tx cookie must have Secure attribute');
+
+      const prodGoogle = await rawRequest(googleUrl, prodStart.location);
+      const prodCbUrl = new URL(prodGoogle.location);
+      assert.strictEqual(prodCbUrl.origin + prodCbUrl.pathname, 'https://tradefourge.vercel.app/api/auth/callback');
+
+      const prodCbRes = await rawRequest(appUrl, `/api/auth?__route=callback&${prodCbUrl.searchParams.toString()}`, {
+        jar: prodJar,
+        headers: prodHeaders
+      });
+      assert.strictEqual(prodCbRes.status, 302);
+      assert.strictEqual(prodCbRes.location, '/?auth=success');
+      assert.ok(prodJar.cookies.get('tf_sess').raw.includes('Secure'), 'Production session cookie must have Secure attribute');
+
+      const prodFolder = await rawRequest(appUrl, '/api/drive?__route=folder', {
+        method: 'POST',
+        jar: prodJar,
+        headers: { ...prodHeaders, Origin: 'https://tradefourge.vercel.app' },
+        body: {}
+      });
+      assert.strictEqual(prodFolder.status, 200);
+
+      const prodLogout = await rawRequest(appUrl, '/api/auth?__route=logout', {
+        method: 'POST',
+        jar: prodJar,
+        headers: { ...prodHeaders, Origin: 'https://tradefourge.vercel.app' },
+        body: {}
+      });
+      assert.strictEqual(prodLogout.status, 200);
+    } finally {
+      process.env.GOOGLE_REDIRECT_URI = prevRedirectUri;
+    }
+
+    // Strategy-bot POST contract check via consolidated usage-store helper
+    const strategyBotHandler = require(path.resolve(__dirname, '../api/strategy-bot'));
+    let botStatus = 0;
+    let botBody = null;
+    const mockBotRes = {
+      _headers: {},
+      setHeader(k, v) { this._headers[k] = v; },
+      status(code) { botStatus = code; return this; },
+      json(obj) { botBody = obj; return this; },
+      end() {}
+    };
+    await strategyBotHandler({ method: 'POST', body: { input: '' } }, mockBotRes);
+    assert.strictEqual(botStatus, 400);
+    assert.ok(botBody && botBody.error && botBody.error.message);
+    console.log('✓ Test 10 passed\n');
+
     console.log('================================================================');
-    console.log('ALL 8 BACKEND OAUTH + ENCRYPTED COOKIE + DRIVE API TESTS PASSED!');
+    console.log('ALL 10 BACKEND OAUTH + ENCRYPTED COOKIE + DRIVE API TESTS PASSED!');
     console.log('================================================================');
   } finally {
     await new Promise((r) => appServer.close(r));

@@ -4,7 +4,7 @@
  * Returns the current server-side aggregated Gemini API usage for the active project.
  */
 
-const { getGeminiUsage } = require('./usage-store');
+const { getGeminiUsage } = require('./_lib/usage-store');
 
 module.exports = async function handler(req, res) {
   // Set headers

@@ -3,9 +3,9 @@
  * GET /api/drive/status
  */
 
-const { sendJson, sanitizeErrorForClient } = require('../_lib/http');
-const { requireDriveContext } = require('../_lib/drive-session');
-const { inspectFolderStructure, readMetadataOnly } = require('../_lib/drive');
+const { sendJson, sanitizeErrorForClient } = require('../http');
+const { requireDriveContext } = require('../drive-session');
+const { inspectFolderStructure, readMetadataOnly } = require('../drive');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {

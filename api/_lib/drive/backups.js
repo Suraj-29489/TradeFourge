@@ -10,8 +10,8 @@ const {
   parseJsonBody,
   verifySameOriginMutation,
   sanitizeErrorForClient
-} = require('../_lib/http');
-const { requireDriveContext } = require('../_lib/drive-session');
+} = require('../http');
+const { requireDriveContext } = require('../drive-session');
 const {
   ensureFolderStructure,
   listBackups,
@@ -19,7 +19,7 @@ const {
   readOwnedBackupFile,
   readDatabase,
   writeDomainFile
-} = require('../_lib/drive');
+} = require('../drive');
 const {
   buildTradesPayload,
   buildJournalPayload,
@@ -29,7 +29,7 @@ const {
   extractSnapshotFromRemoteDb,
   buildBackupBundle,
   normalizeRemoteRevisions
-} = require('../_lib/sync-engine');
+} = require('../sync-engine');
 
 module.exports = async function handler(req, res) {
   try {

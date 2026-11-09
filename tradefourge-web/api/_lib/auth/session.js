@@ -8,10 +8,10 @@
  * - Never returns OAuth access_token, refresh_token, client_secret, or session_secret.
  */
 
-const { getOAuthConfig } = require('../_lib/env');
-const { sendJson } = require('../_lib/http');
-const { readSessionFromRequest, clearSessionCookies } = require('../_lib/crypto-session');
-const { ensureValidSessionTokens, hasDriveFileScope } = require('../_lib/oauth');
+const { getOAuthConfig } = require('../env');
+const { sendJson } = require('../http');
+const { readSessionFromRequest, clearSessionCookies } = require('../crypto-session');
+const { ensureValidSessionTokens, hasDriveFileScope } = require('../oauth');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {

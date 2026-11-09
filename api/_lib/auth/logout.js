@@ -3,15 +3,15 @@
  * POST /api/auth/logout
  */
 
-const { getOAuthConfig } = require('../_lib/env');
-const { sendJson, verifySameOriginMutation } = require('../_lib/http');
+const { getOAuthConfig } = require('../env');
+const { sendJson, verifySameOriginMutation } = require('../http');
 const {
   readSessionFromRequest,
   clearSessionCookies,
   clearOAuthTxCookie,
   revokeSessionId
-} = require('../_lib/crypto-session');
-const { revokeSessionTokens } = require('../_lib/oauth');
+} = require('../crypto-session');
+const { revokeSessionTokens } = require('../oauth');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {

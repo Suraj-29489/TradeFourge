@@ -14,7 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { recordGeminiUsage } = require('./usage-store');
+const { recordGeminiUsage } = require('./_lib/usage-store');
 
 // Lightweight local .env.local loader for development environments
 function loadLocalEnv() {

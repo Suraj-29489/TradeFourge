@@ -3,10 +3,10 @@
  * GET /api/drive/authorize
  */
 
-const { getOAuthConfig } = require('../_lib/env');
-const { getQueryParams, sendJson, sendRedirect, sendPopupResultHtml } = require('../_lib/http');
-const { writeOAuthTxCookie, readSessionFromRequest } = require('../_lib/crypto-session');
-const { generateRandomBase64Url, createPkcePair, buildGoogleAuthorizationUrl } = require('../_lib/oauth');
+const { getOAuthConfig } = require('../env');
+const { getQueryParams, sendJson, sendRedirect, sendPopupResultHtml } = require('../http');
+const { writeOAuthTxCookie, readSessionFromRequest } = require('../crypto-session');
+const { generateRandomBase64Url, createPkcePair, buildGoogleAuthorizationUrl } = require('../oauth');
 
 function _sanitizeReturnTo(raw) {
   if (!raw || typeof raw !== 'string') return '/';

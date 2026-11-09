@@ -235,7 +235,46 @@ function getQueryParams(req) {
       }
     }
   }
+  params.delete('__route');
   return params;
+}
+
+function resolveConsolidatedRoute(req, basePrefix) {
+  const normalizedPrefix = String(basePrefix || '').replace(/\/+$/, '');
+  if (req && req.url && normalizedPrefix) {
+    try {
+      const parsed = new URL(req.url, 'http://localhost');
+      const pathname = parsed.pathname.replace(/\/+$/, '');
+      if (pathname.startsWith(normalizedPrefix + '/')) {
+        const rest = pathname.slice(normalizedPrefix.length + 1);
+        if (rest && !rest.includes('/') && !rest.includes('..') && !rest.startsWith('_')) {
+          return rest;
+        }
+        return '';
+      }
+    } catch (e) {}
+  }
+
+  if (req && req.query && req.query.__route !== undefined) {
+    const raw = Array.isArray(req.query.__route) ? req.query.__route[0] : req.query.__route;
+    const candidate = String(raw || '').trim();
+    if (candidate && !candidate.includes('/') && !candidate.includes('..') && !candidate.startsWith('_')) {
+      return candidate;
+    }
+  }
+
+  if (req && req.url) {
+    try {
+      const parsed = new URL(req.url, 'http://localhost');
+      const fromUrl = parsed.searchParams.get('__route');
+      const candidate = String(fromUrl || '').trim();
+      if (candidate && !candidate.includes('/') && !candidate.includes('..') && !candidate.startsWith('_')) {
+        return candidate;
+      }
+    } catch (e) {}
+  }
+
+  return '';
 }
 
 function verifySameOriginMutation(req) {
@@ -289,6 +328,7 @@ module.exports = {
   appendSetCookie,
   parseJsonBody,
   getQueryParams,
+  resolveConsolidatedRoute,
   verifySameOriginMutation,
   sanitizeErrorForClient
 };

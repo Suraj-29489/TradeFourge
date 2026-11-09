@@ -4,21 +4,21 @@
  */
 
 const crypto = require('crypto');
-const { getOAuthConfig } = require('../_lib/env');
-const { getQueryParams, sendJson, sendRedirect, sendPopupResultHtml } = require('../_lib/http');
+const { getOAuthConfig } = require('../env');
+const { getQueryParams, sendJson, sendRedirect, sendPopupResultHtml } = require('../http');
 const {
   readOAuthTxCookie,
   clearOAuthTxCookie,
   readSessionFromRequest,
   writeSessionCookies
-} = require('../_lib/crypto-session');
+} = require('../crypto-session');
 const {
   timingSafeStringEqual,
   hasDriveFileScope,
   exchangeAuthorizationCode,
   verifyIdentityAndProfile,
   revokeSessionTokens
-} = require('../_lib/oauth');
+} = require('../oauth');
 
 function _appendReturnParam(basePath, key, value) {
   const safeBase = (basePath && basePath.startsWith('/') && !basePath.startsWith('//')) ? basePath : '/';
