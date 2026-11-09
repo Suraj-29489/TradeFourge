@@ -3,7 +3,7 @@
  * Enables offline capability, instant load caching, and PWA installation.
  */
 
-const CACHE_NAME = 'tradeforge-v1.4.2';
+const CACHE_NAME = 'tradeforge-v1.4.3';
 const isLocalDevHost = () => {
   const host = (self && self.location && self.location.hostname) || '';
   return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
@@ -35,8 +35,10 @@ const PRECACHE_ASSETS = [
   './js/strategy-bot.js',
   './js/mt5.js',
   './js/app.js',
+  './assets/icons/logo.png',
   './assets/icons/icon.svg',
   './assets/icons/favicon.svg',
+  './assets/icons/favicon-32.png',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
   './assets/icons/icon-maskable-192.png',

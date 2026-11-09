@@ -284,13 +284,21 @@ code {
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  background: var(--logo-bg);
-  border: 1px solid var(--logo-border);
-  box-shadow: var(--logo-shadow);
+  background: transparent;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  filter: drop-shadow(0 2px 6px rgba(10, 24, 41, 0.28));
+}
+
+.legal-logo-icon img,
+.legal-logo-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
 }
 
 .legal-brand-name {
@@ -928,9 +936,10 @@ code {
     border-radius: 6px;
   }
 
+  .legal-logo-icon img,
   .legal-logo-icon svg {
-    width: 17px;
-    height: 17px;
+    width: 100%;
+    height: 100%;
   }
 
   .legal-brand-name {
