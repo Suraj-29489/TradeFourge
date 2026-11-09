@@ -5324,6 +5324,17 @@ const App = {
     this._miniCalInitialized = false;
     this.customStartDate = '';
     this.customEndDate = '';
+    if (this.reportState) {
+      if (this.reportState.preset === 'custom') {
+        this.reportState.startDate = '';
+        this.reportState.endDate = '';
+        this.reportState._presetInitialized = false;
+        const repStartEl = document.getElementById('reportStartDate');
+        const repEndEl = document.getElementById('reportEndDate');
+        if (repStartEl) repStartEl.value = '';
+        if (repEndEl) repEndEl.value = '';
+      }
+    }
     if (typeof CalendarManager !== 'undefined') {
       CalendarManager._initialized = false;
     }
@@ -5338,6 +5349,9 @@ const App = {
     this.processTrades();
     if (this.activeView === 'analytics' || this.activeView === 'journal') {
       this.renderAnalyticsView();
+    }
+    if (this.activeView === 'settings') {
+      this.refreshCloudBackupsList();
     }
     this.updateCloudSyncUI();
   },
@@ -5790,6 +5804,8 @@ const App = {
           : `Migration uploaded (${cnt} trades).`,
         'success'
       );
+      this.refreshCloudBackupsList();
+    } else if (ev === 'synced' && this.activeView === 'settings') {
       this.refreshCloudBackupsList();
     }
 

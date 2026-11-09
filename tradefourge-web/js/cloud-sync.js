@@ -146,10 +146,15 @@
   }
 
   function _snapshotHasData(snap = {}) {
+    const hasCustomRules = Array.isArray(snap.rules) &&
+      _stableStringify(snap.rules) !== _stableStringify(_defaultRules());
     return (
       (Array.isArray(snap.trades) && snap.trades.length > 0) ||
+      (Array.isArray(snap.deletedUids) && snap.deletedUids.length > 0) ||
       Boolean(snap.notes && String(snap.notes).trim().length > 0) ||
       Boolean(snap.startingCapital && Number(snap.startingCapital) > 0) ||
+      snap.currency === 'INR' ||
+      hasCustomRules ||
       Boolean(snap.mt5Session && snap.mt5Session.isConnected)
     );
   }
@@ -550,18 +555,29 @@
       const localTrades = Array.isArray(localSnapshot.trades) ? localSnapshot.trades : [];
       const hasCustomNotes = Boolean(localSnapshot.notes && String(localSnapshot.notes).trim().length > 0);
       const hasCustomCapital = Boolean(localSnapshot.startingCapital && Number(localSnapshot.startingCapital) > 0);
+      const hasCustomCurrency = localSnapshot.currency === 'INR';
       const hasCustomMt5 = Boolean(localSnapshot.mt5Session && localSnapshot.mt5Session.isConnected);
       const hasNonDefaultRules = Array.isArray(localSnapshot.rules) &&
         _stableStringify(localSnapshot.rules) !== _stableStringify(_defaultRules());
 
-      const localHasData = localTrades.length > 0 || hasCustomNotes || hasCustomCapital || hasCustomMt5 || hasNonDefaultRules;
+      const localHasData = localTrades.length > 0 ||
+        hasCustomNotes ||
+        hasCustomCapital ||
+        hasCustomCurrency ||
+        hasCustomMt5 ||
+        hasNonDefaultRules;
       const localHash = this.computeLocalDataHash(localSnapshot);
 
       const remoteSnap = this.extractSnapshotFromRemoteDb(remoteDb);
       const remoteTrades = remoteSnap.trades || [];
+      const remoteHasNonDefaultRules = Array.isArray(remoteSnap.rules) &&
+        _stableStringify(remoteSnap.rules) !== _stableStringify(_defaultRules());
       const remoteHasData = remoteTrades.length > 0 ||
+        (Array.isArray(remoteSnap.deletedUids) && remoteSnap.deletedUids.length > 0) ||
         Boolean(remoteSnap.notes && remoteSnap.notes.trim().length > 0) ||
         Boolean(remoteSnap.startingCapital && Number(remoteSnap.startingCapital) > 0) ||
+        remoteSnap.currency === 'INR' ||
+        remoteHasNonDefaultRules ||
         Boolean(remoteSnap.mt5Session && remoteSnap.mt5Session.isConnected);
 
       const remoteMetaMigratedHash = remoteDb?.metadata?.migratedLocalHash || '';
@@ -598,7 +614,7 @@
         localHasMt5: hasCustomMt5
       };
 
-      if (remoteHasData && (!localHasData || alreadyMigrated || (newFromLocalCount === 0 && !hasCustomNotes && !hasCustomCapital && !hasCustomMt5 && !hasNonDefaultRules))) {
+      if (remoteHasData && (!localHasData || alreadyMigrated || (newFromLocalCount === 0 && !hasCustomNotes && !hasCustomCapital && !hasCustomCurrency && !hasCustomMt5 && !hasNonDefaultRules))) {
         return { scenario: 'RESTORE_CLOUD', stats, localHash };
       }
 
@@ -1125,7 +1141,10 @@
 
           // Returning account session on this browser: sync/merge account namespace with Drive cleanly first
           if (accountHasData || hasDirty || meta.lastSyncedAt) {
-            await this._reconcileAccountWithRemote(account, remoteDb, { allowConflictAutoResolve: true });
+            await this._reconcileAccountWithRemote(account, remoteDb, {
+              allowConflictAutoResolve: true,
+              fullCheck: true
+            });
 
             if (!isCurrentAccount()) {
               return this.getState();
@@ -1211,15 +1230,33 @@
             return this.getState();
           }
 
-          // INIT_EMPTY: Create initial empty User Data files cleanly in My Drive / TradeFourge / User Data /
-          await this._pushSnapshotToDrive(account, accountSnap, {
-            forceAllDomains: true,
-            force: true,
-            folderIds: remoteDb.folderIds,
-            fileIds: remoteDb.fileIds
-          });
-          this.status = 'synced';
-          this._emit('synced', { reason: 'initialized_empty' });
+          // INIT_EMPTY:
+          // - If remote already has existing files on Drive, apply them read-only without pushing or creating folders.
+          // - If remote folder already exists without files yet, reuse it cleanly without creating a new folder.
+          // - Only on true first-time login (no folder exists in Drive yet), initialize Drive once.
+          if (remoteDb.exists) {
+            await this._applyRemoteDbToAccount(sub, remoteDb);
+            this._emit('workspace_reloaded', { reason: 'cloud_loaded' });
+            this.status = 'synced';
+            this._emit('synced', { reason: 'cloud_loaded' });
+          } else if (remoteDb.folderExists && remoteDb.folderIds) {
+            this.folderIds = remoteDb.folderIds;
+            this._writeMeta(sub, {
+              folderIds: remoteDb.folderIds,
+              fileIds: remoteDb.fileIds
+            });
+            this.status = 'synced';
+            this._emit('synced', { reason: 'initialized_empty' });
+          } else {
+            await this._pushSnapshotToDrive(account, accountSnap, {
+              forceAllDomains: true,
+              force: true,
+              folderIds: remoteDb.folderIds,
+              fileIds: remoteDb.fileIds
+            });
+            this.status = 'synced';
+            this._emit('synced', { reason: 'initialized_empty' });
+          }
           return this.getState();
         } catch (err) {
           if (isCurrentAccount()) {
@@ -1823,6 +1860,9 @@
     },
 
     async listCloudBackups(limit = 10) {
+      if (this._signedInFlowPromise) {
+        await this._signedInFlowPromise.catch(() => {});
+      }
       if (typeof GoogleAuthManager === 'undefined' || !GoogleAuthManager.account || !GoogleAuthManager.hasValidToken()) {
         return [];
       }

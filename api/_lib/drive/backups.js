@@ -13,8 +13,8 @@ const {
 } = require('../http');
 const { requireDriveContext } = require('../drive-session');
 const {
+  discoverDriveWorkspace,
   ensureFolderStructure,
-  inspectLegacyBackupsFolderIds,
   listBackups,
   createBackupSnapshot,
   readOwnedBackupFile,
@@ -36,17 +36,17 @@ const {
 module.exports = async function handler(req, res) {
   try {
     if (req.method === 'GET') {
-      const { driveCtx, getSession } = await requireDriveContext(req, res);
-      const session = getSession();
+      const { driveCtx } = await requireDriveContext(req, res);
       const query = getQueryParams(req);
       const limit = Math.min(50, Math.max(1, Number(query.get('limit')) || 15));
-      const ensured = await ensureFolderStructure(driveCtx, session.user.sub);
-      const legacyBackupIds = await inspectLegacyBackupsFolderIds(driveCtx, ensured.folderIds.root);
-      const backups = await listBackups(driveCtx, [ensured.folderIds.backups, ...legacyBackupIds], limit);
+      const ws = await discoverDriveWorkspace(driveCtx, { inspectPayloads: false });
+      const backups = ws.allBackupFolderIds && ws.allBackupFolderIds.length > 0
+        ? await listBackups(driveCtx, ws.allBackupFolderIds, limit)
+        : [];
 
       return sendJson(res, 200, {
         ok: true,
-        folderIds: ensured.folderIds,
+        folderIds: ws.folderIds,
         backups
       });
     }
@@ -63,8 +63,6 @@ module.exports = async function handler(req, res) {
 
       const { driveCtx, getSession } = await requireDriveContext(req, res);
       const session = getSession();
-      const ensured = await ensureFolderStructure(driveCtx, session.user.sub, body.cachedFolderIds || {});
-      const folderIds = ensured.folderIds;
       const action = body.action || 'create';
 
       if (action === 'create') {
@@ -72,6 +70,9 @@ module.exports = async function handler(req, res) {
         if (!snapshot || !Array.isArray(snapshot.trades)) {
           return sendJson(res, 400, { ok: false, code: 'INVALID_SNAPSHOT', message: 'Snapshot with a trades array is required.' });
         }
+
+        const ensured = await ensureFolderStructure(driveCtx, session.user.sub, body.cachedFolderIds || {});
+        const folderIds = ensured.folderIds;
 
         const bundle = buildBackupBundle({
           snapshot,
@@ -98,12 +99,15 @@ module.exports = async function handler(req, res) {
           return sendJson(res, 400, { ok: false, code: 'MISSING_FILE_ID', message: 'Backup fileId is required.' });
         }
 
-        // Enforces backup belongs strictly inside authenticated user's own TradeFourge/Backups or legacy TradeForge/Backups folder
-        const legacyBackupIds = await inspectLegacyBackupsFolderIds(driveCtx, folderIds.root);
+        // Read-only workspace discovery first: verify ownership strictly within user's TradeFourge/TradeForge Backups
+        const ws = await discoverDriveWorkspace(driveCtx, {
+          inspectPayloads: false,
+          cachedFolderIds: body.cachedFolderIds || {}
+        });
         const { data: backupData } = await readOwnedBackupFile(driveCtx, {
           fileId: body.fileId,
-          backupsFolderId: folderIds.backups,
-          allowedFolderIds: [folderIds.backups, ...legacyBackupIds].filter(Boolean)
+          backupsFolderId: ws.folderIds && ws.folderIds.backups,
+          allowedFolderIds: ws.allBackupFolderIds || []
         });
 
         if (!backupData || (!backupData.trades && !backupData.settings && !backupData.journal && !backupData.accounts)) {
@@ -112,8 +116,23 @@ module.exports = async function handler(req, res) {
 
         const remoteDb = await readDatabase(driveCtx, {
           ownerSub: session.user.sub,
-          cachedFolderIds: folderIds
+          cachedFolderIds: ws.folderIds || body.cachedFolderIds || {}
         });
+
+        let folderIds = remoteDb.folderIds || ws.folderIds;
+        if (
+          !folderIds ||
+          !folderIds.root ||
+          (body.applyToRemote !== false && !folderIds.userData) ||
+          (body.createSafetyBackupFirst !== false && !folderIds.backups)
+        ) {
+          const ensured = await ensureFolderStructure(
+            driveCtx,
+            session.user.sub,
+            folderIds || body.cachedFolderIds || {}
+          );
+          folderIds = ensured.folderIds;
+        }
 
         let safetyBackupFile = null;
         if (body.createSafetyBackupFirst !== false) {
@@ -216,11 +235,14 @@ module.exports = async function handler(req, res) {
           return sendJson(res, 400, { ok: false, code: 'MISSING_FILE_ID', message: 'Backup fileId is required.' });
         }
 
-        const legacyBackupIds = await inspectLegacyBackupsFolderIds(driveCtx, folderIds.root);
+        const ws = await discoverDriveWorkspace(driveCtx, {
+          inspectPayloads: false,
+          cachedFolderIds: body.cachedFolderIds || {}
+        });
         const deleted = await deleteOwnedBackupFile(driveCtx, {
           fileId: body.fileId,
-          backupsFolderId: folderIds.backups,
-          allowedFolderIds: [folderIds.backups, ...legacyBackupIds].filter(Boolean)
+          backupsFolderId: ws.folderIds && ws.folderIds.backups,
+          allowedFolderIds: ws.allBackupFolderIds || []
         });
 
         return sendJson(res, 200, {
@@ -228,7 +250,7 @@ module.exports = async function handler(req, res) {
           action: 'delete',
           deletedFileId: deleted.deletedFileId,
           deletedFileName: deleted.deletedFileName,
-          folderIds
+          folderIds: ws.folderIds
         });
       }
 

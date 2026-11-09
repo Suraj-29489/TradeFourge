@@ -126,6 +126,8 @@ function createMockGoogleServer() {
     revokedTokens: [],
     tokenRequests: [],
     driveIdSeq: 1,
+    driveFolderCreations: 0,
+    driveFileCreations: 0,
     drivesBySub: new Map()
   };
 
@@ -339,6 +341,7 @@ function createMockGoogleServer() {
 
         if (pathname.startsWith('/upload/drive/v3/files')) {
           if (method === 'POST') {
+            state.driveFileCreations++;
             const raw = await readStreamBody(req);
             const { metadata, contentStr, mimeType } = _parseMultipart(req.headers['content-type'], raw);
             const id = `drv_${state.driveIdSeq++}`;
@@ -392,6 +395,9 @@ function createMockGoogleServer() {
         if (pathname === '/drive/v3/files' && method === 'POST') {
           const raw = await readStreamBody(req);
           const metadata = JSON.parse(raw);
+          if (metadata.mimeType === 'application/vnd.google-apps.folder') {
+            state.driveFolderCreations++;
+          }
           const id = `fld_${state.driveIdSeq++}`;
           const now = new Date(Date.now() + state.driveIdSeq * 10).toISOString();
           const rec = {
@@ -1275,7 +1281,7 @@ async function runTests() {
     console.log('✓ Test 10 passed\n');
 
     // TEST 11: Legacy `TradeForge` & `TradeFourge` Dual-Folder Bridging, Empty Shell Override & Legacy Backups
-    console.log('[11/11] Testing legacy TradeForge + TradeFourge dual-folder search, fetch & backups...');
+    console.log('[11/12] Testing legacy TradeForge + TradeFourge dual-folder search, fetch & backups...');
     const carolSub = 'sub_carol_legacy_3003';
     mockGoogle.state.nextUser = {
       sub: carolSub,
@@ -1492,8 +1498,397 @@ async function runTests() {
     assert.strictEqual(carolBkDel.json.deletedFileId, 'c_old_bk_file');
     console.log('✓ Test 11 passed\n');
 
+    // TEST 12: Search-First Zero-Duplicate Folder Discovery, Cross-Worker Race Deduplication, TradeForge-Only & Moved Duplicate Folders
+    console.log('[12/12] Testing search-first discovery, zero duplicate creation & cross-worker race dedup...');
+
+    // 12A: Empty Drive (Dana) - Read-only GET endpoints & missing delete create ZERO folders
+    const danaSub = 'sub_dana_search_4004';
+    mockGoogle.state.nextUser = {
+      sub: danaSub,
+      email: 'dana.clean@gmail.com',
+      name: 'Dana Clean',
+      picture: 'https://example.com/dana.png',
+      email_verified: true
+    };
+    const danaJar = new CookieJar();
+    await performFullOAuthLogin(appUrl, googleUrl, danaJar);
+    mockGoogle.state.driveFolderCreations = 0;
+
+    const [danaStatus, danaMeta, danaFull, danaBackups, danaDelMissing] = await Promise.all([
+      rawRequest(appUrl, '/api/drive/status', { jar: danaJar }),
+      rawRequest(appUrl, '/api/drive/sync?mode=meta', { jar: danaJar }),
+      rawRequest(appUrl, '/api/drive/sync?mode=full', { jar: danaJar }),
+      rawRequest(appUrl, '/api/drive/backups?limit=10', { jar: danaJar }),
+      rawRequest(appUrl, '/api/drive/backups', {
+        method: 'POST',
+        jar: danaJar,
+        headers: { Origin: appUrl },
+        body: { action: 'delete', fileId: 'missing_bk_id' }
+      })
+    ]);
+    assert.strictEqual(danaStatus.status, 200);
+    assert.strictEqual(danaStatus.json.folderExists, false);
+    assert.strictEqual(danaStatus.json.rootName, null);
+    assert.strictEqual(danaStatus.json.folderIds, null);
+    assert.strictEqual(danaMeta.status, 200);
+    assert.strictEqual(danaMeta.json.folderExists, false);
+    assert.strictEqual(danaMeta.json.folderIds, null);
+    assert.strictEqual(danaMeta.json.legacyAvailable, false);
+    assert.strictEqual(danaFull.status, 200);
+    assert.strictEqual(danaFull.json.folderExists, false);
+    assert.strictEqual(danaFull.json.exists, false);
+    assert.strictEqual(danaFull.json.folderIds, null);
+    assert.strictEqual(danaBackups.status, 200);
+    assert.deepStrictEqual(danaBackups.json.backups, []);
+    assert.strictEqual(danaDelMissing.status, 404);
+    assert.strictEqual(mockGoogle.state.driveFolderCreations, 0, 'Read-only status/meta/full/backups on empty Drive must create 0 folders');
+    assert.strictEqual(mockGoogle.getDriveStore(danaSub).size, 0, 'Dana Drive store must stay empty before first write');
+
+    // Cross-worker concurrent folder creation race deduplication (distinct ownerSub lock keys bypass local mutex)
+    const { ensureFolderStructure } = require(path.resolve(__dirname, '../api/_lib/drive'));
+    let danaToken = null;
+    for (const [tok, entry] of mockGoogle.state.accessTokens.entries()) {
+      if (entry.user.sub === danaSub && !entry.expired) {
+        danaToken = tok;
+        break;
+      }
+    }
+    assert.ok(danaToken, 'Dana mock access token must exist');
+    const danaCtx = {
+      endpoints: {
+        driveApiUrl: process.env.TF_TEST_GOOGLE_DRIVE_API_URL,
+        driveUploadUrl: process.env.TF_TEST_GOOGLE_DRIVE_UPLOAD_URL
+      },
+      getToken: async () => danaToken
+    };
+    const [raceResA, raceResB] = await Promise.all([
+      ensureFolderStructure(danaCtx, 'worker_A'),
+      ensureFolderStructure(danaCtx, 'worker_B')
+    ]);
+    assert.strictEqual(raceResA.folderIds.root, raceResB.folderIds.root, 'Racing workers must converge to 1 canonical TradeFourge root');
+    assert.strictEqual(raceResA.folderIds.userData, raceResB.folderIds.userData, 'Racing workers must converge to 1 User Data folder');
+    assert.strictEqual(raceResA.folderIds.backups, raceResB.folderIds.backups, 'Racing workers must converge to 1 Backups folder');
+    assert.strictEqual(raceResA.folderIds.exports, raceResB.folderIds.exports, 'Racing workers must converge to 1 Exports folder');
+    const danaStoreVals = Array.from(mockGoogle.getDriveStore(danaSub).values());
+    assert.strictEqual(danaStoreVals.filter((f) => f.name === 'TradeFourge' && !f.trashed).length, 1);
+    assert.strictEqual(danaStoreVals.filter((f) => f.name === 'User Data' && !f.trashed).length, 1);
+    assert.strictEqual(danaStoreVals.filter((f) => f.name === 'Backups' && !f.trashed).length, 1);
+    assert.strictEqual(danaStoreVals.filter((f) => f.name === 'Exports' && !f.trashed).length, 1);
+
+    // 12B: TradeForge-only user (Evan) - reuses existing TradeForge in-place with ZERO TradeFourge folders created
+    const evanSub = 'sub_evan_tradeforge_5005';
+    mockGoogle.state.nextUser = {
+      sub: evanSub,
+      email: 'evan.legacy@gmail.com',
+      name: 'Evan Legacy',
+      picture: 'https://example.com/evan.png',
+      email_verified: true
+    };
+    const evanDrive = mockGoogle.getDriveStore(evanSub);
+    evanDrive.set('evan_root', {
+      id: 'evan_root',
+      name: 'TradeForge',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'root' },
+      trashed: false,
+      createdTime: '2026-06-01T00:00:00Z',
+      modifiedTime: '2026-06-01T00:00:00Z'
+    });
+    evanDrive.set('evan_ud', {
+      id: 'evan_ud',
+      name: 'User Data',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['evan_root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'user_data' },
+      trashed: false,
+      createdTime: '2026-06-01T00:00:01Z',
+      modifiedTime: '2026-06-01T00:00:01Z'
+    });
+    evanDrive.set('evan_bk', {
+      id: 'evan_bk',
+      name: 'Backups',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['evan_root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'backups' },
+      trashed: false,
+      createdTime: '2026-06-01T00:00:02Z',
+      modifiedTime: '2026-06-01T00:00:02Z'
+    });
+    evanDrive.set('evan_exp', {
+      id: 'evan_exp',
+      name: 'Exports',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['evan_root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'exports' },
+      trashed: false,
+      createdTime: '2026-06-01T00:00:03Z',
+      modifiedTime: '2026-06-01T00:00:03Z'
+    });
+    const evanTrades = [
+      { ticket: 'EV_1', symbol: 'XAUUSD', type: 'buy', lots: 0.1, profit: 150, openTime: '2026-06-02T09:00:00Z', closeTime: '2026-06-02T10:00:00Z', broker: 'exness' },
+      { ticket: 'EV_2', symbol: 'EURUSD', type: 'sell', lots: 0.2, profit: 75, openTime: '2026-06-03T09:00:00Z', closeTime: '2026-06-03T10:00:00Z', broker: 'exness' }
+    ];
+    evanDrive.set('evan_trades', {
+      id: 'evan_trades',
+      name: 'trades.json',
+      mimeType: 'application/json',
+      parents: ['evan_ud'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeDomain: 'trades' },
+      trashed: false,
+      createdTime: '2026-06-03T10:00:00Z',
+      modifiedTime: '2026-06-03T10:00:00Z',
+      _content: JSON.stringify({ schemaVersion: '1.0.0', trades: evanTrades, deletedUids: [] })
+    });
+    evanDrive.set('evan_settings', {
+      id: 'evan_settings',
+      name: 'settings.json',
+      mimeType: 'application/json',
+      parents: ['evan_ud'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeDomain: 'settings' },
+      trashed: false,
+      createdTime: '2026-06-03T10:00:00Z',
+      modifiedTime: '2026-06-03T10:00:00Z',
+      _content: JSON.stringify({ currency: 'INR', startingCapital: 60000 })
+    });
+    evanDrive.set('evan_meta', {
+      id: 'evan_meta',
+      name: 'metadata.json',
+      mimeType: 'application/json',
+      parents: ['evan_ud'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeDomain: 'metadata' },
+      trashed: false,
+      createdTime: '2026-06-03T10:00:00Z',
+      modifiedTime: '2026-06-03T10:00:00Z',
+      _content: JSON.stringify({ appName: 'TradeForge', revisions: { trades: 1, journal: 1, settings: 1 }, counts: { trades: 2 } })
+    });
+    evanDrive.set('evan_bk_1', {
+      id: 'evan_bk_1',
+      name: 'tradeforge-backup-2026-06-03-manual.json',
+      mimeType: 'application/json',
+      parents: ['evan_bk'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'backup' },
+      trashed: false,
+      createdTime: '2026-06-03T10:05:00Z',
+      modifiedTime: '2026-06-03T10:05:00Z',
+      size: '250',
+      _content: JSON.stringify({ trades: { trades: evanTrades } })
+    });
+
+    const evanJar = new CookieJar();
+    await performFullOAuthLogin(appUrl, googleUrl, evanJar);
+    mockGoogle.state.driveFolderCreations = 0;
+
+    const evanStatus = await rawRequest(appUrl, '/api/drive/status', { jar: evanJar });
+    assert.strictEqual(evanStatus.status, 200);
+    assert.strictEqual(evanStatus.json.folderExists, true);
+    assert.strictEqual(evanStatus.json.rootName, 'TradeForge');
+    assert.strictEqual(evanStatus.json.folderIds.root, 'evan_root');
+
+    const evanMeta = await rawRequest(appUrl, '/api/drive/sync?mode=meta', { jar: evanJar });
+    assert.strictEqual(evanMeta.status, 200);
+    assert.strictEqual(evanMeta.json.folderIds.root, 'evan_root');
+
+    const evanFull = await rawRequest(appUrl, '/api/drive/sync?mode=full', { jar: evanJar });
+    assert.strictEqual(evanFull.status, 200);
+    assert.strictEqual(evanFull.json.rootName, 'TradeForge');
+    assert.strictEqual(evanFull.json.folderIds.root, 'evan_root');
+    assert.strictEqual(evanFull.json.trades.trades.length, 2);
+    assert.strictEqual(evanFull.json.settings.currency, 'INR');
+
+    const evanBkList = await rawRequest(appUrl, '/api/drive/backups?limit=10', { jar: evanJar });
+    assert.strictEqual(evanBkList.status, 200);
+    assert.ok(evanBkList.json.backups.some((b) => b.id === 'evan_bk_1'));
+
+    const evanPush = await rawRequest(appUrl, '/api/drive/sync', {
+      method: 'POST',
+      jar: evanJar,
+      headers: { Origin: appUrl },
+      body: {
+        action: 'push',
+        snapshot: {
+          trades: [...evanTrades, { ticket: 'EV_3', symbol: 'GBPUSD', profit: 45, broker: 'exness' }],
+          deletedUids: [],
+          currency: 'INR',
+          startingCapital: 60000
+        },
+        forceAllDomains: true,
+        force: true
+      }
+    });
+    assert.strictEqual(evanPush.status, 200);
+    assert.strictEqual(evanPush.json.folderIds.root, 'evan_root', 'Push must reuse TradeForge root in-place');
+    assert.strictEqual(mockGoogle.state.driveFolderCreations, 0, 'TradeForge-only user must incur 0 new folder creations');
+    assert.ok(!Array.from(evanDrive.values()).some((f) => f.name === 'TradeFourge'), 'Must NEVER create duplicate TradeFourge folder');
+
+    // 12C: Duplicate same-name TradeFourge folders (early empty shell + later moved untagged populated folder)
+    const frankSub = 'sub_frank_dups_6006';
+    mockGoogle.state.nextUser = {
+      sub: frankSub,
+      email: 'frank.dups@gmail.com',
+      name: 'Frank Dups',
+      picture: 'https://example.com/frank.png',
+      email_verified: true
+    };
+    const frankDrive = mockGoogle.getDriveStore(frankSub);
+    // Custom parent folder simulating user moving their real TradeFourge folder out of My Drive root
+    frankDrive.set('f_custom_parent', {
+      id: 'f_custom_parent',
+      name: 'Trading Archive',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['root'],
+      trashed: false,
+      createdTime: '2026-08-01T00:00:00Z',
+      modifiedTime: '2026-08-01T00:00:00Z'
+    });
+    // Earlier empty TradeFourge shell at root
+    frankDrive.set('f_empty_early', {
+      id: 'f_empty_early',
+      name: 'TradeFourge',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['root'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'root' },
+      trashed: false,
+      createdTime: '2026-09-01T00:00:00Z',
+      modifiedTime: '2026-09-01T00:00:00Z'
+    });
+    frankDrive.set('f_empty_early_ud', {
+      id: 'f_empty_early_ud',
+      name: 'User Data',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['f_empty_early'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'user_data' },
+      trashed: false,
+      createdTime: '2026-09-01T00:00:01Z',
+      modifiedTime: '2026-09-01T00:00:01Z'
+    });
+    frankDrive.set('f_empty_early_trades', {
+      id: 'f_empty_early_trades',
+      name: 'trades.json',
+      mimeType: 'application/json',
+      parents: ['f_empty_early_ud'],
+      trashed: false,
+      createdTime: '2026-09-01T00:00:02Z',
+      modifiedTime: '2026-09-01T00:00:02Z',
+      _content: JSON.stringify({ schemaVersion: '1.0.0', trades: [], deletedUids: [] })
+    });
+    // Later moved & untagged populated TradeFourge folder
+    frankDrive.set('f_real_root', {
+      id: 'f_real_root',
+      name: 'TradeFourge',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['f_custom_parent'],
+      appProperties: {},
+      trashed: false,
+      createdTime: '2026-10-01T00:00:00Z',
+      modifiedTime: '2026-10-01T00:00:00Z'
+    });
+    frankDrive.set('f_real_ud', {
+      id: 'f_real_ud',
+      name: 'User Data',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['f_real_root'],
+      appProperties: {},
+      trashed: false,
+      createdTime: '2026-10-01T00:00:01Z',
+      modifiedTime: '2026-10-01T00:00:01Z'
+    });
+    frankDrive.set('f_real_bk', {
+      id: 'f_real_bk',
+      name: 'Backups',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['f_real_root'],
+      appProperties: {},
+      trashed: false,
+      createdTime: '2026-10-01T00:00:02Z',
+      modifiedTime: '2026-10-01T00:00:02Z'
+    });
+    frankDrive.set('f_real_exp', {
+      id: 'f_real_exp',
+      name: 'Exports',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['f_real_root'],
+      appProperties: {},
+      trashed: false,
+      createdTime: '2026-10-01T00:00:03Z',
+      modifiedTime: '2026-10-01T00:00:03Z'
+    });
+    const frankTrades = [
+      { ticket: 'FR_1', symbol: 'NAS100', type: 'buy', lots: 0.2, profit: 310, openTime: '2026-10-02T09:00:00Z', closeTime: '2026-10-02T10:00:00Z', broker: 'exness' },
+      { ticket: 'FR_2', symbol: 'XAUUSD', type: 'sell', lots: 0.1, profit: 190, openTime: '2026-10-03T09:00:00Z', closeTime: '2026-10-03T10:00:00Z', broker: 'exness' }
+    ];
+    frankDrive.set('f_real_trades', {
+      id: 'f_real_trades',
+      name: 'trades.json',
+      mimeType: 'application/json',
+      parents: ['f_real_ud'],
+      trashed: false,
+      createdTime: '2026-10-03T10:00:00Z',
+      modifiedTime: '2026-10-03T10:00:00Z',
+      size: '500',
+      _content: JSON.stringify({ schemaVersion: '1.0.0', trades: frankTrades, deletedUids: [] })
+    });
+    frankDrive.set('f_real_settings', {
+      id: 'f_real_settings',
+      name: 'settings.json',
+      mimeType: 'application/json',
+      parents: ['f_real_ud'],
+      trashed: false,
+      createdTime: '2026-10-03T10:00:00Z',
+      modifiedTime: '2026-10-03T10:00:00Z',
+      _content: JSON.stringify({ currency: 'INR', startingCapital: 120000 })
+    });
+    // Empty orphan #3 at root
+    frankDrive.set('f_empty_orphan', {
+      id: 'f_empty_orphan',
+      name: 'TradeFourge',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['root'],
+      trashed: false,
+      createdTime: '2026-11-01T00:00:00Z',
+      modifiedTime: '2026-11-01T00:00:00Z'
+    });
+
+    const frankJar = new CookieJar();
+    await performFullOAuthLogin(appUrl, googleUrl, frankJar);
+    mockGoogle.state.driveFolderCreations = 0;
+
+    const frankStatus = await rawRequest(appUrl, '/api/drive/status', { jar: frankJar });
+    assert.strictEqual(frankStatus.status, 200);
+    assert.strictEqual(frankStatus.json.folderIds.root, 'f_real_root', 'Must select moved populated folder over empty shells');
+    assert.strictEqual(frankStatus.json.folderIds.userData, 'f_real_ud');
+
+    const frankMetaStale = await rawRequest(
+      appUrl,
+      '/api/drive/sync?mode=meta&rootId=f_empty_early&userDataId=f_empty_early_ud',
+      { jar: frankJar }
+    );
+    assert.strictEqual(frankMetaStale.status, 200);
+    assert.strictEqual(frankMetaStale.json.folderIds.root, 'f_real_root', 'Must self-heal away from stale empty cachedFolderIds');
+
+    const frankFull = await rawRequest(appUrl, '/api/drive/sync?mode=full', { jar: frankJar });
+    assert.strictEqual(frankFull.status, 200);
+    assert.strictEqual(frankFull.json.folderIds.root, 'f_real_root');
+    assert.strictEqual(frankFull.json.trades.trades.length, 2);
+    assert.strictEqual(frankFull.json.trades.trades[0].ticket, 'FR_1');
+    assert.strictEqual(frankFull.json.settings.currency, 'INR');
+    assert.strictEqual(frankFull.json.settings.startingCapital, 120000);
+
+    const frankFolderPost = await rawRequest(appUrl, '/api/drive/folder', {
+      method: 'POST',
+      jar: frankJar,
+      headers: { Origin: appUrl },
+      body: { cachedFolderIds: { root: 'f_empty_early', userData: 'f_empty_early_ud' } }
+    });
+    assert.strictEqual(frankFolderPost.status, 200);
+    assert.strictEqual(frankFolderPost.json.folderIds.root, 'f_real_root');
+    assert.strictEqual(frankFolderPost.json.created, false);
+    assert.strictEqual(mockGoogle.state.driveFolderCreations, 0, 'Duplicate disambiguation + reuse must create 0 new folders');
+
+    console.log('✓ Test 12 passed\n');
+
     console.log('================================================================');
-    console.log('ALL 11 BACKEND OAUTH + ENCRYPTED COOKIE + DRIVE API TESTS PASSED!');
+    console.log('ALL 12 BACKEND OAUTH + ENCRYPTED COOKIE + DRIVE API TESTS PASSED!');
     console.log('================================================================');
   } finally {
     await new Promise((r) => appServer.close(r));

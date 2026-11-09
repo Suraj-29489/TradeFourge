@@ -13,6 +13,7 @@ const {
 } = require('../http');
 const { requireDriveContext } = require('../drive-session');
 const {
+  discoverDriveWorkspace,
   ensureFolderStructure,
   readDatabase,
   readMetadataOnly,
@@ -46,16 +47,36 @@ async function _handleGet(req, res) {
       backups: query.get('backupsId') || null,
       exports: query.get('exportsId') || null
     };
-    const ensured = await ensureFolderStructure(driveCtx, session.user.sub, cachedFolderIds);
-    const metaRes = await readMetadataOnly(driveCtx, { folderIds: ensured.folderIds });
+    const ws = await discoverDriveWorkspace(driveCtx, { inspectPayloads: false, cachedFolderIds });
+    if (!ws.exists || !ws.folderIds) {
+      return sendJson(res, 200, {
+        ok: true,
+        mode: 'meta',
+        folderExists: false,
+        folderIds: null,
+        metadataFileId: null,
+        metadata: null,
+        legacyAvailable: false,
+        user: session.user
+      });
+    }
+
+    const metaRes = (ws.primaryEval && ws.primaryEval.payloadRead)
+      ? {
+          fileId: (ws.primaryEval.filesMap && ws.primaryEval.filesMap.metadata && ws.primaryEval.filesMap.metadata.id) || null,
+          metadata: ws.primaryEval.payload.metadata || null
+        }
+      : await readMetadataOnly(driveCtx, { folderIds: ws.folderIds });
+
     let legacyAvailable = false;
     if (!metaRes.metadata || Number((metaRes.metadata.counts && metaRes.metadata.counts.trades) || 0) === 0) {
-      legacyAvailable = await hasLegacyDataHint(driveCtx, ensured.folderIds);
+      legacyAvailable = await hasLegacyDataHint(driveCtx, ws);
     }
     return sendJson(res, 200, {
       ok: true,
       mode: 'meta',
-      folderIds: ensured.folderIds,
+      folderExists: true,
+      folderIds: ws.folderIds,
       metadataFileId: metaRes.fileId,
       metadata: metaRes.metadata,
       legacyAvailable,
@@ -70,6 +91,8 @@ async function _handleGet(req, res) {
   return sendJson(res, 200, {
     ok: true,
     mode: 'full',
+    folderExists: Boolean(remoteDb.folderExists),
+    rootName: remoteDb.rootName || null,
     folderIds: remoteDb.folderIds,
     fileIds: remoteDb.fileIds,
     exists: remoteDb.exists,
@@ -99,10 +122,10 @@ async function _handlePost(req, res) {
   const action = body.action || 'push';
 
   if (action === 'save_export') {
-    const ensured = await ensureFolderStructure(driveCtx, session.user.sub, body.cachedFolderIds || {});
     if (body.content === undefined || body.content === null) {
       return sendJson(res, 400, { ok: false, code: 'MISSING_CONTENT', message: 'Export content is required.' });
     }
+    const ensured = await ensureFolderStructure(driveCtx, session.user.sub, body.cachedFolderIds || {});
     const created = await saveExportFile(driveCtx, {
       exportsFolderId: ensured.folderIds.exports,
       fileName: body.fileName || `tradefourge-export-${new Date().toISOString().slice(0, 10)}.json`,
@@ -179,8 +202,23 @@ async function _handlePost(req, res) {
     }
   }
 
+  let folderIds = remoteDb.folderIds;
+  if (
+    !folderIds ||
+    !folderIds.root ||
+    !folderIds.userData ||
+    (body.createSafetyBackup && remoteDb.exists && !folderIds.backups)
+  ) {
+    const ensured = await ensureFolderStructure(
+      driveCtx,
+      session.user.sub,
+      folderIds || body.cachedFolderIds || {}
+    );
+    folderIds = ensured.folderIds;
+  }
+
   let backupFile = null;
-  if (body.createSafetyBackup && remoteDb.exists && remoteDb.folderIds && remoteDb.folderIds.backups) {
+  if (body.createSafetyBackup && remoteDb.exists && folderIds && folderIds.backups) {
     const existingRemoteSnap = extractSnapshotFromRemoteDb(remoteDb);
     const bundle = buildBackupBundle({
       snapshot: existingRemoteSnap,
@@ -188,14 +226,13 @@ async function _handlePost(req, res) {
       reason: body.backupReason || 'pre-sync'
     });
     backupFile = await createBackupSnapshot(driveCtx, {
-      backupsFolderId: remoteDb.folderIds.backups,
+      backupsFolderId: folderIds.backups,
       reason: body.backupReason || 'pre-sync',
       bundle
     });
   }
 
   const nowIso = new Date().toISOString();
-  const folderIds = remoteDb.folderIds;
   const fileIds = Object.assign(
     { metadata: null, trades: null, journal: null, settings: null },
     remoteDb.fileIds || {}

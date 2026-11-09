@@ -327,6 +327,8 @@ async function runAllTests() {
     mockGoogle.state.authCodes.clear();
     mockGoogle.state.revokedTokens.length = 0;
     mockGoogle.state.tokenRequests.length = 0;
+    mockGoogle.state.driveFolderCreations = 0;
+    mockGoogle.state.driveFileCreations = 0;
     mockGoogle.state.forceNextDriveResponse = null;
     mockGoogle.state.forceRefreshResponse = null;
     mockGoogle.state.nextUser = {
@@ -967,7 +969,7 @@ async function runAllTests() {
     // ------------------------------------------------------------------
     // TEST 12: Legacy `TradeForge` Drive Bridge (Empty `TradeFourge` Shell + `tradeforge_*` Storage Fallback)
     // ------------------------------------------------------------------
-    console.log('[12/12] Testing Legacy TradeForge Drive Bridge & tradeforge_* Storage Fallback...');
+    console.log('[12/13] Testing Legacy TradeForge Drive Bridge & tradeforge_* Storage Fallback...');
     resetAllTestState();
     const legacySub = 'sub_legacy_carol_3003';
     mockGoogle.state.nextUser = {
@@ -1240,8 +1242,335 @@ async function runAllTests() {
     assert.strictEqual(StorageManager.getTrades().length, 2, 'Canonical tradefourge_acct_* must take precedence over legacy key');
     console.log('✓ Test 12 passed\n');
 
+    // ------------------------------------------------------------------
+    // TEST 13: First-Time Only Folder Creation, Subsequent Clean-Browser Restore, TradeForge-Only & Stale Duplicate Recovery
+    // ------------------------------------------------------------------
+    console.log('[13/13] Testing Search-First Zero-Duplicate Folder Creation & Cross-Session Restore...');
+
+    // 13A: True first-time empty user creates 1 tree (4 folders) once; subsequent clean-browser logins create 0
+    resetAllTestState();
+    const danaSubFs = 'sub_dana_fs_7007';
+    mockGoogle.state.nextUser = {
+      sub: danaSubFs,
+      email: 'dana.fs@gmail.com',
+      name: 'Dana FS',
+      picture: 'https://example.com/dana_fs.png',
+      email_verified: true
+    };
+    await CloudSyncManager.init();
+    mockGoogle.state.driveFolderCreations = 0;
+    await signInViaOAuth();
+    await waitForCloudIdle();
+
+    assert.strictEqual(mockGoogle.state.driveFolderCreations, 4, 'True first-time login on empty Drive creates 4 folders once (root + 3 subfolders)');
+    const danaStore = mockGoogle.getDriveStore(danaSubFs);
+    assert.strictEqual(Array.from(danaStore.values()).filter((f) => f.name === 'TradeFourge').length, 1);
+
+    StorageManager.saveTrades([
+      {
+        ticket: 'FS_1',
+        symbol: 'XAUUSD',
+        type: 'buy',
+        lots: 0.25,
+        openTime: '2026-10-20T09:00:00Z',
+        closeTime: '2026-10-20T10:00:00Z',
+        profit: 330,
+        broker: 'exness'
+      },
+      {
+        ticket: 'FS_2',
+        symbol: 'EURUSD',
+        type: 'sell',
+        lots: 0.15,
+        openTime: '2026-10-21T09:00:00Z',
+        closeTime: '2026-10-21T10:00:00Z',
+        profit: 95,
+        broker: 'exness'
+      }
+    ], 'dana.csv');
+    TradeAnalytics.setCurrency('INR');
+    StorageManager.saveNotes('Dana session note');
+    await CloudSyncManager.syncNow({ reason: 'dana_initial_push' });
+    assert.strictEqual(mockGoogle.state.driveFolderCreations, 4, 'Sync push must not create extra folders');
+
+    // Clean browser Login #2 -> 0 folder creations, full restore
+    _lsMap.clear();
+    _ssMap.clear();
+    simulateBrowserReload({ preserveCookieJar: false });
+    await CloudSyncManager.init();
+    mockGoogle.state.driveFolderCreations = 0;
+    await signInViaOAuth();
+    await waitForCloudIdle();
+    assert.strictEqual(mockGoogle.state.driveFolderCreations, 0, 'Clean-browser Login #2 must create 0 folders');
+    assert.strictEqual(StorageManager.getTrades().length, 2, 'Clean-browser Login #2 must restore 2 trades');
+    assert.strictEqual(StorageManager.getCurrency(), 'INR');
+    assert.strictEqual(StorageManager.getNotes(), 'Dana session note');
+
+    // Clean browser Login #3 + listBackups + fullCheck sync -> 0 folder creations
+    _lsMap.clear();
+    _ssMap.clear();
+    simulateBrowserReload({ preserveCookieJar: false });
+    await CloudSyncManager.init();
+    mockGoogle.state.driveFolderCreations = 0;
+    await signInViaOAuth();
+    await waitForCloudIdle();
+    await CloudSyncManager.listCloudBackups(10);
+    await CloudSyncManager.syncNow({ fullCheck: true, reason: 'login3_check' });
+    assert.strictEqual(mockGoogle.state.driveFolderCreations, 0, 'Clean-browser Login #3 + backup list + syncNow must create 0 folders');
+    assert.strictEqual(StorageManager.getTrades().length, 2);
+    assert.strictEqual(Array.from(danaStore.values()).filter((f) => f.name === 'TradeFourge').length, 1);
+
+    // 13B: TradeForge-only existing user restores seamlessly and creates 0 new folders (NO TradeFourge created)
+    resetAllTestState();
+    const evanSubFs = 'sub_evan_fs_8008';
+    mockGoogle.state.nextUser = {
+      sub: evanSubFs,
+      email: 'evan.fs@gmail.com',
+      name: 'Evan FS',
+      picture: 'https://example.com/evan_fs.png',
+      email_verified: true
+    };
+    const evanFsDrive = mockGoogle.getDriveStore(evanSubFs);
+    evanFsDrive.set('ev_fs_root', {
+      id: 'ev_fs_root',
+      name: 'TradeForge',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'root' },
+      trashed: false,
+      createdTime: '2026-06-01T00:00:00Z',
+      modifiedTime: '2026-06-01T00:00:00Z'
+    });
+    evanFsDrive.set('ev_fs_ud', {
+      id: 'ev_fs_ud',
+      name: 'User Data',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['ev_fs_root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'user_data' },
+      trashed: false,
+      createdTime: '2026-06-01T00:00:01Z',
+      modifiedTime: '2026-06-01T00:00:01Z'
+    });
+    evanFsDrive.set('ev_fs_bk', {
+      id: 'ev_fs_bk',
+      name: 'Backups',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['ev_fs_root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'backups' },
+      trashed: false,
+      createdTime: '2026-06-01T00:00:02Z',
+      modifiedTime: '2026-06-01T00:00:02Z'
+    });
+    evanFsDrive.set('ev_fs_exp', {
+      id: 'ev_fs_exp',
+      name: 'Exports',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['ev_fs_root'],
+      appProperties: { tradeforgeApp: 'true', tradeforgeRole: 'exports' },
+      trashed: false,
+      createdTime: '2026-06-01T00:00:03Z',
+      modifiedTime: '2026-06-01T00:00:03Z'
+    });
+    evanFsDrive.set('ev_fs_trades', {
+      id: 'ev_fs_trades',
+      name: 'trades.json',
+      mimeType: 'application/json',
+      parents: ['ev_fs_ud'],
+      trashed: false,
+      createdTime: '2026-06-02T00:00:00Z',
+      modifiedTime: '2026-06-02T00:00:00Z',
+      _content: JSON.stringify({
+        schemaVersion: '1.0.0',
+        trades: [
+          { ticket: 'TF_EV_1', symbol: 'XAUUSD', type: 'buy', lots: 0.1, profit: 210, openTime: '2026-06-02T08:00:00Z', closeTime: '2026-06-02T09:00:00Z', broker: 'exness' },
+          { ticket: 'TF_EV_2', symbol: 'GBPUSD', type: 'sell', lots: 0.2, profit: 80, openTime: '2026-06-02T10:00:00Z', closeTime: '2026-06-02T11:00:00Z', broker: 'exness' }
+        ],
+        deletedUids: []
+      })
+    });
+    evanFsDrive.set('ev_fs_settings', {
+      id: 'ev_fs_settings',
+      name: 'settings.json',
+      mimeType: 'application/json',
+      parents: ['ev_fs_ud'],
+      trashed: false,
+      createdTime: '2026-06-02T00:00:00Z',
+      modifiedTime: '2026-06-02T00:00:00Z',
+      _content: JSON.stringify({
+        currency: 'INR',
+        startingCapital: 50000,
+        notes: 'Evan Trading Note'
+      })
+    });
+
+    await CloudSyncManager.init();
+    mockGoogle.state.driveFolderCreations = 0;
+    await signInViaOAuth();
+    await waitForCloudIdle();
+    assert.strictEqual(mockGoogle.state.driveFolderCreations, 0, 'TradeForge-only login must create 0 new folders');
+    assert.strictEqual(CloudSyncManager.folderIds.root, 'ev_fs_root');
+    assert.strictEqual(StorageManager.getTrades().length, 2);
+    assert.strictEqual(StorageManager.getCurrency(), 'INR');
+    assert.strictEqual(StorageManager.getStartingCapital(), 50000);
+    assert.strictEqual(StorageManager.getNotes(), 'Evan Trading Note');
+
+    // Saving an extra trade pushes cleanly into existing TradeForge folder without creating TradeFourge
+    StorageManager.addTrade({
+      ticket: 'TF_EV_3',
+      symbol: 'EURUSD',
+      type: 'buy',
+      lots: 0.1,
+      openTime: '2026-06-03T08:00:00Z',
+      closeTime: '2026-06-03T09:00:00Z',
+      profit: 65,
+      broker: 'exness'
+    });
+    await CloudSyncManager.syncNow({ reason: 'evan_add_trade' });
+    assert.strictEqual(mockGoogle.state.driveFolderCreations, 0, 'Push for TradeForge-only user must create 0 folders');
+    assert.ok(!Array.from(evanFsDrive.values()).some((f) => f.name === 'TradeFourge'));
+
+    // 13C: Duplicate empty + moved populated TradeFourge folders + stale localStorage -> self-heals & restores with 0 folder creations
+    resetAllTestState();
+    const frankSubFs = 'sub_frank_fs_9009';
+    mockGoogle.state.nextUser = {
+      sub: frankSubFs,
+      email: 'frank.fs@gmail.com',
+      name: 'Frank FS',
+      picture: 'https://example.com/frank_fs.png',
+      email_verified: true
+    };
+    const frankFsDrive = mockGoogle.getDriveStore(frankSubFs);
+    frankFsDrive.set('fr_archive', {
+      id: 'fr_archive',
+      name: 'Archive',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['root'],
+      trashed: false,
+      createdTime: '2026-08-01T00:00:00Z',
+      modifiedTime: '2026-08-01T00:00:00Z'
+    });
+    frankFsDrive.set('fr_empty_root', {
+      id: 'fr_empty_root',
+      name: 'TradeFourge',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['root'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'root' },
+      trashed: false,
+      createdTime: '2026-09-01T00:00:00Z',
+      modifiedTime: '2026-09-01T00:00:00Z'
+    });
+    frankFsDrive.set('fr_empty_ud', {
+      id: 'fr_empty_ud',
+      name: 'User Data',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['fr_empty_root'],
+      appProperties: { tradefourgeApp: 'true', tradefourgeRole: 'user_data' },
+      trashed: false,
+      createdTime: '2026-09-01T00:00:01Z',
+      modifiedTime: '2026-09-01T00:00:01Z'
+    });
+    frankFsDrive.set('fr_empty_trades', {
+      id: 'fr_empty_trades',
+      name: 'trades.json',
+      mimeType: 'application/json',
+      parents: ['fr_empty_ud'],
+      trashed: false,
+      createdTime: '2026-09-01T00:00:02Z',
+      modifiedTime: '2026-09-01T00:00:02Z',
+      _content: JSON.stringify({ schemaVersion: '1.0.0', trades: [], deletedUids: [] })
+    });
+    frankFsDrive.set('fr_real_root', {
+      id: 'fr_real_root',
+      name: 'TradeFourge',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['fr_archive'],
+      appProperties: {},
+      trashed: false,
+      createdTime: '2026-10-01T00:00:00Z',
+      modifiedTime: '2026-10-01T00:00:00Z'
+    });
+    frankFsDrive.set('fr_real_ud', {
+      id: 'fr_real_ud',
+      name: 'User Data',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['fr_real_root'],
+      appProperties: {},
+      trashed: false,
+      createdTime: '2026-10-01T00:00:01Z',
+      modifiedTime: '2026-10-01T00:00:01Z'
+    });
+    frankFsDrive.set('fr_real_bk', {
+      id: 'fr_real_bk',
+      name: 'Backups',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['fr_real_root'],
+      appProperties: {},
+      trashed: false,
+      createdTime: '2026-10-01T00:00:02Z',
+      modifiedTime: '2026-10-01T00:00:02Z'
+    });
+    frankFsDrive.set('fr_real_exp', {
+      id: 'fr_real_exp',
+      name: 'Exports',
+      mimeType: 'application/vnd.google-apps.folder',
+      parents: ['fr_real_root'],
+      appProperties: {},
+      trashed: false,
+      createdTime: '2026-10-01T00:00:03Z',
+      modifiedTime: '2026-10-01T00:00:03Z'
+    });
+    frankFsDrive.set('fr_real_trades', {
+      id: 'fr_real_trades',
+      name: 'trades.json',
+      mimeType: 'application/json',
+      parents: ['fr_real_ud'],
+      trashed: false,
+      createdTime: '2026-10-02T00:00:00Z',
+      modifiedTime: '2026-10-02T00:00:00Z',
+      size: '500',
+      _content: JSON.stringify({
+        schemaVersion: '1.0.0',
+        trades: [
+          { ticket: 'FR_FS_1', symbol: 'XAUUSD', type: 'buy', lots: 0.2, profit: 410, openTime: '2026-10-02T08:00:00Z', closeTime: '2026-10-02T09:00:00Z', broker: 'exness' },
+          { ticket: 'FR_FS_2', symbol: 'US30', type: 'sell', lots: 0.1, profit: 155, openTime: '2026-10-02T10:00:00Z', closeTime: '2026-10-02T11:00:00Z', broker: 'exness' }
+        ],
+        deletedUids: []
+      })
+    });
+    frankFsDrive.set('fr_real_settings', {
+      id: 'fr_real_settings',
+      name: 'settings.json',
+      mimeType: 'application/json',
+      parents: ['fr_real_ud'],
+      trashed: false,
+      createdTime: '2026-10-02T00:00:00Z',
+      modifiedTime: '2026-10-02T00:00:00Z',
+      _content: JSON.stringify({ currency: 'INR', startingCapital: 88000 })
+    });
+
+    await CloudSyncManager.init();
+    localStorage.setItem(CloudSyncManager._getMetaKey(frankSubFs), JSON.stringify({
+      folderIds: { root: 'fr_empty_root', userData: 'fr_empty_ud', backups: null, exports: null },
+      fileIds: { metadata: null, trades: 'fr_empty_trades', journal: null, settings: null },
+      revisions: { trades: 1, journal: 1, settings: 1 },
+      checksums: { trades: '', journal: '', settings: '' },
+      dirtyDomains: { trades: false, journal: false, settings: false },
+      lastSyncedAt: '2026-10-01T00:00:00Z'
+    }));
+    localStorage.setItem(StorageManager._getKeyForNamespace(StorageManager.KEYS.TRADES, frankSubFs), JSON.stringify([]));
+
+    mockGoogle.state.driveFolderCreations = 0;
+    await signInViaOAuth();
+    await waitForCloudIdle();
+    assert.strictEqual(mockGoogle.state.driveFolderCreations, 0, 'Duplicate recovery must create 0 folders');
+    assert.strictEqual(CloudSyncManager.folderIds.root, 'fr_real_root', 'Must self-heal from stale empty folderIds to populated moved folder');
+    assert.strictEqual(StorageManager.getTrades().length, 2, 'Must restore Frank trades into UI cache');
+    assert.strictEqual(StorageManager.getCurrency(), 'INR');
+    assert.strictEqual(StorageManager.getStartingCapital(), 88000);
+    console.log('✓ Test 13 passed\n');
+
     console.log('================================================================');
-    console.log('ALL 12 FULL-STACK GOOGLE OAUTH & DRIVE SYNC TESTS PASSED!');
+    console.log('ALL 13 FULL-STACK GOOGLE OAUTH & DRIVE SYNC TESTS PASSED!');
     console.log('================================================================');
   } finally {
     await new Promise((r) => appServer.close(r));

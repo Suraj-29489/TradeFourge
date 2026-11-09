@@ -56,7 +56,54 @@ function _getDomainProp(item) {
   return props.tradefourgeDomain || props.tradeforgeDomain || '';
 }
 
-// In-memory mutex per user `sub` to prevent concurrent duplicate folder creation
+function _normName(name) {
+  return String(name || '').trim().toLowerCase();
+}
+
+function _compareCreatedAsc(a, b) {
+  const ta = String((a && a.createdTime) || '');
+  const tb = String((b && b.createdTime) || '');
+  if (ta !== tb) return ta.localeCompare(tb);
+  return String((a && a.id) || '').localeCompare(String((b && b.id) || ''));
+}
+
+function _isPrimaryRootFolder(item) {
+  if (!item || item.mimeType !== FOLDER_MIME || item.trashed) return false;
+  const n = _normName(item.name);
+  if (n === 'tradefourge') return true;
+  const role = _getRoleProp(item);
+  return role === 'root' && n !== 'tradeforge';
+}
+
+function _isLegacyRootFolder(item) {
+  if (!item || item.mimeType !== FOLDER_MIME || item.trashed) return false;
+  return _normName(item.name) === 'tradeforge';
+}
+
+function _isTopLevelFolder(folder, allFoldersById) {
+  if (!folder || !Array.isArray(folder.parents) || folder.parents.length === 0) return true;
+  if (folder.parents.includes('root')) return true;
+  return folder.parents.every((p) => !allFoldersById.has(p));
+}
+
+function _matchesSubfolder(item, parentId, targetNormName, targetRole) {
+  if (!item || item.mimeType !== FOLDER_MIME || item.trashed) return false;
+  if (!Array.isArray(item.parents) || !item.parents.includes(parentId)) return false;
+  const n = _normName(item.name);
+  const role = _getRoleProp(item);
+  return n === targetNormName || (targetRole && role === targetRole);
+}
+
+function _sortSubfoldersByPriority(folders, targetRole) {
+  return [...folders].sort((a, b) => {
+    const aTagged = _getRoleProp(a) === targetRole ? 0 : 1;
+    const bTagged = _getRoleProp(b) === targetRole ? 0 : 1;
+    if (aTagged !== bTagged) return aTagged - bTagged;
+    return _compareCreatedAsc(a, b);
+  });
+}
+
+// In-memory mutex per user `sub` to prevent concurrent duplicate folder creation within one worker
 const _ensureMutexes = new Map();
 
 function _escapeQueryValue(val) {
@@ -164,23 +211,46 @@ async function driveRequestJson(ctx, url, options = {}) {
   }
 }
 
-async function listFiles(ctx, { q, fields = 'files(id,name,mimeType,createdTime,modifiedTime,size,appProperties,trashed,parents)', orderBy = 'createdTime asc', pageSize = 100 }) {
-  const params = new URLSearchParams({
-    q,
-    spaces: 'drive',
-    orderBy,
-    pageSize: String(pageSize),
-    fields
-  });
-  const data = await driveRequestJson(ctx, `${ctx.endpoints.driveApiUrl}?${params.toString()}`, { method: 'GET' });
-  return Array.isArray(data && data.files) ? data.files : [];
+async function listFiles(ctx, {
+  q,
+  fields = 'files(id,name,mimeType,createdTime,modifiedTime,size,appProperties,trashed,parents)',
+  orderBy = 'createdTime asc',
+  pageSize = 100,
+  paginate = false
+}) {
+  const all = [];
+  let pageToken = null;
+  let pageCount = 0;
+
+  do {
+    const params = new URLSearchParams({
+      q,
+      spaces: 'drive',
+      orderBy,
+      pageSize: String(pageSize),
+      fields: paginate ? `nextPageToken,${fields}` : fields,
+      supportsAllDrives: 'true',
+      includeItemsFromAllDrives: 'true'
+    });
+    if (pageToken) {
+      params.set('pageToken', pageToken);
+    }
+    const data = await driveRequestJson(ctx, `${ctx.endpoints.driveApiUrl}?${params.toString()}`, { method: 'GET' });
+    const batch = Array.isArray(data && data.files) ? data.files : [];
+    all.push(...batch);
+    pageToken = paginate && data && data.nextPageToken ? data.nextPageToken : null;
+    pageCount++;
+  } while (pageToken && pageCount < 25);
+
+  return all;
 }
 
 async function verifyItemExists(ctx, fileId) {
   if (!fileId) return null;
   try {
     const params = new URLSearchParams({
-      fields: 'id,name,mimeType,trashed,parents,modifiedTime,appProperties'
+      fields: 'id,name,mimeType,trashed,parents,modifiedTime,createdTime,appProperties',
+      supportsAllDrives: 'true'
     });
     const meta = await driveRequestJson(ctx, `${ctx.endpoints.driveApiUrl}/${encodeURIComponent(fileId)}?${params.toString()}`, {
       method: 'GET'
@@ -193,59 +263,446 @@ async function verifyItemExists(ctx, fileId) {
   }
 }
 
-async function findMatchingFolders(ctx, { name, parentId = 'root', role = 'root' }) {
-  const escapedName = _escapeQueryValue(name);
-  const escapedParent = _escapeQueryValue(parentId);
-  const q = `name = '${escapedName}' and mimeType = '${FOLDER_MIME}' and '${escapedParent}' in parents and trashed = false`;
-  const existing = await listFiles(ctx, { q, pageSize: 25 });
-  if (existing.length <= 1) return existing;
-  const tagged = [];
-  const untagged = [];
-  for (const f of existing) {
-    if (_getRoleProp(f) === role) tagged.push(f);
-    else untagged.push(f);
+async function _listAllFolders(ctx, cachedFolderIds = {}) {
+  const q = `mimeType = '${FOLDER_MIME}' and trashed = false`;
+  const listed = await listFiles(ctx, { q, pageSize: 200, paginate: true });
+  const byId = new Map();
+  for (const f of listed) {
+    if (f && f.id && !f.trashed && f.mimeType === FOLDER_MIME) {
+      byId.set(f.id, f);
+    }
   }
-  return tagged.concat(untagged);
-}
 
-async function findFolderOnly(ctx, { name, parentId = 'root', role = 'root' }) {
-  const matches = await findMatchingFolders(ctx, { name, parentId, role });
-  return matches.length > 0 ? matches[0] : null;
-}
+  const cacheCandidates = [
+    cachedFolderIds && cachedFolderIds.root,
+    cachedFolderIds && cachedFolderIds.userData,
+    cachedFolderIds && cachedFolderIds.backups,
+    cachedFolderIds && cachedFolderIds.exports
+  ].filter(Boolean);
 
-async function findLegacyRootFolders(ctx) {
-  const results = await Promise.all(
-    FOLDER_NAMES.LEGACY_ROOTS.map((name) => findMatchingFolders(ctx, { name, parentId: 'root', role: 'root' }))
-  );
-  const seen = new Set();
-  const out = [];
-  for (const list of results) {
-    for (const f of list) {
-      if (f && f.id && !seen.has(f.id)) {
-        seen.add(f.id);
-        out.push(f);
+  for (const cid of cacheCandidates) {
+    if (!byId.has(cid)) {
+      const verified = await verifyItemExists(ctx, cid);
+      if (verified && verified.id && !verified.trashed && verified.mimeType === FOLDER_MIME) {
+        byId.set(verified.id, verified);
       }
     }
   }
-  return out;
+
+  return Array.from(byId.values());
 }
 
-async function findOrCreateFolder(ctx, { name, parentId = 'root', role = 'root', cachedId = null }) {
-  if (cachedId) {
-    const verified = await verifyItemExists(ctx, cachedId);
-    if (
-      verified &&
-      verified.mimeType === FOLDER_MIME &&
-      verified.name === name &&
-      (!verified.parents || parentId === 'root' || verified.parents.includes(parentId))
-    ) {
-      return { folder: verified, created: false };
+async function _deleteFolderIfEmpty(ctx, folderId) {
+  if (!folderId) return false;
+  try {
+    const escapedParent = _escapeQueryValue(folderId);
+    const children = await listFiles(ctx, {
+      q: `'${escapedParent}' in parents and trashed = false`,
+      pageSize: 1,
+      fields: 'files(id)'
+    });
+    if (children.length > 0) return false;
+    await driveRequest({
+      ...ctx,
+      url: `${ctx.endpoints.driveApiUrl}/${encodeURIComponent(folderId)}?supportsAllDrives=true`,
+      method: 'DELETE'
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function _emptyDataEvaluation(folderId = null) {
+  return {
+    folderId,
+    filesMap: { metadata: null, trades: null, journal: null, settings: null, accounts: null },
+    hasFiles: false,
+    payload: { metadata: null, trades: null, journal: null, settings: null, accounts: null },
+    hasMeaningfulData: false,
+    tradeCount: 0,
+    maxRevision: 0,
+    metaTradeCount: 0,
+    updatedAtMs: 0,
+    fileCount: 0,
+    totalBytes: 0,
+    latestFileModifiedMs: 0,
+    payloadRead: false
+  };
+}
+
+async function _evaluateDataFolder(ctx, folderId, { inspectPayloads = false, payloadCache = null } = {}) {
+  if (!folderId) return _emptyDataEvaluation(null);
+
+  const cached = payloadCache && payloadCache.get(folderId);
+  if (cached && (!inspectPayloads || cached.payloadRead)) {
+    return cached;
+  }
+
+  const filesMap = cached ? cached.filesMap : await listUserDataFiles(ctx, folderId);
+  const fileObjs = Object.values(filesMap).filter(Boolean);
+  const hasFiles = fileObjs.length > 0;
+  const totalBytes = fileObjs.reduce((acc, f) => acc + (Number(f.size) || 0), 0);
+  const latestFileModifiedMs = fileObjs.reduce(
+    (mx, f) => Math.max(mx, Date.parse(f.modifiedTime || f.createdTime || '') || 0),
+    0
+  );
+
+  let payload = cached ? cached.payload : { metadata: null, trades: null, journal: null, settings: null, accounts: null };
+  let payloadRead = Boolean(cached && cached.payloadRead);
+
+  if (hasFiles && inspectPayloads && !payloadRead) {
+    payload = await _readFilesMapPayload(ctx, filesMap);
+    payloadRead = true;
+  }
+
+  const hasMeaningfulData = payloadRead ? _hasMeaningfulRemoteData(payload) : false;
+  const rawTrades = payloadRead
+    ? (Array.isArray(payload.trades) ? payload.trades : (payload.trades && payload.trades.trades))
+    : null;
+  const tradeCount = Array.isArray(rawTrades) ? rawTrades.length : 0;
+  const revs = (payload.metadata && payload.metadata.revisions) || {};
+  const maxRevision = Math.max(
+    Number(revs.trades) || 0,
+    Number(revs.journal) || 0,
+    Number(revs.settings) || 0,
+    Number(revs.accounts) || 0
+  );
+  const metaTradeCount = Number(payload.metadata && payload.metadata.counts && payload.metadata.counts.trades) || 0;
+  const updatedAtStr = (payload.metadata && (payload.metadata.lastSyncedAt || payload.metadata.updatedAt)) ||
+    (payload.trades && payload.trades.updatedAt) ||
+    (payload.journal && payload.journal.updatedAt) ||
+    (payload.settings && payload.settings.updatedAt) ||
+    '';
+  const updatedAtMs = Math.max(Date.parse(updatedAtStr) || 0, latestFileModifiedMs);
+
+  const entry = {
+    folderId,
+    filesMap,
+    hasFiles,
+    payload,
+    hasMeaningfulData,
+    tradeCount,
+    maxRevision,
+    metaTradeCount,
+    updatedAtMs,
+    fileCount: fileObjs.length,
+    totalBytes,
+    latestFileModifiedMs,
+    payloadRead
+  };
+
+  if (payloadCache) {
+    payloadCache.set(folderId, entry);
+  }
+  return entry;
+}
+
+function _compareDataEvaluations(a, b) {
+  const ea = a || _emptyDataEvaluation();
+  const eb = b || _emptyDataEvaluation();
+  if (ea.hasMeaningfulData !== eb.hasMeaningfulData) return ea.hasMeaningfulData ? -1 : 1;
+  if (ea.tradeCount !== eb.tradeCount) return eb.tradeCount - ea.tradeCount;
+  if (ea.hasFiles !== eb.hasFiles) return ea.hasFiles ? -1 : 1;
+  if (ea.maxRevision !== eb.maxRevision) return eb.maxRevision - ea.maxRevision;
+  if (ea.metaTradeCount !== eb.metaTradeCount) return eb.metaTradeCount - ea.metaTradeCount;
+  if (ea.fileCount !== eb.fileCount) return eb.fileCount - ea.fileCount;
+  if (ea.totalBytes !== eb.totalBytes) return eb.totalBytes - ea.totalBytes;
+  if (ea.updatedAtMs !== eb.updatedAtMs) return eb.updatedAtMs - ea.updatedAtMs;
+  return 0;
+}
+
+function _collectRootSubfolders(rootFolder, allFolders) {
+  const rootId = rootFolder.id;
+  return {
+    userDataFolders: _sortSubfoldersByPriority(
+      allFolders.filter((f) => _matchesSubfolder(f, rootId, 'user data', 'user_data')),
+      'user_data'
+    ),
+    databaseFolders: _sortSubfoldersByPriority(
+      allFolders.filter((f) => _matchesSubfolder(f, rootId, 'database', 'database')),
+      'database'
+    ),
+    backupsFolders: _sortSubfoldersByPriority(
+      allFolders.filter((f) => _matchesSubfolder(f, rootId, 'backups', 'backups')),
+      'backups'
+    ),
+    exportsFolders: _sortSubfoldersByPriority(
+      allFolders.filter((f) => _matchesSubfolder(f, rootId, 'exports', 'exports')),
+      'exports'
+    )
+  };
+}
+
+function _compareRootCandidates(a, b) {
+  const pCmp = _compareDataEvaluations(a.primaryEval, b.primaryEval);
+  if (pCmp !== 0) return pCmp;
+  const eCmp = _compareDataEvaluations(a.effectiveEval, b.effectiveEval);
+  if (eCmp !== 0) return eCmp;
+  if (a.subfolderScore !== b.subfolderScore) return b.subfolderScore - a.subfolderScore;
+  if (a.isTopLevel !== b.isTopLevel) return a.isTopLevel ? -1 : 1;
+  if (a.hasRootRole !== b.hasRootRole) return a.hasRootRole ? -1 : 1;
+  return _compareCreatedAsc(a.folder, b.folder);
+}
+
+async function discoverDriveWorkspace(ctx, { inspectPayloads = false, cachedFolderIds = {} } = {}) {
+  const allFolders = await _listAllFolders(ctx, cachedFolderIds);
+  const allFoldersById = new Map(allFolders.map((f) => [f.id, f]));
+  const primaryRoots = allFolders.filter(_isPrimaryRootFolder);
+  const legacyRoots = allFolders.filter(_isLegacyRootFolder);
+  const payloadCache = new Map();
+
+  if (primaryRoots.length === 0 && legacyRoots.length === 0) {
+    return {
+      exists: false,
+      rootName: null,
+      isLegacyCanonical: false,
+      canonicalRoot: null,
+      canonicalSubfolders: null,
+      folderIds: null,
+      legacyFolderDetected: false,
+      legacyRootId: null,
+      primaryEval: null,
+      fallbackCandidates: [],
+      allBackupFolderIds: [],
+      payloadCache,
+      duplicateRootCount: 0
+    };
+  }
+
+  const activeTierRoots = primaryRoots.length > 0 ? primaryRoots : legacyRoots;
+  const isLegacyCanonical = primaryRoots.length === 0;
+  const hasMultipleActiveRoots = activeTierRoots.length > 1;
+  const hasMultipleUserDataSubs = activeTierRoots.some(
+    (r) => allFolders.filter((f) => _matchesSubfolder(f, r.id, 'user data', 'user_data')).length > 1
+  );
+  const needDisambiguation = hasMultipleActiveRoots || hasMultipleUserDataSubs;
+  const checkFiles = Boolean(inspectPayloads || needDisambiguation);
+
+  const rootCandidates = await Promise.all(
+    activeTierRoots.map(async (rootFolder) => {
+      const subs = _collectRootSubfolders(rootFolder, allFolders);
+      let bestUserData = subs.userDataFolders[0] || null;
+      let primaryEval = _emptyDataEvaluation(bestUserData ? bestUserData.id : null);
+
+      if (subs.userDataFolders.length > 0 && checkFiles) {
+        const userDataEvals = await Promise.all(
+          subs.userDataFolders.map(async (udFolder) => ({
+            folder: udFolder,
+            eval: await _evaluateDataFolder(ctx, udFolder.id, { inspectPayloads, payloadCache })
+          }))
+        );
+        // When disambiguating duplicates on light calls, read payloads for any non-empty User Data folder
+        // so populated data always beats an empty initialized placeholder.
+        if (needDisambiguation && !inspectPayloads && userDataEvals.some((u) => u.eval.hasFiles)) {
+          await Promise.all(
+            userDataEvals.map(async (u) => {
+              if (u.eval.hasFiles && !u.eval.payloadRead) {
+                u.eval = await _evaluateDataFolder(ctx, u.folder.id, { inspectPayloads: true, payloadCache });
+              }
+            })
+          );
+        }
+        userDataEvals.sort((x, y) => {
+          const cmp = _compareDataEvaluations(x.eval, y.eval);
+          if (cmp !== 0) return cmp;
+          const xTag = _getRoleProp(x.folder) === 'user_data' ? 0 : 1;
+          const yTag = _getRoleProp(y.folder) === 'user_data' ? 0 : 1;
+          if (xTag !== yTag) return xTag - yTag;
+          return _compareCreatedAsc(x.folder, y.folder);
+        });
+        bestUserData = userDataEvals[0].folder;
+        primaryEval = userDataEvals[0].eval;
+      }
+
+      let effectiveEval = primaryEval;
+      if (!effectiveEval.hasMeaningfulData && checkFiles) {
+        const extraEvals = [];
+        for (const dbF of subs.databaseFolders) {
+          let dbEv = await _evaluateDataFolder(ctx, dbF.id, { inspectPayloads, payloadCache });
+          if (needDisambiguation && dbEv.hasFiles && !dbEv.payloadRead) {
+            dbEv = await _evaluateDataFolder(ctx, dbF.id, { inspectPayloads: true, payloadCache });
+          }
+          extraEvals.push(dbEv);
+        }
+        if (extraEvals.every((e) => !e.hasFiles)) {
+          let rootDirectEv = await _evaluateDataFolder(ctx, rootFolder.id, { inspectPayloads, payloadCache });
+          if (needDisambiguation && rootDirectEv.hasFiles && !rootDirectEv.payloadRead) {
+            rootDirectEv = await _evaluateDataFolder(ctx, rootFolder.id, { inspectPayloads: true, payloadCache });
+          }
+          extraEvals.push(rootDirectEv);
+        }
+        extraEvals.sort(_compareDataEvaluations);
+        if (extraEvals[0] && _compareDataEvaluations(extraEvals[0], effectiveEval) < 0) {
+          effectiveEval = extraEvals[0];
+        }
+      }
+
+      return {
+        folder: rootFolder,
+        subs,
+        bestUserData,
+        bestBackups: subs.backupsFolders[0] || null,
+        bestExports: subs.exportsFolders[0] || null,
+        primaryEval,
+        effectiveEval,
+        subfolderScore:
+          (subs.userDataFolders.length > 0 ? 1 : 0) +
+          (subs.backupsFolders.length > 0 ? 1 : 0) +
+          (subs.exportsFolders.length > 0 ? 1 : 0),
+        isTopLevel: _isTopLevelFolder(rootFolder, allFoldersById),
+        hasRootRole: _getRoleProp(rootFolder) === 'root'
+      };
+    })
+  );
+
+  rootCandidates.sort(_compareRootCandidates);
+  const winner = rootCandidates[0];
+  const canonicalRoot = winner.folder;
+  const folderIds = {
+    root: canonicalRoot.id,
+    userData: winner.bestUserData ? winner.bestUserData.id : null,
+    database: winner.bestUserData ? winner.bestUserData.id : null,
+    backups: winner.bestBackups ? winner.bestBackups.id : null,
+    exports: winner.bestExports ? winner.bestExports.id : null
+  };
+
+  // Fallback data candidates in priority order (never duplicating canonical User Data):
+  // 1. Canonical root's Database/ subfolder(s) & direct root files
+  // 2. Other duplicate roots in the same active tier
+  // 3. Legacy TradeForge roots (when canonical is TradeFourge)
+  const fallbackCandidates = [];
+  const seenDataIds = new Set(folderIds.userData ? [folderIds.userData] : []);
+  const pushFallback = (rootName, fId) => {
+    if (fId && !seenDataIds.has(fId)) {
+      seenDataIds.add(fId);
+      fallbackCandidates.push({ rootName, folderId: fId });
+    }
+  };
+
+  for (const dbF of winner.subs.databaseFolders) {
+    pushFallback(canonicalRoot.name || FOLDER_NAMES.ROOT, dbF.id);
+  }
+  pushFallback(canonicalRoot.name || FOLDER_NAMES.ROOT, canonicalRoot.id);
+
+  for (let i = 1; i < rootCandidates.length; i++) {
+    const alt = rootCandidates[i];
+    const rName = alt.folder.name || FOLDER_NAMES.ROOT;
+    for (const udF of alt.subs.userDataFolders) pushFallback(rName, udF.id);
+    for (const dbF of alt.subs.databaseFolders) pushFallback(rName, dbF.id);
+    pushFallback(rName, alt.folder.id);
+  }
+
+  if (primaryRoots.length > 0 && legacyRoots.length > 0) {
+    const sortedLegacy = [...legacyRoots].sort(_compareCreatedAsc);
+    for (const lr of sortedLegacy) {
+      const lSubs = _collectRootSubfolders(lr, allFolders);
+      const rName = lr.name || FOLDER_NAMES.LEGACY_ROOTS[0];
+      for (const udF of lSubs.userDataFolders) pushFallback(rName, udF.id);
+      for (const dbF of lSubs.databaseFolders) pushFallback(rName, dbF.id);
+      pushFallback(rName, lr.id);
     }
   }
 
-  const found = await findFolderOnly(ctx, { name, parentId, role });
-  if (found) {
-    return { folder: found, created: false };
+  // Collect all Backups/ folder IDs across canonical, duplicate, and legacy roots
+  const backupIds = [];
+  const seenBkIds = new Set();
+  const pushBk = (id) => {
+    if (id && !seenBkIds.has(id)) {
+      seenBkIds.add(id);
+      backupIds.push(id);
+    }
+  };
+  for (const bkF of winner.subs.backupsFolders) pushBk(bkF.id);
+  for (let i = 1; i < rootCandidates.length; i++) {
+    for (const bkF of rootCandidates[i].subs.backupsFolders) pushBk(bkF.id);
+  }
+  if (primaryRoots.length > 0 && legacyRoots.length > 0) {
+    for (const lr of legacyRoots) {
+      const lSubs = _collectRootSubfolders(lr, allFolders);
+      for (const bkF of lSubs.backupsFolders) pushBk(bkF.id);
+    }
+  }
+
+  const sortedLegacyRoots = [...legacyRoots].sort(_compareCreatedAsc);
+  return {
+    exists: true,
+    rootName: canonicalRoot.name || FOLDER_NAMES.ROOT,
+    isLegacyCanonical,
+    canonicalRoot,
+    canonicalSubfolders: {
+      userData: winner.bestUserData,
+      backups: winner.bestBackups,
+      exports: winner.bestExports,
+      database: winner.subs.databaseFolders[0] || null
+    },
+    folderIds,
+    legacyFolderDetected: sortedLegacyRoots.length > 0,
+    legacyRootId: sortedLegacyRoots[0] ? sortedLegacyRoots[0].id : null,
+    primaryEval: winner.primaryEval,
+    fallbackCandidates,
+    allBackupFolderIds: backupIds,
+    payloadCache,
+    duplicateRootCount: Math.max(0, activeTierRoots.length - 1)
+  };
+}
+
+async function _createRootFolderWithRaceCheck(ctx) {
+  const metadata = {
+    name: FOLDER_NAMES.ROOT,
+    mimeType: FOLDER_MIME,
+    parents: ['root'],
+    appProperties: {
+      tradefourgeApp: 'true',
+      tradefourgeRole: 'root'
+    }
+  };
+
+  const created = await driveRequestJson(
+    ctx,
+    `${ctx.endpoints.driveApiUrl}?fields=id,name,mimeType,createdTime,modifiedTime,appProperties,parents`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+      body: JSON.stringify(metadata)
+    }
+  );
+
+  // Post-create cross-worker race check: adopt earliest canonical root & delete empty duplicate
+  const allFolders = await _listAllFolders(ctx, { root: created.id });
+  const primary = allFolders.filter(_isPrimaryRootFolder);
+  const legacy = allFolders.filter(_isLegacyRootFolder);
+  const tier = primary.length > 0 ? primary : legacy;
+  if (tier.length > 1) {
+    const byId = new Map(allFolders.map((f) => [f.id, f]));
+    tier.sort((a, b) => {
+      const aTop = _isTopLevelFolder(a, byId);
+      const bTop = _isTopLevelFolder(b, byId);
+      if (aTop !== bTop) return aTop ? -1 : 1;
+      const aTag = _getRoleProp(a) === 'root';
+      const bTag = _getRoleProp(b) === 'root';
+      if (aTag !== bTag) return aTag ? -1 : 1;
+      return _compareCreatedAsc(a, b);
+    });
+    const winner = tier[0];
+    if (winner && winner.id && winner.id !== created.id) {
+      await _deleteFolderIfEmpty(ctx, created.id);
+      return { folder: winner, created: false, allFolders };
+    }
+  }
+
+  return { folder: created, created: true, allFolders };
+}
+
+async function _createSubfolderWithRaceCheck(ctx, { name, parentId, role, initialFolders = null }) {
+  if (Array.isArray(initialFolders)) {
+    const existingList = _sortSubfoldersByPriority(
+      initialFolders.filter((f) => _matchesSubfolder(f, parentId, _normName(name), role)),
+      role
+    );
+    if (existingList.length > 0) {
+      return { folder: existingList[0], created: false };
+    }
   }
 
   const metadata = {
@@ -267,40 +724,34 @@ async function findOrCreateFolder(ctx, { name, parentId = 'root', role = 'root',
       body: JSON.stringify(metadata)
     }
   );
+
+  // Post-create sibling deduplication across concurrent workers
+  const escapedParent = _escapeQueryValue(parentId);
+  const childFolders = await listFiles(ctx, {
+    q: `'${escapedParent}' in parents and mimeType = '${FOLDER_MIME}' and trashed = false`,
+    pageSize: 50
+  });
+  const matching = _sortSubfoldersByPriority(
+    childFolders.filter((f) => _matchesSubfolder(f, parentId, _normName(name), role)),
+    role
+  );
+  if (matching.length > 1 && matching[0].id !== created.id) {
+    await _deleteFolderIfEmpty(ctx, created.id);
+    return { folder: matching[0], created: false };
+  }
+
   return { folder: created, created: true };
 }
 
-async function inspectFolderStructure(ctx) {
-  const [rootFolder, legacyRoots] = await Promise.all([
-    findFolderOnly(ctx, { name: FOLDER_NAMES.ROOT, parentId: 'root', role: 'root' }),
-    findLegacyRootFolders(ctx)
-  ]);
-  const legacyRootFolder = legacyRoots[0] || null;
-  if (!rootFolder) {
-    return {
-      exists: false,
-      folderIds: null,
-      legacyFolderDetected: Boolean(legacyRootFolder),
-      legacyRootId: legacyRootFolder ? legacyRootFolder.id : null
-    };
-  }
-  const [userDataFolder, backupsFolder, exportsFolder] = await Promise.all([
-    findFolderOnly(ctx, { name: FOLDER_NAMES.USER_DATA, parentId: rootFolder.id, role: 'user_data' }),
-    findFolderOnly(ctx, { name: FOLDER_NAMES.BACKUPS, parentId: rootFolder.id, role: 'backups' }),
-    findFolderOnly(ctx, { name: FOLDER_NAMES.EXPORTS, parentId: rootFolder.id, role: 'exports' })
-  ]);
-
+async function inspectFolderStructure(ctx, cachedFolderIds = {}) {
+  const ws = await discoverDriveWorkspace(ctx, { inspectPayloads: false, cachedFolderIds });
   return {
-    exists: Boolean(rootFolder),
-    legacyFolderDetected: Boolean(legacyRootFolder),
-    legacyRootId: legacyRootFolder ? legacyRootFolder.id : null,
-    folderIds: {
-      root: rootFolder.id,
-      userData: userDataFolder ? userDataFolder.id : null,
-      database: userDataFolder ? userDataFolder.id : null,
-      backups: backupsFolder ? backupsFolder.id : null,
-      exports: exportsFolder ? exportsFolder.id : null
-    }
+    exists: ws.exists,
+    rootName: ws.rootName,
+    legacyFolderDetected: Boolean(ws.legacyFolderDetected),
+    legacyRootId: ws.legacyRootId,
+    folderIds: ws.folderIds,
+    duplicateRootCount: ws.duplicateRootCount
   };
 }
 
@@ -311,44 +762,63 @@ async function ensureFolderStructure(ctx, ownerSub = 'default', cachedFolderIds 
   }
 
   const task = (async () => {
-    const rootRes = await findOrCreateFolder(ctx, {
-      name: FOLDER_NAMES.ROOT,
-      parentId: 'root',
-      role: 'root',
-      cachedId: cachedFolderIds && cachedFolderIds.root
-    });
+    // 1. Search Google Drive FIRST — reuse any existing TradeFourge or TradeForge folder
+    const ws = await discoverDriveWorkspace(ctx, { inspectPayloads: false, cachedFolderIds });
+
+    let rootFolder = ws.canonicalRoot;
+    let rootCreated = false;
+    let knownFolders = null;
+
+    if (!rootFolder) {
+      const rootRes = await _createRootFolderWithRaceCheck(ctx);
+      rootFolder = rootRes.folder;
+      rootCreated = rootRes.created;
+      knownFolders = rootRes.allFolders;
+    }
+
+    const existingSubs = ws.canonicalSubfolders || {};
+    const needUserData = !existingSubs.userData;
+    const needBackups = !existingSubs.backups;
+    const needExports = !existingSubs.exports;
 
     const [userDataRes, backupsRes, exportsRes] = await Promise.all([
-      findOrCreateFolder(ctx, {
-        name: FOLDER_NAMES.USER_DATA,
-        parentId: rootRes.folder.id,
-        role: 'user_data',
-        cachedId: cachedFolderIds && (cachedFolderIds.userData || cachedFolderIds.database)
-      }),
-      findOrCreateFolder(ctx, {
-        name: FOLDER_NAMES.BACKUPS,
-        parentId: rootRes.folder.id,
-        role: 'backups',
-        cachedId: cachedFolderIds && cachedFolderIds.backups
-      }),
-      findOrCreateFolder(ctx, {
-        name: FOLDER_NAMES.EXPORTS,
-        parentId: rootRes.folder.id,
-        role: 'exports',
-        cachedId: cachedFolderIds && cachedFolderIds.exports
-      })
+      existingSubs.userData
+        ? Promise.resolve({ folder: existingSubs.userData, created: false })
+        : _createSubfolderWithRaceCheck(ctx, {
+            name: FOLDER_NAMES.USER_DATA,
+            parentId: rootFolder.id,
+            role: 'user_data',
+            initialFolders: knownFolders
+          }),
+      existingSubs.backups
+        ? Promise.resolve({ folder: existingSubs.backups, created: false })
+        : _createSubfolderWithRaceCheck(ctx, {
+            name: FOLDER_NAMES.BACKUPS,
+            parentId: rootFolder.id,
+            role: 'backups',
+            initialFolders: knownFolders
+          }),
+      existingSubs.exports
+        ? Promise.resolve({ folder: existingSubs.exports, created: false })
+        : _createSubfolderWithRaceCheck(ctx, {
+            name: FOLDER_NAMES.EXPORTS,
+            parentId: rootFolder.id,
+            role: 'exports',
+            initialFolders: knownFolders
+          })
     ]);
 
     return {
       folderIds: {
-        root: rootRes.folder.id,
+        root: rootFolder.id,
         userData: userDataRes.folder.id,
         database: userDataRes.folder.id,
         backups: backupsRes.folder.id,
         exports: exportsRes.folder.id
       },
-      created: Boolean(rootRes.created || userDataRes.created || backupsRes.created || exportsRes.created),
-      reused: !rootRes.created
+      rootName: rootFolder.name || FOLDER_NAMES.ROOT,
+      created: Boolean(rootCreated || (needUserData && userDataRes.created) || (needBackups && backupsRes.created) || (needExports && exportsRes.created)),
+      reused: !rootCreated
     };
   })();
 
@@ -560,130 +1030,112 @@ async function _readFilesMapPayload(ctx, filesMap) {
   return out;
 }
 
-async function _collectLegacyDataCandidates(ctx, primaryFolderIds) {
-  const candidates = [];
-  const seenFolderIds = new Set();
-  const pushCand = (rootName, folder) => {
-    if (folder && folder.id && !seenFolderIds.has(folder.id) && folder.id !== primaryFolderIds.userData) {
-      seenFolderIds.add(folder.id);
-      candidates.push({ rootName, folderId: folder.id });
-    }
-  };
+async function hasLegacyDataHint(ctx, workspaceOrFolderIds = {}) {
+  const ws = (workspaceOrFolderIds && Array.isArray(workspaceOrFolderIds.fallbackCandidates))
+    ? workspaceOrFolderIds
+    : await discoverDriveWorkspace(ctx, { inspectPayloads: false, cachedFolderIds: workspaceOrFolderIds });
 
-  // 1. Legacy `Database/` inside primary `TradeFourge` root folder
-  if (primaryFolderIds && primaryFolderIds.root) {
-    const primaryDbFolder = await findFolderOnly(ctx, {
-      name: FOLDER_NAMES.LEGACY_DATABASE,
-      parentId: primaryFolderIds.root,
-      role: 'database'
-    });
-    pushCand(FOLDER_NAMES.ROOT, primaryDbFolder);
-  }
-
-  // 2. Duplicate `TradeFourge` root folders + all legacy `TradeForge` root folders
-  const [allPrimaryRoots, legacyRoots] = await Promise.all([
-    findMatchingFolders(ctx, { name: FOLDER_NAMES.ROOT, parentId: 'root', role: 'root' }),
-    findLegacyRootFolders(ctx)
-  ]);
-
-  for (const altRoot of allPrimaryRoots) {
-    if (!altRoot || !altRoot.id || altRoot.id === (primaryFolderIds && primaryFolderIds.root)) continue;
-    const [ud, db] = await Promise.all([
-      findFolderOnly(ctx, { name: FOLDER_NAMES.USER_DATA, parentId: altRoot.id, role: 'user_data' }),
-      findFolderOnly(ctx, { name: FOLDER_NAMES.LEGACY_DATABASE, parentId: altRoot.id, role: 'database' })
-    ]);
-    pushCand(altRoot.name || FOLDER_NAMES.ROOT, ud);
-    pushCand(altRoot.name || FOLDER_NAMES.ROOT, db);
-  }
-
-  for (const legacyRoot of legacyRoots) {
-    if (!legacyRoot || !legacyRoot.id) continue;
-    const [ud, db] = await Promise.all([
-      findFolderOnly(ctx, { name: FOLDER_NAMES.USER_DATA, parentId: legacyRoot.id, role: 'user_data' }),
-      findFolderOnly(ctx, { name: FOLDER_NAMES.LEGACY_DATABASE, parentId: legacyRoot.id, role: 'database' })
-    ]);
-    pushCand(legacyRoot.name || FOLDER_NAMES.LEGACY_ROOTS[0], ud);
-    pushCand(legacyRoot.name || FOLDER_NAMES.LEGACY_ROOTS[0], db);
-  }
-
-  return candidates;
-}
-
-async function hasLegacyDataHint(ctx, primaryFolderIds = {}) {
-  const candidates = await _collectLegacyDataCandidates(ctx, primaryFolderIds);
+  const candidates = ws.fallbackCandidates || [];
   for (const cand of candidates) {
-    const filesMap = await listUserDataFiles(ctx, cand.folderId);
-    if (_hasAnyFilesInMap(filesMap)) {
+    const evalEntry = await _evaluateDataFolder(ctx, cand.folderId, {
+      inspectPayloads: false,
+      payloadCache: ws.payloadCache
+    });
+    if (evalEntry.hasFiles) {
       return true;
     }
   }
   return false;
 }
 
-async function readDatabase(ctx, { ownerSub, cachedFolderIds = {} } = {}) {
-  const ensured = await ensureFolderStructure(ctx, ownerSub, cachedFolderIds);
-  const folderIds = ensured.folderIds;
-  const primaryFilesMap = await listUserDataFiles(ctx, folderIds.userData);
-  const hasPrimaryFiles = _hasAnyFilesInMap(primaryFilesMap);
+async function readDatabase(ctx, { cachedFolderIds = {} } = {}) {
+  const ws = await discoverDriveWorkspace(ctx, { inspectPayloads: true, cachedFolderIds });
+  if (!ws.canonicalRoot) {
+    return {
+      folderExists: false,
+      folderIds: null,
+      rootName: null,
+      folderCreated: false,
+      folderReused: false,
+      legacyFolderDetected: false,
+      legacySource: false,
+      legacyRootName: null,
+      fileIds: {
+        metadata: null,
+        trades: null,
+        journal: null,
+        settings: null
+      },
+      exists: false,
+      metadata: null,
+      trades: null,
+      journal: null,
+      settings: null,
+      accounts: null
+    };
+  }
 
-  let selectedFilesMap = primaryFilesMap;
-  let selectedData = hasPrimaryFiles
-    ? await _readFilesMapPayload(ctx, primaryFilesMap)
-    : { metadata: null, trades: null, journal: null, settings: null, accounts: null };
+  const folderIds = ws.folderIds;
+  const primaryEval = ws.primaryEval || _emptyDataEvaluation(folderIds.userData);
+  const primaryFilesMap = primaryEval.filesMap;
+  const hasPrimaryFiles = primaryEval.hasFiles;
 
+  let selectedEval = primaryEval;
   let legacySource = false;
   let legacyRootName = null;
 
-  // Bridge from `TradeFourge/Database/`, duplicate `TradeFourge` roots, or legacy `TradeForge/` folders
-  // whenever `TradeFourge / User Data/` is absent OR contains only an empty initial placeholder.
-  if (!_hasMeaningfulRemoteData(selectedData)) {
-    const candidates = await _collectLegacyDataCandidates(ctx, folderIds);
+  // Bridge from `Database/`, direct root files, duplicate roots, or legacy `TradeForge/` folders
+  // whenever canonical `User Data/` is absent OR contains only an empty initial placeholder.
+  if (!primaryEval.hasMeaningfulData) {
     let firstNonEmptyFallback = null;
 
-    for (const cand of candidates) {
-      const candMap = await listUserDataFiles(ctx, cand.folderId);
-      if (!_hasAnyFilesInMap(candMap)) continue;
-      const candData = await _readFilesMapPayload(ctx, candMap);
-      if (_hasMeaningfulRemoteData(candData)) {
-        selectedFilesMap = candMap;
-        selectedData = candData;
+    for (const cand of ws.fallbackCandidates) {
+      const candEval = await _evaluateDataFolder(ctx, cand.folderId, {
+        inspectPayloads: true,
+        payloadCache: ws.payloadCache
+      });
+      if (!candEval.hasFiles) continue;
+      if (candEval.hasMeaningfulData) {
+        selectedEval = candEval;
         legacySource = true;
         legacyRootName = cand.rootName;
         break;
       }
       if (!firstNonEmptyFallback && !hasPrimaryFiles) {
-        firstNonEmptyFallback = { filesMap: candMap, data: candData, rootName: cand.rootName };
+        firstNonEmptyFallback = { evalEntry: candEval, rootName: cand.rootName };
       }
     }
 
     if (!legacySource && firstNonEmptyFallback) {
-      selectedFilesMap = firstNonEmptyFallback.filesMap;
-      selectedData = firstNonEmptyFallback.data;
+      selectedEval = firstNonEmptyFallback.evalEntry;
       legacySource = true;
       legacyRootName = firstNonEmptyFallback.rootName;
     }
   }
 
   return {
+    folderExists: true,
     folderIds,
-    folderCreated: ensured.created,
-    folderReused: ensured.reused,
+    rootName: ws.rootName,
+    folderCreated: false,
+    folderReused: true,
+    legacyFolderDetected: Boolean(ws.legacyFolderDetected),
     legacySource,
     legacyRootName,
-    // Keep fileIds anchored strictly to canonical `TradeFourge / User Data/` so subsequent writes
-    // never overwrite files inside legacy `TradeForge/` or `Database/` folders.
+    // Keep fileIds anchored strictly to canonical root's `User Data/` so subsequent writes
+    // never overwrite files inside separate legacy `TradeForge/` or `Database/` folders.
     fileIds: {
       metadata: primaryFilesMap.metadata ? primaryFilesMap.metadata.id : null,
       trades: primaryFilesMap.trades ? primaryFilesMap.trades.id : null,
       journal: primaryFilesMap.journal ? primaryFilesMap.journal.id : null,
       settings: primaryFilesMap.settings ? primaryFilesMap.settings.id : null
     },
-    exists: _hasAnyFilesInMap(selectedFilesMap),
-    metadata: selectedData.metadata,
-    trades: selectedData.trades,
-    journal: selectedData.journal,
-    settings: selectedData.settings,
-    accounts: selectedData.accounts
+    exists: _hasAnyFilesInMap(selectedEval.filesMap),
+    metadata: selectedEval.payload.metadata,
+    trades: selectedEval.payload.trades,
+    journal: selectedEval.payload.journal,
+    settings: selectedEval.payload.settings,
+    accounts: selectedEval.payload.accounts
   };
 }
 
@@ -724,32 +1176,12 @@ async function createBackupSnapshot(ctx, { backupsFolderId, reason = 'manual', b
 }
 
 async function inspectLegacyBackupsFolderIds(ctx, primaryRootId = null) {
-  const [allPrimaryRoots, legacyRoots] = await Promise.all([
-    findMatchingFolders(ctx, { name: FOLDER_NAMES.ROOT, parentId: 'root', role: 'root' }),
-    findLegacyRootFolders(ctx)
-  ]);
-
-  const rootsToCheck = [];
-  for (const r of allPrimaryRoots) {
-    if (r && r.id && r.id !== primaryRootId) rootsToCheck.push(r);
-  }
-  for (const r of legacyRoots) {
-    if (r && r.id) rootsToCheck.push(r);
-  }
-  if (rootsToCheck.length === 0) return [];
-
-  const backupFolders = await Promise.all(
-    rootsToCheck.map((r) => findFolderOnly(ctx, { name: FOLDER_NAMES.BACKUPS, parentId: r.id, role: 'backups' }))
-  );
-  const ids = [];
-  const seen = new Set();
-  for (const f of backupFolders) {
-    if (f && f.id && !seen.has(f.id)) {
-      seen.add(f.id);
-      ids.push(f.id);
-    }
-  }
-  return ids;
+  const ws = await discoverDriveWorkspace(ctx, { inspectPayloads: false });
+  return (ws.allBackupFolderIds || []).filter((id) => {
+    if (!primaryRootId) return true;
+    const primaryBk = ws.folderIds && ws.folderIds.backups;
+    return ws.canonicalRoot && ws.canonicalRoot.id === primaryRootId ? id !== primaryBk : true;
+  });
 }
 
 async function listBackups(ctx, backupsFolderIds, limit = 15) {
@@ -785,18 +1217,18 @@ async function listBackups(ctx, backupsFolderIds, limit = 15) {
     .slice(0, maxLimit);
 }
 
-async function readOwnedBackupFile(ctx, { fileId, backupsFolderId, allowedFolderIds = null }) {
-  const allowedSet = new Set(
-    (Array.isArray(allowedFolderIds) ? allowedFolderIds : [backupsFolderId]).filter(Boolean)
-  );
-  if (!fileId || allowedSet.size === 0) {
+async function readOwnedBackupFile(ctx, { fileId, backupsFolderId = null, allowedFolderIds = null }) {
+  if (!fileId) {
     throw _makeDriveError('INVALID_REQUEST', 'Backup file ID is required.', 400);
   }
   const meta = await verifyItemExists(ctx, fileId);
   if (!meta) {
     throw _makeDriveError('NOT_FOUND', 'Selected backup file could not be found.', 404);
   }
-  const inUserBackups = Array.isArray(meta.parents) && meta.parents.some((p) => allowedSet.has(p));
+  const allowedSet = new Set(
+    (Array.isArray(allowedFolderIds) ? allowedFolderIds : [backupsFolderId]).filter(Boolean)
+  );
+  const inUserBackups = allowedSet.size > 0 && Array.isArray(meta.parents) && meta.parents.some((p) => allowedSet.has(p));
   if (!inUserBackups) {
     throw _makeDriveError('FORBIDDEN', 'Backup file does not belong to your TradeFourge Backups folder.', 403);
   }
@@ -804,11 +1236,8 @@ async function readOwnedBackupFile(ctx, { fileId, backupsFolderId, allowedFolder
   return { meta, data };
 }
 
-async function deleteOwnedBackupFile(ctx, { fileId, backupsFolderId, allowedFolderIds = null }) {
-  const allowedSet = new Set(
-    (Array.isArray(allowedFolderIds) ? allowedFolderIds : [backupsFolderId]).filter(Boolean)
-  );
-  if (!fileId || allowedSet.size === 0) {
+async function deleteOwnedBackupFile(ctx, { fileId, backupsFolderId = null, allowedFolderIds = null }) {
+  if (!fileId) {
     throw _makeDriveError('INVALID_REQUEST', 'Backup file ID is required.', 400);
   }
   const meta = await verifyItemExists(ctx, fileId);
@@ -818,7 +1247,10 @@ async function deleteOwnedBackupFile(ctx, { fileId, backupsFolderId, allowedFold
   if (meta.mimeType === FOLDER_MIME) {
     throw _makeDriveError('FORBIDDEN', 'Folders cannot be deleted from backups.', 403);
   }
-  const inUserBackups = Array.isArray(meta.parents) && meta.parents.some((p) => allowedSet.has(p));
+  const allowedSet = new Set(
+    (Array.isArray(allowedFolderIds) ? allowedFolderIds : [backupsFolderId]).filter(Boolean)
+  );
+  const inUserBackups = allowedSet.size > 0 && Array.isArray(meta.parents) && meta.parents.some((p) => allowedSet.has(p));
   if (!inUserBackups) {
     throw _makeDriveError('FORBIDDEN', 'Backup file does not belong to your TradeFourge Backups folder.', 403);
   }
@@ -857,6 +1289,7 @@ module.exports = {
   DATA_FILENAMES,
   _buildStableTradesMap,
   _hasMeaningfulRemoteData,
+  discoverDriveWorkspace,
   inspectFolderStructure,
   ensureFolderStructure,
   listUserDataFiles,
