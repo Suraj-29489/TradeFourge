@@ -540,6 +540,91 @@
     assert.ok(thrown && thrown.code === 'SERVER_NOT_CONFIGURED');
   });
 
+  test('8. Failed /api/auth/logout rejects cleanly and preserves active session until logout succeeds', async () => {
+    resetAll();
+    let serverAuthenticated = true;
+    let logoutBehavior = 'http_error';
+
+    GoogleAuthManager._customFetch = async (url) => {
+      if (url.includes('/api/auth/logout')) {
+        if (logoutBehavior === 'network_error') {
+          throw new Error('Network unreachable');
+        }
+        if (logoutBehavior === 'http_error') {
+          return {
+            ok: false,
+            status: 500,
+            async json() { return { ok: false, message: 'Failed to revoke server session.' }; }
+          };
+        }
+        serverAuthenticated = false;
+        return {
+          ok: true,
+          status: 200,
+          async json() { return { ok: true }; }
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return {
+            ok: true,
+            configured: true,
+            authenticated: serverAuthenticated,
+            status: serverAuthenticated ? 'authenticated' : 'unauthenticated',
+            driveConnected: serverAuthenticated,
+            driveScopeGranted: serverAuthenticated,
+            rememberMe: true,
+            expiresAt: Date.now() + 3600000,
+            user: serverAuthenticated ? {
+              sub: 'google-sub-888',
+              email: 'trader.ops@gmail.com',
+              name: 'Ops Trader',
+              picture: 'https://example.com/ops.png',
+              emailVerified: true
+            } : null
+          };
+        }
+      };
+    };
+
+    AuthSessionManager.init();
+    await AuthSessionManager.syncWithServerSession();
+    assert.strictEqual(AuthSessionManager.isAuthenticated(), true);
+    assert.strictEqual(GoogleAuthManager.account.email, 'trader.ops@gmail.com');
+
+    // HTTP 500 on logout must NOT clear client session or lock gate
+    let err500 = null;
+    try {
+      await AuthSessionManager.signOut({ clearGoogle: true });
+    } catch (err) {
+      err500 = err;
+    }
+    assert.ok(err500 && err500.code === 'LOGOUT_FAILED');
+    assert.strictEqual(AuthSessionManager.isAuthenticated(), true, 'Failed 500 logout must keep active session');
+    assert.strictEqual(GoogleAuthManager.account.email, 'trader.ops@gmail.com');
+
+    // Network rejection on logout must NOT clear client session
+    logoutBehavior = 'network_error';
+    let errNet = null;
+    try {
+      await AuthSessionManager.signOut({ clearGoogle: true });
+    } catch (err) {
+      errNet = err;
+    }
+    assert.ok(errNet && errNet.code === 'LOGOUT_FAILED');
+    assert.strictEqual(AuthSessionManager.isAuthenticated(), true, 'Failed network logout must keep active session');
+
+    // Succeeding logout cleans session and locks gate cleanly
+    logoutBehavior = 'ok';
+    await AuthSessionManager.signOut({ clearGoogle: true });
+    assert.strictEqual(AuthSessionManager.isAuthenticated(), false);
+    assert.strictEqual(GoogleAuthManager.account, null);
+    assert.strictEqual(global.localStorage.getItem(AuthSessionManager.SESSION_STORAGE_KEY), null);
+    assert.strictEqual(global.sessionStorage.getItem(AuthSessionManager.TEMP_SESSION_KEY), null);
+  });
+
   // -------------------- RUNNER --------------------
   async function runAll() {
     let passed = 0;

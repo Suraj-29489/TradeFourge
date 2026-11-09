@@ -2860,6 +2860,11 @@ const App = {
     }, 3200);
   },
 
+  openUploadModal() {
+    const uploadModal = document.getElementById('uploadModal');
+    if (uploadModal) uploadModal.classList.add('active');
+  },
+
   /**
    * Bind DOM Event Listeners
    */
@@ -2886,6 +2891,9 @@ const App = {
           openMobileSidebar();
         } else {
           document.body.classList.remove('sidebar-collapsed');
+          setTimeout(() => {
+            if (typeof window !== 'undefined') window.dispatchEvent(new Event('resize'));
+          }, 240);
         }
       });
     }
@@ -2897,6 +2905,9 @@ const App = {
           closeMobileSidebar();
         } else {
           document.body.classList.add('sidebar-collapsed');
+          setTimeout(() => {
+            if (typeof window !== 'undefined') window.dispatchEvent(new Event('resize'));
+          }, 240);
         }
       });
     }
@@ -3111,25 +3122,12 @@ const App = {
       btnINR.addEventListener('click', () => this.setCurrency('INR'));
     }
 
-    // Export JSON Button (Fallback if present)
-    const exportJsonBtn = document.getElementById('btnExportJSONTop');
-    if (exportJsonBtn) {
-      exportJsonBtn.addEventListener('click', () => this.exportJSON());
-    }
-
-    // CSV Upload Modals trigger (Top Header + Sidebar)
-    const uploadBtnTop = document.getElementById('btnUploadCSVTop');
+    // CSV Upload modal trigger (Sidebar + Profile dropdown + Settings/Empty states)
     const uploadBtnSidebar = document.getElementById('btnSidebarUploadCSV');
-    const uploadModal = document.getElementById('uploadModal');
     const fileInput = document.getElementById('csvFileInput');
     const dropzone = document.getElementById('csvDropzone');
 
-    const openUploadModal = () => {
-      if (uploadModal) uploadModal.classList.add('active');
-    };
-
-    if (uploadBtnTop) uploadBtnTop.addEventListener('click', openUploadModal);
-    if (uploadBtnSidebar) uploadBtnSidebar.addEventListener('click', openUploadModal);
+    if (uploadBtnSidebar) uploadBtnSidebar.addEventListener('click', () => this.openUploadModal());
 
     // Close Modals
     // Universal Modal Close Handlers (Buttons, Backdrop Click, and ESC key)
@@ -5061,9 +5059,26 @@ const App = {
     const dropResolve = document.getElementById('btnGoogleDropdownResolveMig');
     const dropReconnect = document.getElementById('btnGoogleDropdownReconnect');
     const dropSync = document.getElementById('btnGoogleDropdownSync');
+    const dropUploadCSV = document.getElementById('btnGoogleDropdownUploadCSV');
     const dropSwitch = document.getElementById('btnGoogleDropdownSwitch');
     const dropSettings = document.getElementById('btnGoogleDropdownSettings');
     const dropSignOut = document.getElementById('btnGoogleDropdownSignOut');
+
+    // Graceful avatar image error fallback -> show initials
+    [
+      { imgId: 'googleHeaderAvatar', initId: 'googleHeaderInitials', displayMode: 'inline-flex' },
+      { imgId: 'googleDropdownAvatar', initId: 'googleDropdownInitials', displayMode: 'block' },
+      { imgId: 'cloudSettingsAvatar', initId: 'cloudSettingsInitials', displayMode: 'block' }
+    ].forEach(({ imgId, initId, displayMode }) => {
+      const imgEl = document.getElementById(imgId);
+      const initEl = document.getElementById(initId);
+      if (imgEl) {
+        imgEl.addEventListener('error', () => {
+          imgEl.style.display = 'none';
+          if (initEl) initEl.style.display = displayMode;
+        });
+      }
+    });
 
     if (dropResolve) {
       dropResolve.addEventListener('click', () => {
@@ -5081,6 +5096,12 @@ const App = {
       dropSync.addEventListener('click', () => {
         closeDropdown();
         this.triggerCloudSyncNow();
+      });
+    }
+    if (dropUploadCSV) {
+      dropUploadCSV.addEventListener('click', () => {
+        closeDropdown();
+        this.openUploadModal();
       });
     }
     if (dropSwitch) {
@@ -5207,6 +5228,9 @@ const App = {
 
       if (typeof AuthUIController !== 'undefined') {
         AuthUIController.setLocked(true);
+        if (typeof AuthUIController.switchTab === 'function') {
+          AuthUIController.switchTab('login');
+        }
         AuthUIController.syncFromSessionState();
       }
       this.updateCloudSyncUI();
@@ -5214,13 +5238,36 @@ const App = {
   },
 
   async triggerGoogleSignOut() {
-    if (typeof AuthSessionManager !== 'undefined') {
-      await AuthSessionManager.signOut({ clearGoogle: true });
-      return;
+    if (this._signingOut) return;
+    this._signingOut = true;
+
+    const signOutButtons = [
+      document.getElementById('btnGoogleDropdownSignOut'),
+      document.getElementById('btnSettingsGoogleSignOut'),
+      document.getElementById('btnSignOutFromMigration')
+    ].filter(Boolean);
+    const prevTexts = signOutButtons.map((btn) => btn.textContent);
+    signOutButtons.forEach((btn) => {
+      btn.disabled = true;
+      btn.textContent = 'Signing out...';
+    });
+
+    try {
+      if (typeof AuthSessionManager !== 'undefined') {
+        await AuthSessionManager.signOut({ clearGoogle: true });
+      } else if (typeof GoogleAuthManager !== 'undefined') {
+        await GoogleAuthManager.signOut();
+      }
+      this.showToast('Signed out cleanly. Your Google Drive files and backups remain preserved.', 'info');
+    } catch (err) {
+      this.showToast((err && err.message) || 'Sign out failed. Please try again.', 'error');
+    } finally {
+      this._signingOut = false;
+      signOutButtons.forEach((btn, idx) => {
+        btn.disabled = false;
+        btn.textContent = prevTexts[idx] || 'Sign Out';
+      });
     }
-    if (typeof GoogleAuthManager === 'undefined') return;
-    await GoogleAuthManager.signOut();
-    this.showToast('Signed out of Google. Returned to local offline storage.', 'info');
   },
 
   async triggerCloudSyncNow() {
@@ -5285,13 +5332,26 @@ const App = {
       container.innerHTML = backups.map(b => {
         const dt = b.createdTime ? new Date(b.createdTime).toLocaleString() : '';
         const sizeKb = b.size ? ` • ${(Number(b.size) / 1024).toFixed(1)} KB` : '';
+        const safeId = this.escapeHTML(b.id);
+        const safeName = this.escapeHTML(b.name);
         return `
           <div class="cloud-backup-item">
-            <div>
-              <div class="cloud-backup-name">${this.escapeHTML(b.name)}</div>
+            <div class="cloud-backup-info">
+              <div class="cloud-backup-name">${safeName}</div>
               <div class="cloud-backup-meta">${this.escapeHTML(dt)}${sizeKb}</div>
             </div>
-            <button type="button" class="btn-secondary" data-backup-id="${this.escapeHTML(b.id)}">Restore</button>
+            <div class="cloud-backup-actions">
+              <button type="button" class="btn-secondary" data-backup-id="${safeId}">Restore</button>
+              <button type="button" class="btn-danger-outline cloud-backup-delete-btn" data-delete-backup-id="${safeId}" data-backup-name="${safeName}" title="Delete backup ${safeName}" aria-label="Delete backup ${safeName}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" aria-hidden="true">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                  <path d="M10 11v6"></path>
+                  <path d="M14 11v6"></path>
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         `;
       }).join('');
@@ -5302,7 +5362,9 @@ const App = {
           if (!confirm('Restore from this backup snapshot? A safety backup of your current state will be saved first.')) {
             return;
           }
-          btn.disabled = true;
+          const row = btn.closest('.cloud-backup-item');
+          const rowButtons = row ? Array.from(row.querySelectorAll('button')) : [btn];
+          rowButtons.forEach(b => { b.disabled = true; });
           btn.innerText = 'Restoring...';
           try {
             const res = await CloudSyncManager.restoreFromBackupFileId(fileId);
@@ -5310,9 +5372,34 @@ const App = {
             this.refreshCloudBackupsList();
           } catch (err) {
             this.showToast((err && err.message) || 'Failed to restore backup.', 'error');
-          } finally {
-            btn.disabled = false;
+            rowButtons.forEach(b => { b.disabled = false; });
             btn.innerText = 'Restore';
+          }
+        });
+      });
+
+      container.querySelectorAll('button[data-delete-backup-id]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const fileId = btn.getAttribute('data-delete-backup-id');
+          const backupName = btn.getAttribute('data-backup-name') || 'this backup';
+          if (!confirm(`Delete backup "${backupName}" permanently from My Drive / TradeForge / Backups? This cannot be undone.`)) {
+            return;
+          }
+          const row = btn.closest('.cloud-backup-item');
+          const rowButtons = row ? Array.from(row.querySelectorAll('button')) : [btn];
+          rowButtons.forEach(b => { b.disabled = true; });
+          btn.classList.add('is-deleting');
+          try {
+            await CloudSyncManager.deleteCloudBackup(fileId);
+            this.showToast(`Deleted backup ${backupName}.`, 'success');
+            this.refreshCloudBackupsList();
+          } catch (err) {
+            this.showToast((err && err.message) || 'Failed to delete backup.', 'error');
+            rowButtons.forEach(b => { b.disabled = false; });
+            btn.classList.remove('is-deleting');
+            if (err && (err.code === 'NOT_FOUND' || err.code === 'AUTH_EXPIRED')) {
+              this.refreshCloudBackupsList();
+            }
           }
         });
       });
@@ -5511,6 +5598,7 @@ const App = {
     const lastSyncFmt = state.lastSyncedAt ? `Last synced: ${new Date(state.lastSyncedAt).toLocaleString()}` : 'Not synced with Drive yet';
 
     // 1. Header Trigger & Dropdown
+    const triggerBtn = document.getElementById('btnGoogleAccountTrigger');
     const gIcon = document.getElementById('googleTriggerGIcon');
     const hAvatar = document.getElementById('googleHeaderAvatar');
     const hInitials = document.getElementById('googleHeaderInitials');
@@ -5531,19 +5619,35 @@ const App = {
       : 'G';
 
     if (isSignedIn) {
+      if (triggerBtn) {
+        triggerBtn.classList.add('is-signed-in');
+        triggerBtn.title = acct.name ? `${acct.name} (${acct.email})` : (acct.email || 'Account');
+        triggerBtn.setAttribute('aria-label', `Account menu for ${acct.name || acct.email || 'Google user'}`);
+      }
       if (gIcon) gIcon.style.display = 'none';
-      if (hLabel) hLabel.innerText = acct.email;
+      if (hLabel) {
+        hLabel.innerText = '';
+        hLabel.style.display = 'none';
+      }
       if (hDot) {
         hDot.style.display = 'inline-block';
         hDot.className = `cloud-sync-dot ${state.status}`;
       }
       if (acct.picture && hAvatar && dAvatar) {
         hAvatar.src = acct.picture;
+        hAvatar.alt = acct.name || 'Google Profile';
         hAvatar.style.display = 'inline-block';
-        if (hInitials) hInitials.style.display = 'none';
+        if (hInitials) {
+          hInitials.innerText = initials;
+          hInitials.style.display = 'none';
+        }
         dAvatar.src = acct.picture;
+        dAvatar.alt = acct.name || 'Google Profile';
         dAvatar.style.display = 'block';
-        if (dInitials) dInitials.style.display = 'none';
+        if (dInitials) {
+          dInitials.innerText = initials;
+          dInitials.style.display = 'none';
+        }
       } else {
         if (hAvatar) hAvatar.style.display = 'none';
         if (hInitials) {
@@ -5578,21 +5682,45 @@ const App = {
       const dropSwitchBtn = document.getElementById('btnGoogleDropdownSwitch');
 
       if (appUser) {
+        if (triggerBtn) {
+          triggerBtn.classList.add('is-signed-in');
+          triggerBtn.title = appUser.name ? `${appUser.name} (${appUser.email})` : (appUser.email || 'Account');
+          triggerBtn.setAttribute('aria-label', `Account menu for ${appUser.name || appUser.email || 'User'}`);
+        }
         if (gIcon) gIcon.style.display = 'none';
-        if (hAvatar) hAvatar.style.display = 'none';
-        if (hInitials) {
-          hInitials.innerText = appInitials;
-          hInitials.style.display = 'inline-flex';
+        if (appUser.picture && hAvatar && dAvatar) {
+          hAvatar.src = appUser.picture;
+          hAvatar.alt = appUser.name || 'Profile';
+          hAvatar.style.display = 'inline-block';
+          if (hInitials) {
+            hInitials.innerText = appInitials;
+            hInitials.style.display = 'none';
+          }
+          dAvatar.src = appUser.picture;
+          dAvatar.style.display = 'block';
+          if (dInitials) {
+            dInitials.innerText = appInitials;
+            dInitials.style.display = 'none';
+          }
+        } else {
+          if (hAvatar) hAvatar.style.display = 'none';
+          if (hInitials) {
+            hInitials.innerText = appInitials;
+            hInitials.style.display = 'inline-flex';
+          }
+          if (dAvatar) dAvatar.style.display = 'none';
+          if (dInitials) {
+            dInitials.innerText = appInitials;
+            dInitials.style.display = 'block';
+          }
         }
         if (hDot) {
           hDot.style.display = 'inline-block';
           hDot.className = 'cloud-sync-dot local';
         }
-        if (hLabel) hLabel.innerText = appUser.email;
-        if (dAvatar) dAvatar.style.display = 'none';
-        if (dInitials) {
-          dInitials.innerText = appInitials;
-          dInitials.style.display = 'block';
+        if (hLabel) {
+          hLabel.innerText = '';
+          hLabel.style.display = 'none';
         }
         if (dName) dName.innerText = appUser.name || appUser.email;
         if (dEmail) dEmail.innerText = appUser.email;
@@ -5606,11 +5734,19 @@ const App = {
         if (dropSync) dropSync.style.display = 'none';
         if (dropSwitchBtn) dropSwitchBtn.innerText = 'Connect Google Drive';
       } else {
+        if (triggerBtn) {
+          triggerBtn.classList.remove('is-signed-in');
+          triggerBtn.title = 'Google Account & Drive Sync';
+          triggerBtn.setAttribute('aria-label', 'Continue with Google');
+        }
         if (gIcon) gIcon.style.display = 'inline-flex';
         if (hAvatar) hAvatar.style.display = 'none';
         if (hInitials) hInitials.style.display = 'none';
         if (hDot) hDot.style.display = 'none';
-        if (hLabel) hLabel.innerText = 'Continue with Google';
+        if (hLabel) {
+          hLabel.style.display = '';
+          hLabel.innerText = 'Continue with Google';
+        }
         if (dropSwitchBtn) dropSwitchBtn.innerText = 'Switch Google Account';
       }
     }

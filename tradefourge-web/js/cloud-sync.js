@@ -821,11 +821,9 @@
         });
       }
 
-      if (this._unsubscribeTheme) this._unsubscribeTheme();
-      if (typeof ThemeManager !== 'undefined' && ThemeManager.subscribe) {
-        this._unsubscribeTheme = ThemeManager.subscribe(() => {
-          this._onThemeChanged();
-        });
+      if (this._unsubscribeTheme) {
+        this._unsubscribeTheme();
+        this._unsubscribeTheme = null;
       }
 
       if (this._unsubscribeAuth) this._unsubscribeAuth();
@@ -887,17 +885,9 @@
     },
 
     _onThemeChanged() {
-      if (this._booting) return;
-      if (typeof GoogleAuthManager === 'undefined' || !GoogleAuthManager.account || !GoogleAuthManager.account.sub) {
-        return;
-      }
-      const sub = GoogleAuthManager.account.sub;
-      const meta = this._readMeta(sub);
-      const nextDirty = Object.assign({}, meta.dirtyDomains, { settings: true });
-      this._writeMeta(sub, { dirtyDomains: nextDirty });
-      if (this.status !== 'migration_pending') {
-        this._scheduleAutoSync();
-      }
+      // Visual theme preferences remain local-only so switching themes never
+      // triggers cloud sync, reloads, or remote workspace pulls.
+      return;
     },
 
     _onStorageMutation(event) {
@@ -1311,7 +1301,10 @@
       const remoteSnap = CloudSyncUtils.extractSnapshotFromRemoteDb(remoteDb);
       StorageManager.applySnapshot(remoteSnap, { silentSync: true });
 
-      if (remoteSnap.theme && typeof ThemeManager !== 'undefined' && ThemeManager.isValidTheme && ThemeManager.isValidTheme(remoteSnap.theme)) {
+      const hasLocalTheme = typeof ThemeManager !== 'undefined' &&
+        typeof ThemeManager.hasStoredThemePreference === 'function' &&
+        ThemeManager.hasStoredThemePreference();
+      if (!hasLocalTheme && remoteSnap.theme && typeof ThemeManager !== 'undefined' && ThemeManager.isValidTheme && ThemeManager.isValidTheme(remoteSnap.theme)) {
         ThemeManager.applyTheme(remoteSnap.theme, { persist: true, silent: false });
       }
 
@@ -1495,7 +1488,10 @@
       };
 
       StorageManager.applySnapshot(mergedSnapshot, { silentSync: true });
-      if (mergedSnapshot.theme && typeof ThemeManager !== 'undefined' && ThemeManager.isValidTheme && ThemeManager.isValidTheme(mergedSnapshot.theme)) {
+      const hasLocalTheme = typeof ThemeManager !== 'undefined' &&
+        typeof ThemeManager.hasStoredThemePreference === 'function' &&
+        ThemeManager.hasStoredThemePreference();
+      if (!hasLocalTheme && mergedSnapshot.theme && typeof ThemeManager !== 'undefined' && ThemeManager.isValidTheme && ThemeManager.isValidTheme(mergedSnapshot.theme)) {
         ThemeManager.applyTheme(mergedSnapshot.theme, { persist: true, silent: false });
       }
       this._emit('workspace_reloaded', { reason: 'conflict_merged', conflicts: allConflicts });
@@ -1550,6 +1546,11 @@
         this.lastError = { code: 'AUTH_EXPIRED', message: 'Google authorization expired. Please reconnect.' };
         this._emit('auth_expired');
         return { skipped: true, reason: 'auth_expired' };
+      }
+
+      if (this._debounceTimer) {
+        clearTimeout(this._debounceTimer);
+        this._debounceTimer = null;
       }
 
       this._syncPromise = (async () => {
@@ -1675,6 +1676,41 @@
       return GoogleDriveStorage.listBackups(null, limit);
     },
 
+    async deleteCloudBackup(fileId) {
+      if (!fileId) throw new Error('Backup file ID is required.');
+      if (typeof GoogleAuthManager === 'undefined' || !GoogleAuthManager.account) {
+        throw new Error('Sign in with Google first to manage cloud backups.');
+      }
+      if (!GoogleAuthManager.hasValidToken()) {
+        const err = new Error('Google session expired. Please reconnect first.');
+        err.code = 'AUTH_EXPIRED';
+        this.status = 'auth_expired';
+        this.lastError = { code: 'AUTH_EXPIRED', message: err.message };
+        this._emit('auth_expired', { error: this.lastError });
+        throw err;
+      }
+
+      const account = GoogleAuthManager.account;
+      const sub = account.sub;
+      const meta = this._readMeta(sub);
+      try {
+        const res = await GoogleDriveStorage.deleteBackupById(fileId, {
+          cachedFolderIds: meta.folderIds || {}
+        });
+        this._emit('backup_deleted', {
+          fileId: (res && res.deletedFileId) || fileId,
+          fileName: (res && res.deletedFileName) || ''
+        });
+        return res;
+      } catch (err) {
+        const code = err && err.code ? err.code : '';
+        if (code === 'AUTH_EXPIRED' || code === 'UNAUTHENTICATED' || code === 'DRIVE_SCOPE_DENIED' || code === 'OFFLINE') {
+          this._handleSyncError(sub, err);
+        }
+        throw err;
+      }
+    },
+
     async restoreFromCloud({ createSafetyBackupFirst = true } = {}) {
       if (typeof GoogleAuthManager === 'undefined' || !GoogleAuthManager.account) {
         throw new Error('Sign in with Google first to restore from Google Drive.');
@@ -1740,7 +1776,10 @@
 
         const restoredSnap = res.restoredSnapshot;
         StorageManager.applySnapshot(restoredSnap, { silentSync: true });
-        if (restoredSnap.theme && typeof ThemeManager !== 'undefined' && ThemeManager.isValidTheme && ThemeManager.isValidTheme(restoredSnap.theme)) {
+        const hasLocalTheme = typeof ThemeManager !== 'undefined' &&
+          typeof ThemeManager.hasStoredThemePreference === 'function' &&
+          ThemeManager.hasStoredThemePreference();
+        if (!hasLocalTheme && restoredSnap.theme && typeof ThemeManager !== 'undefined' && ThemeManager.isValidTheme && ThemeManager.isValidTheme(restoredSnap.theme)) {
           ThemeManager.applyTheme(restoredSnap.theme, { persist: true, silent: false });
         }
 

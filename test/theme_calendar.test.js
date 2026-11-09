@@ -187,17 +187,15 @@
     });
     doc.body.appendChild(themeGrid);
 
-    // Calendar UI mock
+    // Calendar UI mock (legend footer removed cleanly from DOM)
     const calGrid = doc.registerById('calendarGrid', new MockElement('div', doc));
     const calTitle = doc.registerById('calendarTitle', new MockElement('span', doc));
     const calPnl = doc.registerById('calMonthlyPnl', new MockElement('span', doc));
     const calDays = doc.registerById('calMonthlyDays', new MockElement('span', doc));
-    const calNote = doc.registerById('calendarHeatmapLegendNote', new MockElement('span', doc));
     doc.body.appendChild(calGrid);
     doc.body.appendChild(calTitle);
     doc.body.appendChild(calPnl);
     doc.body.appendChild(calDays);
-    doc.body.appendChild(calNote);
 
     global.document = doc;
     return doc;
@@ -278,12 +276,14 @@
     StorageManager.saveNotes('Strict risk management rule');
     global.localStorage.setItem(ThemeManager.SETTINGS_KEY, JSON.stringify({ currency: 'INR', compactMode: true }));
 
+    assert.strictEqual(ThemeManager.hasStoredThemePreference(), false);
     ThemeManager.init();
     const events = [];
     const unsub = ThemeManager.subscribe((payload) => events.push(payload));
 
     // Switch Classic -> Midnight
     ThemeManager.setTheme('midnight');
+    assert.strictEqual(ThemeManager.hasStoredThemePreference(), true);
     assert.strictEqual(document.documentElement.getAttribute('data-theme'), 'midnight');
     assert.strictEqual(document.querySelector('meta[name="theme-color"]').getAttribute('content'), '#0B1218');
     assert.strictEqual(global.localStorage.getItem(ThemeManager.STORAGE_KEY), 'midnight');
@@ -444,7 +444,7 @@
     CalendarManager.init(metrics, true);
 
     assert.strictEqual(document.getElementById('calendarTitle').innerText, 'October 2026');
-    assert.ok(document.getElementById('calendarHeatmapLegendNote').textContent.includes('10,000'));
+    assert.strictEqual(document.getElementById('calendarHeatmapLegendNote'), null, 'Calendar renders cleanly without legend note element');
 
     // Collect rendered active cells from mock DOM
     const cells = document.getElementById('calendarGrid').querySelectorAll('.calendar-day-cell');

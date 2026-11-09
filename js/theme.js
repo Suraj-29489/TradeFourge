@@ -60,6 +60,27 @@ const ThemeManager = {
     return this.isValidTheme(cleaned) ? cleaned : this.DEFAULT_THEME;
   },
 
+  hasStoredThemePreference() {
+    const storage = this._getStorage();
+    if (!storage) return false;
+    try {
+      const direct = storage.getItem(this.STORAGE_KEY);
+      if (direct && this.isValidTheme(direct.trim().toLowerCase())) {
+        return true;
+      }
+      const rawSettings = storage.getItem(this.SETTINGS_KEY);
+      if (rawSettings) {
+        const parsed = JSON.parse(rawSettings);
+        if (parsed && parsed.theme && this.isValidTheme(String(parsed.theme).trim().toLowerCase())) {
+          return true;
+        }
+      }
+    } catch (e) {
+      // Ignore malformed storage entries
+    }
+    return false;
+  },
+
   getStoredTheme() {
     const storage = this._getStorage();
     if (!storage) return this.DEFAULT_THEME;

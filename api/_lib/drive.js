@@ -561,6 +561,33 @@ async function readOwnedBackupFile(ctx, { fileId, backupsFolderId }) {
   return { meta, data };
 }
 
+async function deleteOwnedBackupFile(ctx, { fileId, backupsFolderId }) {
+  if (!fileId || !backupsFolderId) {
+    throw _makeDriveError('INVALID_REQUEST', 'Backup file ID is required.', 400);
+  }
+  const meta = await verifyItemExists(ctx, fileId);
+  if (!meta) {
+    throw _makeDriveError('NOT_FOUND', 'Selected backup file could not be found.', 404);
+  }
+  if (meta.mimeType === FOLDER_MIME) {
+    throw _makeDriveError('FORBIDDEN', 'Folders cannot be deleted from backups.', 403);
+  }
+  const inUserBackups = Array.isArray(meta.parents) && meta.parents.includes(backupsFolderId);
+  if (!inUserBackups) {
+    throw _makeDriveError('FORBIDDEN', 'Backup file does not belong to your TradeForge Backups folder.', 403);
+  }
+  await driveRequest({
+    ...ctx,
+    url: `${ctx.endpoints.driveApiUrl}/${encodeURIComponent(fileId)}`,
+    method: 'DELETE'
+  });
+  return {
+    meta,
+    deletedFileId: meta.id || fileId,
+    deletedFileName: meta.name || ''
+  };
+}
+
 async function saveExportFile(ctx, { exportsFolderId, fileName, content, mimeType = JSON_MIME }) {
   if (!exportsFolderId) {
     throw _makeDriveError('MISSING_FOLDER', 'Exports folder is missing on Google Drive.', 400);
@@ -593,5 +620,6 @@ module.exports = {
   createBackupSnapshot,
   listBackups,
   readOwnedBackupFile,
+  deleteOwnedBackupFile,
   saveExportFile
 };

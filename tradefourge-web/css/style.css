@@ -789,13 +789,41 @@ html, body {
   transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
               transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
               background-color 0.18s ease,
-              border-color 0.18s ease;
+              border-color 0.18s ease,
+              border-right-width 0.18s ease;
   overflow: hidden;
+  will-change: width;
+}
+
+.sidebar-inner {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  opacity: 1;
+  transform: translateX(0);
+  visibility: visible;
+  transition: opacity 0.18s ease 0.04s,
+              transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0s;
 }
 
 body.sidebar-collapsed .sidebar {
   width: 0;
+  border-right-width: 0;
   border-right-color: transparent;
+}
+
+body.sidebar-collapsed .sidebar-inner {
+  opacity: 0;
+  transform: translateX(-16px);
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.12s ease,
+              transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0s linear 0.22s;
 }
 
 .sidebar-header {
@@ -804,6 +832,8 @@ body.sidebar-collapsed .sidebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
+  white-space: nowrap;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--bg-sidebar);
 }
@@ -812,6 +842,8 @@ body.sidebar-collapsed .sidebar {
   display: flex;
   align-items: center;
   gap: 11px;
+  min-width: 0;
+  white-space: nowrap;
   background: transparent;
   border: none;
   padding: 6px 4px;
@@ -998,6 +1030,8 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   letter-spacing: 0.09em;
   color: var(--text-dim);
   text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .sidebar-nav {
@@ -1007,6 +1041,7 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .nav-item {
@@ -1020,8 +1055,11 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: all 0.14s ease;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
   text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .nav-item svg {
@@ -1104,6 +1142,8 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .sidebar-bridge-card {
@@ -2303,6 +2343,24 @@ body.sidebar-collapsed .sidebar-reveal-btn {
     transform: translateX(-100%);
     border-right: 1px solid var(--border-strong);
     box-shadow: var(--shadow-lg);
+    transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.18s ease,
+                border-color 0.18s ease;
+    will-change: transform;
+  }
+
+  body.sidebar-collapsed .sidebar {
+    width: 276px !important;
+    border-right: 1px solid var(--border-strong);
+  }
+
+  .sidebar-inner {
+    width: 100%;
+    min-width: 0;
+    opacity: 1 !important;
+    transform: none !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
   }
 
   body.sidebar-mobile-open .sidebar {
@@ -2326,14 +2384,11 @@ body.sidebar-collapsed .sidebar-reveal-btn {
     display: inline-flex !important;
     height: 34px;
     padding: 0 8px;
+    flex-shrink: 0;
   }
 
   .btn-mobile-add-top {
     display: inline-flex;
-  }
-
-  #btnExportJSONTop {
-    display: none;
   }
 
   .mobile-bottom-nav {
@@ -2347,11 +2402,19 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   }
 
   .header-left {
+    flex: 1;
+    min-width: 0;
     gap: 8px;
+  }
+
+  .header-title-row {
+    min-width: 0;
   }
 
   .page-title {
     font-size: 0.96rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .header-right {
@@ -2368,12 +2431,6 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   }
 
   .date-filter select {
-    font-size: 0.72rem;
-  }
-
-  .btn-upload-csv {
-    height: 32px;
-    padding: 0 10px;
     font-size: 0.72rem;
   }
 
@@ -2432,6 +2489,12 @@ body.sidebar-collapsed .sidebar-reveal-btn {
   }
 }
 
+@media (max-width: 480px) {
+  .sidebar-reveal-btn .brand-name-nav {
+    display: none;
+  }
+}
+
 @media (max-width: 420px) {
   .top-header {
     padding: 0 8px;
@@ -2439,17 +2502,6 @@ body.sidebar-collapsed .sidebar-reveal-btn {
 
   .page-title {
     font-size: 0.88rem;
-    max-width: 96px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .btn-upload-csv span {
-    display: none;
-  }
-
-  .btn-upload-csv {
-    padding: 0 9px;
   }
 
   .donut-card-body {

@@ -757,11 +757,7 @@
 
     async signOut(options = {}) {
       const clearGoogle = options.clearGoogle !== false;
-      this._clearPersistedSessions();
       const prevUser = this.user ? Object.assign({}, this.user) : null;
-
-      this.user = null;
-      this.status = 'unauthenticated';
 
       if (clearGoogle && typeof GoogleAuthManager !== 'undefined') {
         this._ignoreGoogleEvents = true;
@@ -773,10 +769,18 @@
       }
 
       if (prevUser && prevUser.provider === 'email') {
-        try {
-          await AuthServiceAdapter.logoutBackend();
-        } catch (e) {}
+        const res = await AuthServiceAdapter.logoutBackend();
+        if (res && res.ok === false) {
+          const err = new Error(res.message || 'Sign out failed on server. Please try again.');
+          err.code = res.code || 'LOGOUT_FAILED';
+          throw err;
+        }
       }
+
+      this._clearPersistedSessions();
+      this.user = null;
+      this.status = 'unauthenticated';
+      this._inFlightGooglePromise = null;
 
       this._emit('session_locked', { reason: 'user_sign_out', previousUser: prevUser });
       return true;

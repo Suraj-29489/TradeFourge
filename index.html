@@ -315,7 +315,8 @@
   <div class="app-layout">
     <!-- ==================== LEFT SIDEBAR NAVIGATION ==================== -->
     <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
+      <div class="sidebar-inner">
+        <div class="sidebar-header">
         <button type="button" class="brand-logo" id="sidebarBrandToggle" title="Collapse Sidebar">
           <div class="logo-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -453,6 +454,7 @@
           <button type="button" class="btn-sidebar-util danger" id="btnClearData">Clear Data</button>
         </div>
       </div>
+      </div>
     </aside>
 
     <!-- ==================== MAIN CONTENT AREA ==================== -->
@@ -494,13 +496,6 @@
         </div>
 
         <div class="header-right">
-          <!-- Currency Switcher ($ / ₹) -->
-          <div class="currency-slider-toggle" id="currencySliderToggle" data-currency="USD" title="Switch display currency">
-            <div class="currency-slider-pill"></div>
-            <button type="button" class="currency-opt active" id="btnCurrUSD" data-curr="USD">$ USD</button>
-            <button type="button" class="currency-opt" id="btnCurrINR" data-curr="INR">₹ INR</button>
-          </div>
-
           <!-- Date Range Filter + Custom Range Popover -->
           <div class="date-filter-wrapper">
             <div class="date-filter">
@@ -555,26 +550,6 @@
             </svg>
           </button>
 
-          <!-- Export JSON Utility Button -->
-          <button type="button" class="btn-header-secondary" id="btnExportJSONTop" title="Export Trades as JSON">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            <span class="btn-label-desktop">Export</span>
-          </button>
-
-          <!-- Upload CSV Button -->
-          <button class="btn-upload-csv" id="btnUploadCSVTop">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-            <span>Upload CSV</span>
-          </button>
-
           <!-- Google Account & Cloud Sync Control -->
           <div class="google-account-control" id="googleAccountControl">
             <button type="button" class="google-auth-trigger-btn" id="btnGoogleAccountTrigger" aria-expanded="false" aria-haspopup="true" title="Google Account &amp; Drive Sync">
@@ -621,6 +596,9 @@
                 </button>
                 <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownSync">
                   Sync Now
+                </button>
+                <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownUploadCSV">
+                  Upload CSV
                 </button>
                 <button type="button" class="google-dropdown-btn" id="btnGoogleDropdownSwitch">
                   Switch Google Account
@@ -1086,26 +1064,6 @@
             </div>
             <div class="section-body">
               <div class="calendar-grid" id="calendarGrid"></div>
-              <div class="calendar-heatmap-legend" id="calendarHeatmapLegend" aria-label="Daily P&amp;L heatmap intensity scale">
-                <span class="heatmap-legend-note" id="calendarHeatmapLegendNote">Intensity scaled by daily P&amp;L % of starting capital (5 tiers each side)</span>
-                <div class="heatmap-legend-scale" aria-hidden="true">
-                  <span class="heatmap-scale-edge loss">Loss (&le;-2%)</span>
-                  <div class="heatmap-scale-swatches">
-                    <span class="heatmap-swatch neg-5" title="High Loss (&le; -2.0%)"></span>
-                    <span class="heatmap-swatch neg-4" title="Strong Loss (-1.0% to -2.0%)"></span>
-                    <span class="heatmap-swatch neg-3" title="Moderate Loss (-0.5% to -1.0%)"></span>
-                    <span class="heatmap-swatch neg-2" title="Mild Loss (-0.25% to -0.5%)"></span>
-                    <span class="heatmap-swatch neg-1" title="Small Loss (0% to -0.25%)"></span>
-                    <span class="heatmap-swatch neutral" title="Flat / No Net P&amp;L (0%)"></span>
-                    <span class="heatmap-swatch pos-1" title="Small Profit (0% to +0.25%)"></span>
-                    <span class="heatmap-swatch pos-2" title="Mild Profit (+0.25% to +0.5%)"></span>
-                    <span class="heatmap-swatch pos-3" title="Moderate Profit (+0.5% to +1.0%)"></span>
-                    <span class="heatmap-swatch pos-4" title="Strong Profit (+1.0% to +2.0%)"></span>
-                    <span class="heatmap-swatch pos-5" title="High Profit (&ge; +2.0%)"></span>
-                  </div>
-                  <span class="heatmap-scale-edge profit">Profit (&ge;+2%)</span>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -1212,7 +1170,7 @@
             <div style="font-size: 2rem; margin-bottom: 12px;">📊</div>
             <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">No Trade Data Available</h3>
             <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 420px; margin: 0 auto 18px;">Upload a CSV trade history file or add manual trades to unlock hold time and lot size analytics.</p>
-            <button class="btn-upload-csv" onclick="document.getElementById('btnUploadCSVTop').click()" style="margin: 0 auto;">Upload CSV</button>
+            <button class="btn-upload-csv" onclick="App.openUploadModal()" style="margin: 0 auto;">Upload CSV</button>
           </div>
 
           <div id="analyticsMainContent" style="display: flex; flex-direction: column; gap: 22px;">
@@ -2480,8 +2438,11 @@
                     <div class="settings-desc">Switch all P&amp;L metrics, charts, and tables between USD ($) and INR (₹)</div>
                   </div>
                   <div class="settings-action">
-                    <button type="button" class="btn-secondary" onclick="App.setCurrency('USD')">$ USD</button>
-                    <button type="button" class="btn-secondary" onclick="App.setCurrency('INR')">₹ INR</button>
+                    <div class="currency-slider-toggle" id="currencySliderToggle" data-currency="USD" title="Switch display currency">
+                      <div class="currency-slider-pill"></div>
+                      <button type="button" class="currency-opt active" id="btnCurrUSD" data-curr="USD">$ USD</button>
+                      <button type="button" class="currency-opt" id="btnCurrINR" data-curr="INR">₹ INR</button>
+                    </div>
                   </div>
                 </div>
 
@@ -2613,7 +2574,7 @@
                     <div class="settings-desc">Upload Exness, Zuperior, or MT4/MT5 CSV trade logs with automatic duplicate protection</div>
                   </div>
                   <div class="settings-action">
-                    <button type="button" class="btn-upload-csv" onclick="document.getElementById('btnUploadCSVTop').click()">Upload CSV File</button>
+                    <button type="button" class="btn-upload-csv" onclick="App.openUploadModal()">Upload CSV File</button>
                   </div>
                 </div>
 

@@ -1,7 +1,7 @@
 /**
  * TradeForge Drive - Backups Listing, Manual Snapshot & Safe Restore Endpoint
  * GET  /api/drive/backups
- * POST /api/drive/backups  (action: 'create' | 'restore')
+ * POST /api/drive/backups  (action: 'create' | 'restore' | 'delete')
  */
 
 const {
@@ -17,6 +17,7 @@ const {
   listBackups,
   createBackupSnapshot,
   readOwnedBackupFile,
+  deleteOwnedBackupFile,
   readDatabase,
   writeDomainFile
 } = require('../drive');
@@ -203,6 +204,25 @@ module.exports = async function handler(req, res) {
           folderIds,
           fileIds,
           metadata: metadataPayload
+        });
+      }
+
+      if (action === 'delete') {
+        if (!body.fileId || typeof body.fileId !== 'string') {
+          return sendJson(res, 400, { ok: false, code: 'MISSING_FILE_ID', message: 'Backup fileId is required.' });
+        }
+
+        const deleted = await deleteOwnedBackupFile(driveCtx, {
+          fileId: body.fileId,
+          backupsFolderId: folderIds.backups
+        });
+
+        return sendJson(res, 200, {
+          ok: true,
+          action: 'delete',
+          deletedFileId: deleted.deletedFileId,
+          deletedFileName: deleted.deletedFileName,
+          folderIds
         });
       }
 

@@ -414,7 +414,7 @@ function createMockGoogleServer() {
         if (pathname.startsWith('/drive/v3/files/') && method === 'GET') {
           const fileId = decodeURIComponent(pathname.replace('/drive/v3/files/', ''));
           const rec = store.get(fileId);
-          if (!rec) {
+          if (!rec || rec.trashed) {
             return _makeJsonRes(res, 404, { error: { message: 'File not found' } });
           }
           if (urlObj.searchParams.get('alt') === 'media') {
@@ -424,6 +424,18 @@ function createMockGoogleServer() {
           }
           const { _content, ...pub } = rec;
           return _makeJsonRes(res, 200, pub);
+        }
+
+        if (pathname.startsWith('/drive/v3/files/') && method === 'DELETE') {
+          const fileId = decodeURIComponent(pathname.replace('/drive/v3/files/', ''));
+          const rec = store.get(fileId);
+          if (!rec || rec.trashed) {
+            return _makeJsonRes(res, 404, { error: { message: 'File not found' } });
+          }
+          store.delete(fileId);
+          res.writeHead(204);
+          res.end();
+          return;
         }
       }
 
@@ -838,6 +850,80 @@ async function runTests() {
     assert.strictEqual(validRestore.json.restoredTrades, 1);
     assert.ok(validRestore.json.safetyBackupFile.name.includes('pre-backup-restore'));
 
+    // Backup deletion ownership & isolation checks
+    const secondBk = await rawRequest(appUrl, '/api/drive/backups', {
+      method: 'POST',
+      jar: aliceJar,
+      headers: { Origin: appUrl },
+      body: { action: 'create', reason: 'delete-target', snapshot: initialSnap }
+    });
+    assert.strictEqual(secondBk.status, 200);
+    const aliceDeleteId = secondBk.json.file.id;
+
+    // Cross-origin delete blocked (403)
+    const evilDelete = await rawRequest(appUrl, '/api/drive/backups', {
+      method: 'POST',
+      jar: aliceJar,
+      headers: { Origin: 'https://evil.example' },
+      body: { action: 'delete', fileId: aliceDeleteId }
+    });
+    assert.strictEqual(evilDelete.status, 403);
+
+    // Missing fileId rejected (400)
+    const missingDelId = await rawRequest(appUrl, '/api/drive/backups', {
+      method: 'POST',
+      jar: aliceJar,
+      headers: { Origin: appUrl },
+      body: { action: 'delete' }
+    });
+    assert.strictEqual(missingDelId.status, 400);
+
+    // Deleting User Data/trades.json via backups delete route must return 403 FORBIDDEN!
+    const nonBackupDelete = await rawRequest(appUrl, '/api/drive/backups', {
+      method: 'POST',
+      jar: aliceJar,
+      headers: { Origin: appUrl },
+      body: { action: 'delete', fileId: push1.json.fileIds.trades }
+    });
+    assert.strictEqual(nonBackupDelete.status, 403);
+
+    // Deleting Backups/ folder itself must return 403 FORBIDDEN!
+    const folderDelete = await rawRequest(appUrl, '/api/drive/backups', {
+      method: 'POST',
+      jar: aliceJar,
+      headers: { Origin: appUrl },
+      body: { action: 'delete', fileId: push1.json.folderIds.backups }
+    });
+    assert.strictEqual(folderDelete.status, 403);
+
+    // Valid delete removes ONLY targeted backup file; siblings and User Data/ stay untouched
+    const listBeforeDel = await rawRequest(appUrl, '/api/drive/backups?limit=10', { jar: aliceJar });
+    const countBeforeDel = listBeforeDel.json.backups.length;
+    const validDel = await rawRequest(appUrl, '/api/drive/backups', {
+      method: 'POST',
+      jar: aliceJar,
+      headers: { Origin: appUrl },
+      body: { action: 'delete', fileId: aliceDeleteId }
+    });
+    assert.strictEqual(validDel.status, 200);
+    assert.strictEqual(validDel.json.ok, true);
+    assert.strictEqual(validDel.json.action, 'delete');
+    assert.strictEqual(validDel.json.deletedFileId, aliceDeleteId);
+
+    const listAfterDel = await rawRequest(appUrl, '/api/drive/backups?limit=10', { jar: aliceJar });
+    assert.strictEqual(listAfterDel.json.backups.length, countBeforeDel - 1);
+    assert.ok(!listAfterDel.json.backups.some((b) => b.id === aliceDeleteId), 'Deleted backup must disappear from listing');
+    assert.ok(listAfterDel.json.backups.some((b) => b.id === aliceBackupId), 'Sibling backup must remain intact');
+
+    // Second delete of already-deleted ID returns 404
+    const dupDel = await rawRequest(appUrl, '/api/drive/backups', {
+      method: 'POST',
+      jar: aliceJar,
+      headers: { Origin: appUrl },
+      body: { action: 'delete', fileId: aliceDeleteId }
+    });
+    assert.strictEqual(dupDel.status, 404);
+
     // Sign in Bob with pre-existing legacy TradeForge/Database/* files
     const bobStore = mockGoogle.getDriveStore('sub_bob_2002');
     bobStore.set('bob_root', {
@@ -893,7 +979,7 @@ async function runTests() {
     const bobJar = new CookieJar();
     await performFullOAuthLogin(appUrl, googleUrl, bobJar);
 
-    // Bob tries restoring Alice's backup ID -> strictly isolated (404 / 403, never succeeds!)
+    // Bob tries restoring or deleting Alice's backup ID -> strictly isolated (404 / 403, never succeeds!)
     const crossRestore = await rawRequest(appUrl, '/api/drive/backups', {
       method: 'POST',
       jar: bobJar,
@@ -901,6 +987,14 @@ async function runTests() {
       body: { action: 'restore', fileId: aliceBackupId }
     });
     assert.ok(crossRestore.status === 404 || crossRestore.status === 403, 'Cross-user backup access must be blocked');
+
+    const crossDelete = await rawRequest(appUrl, '/api/drive/backups', {
+      method: 'POST',
+      jar: bobJar,
+      headers: { Origin: appUrl },
+      body: { action: 'delete', fileId: aliceBackupId }
+    });
+    assert.ok(crossDelete.status === 404 || crossDelete.status === 403, 'Cross-user backup delete must be blocked');
 
     // Bob reads his own legacy Database/ data seamlessly through User Data bridge
     const bobFull = await rawRequest(appUrl, '/api/drive/sync?mode=full', { jar: bobJar });
@@ -1092,6 +1186,15 @@ async function runTests() {
     });
     assert.strictEqual(rwBkRestore.status, 200);
     assert.strictEqual(rwBkRestore.json.restoredTrades, 1);
+
+    const rwBkDelete = await rawRequest(appUrl, '/api/drive?__route=backups', {
+      method: 'POST',
+      jar: rwJar,
+      headers: { Origin: appUrl },
+      body: { action: 'delete', fileId: rwBkCreate.json.file.id }
+    });
+    assert.strictEqual(rwBkDelete.status, 200);
+    assert.strictEqual(rwBkDelete.json.deletedFileId, rwBkCreate.json.file.id);
 
     const rwLogout = await rawRequest(appUrl, '/api/auth?__route=logout', {
       method: 'POST',

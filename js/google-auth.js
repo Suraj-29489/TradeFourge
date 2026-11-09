@@ -630,16 +630,38 @@
       const endpoints = _getEndpoints();
       const logoutUrl = endpoints.logout || '/api/auth/logout';
 
-      if (fetchFn) {
+      if (fetchFn && this.serverConfigured) {
+        let res;
         try {
-          await fetchFn(logoutUrl, {
+          res = await fetchFn(logoutUrl, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: '{}'
           });
         } catch (e) {
-          // Offline sign-out still resets local session cleanly
+          const err = this._buildError(
+            'LOGOUT_FAILED',
+            'Unable to reach the server to sign out. Please check your connection and try again.'
+          );
+          this.lastError = { code: err.code, message: err.message };
+          this._emit('auth_error', { error: this.lastError });
+          throw err;
+        }
+
+        let data = null;
+        try {
+          if (res && typeof res.json === 'function') {
+            data = await res.json();
+          }
+        } catch (e) {}
+
+        if (!res || !res.ok || (data && data.ok === false)) {
+          const msg = (data && data.message) || `Sign out failed (HTTP ${res ? res.status : 'error'}). Please try again.`;
+          const err = this._buildError('LOGOUT_FAILED', msg);
+          this.lastError = { code: err.code, message: err.message };
+          this._emit('auth_error', { error: this.lastError });
+          throw err;
         }
       }
 

@@ -857,6 +857,7 @@ select.form-control option {
   min-height: 56px;
   background-color: var(--bg-lowest);
   border: 1px solid var(--border-color);
+  box-shadow: none;
   border-radius: var(--radius-sm);
   padding: 6px 8px;
   display: flex;
@@ -866,13 +867,13 @@ select.form-control option {
   cursor: pointer;
   min-width: 0;
   overflow: hidden;
-  transition: border-color 0.14s ease, background-color 0.14s ease, transform 0.1s ease;
+  transition: background-color 0.14s ease, border-color 0.14s ease;
 }
 
 .calendar-day-cell:hover:not(.other-month) {
   background-color: var(--bg-card-hover);
-  border-color: var(--btn-subtle-border-hover);
-  transform: translateY(-1px);
+  border-color: var(--border-color);
+  box-shadow: none;
 }
 
 .calendar-day-cell:focus-visible {
@@ -927,15 +928,17 @@ select.form-control option {
   white-space: nowrap;
 }
 
-/* Fallback positive / negative states + 5-tier Dynamic P&L Heatmap */
+/* Flat Neutral-Border 5-Tier Dynamic P&L Heatmap */
 .calendar-day-cell.profit-day {
   background-color: var(--cal-profit-bg-3);
-  border-color: var(--cal-profit-border-3);
+  border-color: var(--border-color);
+  box-shadow: none;
 }
 
 .calendar-day-cell.profit-day:hover:not(.other-month) {
   background-color: var(--cal-profit-hover-3);
-  border-color: var(--cal-profit-border-3);
+  border-color: var(--border-color);
+  box-shadow: none;
 }
 
 .calendar-day-cell.profit-day .day-pnl {
@@ -944,11 +947,11 @@ select.form-control option {
 
 .calendar-day-cell.profit-day.pnl-tier-pos-1 {
   background-color: var(--cal-profit-bg-1);
-  border-color: var(--cal-profit-border-1);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.profit-day.pnl-tier-pos-1:hover:not(.other-month) {
   background-color: var(--cal-profit-hover-1);
-  border-color: var(--cal-profit-border-2);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.profit-day.pnl-tier-pos-1 .day-pnl {
   color: var(--cal-profit-text-1);
@@ -956,11 +959,11 @@ select.form-control option {
 
 .calendar-day-cell.profit-day.pnl-tier-pos-2 {
   background-color: var(--cal-profit-bg-2);
-  border-color: var(--cal-profit-border-2);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.profit-day.pnl-tier-pos-2:hover:not(.other-month) {
   background-color: var(--cal-profit-hover-2);
-  border-color: var(--cal-profit-border-3);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.profit-day.pnl-tier-pos-2 .day-pnl {
   color: var(--cal-profit-text-2);
@@ -968,11 +971,11 @@ select.form-control option {
 
 .calendar-day-cell.profit-day.pnl-tier-pos-3 {
   background-color: var(--cal-profit-bg-3);
-  border-color: var(--cal-profit-border-3);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.profit-day.pnl-tier-pos-3:hover:not(.other-month) {
   background-color: var(--cal-profit-hover-3);
-  border-color: var(--cal-profit-border-4);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.profit-day.pnl-tier-pos-3 .day-pnl {
   color: var(--cal-profit-text-3);
@@ -980,11 +983,11 @@ select.form-control option {
 
 .calendar-day-cell.profit-day.pnl-tier-pos-4 {
   background-color: var(--cal-profit-bg-4);
-  border-color: var(--cal-profit-border-4);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.profit-day.pnl-tier-pos-4:hover:not(.other-month) {
   background-color: var(--cal-profit-hover-4);
-  border-color: var(--cal-profit-border-5);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.profit-day.pnl-tier-pos-4 .day-pnl,
 .calendar-day-cell.profit-day.pnl-tier-pos-4 .day-number {
@@ -997,11 +1000,11 @@ select.form-control option {
 
 .calendar-day-cell.profit-day.pnl-tier-pos-5 {
   background-color: var(--cal-profit-bg-5);
-  border-color: var(--cal-profit-border-5);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.profit-day.pnl-tier-pos-5:hover:not(.other-month) {
   background-color: var(--cal-profit-hover-5);
-  border-color: var(--cal-profit-border-5);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.profit-day.pnl-tier-pos-5 .day-pnl,
 .calendar-day-cell.profit-day.pnl-tier-pos-5 .day-number {
@@ -1014,12 +1017,14 @@ select.form-control option {
 
 .calendar-day-cell.loss-day {
   background-color: var(--cal-loss-bg-3);
-  border-color: var(--cal-loss-border-3);
+  border-color: var(--border-color);
+  box-shadow: none;
 }
 
 .calendar-day-cell.loss-day:hover:not(.other-month) {
   background-color: var(--cal-loss-hover-3);
-  border-color: var(--cal-loss-border-3);
+  border-color: var(--border-color);
+  box-shadow: none;
 }
 
 .calendar-day-cell.loss-day .day-pnl {
@@ -1028,11 +1033,11 @@ select.form-control option {
 
 .calendar-day-cell.loss-day.pnl-tier-neg-1 {
   background-color: var(--cal-loss-bg-1);
-  border-color: var(--cal-loss-border-1);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.loss-day.pnl-tier-neg-1:hover:not(.other-month) {
   background-color: var(--cal-loss-hover-1);
-  border-color: var(--cal-loss-border-2);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.loss-day.pnl-tier-neg-1 .day-pnl {
   color: var(--cal-loss-text-1);
@@ -1040,11 +1045,11 @@ select.form-control option {
 
 .calendar-day-cell.loss-day.pnl-tier-neg-2 {
   background-color: var(--cal-loss-bg-2);
-  border-color: var(--cal-loss-border-2);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.loss-day.pnl-tier-neg-2:hover:not(.other-month) {
   background-color: var(--cal-loss-hover-2);
-  border-color: var(--cal-loss-border-3);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.loss-day.pnl-tier-neg-2 .day-pnl {
   color: var(--cal-loss-text-2);
@@ -1052,11 +1057,11 @@ select.form-control option {
 
 .calendar-day-cell.loss-day.pnl-tier-neg-3 {
   background-color: var(--cal-loss-bg-3);
-  border-color: var(--cal-loss-border-3);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.loss-day.pnl-tier-neg-3:hover:not(.other-month) {
   background-color: var(--cal-loss-hover-3);
-  border-color: var(--cal-loss-border-4);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.loss-day.pnl-tier-neg-3 .day-pnl {
   color: var(--cal-loss-text-3);
@@ -1064,11 +1069,11 @@ select.form-control option {
 
 .calendar-day-cell.loss-day.pnl-tier-neg-4 {
   background-color: var(--cal-loss-bg-4);
-  border-color: var(--cal-loss-border-4);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.loss-day.pnl-tier-neg-4:hover:not(.other-month) {
   background-color: var(--cal-loss-hover-4);
-  border-color: var(--cal-loss-border-5);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.loss-day.pnl-tier-neg-4 .day-pnl,
 .calendar-day-cell.loss-day.pnl-tier-neg-4 .day-number {
@@ -1081,11 +1086,11 @@ select.form-control option {
 
 .calendar-day-cell.loss-day.pnl-tier-neg-5 {
   background-color: var(--cal-loss-bg-5);
-  border-color: var(--cal-loss-border-5);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.loss-day.pnl-tier-neg-5:hover:not(.other-month) {
   background-color: var(--cal-loss-hover-5);
-  border-color: var(--cal-loss-border-5);
+  border-color: var(--border-color);
 }
 .calendar-day-cell.loss-day.pnl-tier-neg-5 .day-pnl,
 .calendar-day-cell.loss-day.pnl-tier-neg-5 .day-number {
@@ -1098,7 +1103,8 @@ select.form-control option {
 
 .calendar-day-cell.breakeven-day {
   background-color: var(--bg-card-alt);
-  border-color: var(--border-strong);
+  border-color: var(--border-color);
+  box-shadow: none;
 }
 
 .calendar-day-cell.breakeven-day .day-pnl {
@@ -1118,6 +1124,7 @@ select.form-control option {
 .calendar-week-summary-cell {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
+  box-shadow: none;
   border-radius: var(--radius-sm);
   padding: 8px 10px;
   display: flex;
@@ -1129,12 +1136,12 @@ select.form-control option {
 
 .calendar-week-summary-cell.profit-week {
   background-color: var(--cal-week-profit-bg);
-  border-color: var(--profit-border);
+  border-color: var(--border-color);
 }
 
 .calendar-week-summary-cell.loss-week {
   background-color: var(--cal-week-loss-bg);
-  border-color: var(--loss-border);
+  border-color: var(--border-color);
 }
 
 .week-summary-inner {
@@ -3310,7 +3317,7 @@ select.form-control option {
 
 @media (max-width: 380px) {
   .currency-slider-toggle {
-    min-width: 84px;
+    min-width: 108px;
   }
   .analytics-kpi-row-4,
   .analytics-kpi-row-5 {
@@ -4019,6 +4026,18 @@ select.form-control option {
   transition: background-color 0.14s ease, border-color 0.14s ease;
 }
 
+.google-auth-trigger-btn.is-signed-in {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  justify-content: center;
+  gap: 0;
+  position: relative;
+  background-color: var(--bg-lowest);
+  border: 1px solid var(--border-strong);
+}
+
 .google-auth-trigger-btn:hover {
   background-color: var(--btn-subtle-hover);
   border-color: var(--btn-subtle-border-hover);
@@ -4041,6 +4060,17 @@ select.form-control option {
   border: 1px solid var(--border-strong);
 }
 
+.google-auth-trigger-btn.is-signed-in .google-avatar-img,
+.google-auth-trigger-btn.is-signed-in .google-avatar-initials {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.google-auth-trigger-btn.is-signed-in .google-avatar-initials {
+  font-size: 0.7rem;
+}
+
 .google-avatar-initials {
   background-color: var(--avatar-bg);
   color: var(--avatar-text);
@@ -4059,11 +4089,24 @@ select.form-control option {
   white-space: nowrap;
 }
 
+.google-auth-trigger-btn.is-signed-in .google-trigger-label {
+  display: none !important;
+}
+
 .cloud-sync-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
+}
+
+.google-auth-trigger-btn.is-signed-in .cloud-sync-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--bg-sidebar);
 }
 
 .cloud-sync-dot.synced { background-color: var(--profit-chart); }
@@ -4333,11 +4376,16 @@ select.form-control option {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+.cloud-backup-info {
+  min-width: 0;
+  flex: 1;
 }
 
 .cloud-backup-name {
@@ -4345,13 +4393,46 @@ select.form-control option {
   font-size: 0.74rem;
   font-weight: 600;
   color: var(--text-main);
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .cloud-backup-meta {
   font-family: var(--font-mono);
   font-size: 0.68rem;
   color: var(--text-dim);
+}
+
+.cloud-backup-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cloud-backup-actions .btn-secondary {
+  height: 32px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+}
+
+.cloud-backup-delete-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background-color 0.14s ease, border-color 0.14s ease, opacity 0.14s ease;
+}
+
+.cloud-backup-delete-btn:disabled,
+.cloud-backup-actions .btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .cloud-backup-empty {
@@ -4365,6 +4446,11 @@ select.form-control option {
   .google-auth-trigger-btn {
     height: 32px;
     padding: 0 8px;
+  }
+  .google-auth-trigger-btn.is-signed-in {
+    width: 32px;
+    height: 32px;
+    padding: 0;
   }
   .google-trigger-label {
     max-width: 82px;
@@ -4698,74 +4784,7 @@ select.form-control option {
   }
 }
 
-/* ==================== 17. CALENDAR HEATMAP LEGEND, TOOLTIP & MODAL EXTRAS ==================== */
-.calendar-heatmap-legend {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.heatmap-legend-note {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  color: var(--text-dim);
-}
-
-.heatmap-legend-scale {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.heatmap-scale-edge {
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.heatmap-scale-edge.loss {
-  color: var(--loss);
-}
-
-.heatmap-scale-edge.profit {
-  color: var(--profit);
-}
-
-.heatmap-scale-swatches {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.heatmap-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  border: 1px solid var(--border-color);
-  display: inline-block;
-  flex-shrink: 0;
-}
-
-.heatmap-swatch.neg-5 { background-color: var(--cal-loss-bg-5); border-color: var(--cal-loss-border-5); }
-.heatmap-swatch.neg-4 { background-color: var(--cal-loss-bg-4); border-color: var(--cal-loss-border-4); }
-.heatmap-swatch.neg-3 { background-color: var(--cal-loss-bg-3); border-color: var(--cal-loss-border-3); }
-.heatmap-swatch.neg-2 { background-color: var(--cal-loss-bg-2); border-color: var(--cal-loss-border-2); }
-.heatmap-swatch.neg-1 { background-color: var(--cal-loss-bg-1); border-color: var(--cal-loss-border-1); }
-.heatmap-swatch.neutral { background-color: var(--bg-lowest); border-color: var(--border-strong); }
-.heatmap-swatch.pos-1 { background-color: var(--cal-profit-bg-1); border-color: var(--cal-profit-border-1); }
-.heatmap-swatch.pos-2 { background-color: var(--cal-profit-bg-2); border-color: var(--cal-profit-border-2); }
-.heatmap-swatch.pos-3 { background-color: var(--cal-profit-bg-3); border-color: var(--cal-profit-border-3); }
-.heatmap-swatch.pos-4 { background-color: var(--cal-profit-bg-4); border-color: var(--cal-profit-border-4); }
-.heatmap-swatch.pos-5 { background-color: var(--cal-profit-bg-5); border-color: var(--cal-profit-border-5); }
-
+/* ==================== 17. CALENDAR HEATMAP TOOLTIP & MODAL EXTRAS ==================== */
 /* Floating Heatmap Tooltip */
 .cal-heatmap-tooltip {
   position: fixed;
@@ -4889,12 +4908,4 @@ select.form-control option {
 
 .day-summary-value.neutral {
   color: var(--text-muted);
-}
-
-@media (max-width: 768px) {
-  .calendar-heatmap-legend {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
 }

@@ -137,10 +137,22 @@ global.history = {
   }
 };
 
+const _docAttrs = {};
+global.document = {
+  documentElement: {
+    setAttribute(k, v) { _docAttrs[k] = String(v); },
+    getAttribute(k) { return _docAttrs[k] ?? null; }
+  },
+  querySelector() { return null; },
+  querySelectorAll() { return []; },
+  getElementById() { return null; }
+};
+
 // Load frontend modules under Node harness
 global.TRADEFORGE_CONFIG = {};
 require(ROOT_PREFIX + 'js/config.js');
 require(ROOT_PREFIX + 'js/storage.js');
+require(ROOT_PREFIX + 'js/theme.js');
 require(ROOT_PREFIX + 'js/google-auth.js');
 require(ROOT_PREFIX + 'js/google-drive.js');
 require(ROOT_PREFIX + 'js/cloud-sync.js');
@@ -883,8 +895,63 @@ async function runAllTests() {
     assert.ok(allBackups.some((b) => b.name.includes('pre-restore')), 'restoreFromCloud must save pre-restore safety backup');
     console.log('✓ Test 10 passed\n');
 
+    // ------------------------------------------------------------------
+    // TEST 11: Theme Switching Isolation (Zero Reload / Zero Sync) & Cloud Backup Deletion
+    // ------------------------------------------------------------------
+    console.log('[11/11] Testing Theme Switch Isolation & CloudSyncManager.deleteCloudBackup...');
+    ThemeManager.init();
+    let workspaceReloadedCount = 0;
+    let backupDeletedEvents = 0;
+    const unsubThemeIsolation = CloudSyncManager.subscribe((ev) => {
+      if (ev.eventType === 'workspace_reloaded') workspaceReloadedCount++;
+      if (ev.eventType === 'backup_deleted') backupDeletedEvents++;
+    });
+
+    const reqCountBeforeTheme = requestLog.length;
+    const tradesBeforeTheme = StorageManager.getTrades().length;
+    ThemeManager.setTheme('midnight');
+    ThemeManager.setTheme('light');
+    ThemeManager.setTheme('classic');
+    ThemeManager.setTheme('midnight');
+    await sleep(1500);
+
+    const driveRequestsDuringTheme = requestLog
+      .slice(reqCountBeforeTheme)
+      .filter((entry) => entry.includes('/api/drive/'));
+    assert.strictEqual(driveRequestsDuringTheme.length, 0, 'Theme switching must trigger ZERO Drive API sync requests');
+    assert.strictEqual(CloudSyncManager.getState().hasDirtyChanges, false, 'Theme switching must not mark cloud dirty');
+    assert.strictEqual(workspaceReloadedCount, 0, 'Theme switching must trigger ZERO workspace reloads');
+    assert.strictEqual(StorageManager.getTrades().length, tradesBeforeTheme, 'Theme switching must preserve active trades');
+    assert.strictEqual(ThemeManager.hasStoredThemePreference(), true);
+    assert.strictEqual(ThemeManager.getStoredTheme(), 'midnight');
+
+    // Stored local theme survives Drive sync even when remote settings carry another theme
+    await CloudSyncManager.syncNow({ fullCheck: true, reason: 'post_theme_sync_check' });
+    assert.strictEqual(ThemeManager.getStoredTheme(), 'midnight', 'Local theme preference must not be overwritten by Drive sync');
+
+    // CloudSyncManager.deleteCloudBackup deletes ONLY targeted backup and leaves siblings intact
+    const bkToDelete = await CloudSyncManager.createManualBackup('delete-target');
+    const backupsBeforeDelete = await CloudSyncManager.listCloudBackups(15);
+    assert.ok(backupsBeforeDelete.some((b) => b.id === bkToDelete.id));
+    await CloudSyncManager.deleteCloudBackup(bkToDelete.id);
+    assert.strictEqual(backupDeletedEvents, 1, 'backup_deleted event must fire');
+
+    const backupsAfterDelete = await CloudSyncManager.listCloudBackups(15);
+    assert.strictEqual(backupsAfterDelete.length, backupsBeforeDelete.length - 1);
+    assert.ok(!backupsAfterDelete.some((b) => b.id === bkToDelete.id), 'Deleted backup must be removed');
+
+    // 401 AUTH_EXPIRED during deleteCloudBackup updates state cleanly without crashing
+    if (backupsAfterDelete.length > 0) {
+      mockGoogle.state.forceNextDriveResponse = { status: 401, body: { error: { message: 'Expired token' } } };
+      mockGoogle.state.forceRefreshResponse = { status: 400, body: { error: 'invalid_grant' } };
+      await assert.rejects(() => CloudSyncManager.deleteCloudBackup(backupsAfterDelete[0].id), 'AUTH_EXPIRED');
+      assert.strictEqual(CloudSyncManager.status, 'auth_expired');
+    }
+    unsubThemeIsolation();
+    console.log('✓ Test 11 passed\n');
+
     console.log('================================================================');
-    console.log('ALL 10 FULL-STACK GOOGLE OAUTH & DRIVE SYNC TESTS PASSED!');
+    console.log('ALL 11 FULL-STACK GOOGLE OAUTH & DRIVE SYNC TESTS PASSED!');
     console.log('================================================================');
   } finally {
     await new Promise((r) => appServer.close(r));

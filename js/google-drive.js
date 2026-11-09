@@ -269,6 +269,18 @@
           cachedFolderIds: cachedFolderIds || {}
         })
       });
+    },
+
+    async deleteBackupById(fileId, { cachedFolderIds = null } = {}) {
+      const ep = _getDriveEndpoints();
+      return this._requestJson(ep.backups || '/api/drive/backups', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'delete',
+          fileId,
+          cachedFolderIds: cachedFolderIds || {}
+        })
+      });
     }
   };
 
