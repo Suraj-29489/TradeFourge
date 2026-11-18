@@ -18,6 +18,7 @@
   const META_PREFIX = 'tradefourge_cloud_meta_';
   const BASE_PREFIX = 'tradefourge_cloud_base_';
   const DEBOUNCE_MS = 1200;
+  const WEEKLY_BACKUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
   const RETRY_DELAYS_MS = [2000, 5000, 15000];
 
   function _getStorage() {
@@ -635,6 +636,7 @@
   };
 
   const CloudSyncManager = {
+    WEEKLY_BACKUP_INTERVAL_MS,
     status: 'local_only', // 'local_only' | 'syncing' | 'synced' | 'offline' | 'sync_failed' | 'auth_expired' | 'migration_pending' | 'conflict'
     lastSyncedAt: null,
     lastError: null,
@@ -689,7 +691,8 @@
         dirtyDomains: { trades: false, journal: false, settings: false },
         migratedLocalHash: '',
         dismissedLocalHash: '',
-        lastSyncedAt: null
+        lastSyncedAt: null,
+        lastWeeklyBackupAt: null
       };
       if (!storage || !sub) return defaults;
       try {
@@ -726,7 +729,8 @@
           },
           migratedLocalHash: parsed.migratedLocalHash || '',
           dismissedLocalHash: parsed.dismissedLocalHash || '',
-          lastSyncedAt: parsed.lastSyncedAt || null
+          lastSyncedAt: parsed.lastSyncedAt || null,
+          lastWeeklyBackupAt: parsed.lastWeeklyBackupAt || null
         };
       } catch (e) {
         return defaults;
@@ -829,6 +833,12 @@
       const meta = sub ? this._readMeta(sub) : null;
       const dirtyDomains = meta ? meta.dirtyDomains : { trades: false, journal: false, settings: false };
       const hasDirty = Boolean(dirtyDomains.trades || dirtyDomains.journal || dirtyDomains.settings);
+      const lastWeeklyBackupAt = meta ? (meta.lastWeeklyBackupAt || null) : null;
+      const weeklyRefIso = lastWeeklyBackupAt || (meta ? meta.lastSyncedAt : null);
+      const weeklyRefMs = weeklyRefIso ? Date.parse(weeklyRefIso) : NaN;
+      const nextWeeklyBackupAt = Number.isFinite(weeklyRefMs)
+        ? new Date(weeklyRefMs + WEEKLY_BACKUP_INTERVAL_MS).toISOString()
+        : null;
 
       return {
         status: this.status,
@@ -838,6 +848,8 @@
         hasDirtyChanges: hasDirty,
         dirtyDomains,
         lastSyncedAt: this.lastSyncedAt || (meta ? meta.lastSyncedAt : null),
+        lastWeeklyBackupAt,
+        nextWeeklyBackupAt,
         folderIds: this.folderIds || (meta ? meta.folderIds : null),
         pendingMigration: this.pendingMigration ? { ...this.pendingMigration } : null,
         lastConflicts: [...this.lastConflicts],
@@ -876,7 +888,9 @@
         global.addEventListener('offline', () => this._onNetworkOffline());
         global.addEventListener('beforeunload', (e) => {
           const st = this.getState();
-          if (st.isCloudActive && (st.hasDirtyChanges || st.status === 'syncing')) {
+          // Local storage is updated synchronously on every edit/CSV import;
+          // only warn on tab close if an active cloud upload is currently in flight.
+          if (st.isCloudActive && st.status === 'syncing') {
             e.preventDefault();
             e.returnValue = '';
           }
@@ -961,12 +975,13 @@
 
       this._writeMeta(sub, { dirtyDomains: nextDirty });
 
-      if (this.status === 'migration_pending') {
-        this._emit('status');
-        return;
+      // Persist immediately in browser localStorage only — do NOT auto-upload/backup
+      // to Google Drive on every CSV import or edit. Cloud backups run weekly (every 7 days)
+      // or manually whenever the user clicks Sync Now / Backup Now.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        this.status = 'offline';
       }
-
-      this._scheduleAutoSync();
+      this._emit('status', { reason: 'local_saved', domain: event.domain });
     },
 
     async _onAuthEvent(authEvent) {
@@ -1023,15 +1038,68 @@
         return;
       }
       const sub = GoogleAuthManager.account.sub;
-      const meta = this._readMeta(sub);
-      const hasDirty = meta.dirtyDomains.trades || meta.dirtyDomains.journal || meta.dirtyDomains.settings;
-      if (hasDirty || this.status === 'offline' || this.status === 'sync_failed') {
+      if (this.status === 'offline') {
+        this.status = 'synced';
+        this._emit('status');
+      }
+      // Only trigger automatic cloud sync/backup when the weekly (7-day) schedule is due
+      if (this.isWeeklyBackupDue(sub)) {
         try {
-          await this.syncNow({ reason: 'network_online' });
+          await this.runWeeklyCloudBackupIfDue();
         } catch (e) {
-          // Handled inside syncNow
+          // Handled inside syncNow / createBackupSnapshot
         }
       }
+    },
+
+    isWeeklyBackupDue(sub, nowMs = Date.now()) {
+      if (!sub) return false;
+      const meta = this._readMeta(sub);
+      const refIso = meta.lastWeeklyBackupAt || meta.lastSyncedAt;
+      if (!refIso) return false;
+      const refMs = Date.parse(refIso);
+      if (!Number.isFinite(refMs)) return false;
+      return (nowMs - refMs) >= WEEKLY_BACKUP_INTERVAL_MS;
+    },
+
+    async runWeeklyCloudBackupIfDue({ nowMs = Date.now(), force = false } = {}) {
+      if (typeof GoogleAuthManager === 'undefined' || !GoogleAuthManager.account) {
+        return { skipped: true, reason: 'signed_out' };
+      }
+      if (this.status === 'migration_pending') {
+        return { skipped: true, reason: 'migration_pending' };
+      }
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return { skipped: true, reason: 'offline' };
+      }
+      if (!GoogleAuthManager.hasValidToken()) {
+        return { skipped: true, reason: 'auth_expired' };
+      }
+
+      const sub = GoogleAuthManager.account.sub;
+      if (!force && !this.isWeeklyBackupDue(sub, nowMs)) {
+        return { skipped: true, reason: 'not_due' };
+      }
+
+      // 1. Sync latest local workspace to My Drive / TradeFourge / User Data
+      await this.syncNow({ reason: 'weekly_auto', fullCheck: true });
+
+      // 2. Save one weekly backup snapshot in My Drive / TradeFourge / Backups/
+      const snap = this._exportActiveWithTheme();
+      const meta = this._readMeta(sub);
+      let backupFile = null;
+      if (_snapshotHasData(snap)) {
+        backupFile = await GoogleDriveStorage.createBackupSnapshot({
+          reason: 'weekly-auto',
+          snapshot: snap,
+          cachedFolderIds: meta.folderIds || {}
+        });
+      }
+
+      const nowIso = new Date(nowMs).toISOString();
+      this._writeMeta(sub, { lastWeeklyBackupAt: nowIso });
+      this._emit('weekly_backup_completed', { file: backupFile, at: nowIso });
+      return { ok: true, backedUp: Boolean(backupFile), file: backupFile, at: nowIso };
     },
 
     _scheduleAutoSync() {
@@ -1136,13 +1204,16 @@
           const hasDirty = meta.dirtyDomains.trades || meta.dirtyDomains.journal || meta.dirtyDomains.settings;
 
           const anonInfo = StorageManager.getAnonymousBaselineInfo
-            ? StorageManager.getAnonymousBaselineInfo()
+            ? StorageManager.getAnonymousBaselineInfo(sub)
             : { hasAnyData: false, snapshot: {} };
 
-          // Returning account session on this browser: sync/merge account namespace with Drive cleanly first
+          // Returning account session on this browser: pull/reconcile remote changes cleanly,
+          // without auto-pushing local edits unless the weekly backup cycle is due.
           if (accountHasData || hasDirty || meta.lastSyncedAt) {
+            const weeklyDue = this.isWeeklyBackupDue(sub);
             await this._reconcileAccountWithRemote(account, remoteDb, {
               allowConflictAutoResolve: true,
+              allowPushDirty: weeklyDue,
               fullCheck: true
             });
 
@@ -1180,6 +1251,25 @@
               }
             }
 
+            if (weeklyDue) {
+              try {
+                const snapNow = this._exportActiveWithTheme();
+                if (_snapshotHasData(snapNow)) {
+                  const latestMeta = this._readMeta(sub);
+                  await GoogleDriveStorage.createBackupSnapshot({
+                    reason: 'weekly-auto',
+                    snapshot: snapNow,
+                    cachedFolderIds: latestMeta.folderIds || remoteDb.folderIds || {}
+                  });
+                }
+                this._writeMeta(sub, { lastWeeklyBackupAt: new Date().toISOString() });
+              } catch (weeklyErr) {
+                if (typeof console !== 'undefined' && console.warn) {
+                  console.warn('Weekly auto-backup skipped due to error:', weeklyErr);
+                }
+              }
+            }
+
             this.status = 'synced';
             this._emit('synced', { reason: detail.switchedAccount ? 'account_switched' : 'reconnected' });
             return this.getState();
@@ -1187,7 +1277,7 @@
 
           // First login for this Google account on this browser: inspect anonymous local storage safely
           const evaluation = CloudSyncUtils.evaluateMigration({
-            localSnapshot: anonInfo.snapshot,
+            localSnapshot: anonInfo.hasAnyData ? anonInfo.snapshot : {},
             remoteDb,
             previousMigratedHash: meta.migratedLocalHash,
             dismissedLocalHash: meta.dismissedLocalHash
@@ -1601,8 +1691,11 @@
         return { merged: false, clean: true };
       }
 
-      // Local dirty & remote has NOT drifted -> straight push of dirty domains
+      // Local dirty & remote has NOT drifted -> push only when allowed (manual Sync Now or weekly schedule)
       if (hasDirty && !shouldPullRemote && !forceAdoptLegacy) {
+        if (options.allowPushDirty === false) {
+          return { merged: false, pushed: false, deferredLocal: true };
+        }
         await this._pushSnapshotToDrive(account, localSnap, {
           folderIds: remoteDb.folderIds,
           fileIds: remoteDb.fileIds,
@@ -1855,6 +1948,7 @@
         snapshot: snap,
         cachedFolderIds: meta.folderIds || {}
       });
+      this._writeMeta(account.sub, { lastWeeklyBackupAt: new Date().toISOString() });
       this._emit('backup_created', { file: created });
       return created;
     },

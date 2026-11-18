@@ -595,9 +595,9 @@ async function runAllTests() {
     console.log('✓ Test 4 passed\n');
 
     // ------------------------------------------------------------------
-    // TEST 5: Multi-Device Load, Edit, Delete Tombstones, Auto-Sync Debounce & CSV Dedup
+    // TEST 5: Multi-Device Load, Edit, Delete Tombstones, Local-First Save, Manual Sync & CSV Dedup
     // ------------------------------------------------------------------
-    console.log('[5/10] Testing Edits, Deletions, Debounced Auto-Sync & Cross-Device Restore...');
+    console.log('[5/10] Testing Edits, Deletions, Local-First Save, Manual Sync & Cross-Device Restore...');
     const activeAliceTrades = StorageManager.getTrades();
     const targetEdit = activeAliceTrades.find((t) => t.ticket === 'ANON_1');
     const targetDel = activeAliceTrades.find((t) => t.ticket === 'ANON_2');
@@ -615,8 +615,16 @@ async function runAllTests() {
     }], 'device1_add.csv');
     StorageManager.saveNotes('Updated journal rule: wait 15m candle close');
 
-    await sleep(1450);
-    assert.strictEqual(CloudSyncManager.status, 'synced', 'Debounced auto-sync must complete cleanly');
+    // CSV upload & edits must persist locally (including offline localStorage) WITHOUT auto-uploading to cloud
+    await sleep(150);
+    assert.strictEqual(CloudSyncManager.getState().hasDirtyChanges, true, 'CSV & edits remain local until manual sync or weekly backup');
+    const offlineLocalMirror = StorageManager.getAnonymousSnapshot();
+    assert.strictEqual(offlineLocalMirror.trades.length, 2, 'Offline localStorage must be updated with latest CSV & edits');
+    assert.ok(offlineLocalMirror.trades.some((t) => t.ticket === 'NEW_3'), 'Offline localStorage must include newly uploaded CSV trade');
+
+    // Manual Sync Now pushes changes cleanly to Google Drive
+    await CloudSyncManager.syncNow({ reason: 'manual' });
+    assert.strictEqual(CloudSyncManager.status, 'synced', 'Manual sync must complete cleanly');
     assert.strictEqual(CloudSyncManager.getState().hasDirtyChanges, false);
 
     // Simulate clean Device 2 (empty localStorage + new CookieJar, same Google Drive!)
@@ -706,7 +714,8 @@ async function runAllTests() {
 
     _isOnline = true;
     await dispatchWindowEvent('online');
-    await sleep(80);
+    await sleep(40);
+    await CloudSyncManager.syncNow({ reason: 'manual' });
 
     assert.strictEqual(CloudSyncManager.status, 'synced', 'Conflict must merge and sync cleanly');
     const mergedTrades = StorageManager.getTrades();
@@ -808,9 +817,10 @@ async function runAllTests() {
     await sleep(30);
     assert.strictEqual(CloudSyncManager.status, 'local_only');
     assert.strictEqual(StorageManager.getActiveNamespace(), 'anonymous');
-    assert.strictEqual(StorageManager.getTrades().length, 0, 'Sign out must not leak Bob trades into anonymous');
+    assert.strictEqual(StorageManager.getTrades().length, 1, 'Offline localStorage preserves latest local data after sign-out');
+    assert.strictEqual(StorageManager.getOfflineMirrorOwner(), 'sub_bob_2002', 'Mirror owner recorded so other accounts never auto-import it');
 
-    // Switch back to Alice -> sees Alice's exact 4 trades and zero Bob trades!
+    // Switch back to Alice -> sees Alice's exact 4 trades and zero Bob trades (and no spurious migration modal)!
     mockGoogle.state.nextUser = {
       sub: 'sub_alice_1001',
       email: 'alice.trader@gmail.com',
@@ -820,6 +830,7 @@ async function runAllTests() {
     };
     await signInViaOAuth({ selectAccount: true });
     await sleep(60);
+    assert.strictEqual(CloudSyncManager.status, 'synced', 'Alice must NOT get migration prompt from Bob offline mirror');
     assert.strictEqual(StorageManager.getTrades().length, 4, 'Alice restores her own 4 trades cleanly');
     assert.ok(!StorageManager.getTrades().some((t) => t.symbol === 'US30'), 'Alice must NEVER see Bob trades');
     console.log('✓ Test 8 passed\n');
@@ -865,7 +876,7 @@ async function runAllTests() {
     assert.strictEqual(mergeRes.verified, true);
     assert.strictEqual(mergeRes.tradeCount, 5, 'Alice 4 cloud trades + 1 unique anon trade = 5');
     assert.ok(mergeRes.backupFile && mergeRes.backupFile.name.includes('pre-merge'), 'Must create pre-merge safety backup');
-    assert.strictEqual(StorageManager.getAnonymousSnapshot().trades.length, 2, 'Anonymous local trades still preserved untouched');
+    assert.strictEqual(StorageManager.getAnonymousSnapshot().trades.length, 5, 'Offline localStorage updated with all 5 merged trades');
     console.log('✓ Test 9 passed\n');
 
     // ------------------------------------------------------------------
@@ -1569,8 +1580,98 @@ async function runAllTests() {
     assert.strictEqual(StorageManager.getStartingCapital(), 88000);
     console.log('✓ Test 13 passed\n');
 
+    // ------------------------------------------------------------------
+    // TEST 14: Offline LocalStorage Persistence on CSV Upload + Weekly-Once & Manual Cloud Backups Only
+    // ------------------------------------------------------------------
+    console.log('[14/14] Testing Offline LocalStorage Mirror on CSV Upload & Weekly-Once / Manual Cloud Backups...');
+    const graceSub = 'sub_grace_weekly_7007';
+    resetAllTestState();
+    mockGoogle.state.nextUser = {
+      sub: graceSub,
+      email: 'grace.weekly@gmail.com',
+      name: 'Grace Weekly',
+      picture: 'https://example.com/grace.png',
+      email_verified: true
+    };
+    await CloudSyncManager.init();
+    await signInViaOAuth();
+    await waitForCloudIdle();
+
+    const backupsBeforeCsv = await CloudSyncManager.listCloudBackups(20);
+    const driveFilesBeforeCsv = mockGoogle.state.driveFileCreations;
+
+    // Upload a CSV (mergeTrades) while signed in
+    StorageManager.mergeTrades([
+      {
+        ticket: 'CSV_WEEK_1',
+        symbol: 'XAUUSD',
+        type: 'buy',
+        lots: 0.1,
+        openTime: '2026-11-10T08:00:00Z',
+        closeTime: '2026-11-10T09:00:00Z',
+        profit: 145.5,
+        broker: 'exness'
+      },
+      {
+        ticket: 'CSV_WEEK_2',
+        symbol: 'EURUSD',
+        type: 'sell',
+        lots: 0.2,
+        openTime: '2026-11-11T08:00:00Z',
+        closeTime: '2026-11-11T09:00:00Z',
+        profit: -40.25,
+        broker: 'exness'
+      }
+    ], 'nov_weekly.csv');
+
+    // Wait past the old 1.2s auto-sync debounce window -> ZERO automatic cloud uploads or backups!
+    await sleep(1400);
+    assert.strictEqual(CloudSyncManager.getState().hasDirtyChanges, true, 'CSV import must stay local without immediate cloud upload');
+    assert.strictEqual(mockGoogle.state.driveFileCreations, driveFilesBeforeCsv, 'Must NOT create any cloud backup after CSV input');
+    const backupsAfterCsv = await CloudSyncManager.listCloudBackups(20);
+    assert.strictEqual(backupsAfterCsv.length, backupsBeforeCsv.length, 'Backup count must NOT increase after CSV upload');
+
+    // Verify normal browser offline localStorage (`tradefourge_trades`) IMMEDIATELY has the latest CSV data!
+    const rawOfflineTrades = JSON.parse(localStorage.getItem('tradefourge_trades') || '[]');
+    assert.strictEqual(rawOfflineTrades.length, 2, 'Normal browser localStorage tradefourge_trades must hold latest CSV');
+    assert.strictEqual(rawOfflineTrades[0].ticket, 'CSV_WEEK_1');
+
+    // Sign out / open offline -> latest CSV data is immediately available offline!
+    await GoogleAuthManager.signOut();
+    await waitForCloudIdle();
+    assert.strictEqual(StorageManager.getActiveNamespace(), 'anonymous');
+    assert.strictEqual(StorageManager.getTrades().length, 2, 'Offline mode must load latest uploaded CSV from localStorage');
+
+    // Sign back in within the same week (< 7 days) -> NO weekly backup yet, NO redundant migration modal
+    await signInViaOAuth();
+    await waitForCloudIdle();
+    assert.strictEqual(CloudSyncManager.status, 'synced');
+    assert.strictEqual(CloudSyncManager.isWeeklyBackupDue(graceSub), false, 'Weekly backup must NOT be due within 7 days');
+    const earlyCheck = await CloudSyncManager.runWeeklyCloudBackupIfDue();
+    assert.strictEqual(earlyCheck.skipped, true);
+    assert.strictEqual(earlyCheck.reason, 'not_due');
+
+    // Advance clock past 7 days -> weekly backup runs ONCE, syncing User Data & creating 1 weekly-auto snapshot
+    const eightDaysLaterMs = Date.now() + (8 * 24 * 60 * 60 * 1000);
+    assert.strictEqual(CloudSyncManager.isWeeklyBackupDue(graceSub, eightDaysLaterMs), true, 'Weekly backup must be due after 7 days');
+    const weeklyRes = await CloudSyncManager.runWeeklyCloudBackupIfDue({ nowMs: eightDaysLaterMs });
+    assert.strictEqual(weeklyRes.ok, true);
+    assert.strictEqual(weeklyRes.backedUp, true);
+    assert.ok(weeklyRes.file && weeklyRes.file.name.includes('weekly-auto'), 'Weekly backup must create a weekly-auto snapshot');
+    assert.strictEqual(CloudSyncManager.getState().hasDirtyChanges, false, 'Weekly backup must sync latest local CSV to Drive');
+
+    // Immediately checking again at same timestamp -> skipped (only once per week!)
+    const repeatCheck = await CloudSyncManager.runWeeklyCloudBackupIfDue({ nowMs: eightDaysLaterMs + 1000 });
+    assert.strictEqual(repeatCheck.skipped, true);
+    assert.strictEqual(repeatCheck.reason, 'not_due');
+
+    // Manual backup works anytime on demand
+    const manualSnapshot = await CloudSyncManager.createManualBackup('manual');
+    assert.ok(manualSnapshot && manualSnapshot.name.includes('manual'), 'Manual backup must work anytime on user click');
+    console.log('✓ Test 14 passed\n');
+
     console.log('================================================================');
-    console.log('ALL 13 FULL-STACK GOOGLE OAUTH & DRIVE SYNC TESTS PASSED!');
+    console.log('ALL 14 FULL-STACK GOOGLE OAUTH & DRIVE SYNC TESTS PASSED!');
     console.log('================================================================');
   } finally {
     await new Promise((r) => appServer.close(r));

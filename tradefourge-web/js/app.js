@@ -526,6 +526,7 @@ const App = {
     const netReturnTag = document.getElementById('kpiNetReturnTag');
     const startCapLabel = document.getElementById('kpiStartingCapitalLabel');
     const endEqLabel = document.getElementById('kpiEndingEquityLabel');
+    const netReturnPnlLabel = document.getElementById('kpiNetReturnPnlLabel');
 
     const currSym = TradeAnalytics.getCurrencySymbol();
     if (inlinePrefix) {
@@ -536,6 +537,11 @@ const App = {
       if (netReturnDisplay) netReturnDisplay.style.display = 'block';
       if (capitalInlineForm) capitalInlineForm.style.display = 'none';
       if (editCapitalBtn) editCapitalBtn.innerText = 'Edit';
+
+      const endEquity = m.calculatedBalance !== null
+        ? m.calculatedBalance
+        : Math.round((m.startingCapital + m.totalPnL) * 100) / 100;
+      const verifiedPnl = Math.round((endEquity - m.startingCapital) * 100) / 100;
 
       if (netReturnEl) {
         const sign = m.netReturnPercent > 0 ? '+' : (m.netReturnPercent < 0 ? '-' : '');
@@ -549,8 +555,12 @@ const App = {
       if (startCapLabel) {
         startCapLabel.innerText = `Start: ${TradeAnalytics.formatCurrency(m.startingCapital, false)}`;
       }
+      if (netReturnPnlLabel) {
+        netReturnPnlLabel.innerText = `P&L: ${TradeAnalytics.formatCurrency(verifiedPnl, true)}`;
+        netReturnPnlLabel.className = verifiedPnl > 0 ? 'profit-text' : (verifiedPnl < 0 ? 'loss-text' : '');
+      }
       if (endEqLabel) {
-        endEqLabel.innerText = `End: ${TradeAnalytics.formatCurrency(m.startingCapital + m.totalPnL, false)}`;
+        endEqLabel.innerText = `End: ${TradeAnalytics.formatCurrency(endEquity, false)}`;
       }
 
       if (netReturnSubEl) {
@@ -1672,22 +1682,22 @@ const App = {
     setEl('repTradingDays', metrics.totalTrades > 0 ? calDays : 0);
     setEl('repActiveTradingDays', metrics.totalTradingDays);
 
-    // Account Summary
+    // Account Summary (strictly uses configured Starting Capital from Net Return Tool)
     const startingBal = configuredCap !== null && configuredCap > 0
       ? configuredCap
-      : (metrics.startingCapital > 0 ? metrics.startingCapital : (trades.length > 0 ? 2064 : 0));
-    const endingBal = startingBal + metrics.totalPnL;
-    const returnPct = startingBal > 0 ? ((metrics.totalPnL / startingBal) * 100).toFixed(2) : '0.00';
+      : (metrics.startingCapital > 0 ? metrics.startingCapital : 0);
+    const endingBal = startingBal > 0 ? Math.round((startingBal + metrics.totalPnL) * 100) / 100 : metrics.totalPnL;
+    const returnPct = startingBal > 0 ? ((metrics.totalPnL / startingBal) * 100).toFixed(2) : null;
     const returnCls = metrics.totalPnL > 0
       ? 'stat-val profit'
       : (metrics.totalPnL < 0 ? 'stat-val loss' : 'stat-val');
 
-    setEl('repStartingBalance', TradeAnalytics.formatCurrency(startingBal, false));
+    setEl('repStartingBalance', startingBal > 0 ? TradeAnalytics.formatCurrency(startingBal, false) : 'Not set');
     setEl('repTotalProfit', (metrics.grossProfit > 0 ? '+' : '') + TradeAnalytics.formatCurrency(metrics.grossProfit, false));
     setEl('repTotalLoss', (metrics.grossLoss > 0 ? '-' : '') + TradeAnalytics.formatCurrency(metrics.grossLoss, false));
     setEl('repNetPnL', TradeAnalytics.formatCurrency(metrics.totalPnL, true), returnCls);
-    setEl('repEndingBalance', TradeAnalytics.formatCurrency(endingBal, false));
-    setEl('repPeriodReturn', `${metrics.totalPnL > 0 ? '+' : ''}${returnPct}%`, returnCls);
+    setEl('repEndingBalance', startingBal > 0 ? TradeAnalytics.formatCurrency(endingBal, false) : '--');
+    setEl('repPeriodReturn', returnPct !== null ? `${metrics.totalPnL > 0 ? '+' : ''}${returnPct}%` : 'N/A', returnCls);
 
     // Performance Summary
     setEl('repPerfTotalTrades', metrics.totalTrades);
@@ -2555,6 +2565,12 @@ const App = {
     let cardsHtml = dayData.tradeList.map((t, idx) => {
       const timeOnly = (t.closeTime || t.openTime || '').slice(11, 16);
       const tradePnlFormatted = TradeAnalytics.formatCurrency(t.profit);
+      const tradePct = (startingCap && startingCap > 0)
+        ? (calMgr ? calMgr.computeDailyReturnPercent(t.profit, startingCap) : ((Number(t.profit) || 0) / startingCap) * 100)
+        : null;
+      const tradePctText = tradePct !== null
+        ? (calMgr ? calMgr.formatPercent(tradePct) : `${tradePct > 0 ? '+' : (tradePct < 0 ? '-' : '')}${Math.abs(tradePct).toFixed(2)}%`)
+        : '';
       const tradePnlClass = t.profit > 0 ? 'profit' : (t.profit < 0 ? 'loss' : 'neutral');
       const safeTrade = JSON.stringify(t).replace(/"/g, '&quot;');
       const typeLabel = (t.type || 'BUY').toUpperCase();
@@ -2571,8 +2587,8 @@ const App = {
             <div class="day-trade-lots">${t.lots} Lot${t.lots === 1 ? '' : 's'}</div>
           </div>
           <div class="day-trade-card-bottom">
-            <span class="day-trade-pnl-label">Net P&L</span>
-            <span class="day-trade-pnl ${tradePnlClass}">${tradePnlFormatted}</span>
+            <span class="day-trade-pnl-label">Net P&L${tradePctText ? ' (%)' : ''}</span>
+            <span class="day-trade-pnl ${tradePnlClass}">${tradePnlFormatted}${tradePctText ? ` <small style="opacity:0.85;">(${tradePctText})</small>` : ''}</span>
           </div>
         </div>
       `;
@@ -4398,7 +4414,7 @@ const App = {
     this.processTrades();
     this.closeCSVPreviewModal();
 
-    this.showToast(`Imported ${importedCount} trades from ${fileName}! (Total: ${this.trades.length})`, 'success');
+    this.showToast(`Imported ${importedCount} trades from ${fileName} and saved locally! (Total: ${this.trades.length})`, 'success');
   },
 
   closeCSVPreviewModal() {
@@ -5954,16 +5970,21 @@ const App = {
 
     const statusBadgeMap = {
       local_only: { text: 'LOCAL ONLY', cls: 'local' },
-      synced: { text: 'SYNCED', cls: 'synced' },
+      synced: state.hasDirtyChanges
+        ? { text: 'SAVED LOCALLY', cls: 'local' }
+        : { text: 'SYNCED', cls: 'synced' },
       syncing: { text: 'SYNCING...', cls: 'syncing' },
-      offline: { text: state.hasDirtyChanges ? 'OFFLINE (QUEUED)' : 'OFFLINE', cls: 'offline' },
+      offline: { text: state.hasDirtyChanges ? 'OFFLINE (SAVED LOCALLY)' : 'OFFLINE', cls: 'offline' },
       auth_expired: { text: 'RECONNECT NEEDED', cls: 'auth_expired' },
       migration_pending: { text: 'MIGRATION PENDING', cls: 'migration_pending' },
       sync_failed: { text: 'SYNC ERROR', cls: 'sync_failed' },
       conflict: { text: 'CONFLICT', cls: 'auth_expired' }
     };
     const statusInfo = statusBadgeMap[state.status] || statusBadgeMap.local_only;
-    const lastSyncFmt = state.lastSyncedAt ? `Last synced: ${new Date(state.lastSyncedAt).toLocaleString()}` : 'Not synced with Drive yet';
+    const lastSyncFmt = state.lastSyncedAt ? `Last cloud sync: ${new Date(state.lastSyncedAt).toLocaleString()}` : 'Not synced with Drive yet';
+    const weeklyScheduleNote = state.hasDirtyChanges
+      ? 'Latest changes saved locally • Auto cloud backup runs weekly (or click Sync Now / Backup Now)'
+      : 'Weekly auto cloud backup enabled • Manual Sync Now & Backup Now available anytime';
 
     // 1. Header Trigger & Dropdown
     const triggerBtn = document.getElementById('btnGoogleAccountTrigger');
@@ -6034,7 +6055,7 @@ const App = {
         dStatus.innerText = statusInfo.text;
         dStatus.className = `cloud-status-pill ${statusInfo.cls}`;
       }
-      if (dLastSync) dLastSync.innerText = state.lastError?.message || lastSyncFmt;
+      if (dLastSync) dLastSync.innerText = state.lastError?.message || (state.hasDirtyChanges ? `${weeklyScheduleNote}` : lastSyncFmt);
       if (dropResolve) dropResolve.style.display = state.status === 'migration_pending' ? 'block' : 'none';
       if (dropReconnect) dropReconnect.style.display = state.status === 'auth_expired' ? 'block' : 'none';
       if (dropSync) dropSync.style.display = state.status === 'auth_expired' ? 'none' : 'block';
@@ -6158,7 +6179,7 @@ const App = {
       if (sDetail) {
         sDetail.innerText = state.lastError?.message
           ? `${state.lastError.message} • ${lastSyncFmt}`
-          : `${lastSyncFmt} • Stored in My Drive / TradeFourge / User Data/, Backups/ & Exports/`;
+          : `${lastSyncFmt} • ${weeklyScheduleNote}`;
       }
 
       if (btnSignIn) btnSignIn.style.display = 'none';

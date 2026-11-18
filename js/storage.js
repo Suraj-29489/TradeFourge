@@ -17,6 +17,8 @@ const StorageManager = {
     DELETED_UIDS: 'tradefourge_deleted_uids'
   },
 
+  OFFLINE_MIRROR_META_KEY: 'tradefourge_offline_mirror_meta',
+
   DEFAULT_RULES: [
     { id: 1, text: 'Never risk more than 1-2% per trade', checked: true },
     { id: 2, text: 'Wait for higher timeframe trend confirmation', checked: true },
@@ -98,6 +100,51 @@ const StorageManager = {
     if (primary !== null && primary !== undefined) return primary;
     const legacyKey = this._getLegacyKeyForNamespace(baseKey, namespace);
     return legacyKey ? storage.getItem(legacyKey) : null;
+  },
+
+  /**
+   * Mirror active signed-in workspace mutations into standard offline browser localStorage
+   * (`tradefourge_*`) so local/offline mode always retains the latest CSV & journal state.
+   * When writing directly in anonymous/offline mode, clears mirror ownership metadata so
+   * offline-only edits are cleanly detected on next cloud login.
+   */
+  _syncKeyToOfflineLocal(storage, baseKey, value, { remove = false } = {}) {
+    if (!storage || !baseKey) return;
+    try {
+      if (!this.activeNamespace || this.activeNamespace === 'anonymous') {
+        storage.removeItem(this.OFFLINE_MIRROR_META_KEY);
+        return;
+      }
+      if (remove) {
+        storage.removeItem(baseKey);
+      } else {
+        storage.setItem(baseKey, value);
+      }
+      storage.setItem(
+        this.OFFLINE_MIRROR_META_KEY,
+        JSON.stringify({
+          ownerSub: this.activeNamespace,
+          updatedAt: new Date().toISOString()
+        })
+      );
+    } catch (e) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('Could not mirror state to offline localStorage:', e);
+      }
+    }
+  },
+
+  getOfflineMirrorOwner() {
+    const storage = this._getStorage();
+    if (!storage) return null;
+    try {
+      const raw = storage.getItem(this.OFFLINE_MIRROR_META_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return (parsed && parsed.ownerSub) ? String(parsed.ownerSub) : null;
+    } catch (e) {
+      return null;
+    }
   },
 
   /**
@@ -263,15 +310,21 @@ const StorageManager = {
   },
 
   /**
-   * Inspect whether anonymous local storage has any user-created data worth migrating
+   * Inspect whether anonymous local storage has any user-created data worth migrating.
+   * When `targetSub` is provided and anonymous keys are simply an unmodified offline mirror
+   * written by a signed-in Google session, `hasAnyData` stays false so users are never
+   * prompted to re-migrate their own mirrored offline cache (or another account's mirror).
    */
-  getAnonymousBaselineInfo() {
+  getAnonymousBaselineInfo(targetSub = null) {
     const anon = this.getAnonymousSnapshot();
+    const mirrorOwner = this.getOfflineMirrorOwner();
+    const isMirroredFromAccount = Boolean(targetSub && mirrorOwner);
     const hasCustomNotes = Boolean(anon.notes && anon.notes.trim().length > 0);
     const hasCustomCapital = Boolean(anon.startingCapital && anon.startingCapital > 0);
     const hasCustomMt5 = Boolean(anon.mt5Session && anon.mt5Session.isConnected);
     const hasNonDefaultRules = Array.isArray(anon.rules) &&
       JSON.stringify(anon.rules) !== JSON.stringify(this.DEFAULT_RULES);
+    const rawHasData = anon.trades.length > 0 || hasCustomNotes || hasCustomCapital || hasCustomMt5 || hasNonDefaultRules;
     return {
       tradeCount: anon.trades.length,
       hasTrades: anon.trades.length > 0,
@@ -279,7 +332,9 @@ const StorageManager = {
       hasCustomCapital,
       hasCustomMt5,
       hasNonDefaultRules,
-      hasAnyData: anon.trades.length > 0 || hasCustomNotes || hasCustomCapital || hasCustomMt5 || hasNonDefaultRules,
+      mirrorOwner,
+      isMirroredFromAccount,
+      hasAnyData: isMirroredFromAccount ? false : rawHasData,
       snapshot: anon
     };
   },
@@ -383,11 +438,16 @@ const StorageManager = {
     const importKey = this._getKeyForNamespace(this.KEYS.LAST_IMPORT);
 
     try {
-      storage.setItem(tradesKey, JSON.stringify(this.state.trades));
+      const tradesJson = JSON.stringify(this.state.trades);
+      storage.setItem(tradesKey, tradesJson);
+      this._syncKeyToOfflineLocal(storage, this.KEYS.TRADES, tradesJson);
       if (this.state.lastImport) {
-        storage.setItem(importKey, JSON.stringify(this.state.lastImport));
+        const importJson = JSON.stringify(this.state.lastImport);
+        storage.setItem(importKey, importJson);
+        this._syncKeyToOfflineLocal(storage, this.KEYS.LAST_IMPORT, importJson);
       } else {
         storage.removeItem(importKey);
+        this._syncKeyToOfflineLocal(storage, this.KEYS.LAST_IMPORT, '', { remove: true });
       }
     } catch (e) {
       if (typeof console !== 'undefined' && console.warn) {
@@ -402,9 +462,12 @@ const StorageManager = {
     const delKey = this._getKeyForNamespace(this.KEYS.DELETED_UIDS);
     try {
       if (Array.isArray(this.state.deletedUids) && this.state.deletedUids.length > 0) {
-        storage.setItem(delKey, JSON.stringify(this.state.deletedUids.slice(-2000)));
+        const delJson = JSON.stringify(this.state.deletedUids.slice(-2000));
+        storage.setItem(delKey, delJson);
+        this._syncKeyToOfflineLocal(storage, this.KEYS.DELETED_UIDS, delJson);
       } else {
         storage.removeItem(delKey);
+        this._syncKeyToOfflineLocal(storage, this.KEYS.DELETED_UIDS, '', { remove: true });
       }
     } catch (e) {
       if (typeof console !== 'undefined' && console.warn) {
@@ -648,6 +711,8 @@ const StorageManager = {
       try {
         storage.removeItem(this._getKeyForNamespace(this.KEYS.TRADES));
         storage.removeItem(this._getKeyForNamespace(this.KEYS.LAST_IMPORT));
+        this._syncKeyToOfflineLocal(storage, this.KEYS.TRADES, '', { remove: true });
+        this._syncKeyToOfflineLocal(storage, this.KEYS.LAST_IMPORT, '', { remove: true });
       } catch (e) {
         if (typeof console !== 'undefined' && console.warn) {
           console.warn('Could not remove trades from localStorage:', e);
@@ -683,9 +748,12 @@ const StorageManager = {
       const importKey = this._getKeyForNamespace(this.KEYS.LAST_IMPORT);
       try {
         if (info) {
-          storage.setItem(importKey, JSON.stringify(info));
+          const json = JSON.stringify(info);
+          storage.setItem(importKey, json);
+          this._syncKeyToOfflineLocal(storage, this.KEYS.LAST_IMPORT, json);
         } else {
           storage.removeItem(importKey);
+          this._syncKeyToOfflineLocal(storage, this.KEYS.LAST_IMPORT, '', { remove: true });
         }
       } catch (e) {
         if (typeof console !== 'undefined' && console.warn) {
@@ -708,6 +776,7 @@ const StorageManager = {
     if (storage) {
       try {
         storage.setItem(this._getKeyForNamespace(this.KEYS.NOTES), this.state.notes);
+        this._syncKeyToOfflineLocal(storage, this.KEYS.NOTES, this.state.notes);
       } catch (e) {
         if (typeof console !== 'undefined' && console.warn) {
           console.warn('Could not persist notes to localStorage:', e);
@@ -734,9 +803,12 @@ const StorageManager = {
       const rulesKey = this._getKeyForNamespace(this.KEYS.RULES);
       try {
         if (this.state.rules) {
-          storage.setItem(rulesKey, JSON.stringify(this.state.rules));
+          const rulesJson = JSON.stringify(this.state.rules);
+          storage.setItem(rulesKey, rulesJson);
+          this._syncKeyToOfflineLocal(storage, this.KEYS.RULES, rulesJson);
         } else {
           storage.removeItem(rulesKey);
+          this._syncKeyToOfflineLocal(storage, this.KEYS.RULES, '', { remove: true });
         }
       } catch (e) {
         if (typeof console !== 'undefined' && console.warn) {
@@ -759,6 +831,7 @@ const StorageManager = {
     if (storage) {
       try {
         storage.setItem(this._getKeyForNamespace(this.KEYS.CURRENCY), this.state.currency);
+        this._syncKeyToOfflineLocal(storage, this.KEYS.CURRENCY, this.state.currency);
       } catch (e) {
         if (typeof console !== 'undefined' && console.warn) {
           console.warn('Could not persist currency to localStorage:', e);
@@ -793,8 +866,10 @@ const StorageManager = {
       try {
         if (cleaned !== null) {
           storage.setItem(capKey, String(cleaned));
+          this._syncKeyToOfflineLocal(storage, this.KEYS.STARTING_CAPITAL, String(cleaned));
         } else {
           storage.removeItem(capKey);
+          this._syncKeyToOfflineLocal(storage, this.KEYS.STARTING_CAPITAL, '', { remove: true });
         }
       } catch (e) {
         if (typeof console !== 'undefined' && console.warn) {
@@ -820,9 +895,12 @@ const StorageManager = {
       const mt5Key = this._getKeyForNamespace(this.KEYS.MT5_SESSION);
       try {
         if (this.state.mt5Session) {
-          storage.setItem(mt5Key, JSON.stringify(this.state.mt5Session));
+          const mt5Json = JSON.stringify(this.state.mt5Session);
+          storage.setItem(mt5Key, mt5Json);
+          this._syncKeyToOfflineLocal(storage, this.KEYS.MT5_SESSION, mt5Json);
         } else {
           storage.removeItem(mt5Key);
+          this._syncKeyToOfflineLocal(storage, this.KEYS.MT5_SESSION, '', { remove: true });
         }
       } catch (e) {
         if (typeof console !== 'undefined' && console.warn) {

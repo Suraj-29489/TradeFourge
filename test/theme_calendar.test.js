@@ -191,11 +191,21 @@
     const calGrid = doc.registerById('calendarGrid', new MockElement('div', doc));
     const calTitle = doc.registerById('calendarTitle', new MockElement('span', doc));
     const calPnl = doc.registerById('calMonthlyPnl', new MockElement('span', doc));
+    const calCrossPnl = doc.registerById('calMonthlyCrossPnl', new MockElement('span', doc));
     const calDays = doc.registerById('calMonthlyDays', new MockElement('span', doc));
+    const calUnitCurrencyBtn = doc.registerById('calUnitCurrencyBtn', new MockElement('button', doc));
+    calUnitCurrencyBtn.className = 'cal-unit-btn active';
+    calUnitCurrencyBtn.textContent = '$';
+    const calUnitPercentBtn = doc.registerById('calUnitPercentBtn', new MockElement('button', doc));
+    calUnitPercentBtn.className = 'cal-unit-btn';
+    calUnitPercentBtn.textContent = '%';
     doc.body.appendChild(calGrid);
     doc.body.appendChild(calTitle);
     doc.body.appendChild(calPnl);
+    doc.body.appendChild(calCrossPnl);
     doc.body.appendChild(calDays);
+    doc.body.appendChild(calUnitCurrencyBtn);
+    doc.body.appendChild(calUnitPercentBtn);
 
     global.document = doc;
     return doc;
@@ -235,9 +245,11 @@
     ThemeManager._selectorBound = false;
 
     CalendarManager.metricsData = null;
+    CalendarManager.displayMode = 'currency';
     CalendarManager._listenersAttached = false;
     CalendarManager._scrollHideAttached = false;
     CalendarManager._initialized = false;
+    CalendarManager._displayModeLoaded = false;
     CalendarManager._tooltipEl = null;
 
     StorageManager.activeNamespace = 'anonymous';
@@ -469,6 +481,99 @@
     assert.ok(byDate['2026-10-08'].classList.contains('breakeven-day'));
     assert.strictEqual(byDate['2026-10-08'].getAttribute('tabindex'), '0');
     assert.strictEqual(byDate['2026-10-08'].getAttribute('role'), 'button');
+  });
+
+  test('6. Calendar $ / % unit toggle switches daily cells, weekly summaries, monthly pill, and cross-verifies against Start balance', () => {
+    resetEnv();
+    TradeAnalytics.setCurrency('INR', { silentSync: true, suppressEvent: true });
+    TradeAnalytics.setStartingCapital(2064);
+    const trades = [
+      { ticket: 'P1', symbol: 'XAUUSD', type: 'buy', lots: 0.1, openTime: '2026-11-04T08:00:00Z', closeTime: '2026-11-04T09:00:00Z', profit: -500.50, broker: 'exness' },
+      { ticket: 'P2', symbol: 'EURUSD', type: 'buy', lots: 0.1, openTime: '2026-11-05T08:00:00Z', closeTime: '2026-11-05T09:00:00Z', profit: 120.24, broker: 'exness' },
+      { ticket: 'P3', symbol: 'GBPUSD', type: 'buy', lots: 0.1, openTime: '2026-11-06T08:00:00Z', closeTime: '2026-11-06T09:00:00Z', profit: -549.50, broker: 'exness' }
+    ];
+    // Total P&L = -929.76; Start = 2064.00; End = 1134.24; Net Return = -45.05%
+    const metrics = TradeAnalytics.calculateMetrics(trades, 2064);
+    assert.strictEqual(metrics.totalPnL, -929.76);
+    assert.strictEqual(metrics.calculatedBalance, 1134.24);
+    assert.strictEqual(metrics.netReturnPercent, -45.05);
+    assert.closeTo(metrics.calculatedBalance - metrics.startingCapital, metrics.totalPnL, 1e-9);
+    assert.closeTo(TradeAnalytics.computeReturnPercent(metrics.totalPnL, 2064), (-929.76 / 2064) * 100, 1e-9);
+
+    CalendarManager.init(metrics, true);
+
+    const currBtn = document.getElementById('calUnitCurrencyBtn');
+    const pctBtn = document.getElementById('calUnitPercentBtn');
+    const pnlPill = document.getElementById('calMonthlyPnl');
+    const crossPill = document.getElementById('calMonthlyCrossPnl');
+
+    // Default currency mode (₹): primary shows exact 2-decimal currency, cross-verify shows %
+    assert.strictEqual(CalendarManager.displayMode, 'currency');
+    assert.strictEqual(currBtn.classList.contains('active'), true);
+    assert.strictEqual(pctBtn.classList.contains('active'), false);
+    assert.strictEqual(currBtn.textContent, '₹');
+    assert.strictEqual(pnlPill.innerText, '-₹929.76');
+    assert.strictEqual(crossPill.innerText, '-45.05%');
+
+    const getByDate = () => {
+      const out = {};
+      document.getElementById('calendarGrid').querySelectorAll('.calendar-day-cell').forEach((c) => {
+        const k = c.getAttribute('data-date-key');
+        if (k) out[k] = c;
+      });
+      return out;
+    };
+
+    const currCells = getByDate();
+    assert.ok(currCells['2026-11-04'].innerHTML.includes('-₹500.50'), 'Daily cell must preserve exact 2-decimal currency');
+    assert.ok(currCells['2026-11-04'].innerHTML.includes('-24.25%'), 'Daily cell must show % cross-verify sub-value');
+    assert.ok(currCells['2026-11-05'].innerHTML.includes('+₹120.24'));
+    assert.ok(currCells['2026-11-05'].innerHTML.includes('+5.83%'));
+    assert.ok(currCells['2026-11-06'].innerHTML.includes('-₹549.50'));
+    assert.ok(currCells['2026-11-06'].innerHTML.includes('-26.62%'));
+
+    // Click % button -> primary shows %, cross-verify shows exact currency P&L
+    pctBtn._listeners.click[0]();
+    assert.strictEqual(CalendarManager.displayMode, 'percent');
+    assert.strictEqual(global.localStorage.getItem(CalendarManager.DISPLAY_MODE_KEY), 'percent');
+    assert.strictEqual(currBtn.classList.contains('active'), false);
+    assert.strictEqual(currBtn.getAttribute('aria-pressed'), 'false');
+    assert.strictEqual(pctBtn.classList.contains('active'), true);
+    assert.strictEqual(pctBtn.getAttribute('aria-pressed'), 'true');
+    assert.strictEqual(pnlPill.innerText, '-45.05%');
+    assert.strictEqual(crossPill.innerText, '-₹929.76');
+
+    const pctCells = getByDate();
+    assert.ok(pctCells['2026-11-04'].innerHTML.includes('<div class="day-pnl">-24.25%</div>'));
+    assert.ok(pctCells['2026-11-04'].innerHTML.includes('<div class="day-pnl-sub">-₹500.50</div>'));
+
+    const weekSummaries = document.getElementById('calendarGrid').querySelectorAll('.calendar-week-summary-cell');
+    assert.ok(weekSummaries[0].innerHTML.includes('-45.05%'), 'Week 1 summary primary should reflect -45.05%');
+    assert.ok(weekSummaries[0].innerHTML.includes('-₹929.76'), 'Week 1 summary cross-verify should reflect -₹929.76');
+    assert.ok(weekSummaries[1].innerHTML.includes('0.00%'), 'Empty week summary should show 0.00%');
+
+    // Simulate reload -> persists % mode
+    CalendarManager.displayMode = 'currency';
+    CalendarManager._displayModeLoaded = false;
+    CalendarManager.init(metrics, false);
+    assert.strictEqual(CalendarManager.displayMode, 'percent');
+    assert.strictEqual(pnlPill.innerText, '-45.05%');
+
+    // Switch to USD currency -> updates currency toggle glyph to $
+    TradeAnalytics.setCurrency('USD', { silentSync: true, suppressEvent: true });
+    currBtn._listeners.click[0]();
+    assert.strictEqual(CalendarManager.displayMode, 'currency');
+    assert.strictEqual(currBtn.textContent, '$');
+    assert.strictEqual(pnlPill.innerText, '-$929.76');
+
+    // Missing starting capital in % mode displays N/A cleanly and hides cross-verify pill
+    TradeAnalytics.setStartingCapital(null);
+    const noCapMetrics = TradeAnalytics.calculateMetrics(trades, null);
+    CalendarManager.update(noCapMetrics);
+    CalendarManager.setDisplayMode('percent', { silent: true });
+    assert.strictEqual(pnlPill.innerText, 'N/A');
+    assert.strictEqual(crossPill.style.display, 'none');
+    assert.ok(getByDate()['2026-11-04'].innerHTML.includes('N/A'));
   });
 
   // ==================== RUNNER ====================

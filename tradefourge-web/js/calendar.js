@@ -6,15 +6,19 @@
 const CalendarManager = {
   currentYear: new Date().getFullYear(),
   currentMonth: new Date().getMonth(), // 0-indexed (0=Jan, 11=Dec)
+  displayMode: 'currency', // 'currency' | 'percent'
+  DISPLAY_MODE_KEY: 'tradefourge_calendar_display_mode',
   metricsData: null,
   containerId: 'calendarGrid',
   titleId: 'calendarTitle',
   pnlPillId: 'calMonthlyPnl',
+  crossPnlPillId: 'calMonthlyCrossPnl',
   daysPillId: 'calMonthlyDays',
   legendNoteId: 'calendarHeatmapLegendNote',
   _listenersAttached: false,
   _scrollHideAttached: false,
   _initialized: false,
+  _displayModeLoaded: false,
   _tooltipEl: null,
 
   /**
@@ -33,10 +37,85 @@ const CalendarManager = {
   },
 
   /**
+   * Load persisted calendar P&L display mode ('currency' | 'percent')
+   */
+  loadDisplayMode() {
+    let mode = this.displayMode === 'percent' ? 'percent' : 'currency';
+    try {
+      const storage = (typeof window !== 'undefined' && window.localStorage)
+        ? window.localStorage
+        : (typeof localStorage !== 'undefined' ? localStorage : null);
+      if (storage) {
+        const saved = storage.getItem(this.DISPLAY_MODE_KEY);
+        if (saved === 'percent' || saved === 'currency') {
+          mode = saved;
+        }
+      }
+    } catch (e) {}
+    this.displayMode = mode;
+    this._displayModeLoaded = true;
+    return this.displayMode;
+  },
+
+  /**
+   * Switch calendar display mode between currency ('$'/'₹') and percentage ('%')
+   */
+  setDisplayMode(mode, { persist = true, silent = false } = {}) {
+    const normalized = mode === 'percent' ? 'percent' : 'currency';
+    this.displayMode = normalized;
+    this._displayModeLoaded = true;
+
+    if (persist) {
+      try {
+        const storage = (typeof window !== 'undefined' && window.localStorage)
+          ? window.localStorage
+          : (typeof localStorage !== 'undefined' ? localStorage : null);
+        if (storage) {
+          storage.setItem(this.DISPLAY_MODE_KEY, normalized);
+        }
+      } catch (e) {}
+    }
+
+    if (!silent && normalized === 'percent' && !this.resolveStartingCapital()) {
+      if (typeof App !== 'undefined' && App.showToast) {
+        App.showToast('Set Starting Capital in the ROI card or Settings to show calendar % returns', 'info');
+      }
+    }
+
+    this.hideTooltip();
+    this.render();
+    return this.displayMode;
+  },
+
+  /**
+   * Synchronize the $ / % toggle button active states and active currency glyph
+   */
+  syncUnitToggleUI(sym = '$') {
+    if (typeof document === 'undefined') return;
+    const currencyBtn = document.getElementById('calUnitCurrencyBtn');
+    const percentBtn = document.getElementById('calUnitPercentBtn');
+    const isPercent = this.displayMode === 'percent';
+
+    if (currencyBtn) {
+      currencyBtn.textContent = sym || '$';
+      currencyBtn.classList.toggle('active', !isPercent);
+      currencyBtn.setAttribute('aria-pressed', String(!isPercent));
+    }
+    if (percentBtn) {
+      percentBtn.classList.toggle('active', isPercent);
+      percentBtn.setAttribute('aria-pressed', String(isPercent));
+    }
+  },
+
+  /**
    * Initialize calendar with metrics
    */
   init(metrics, forceReset = false) {
     this.metricsData = metrics;
+
+    if (!this._displayModeLoaded) {
+      this.loadDisplayMode();
+    }
 
     // Default to the latest month containing trades, if available and not yet initialized
     if ((!this._initialized || forceReset) && metrics && metrics.lastTradeDate) {
@@ -208,6 +287,8 @@ const CalendarManager = {
     const todayBtn = document.getElementById('calThisMonthBtn');
     const settingsBtn = document.getElementById('calSettingsBtn');
     const infoBtn = document.getElementById('calInfoBtn');
+    const currencyBtn = document.getElementById('calUnitCurrencyBtn');
+    const percentBtn = document.getElementById('calUnitPercentBtn');
 
     if (prevBtn) {
       prevBtn.addEventListener('click', () => this.prevMonth());
@@ -217,6 +298,12 @@ const CalendarManager = {
     }
     if (todayBtn) {
       todayBtn.addEventListener('click', () => this.thisMonth());
+    }
+    if (currencyBtn) {
+      currencyBtn.addEventListener('click', () => this.setDisplayMode('currency'));
+    }
+    if (percentBtn) {
+      percentBtn.addEventListener('click', () => this.setDisplayMode('percent'));
     }
     if (settingsBtn) {
       settingsBtn.addEventListener('click', () => {
@@ -316,6 +403,14 @@ const CalendarManager = {
       ? 'Click cell to inspect daily trades'
       : 'Set Starting Capital to scale % tiers • Click to inspect';
 
+    const startCapRow = info.startingCapitalFormatted
+      ? `
+        <div class="cal-tooltip-row">
+          <span class="cal-tooltip-lbl">Start Balance</span>
+          <span class="cal-tooltip-val">${this.escapeHtml(info.startingCapitalFormatted)}</span>
+        </div>`
+      : '';
+
     tooltip.innerHTML = `
       <div class="cal-tooltip-header">
         <span class="cal-tooltip-date">${this.escapeHtml(info.dateDisplay)}</span>
@@ -333,7 +428,7 @@ const CalendarManager = {
         <div class="cal-tooltip-row">
           <span class="cal-tooltip-lbl">Losing Trades</span>
           <span class="cal-tooltip-val loss">${info.losses}</span>
-        </div>
+        </div>${startCapRow}
         <div class="cal-tooltip-row">
           <span class="cal-tooltip-lbl">Net P&amp;L</span>
           <span class="cal-tooltip-val ${pnlClass}">${this.escapeHtml(info.pnlFormatted)}</span>
@@ -481,6 +576,7 @@ const CalendarManager = {
     const gridEl = document.getElementById(this.containerId);
     const titleEl = document.getElementById(this.titleId);
     const pnlPillEl = document.getElementById(this.pnlPillId);
+    const crossPnlPillEl = document.getElementById(this.crossPnlPillId);
     const daysPillEl = document.getElementById(this.daysPillId);
 
     if (!gridEl || !titleEl) return;
@@ -500,19 +596,52 @@ const CalendarManager = {
 
     titleEl.innerText = `${monthNames[this.currentMonth]} ${this.currentYear}`;
 
-    // 1. Calculate & Render Monthly Header Stats
+    // 1. Calculate & Render Monthly Header Stats (with P&L + % cross-verification based on Starting Capital)
     const monthStats = this.getMonthlyStats();
+    const startingCapital = this.resolveStartingCapital();
+    const sym = analytics ? analytics.getCurrencySymbol() : '$';
+    const startingCapitalFormatted = startingCapital
+      ? (analytics ? analytics.formatCurrency(startingCapital, false) : `${sym}${startingCapital.toFixed(2)}`)
+      : null;
+    const isPercentMode = this.displayMode === 'percent';
+    const monthPnlFormatted = this.formatPnL(monthStats.netPnL, true);
+    const monthPctVal = (monthStats.tradingDays === 0 && Math.abs(monthStats.netPnL) < this.HEATMAP_CONFIG.epsilonPnL)
+      ? 0
+      : this.computeDailyReturnPercent(monthStats.netPnL, startingCapital);
+    const monthPctFormatted = this.formatPercent(monthPctVal);
+    const monthDirClass = monthStats.netPnL > 0 ? 'profit' : (monthStats.netPnL < 0 ? 'loss' : 'neutral');
+
+    this.syncUnitToggleUI(sym);
 
     if (pnlPillEl) {
-      pnlPillEl.innerText = this.formatPnL(monthStats.netPnL, true);
-      pnlPillEl.className = `cal-stat-pill cal-stat-pnl ${monthStats.netPnL > 0 ? 'profit' : (monthStats.netPnL < 0 ? 'loss' : 'neutral')}`;
+      pnlPillEl.innerText = isPercentMode ? monthPctFormatted : monthPnlFormatted;
+      pnlPillEl.className = `cal-stat-pill cal-stat-pnl ${monthDirClass}`;
+      pnlPillEl.setAttribute(
+        'title',
+        startingCapitalFormatted
+          ? `Start: ${startingCapitalFormatted} | Net P&L: ${monthPnlFormatted} | Return: ${monthPctFormatted}`
+          : `Net P&L: ${monthPnlFormatted} (Set Starting Balance in Net Return Tool for %)`
+      );
+    }
+
+    if (crossPnlPillEl) {
+      if (startingCapital && startingCapital > 0) {
+        crossPnlPillEl.style.display = 'inline-flex';
+        crossPnlPillEl.innerText = isPercentMode ? monthPnlFormatted : monthPctFormatted;
+        crossPnlPillEl.className = `cal-stat-pill cal-stat-cross ${monthDirClass}`;
+        crossPnlPillEl.setAttribute(
+          'title',
+          `Cross-verify on Start ${startingCapitalFormatted}: ${monthPnlFormatted} = ${monthPctFormatted}`
+        );
+      } else {
+        crossPnlPillEl.style.display = 'none';
+      }
     }
 
     if (daysPillEl) {
       daysPillEl.innerText = `${monthStats.tradingDays} ${monthStats.tradingDays === 1 ? 'day' : 'days'}`;
     }
 
-    const startingCapital = this.resolveStartingCapital();
     this.updateLegendNote(startingCapital, analytics);
 
     // 2. Prepare Calendar Weekday Dimensions
@@ -524,7 +653,6 @@ const CalendarManager = {
     const totalWeeks = totalSlots <= 35 ? 5 : 6;
 
     const dailyMap = (this.metricsData && this.metricsData.dailyMap) ? this.metricsData.dailyMap : {};
-    const sym = analytics ? analytics.getCurrencySymbol() : '$';
 
     gridEl.innerHTML = '';
 
@@ -597,21 +725,27 @@ const CalendarManager = {
             const tradeWord = `<span class="trade-count-num">${dayData.trades}</span><span class="trade-count-word"> ${dayData.trades === 1 ? 'trade' : 'trades'}</span>`;
             const tradeTitleWord = dayData.trades === 1 ? '1 trade' : `${dayData.trades} trades`;
 
+            const pctFormatted = this.formatPercent(dailyPct);
+            const fullFormatted = analytics
+              ? analytics.formatCurrency(pnl, true)
+              : `${pnl > 0 ? '+' : (pnl < 0 ? '-' : '')}${sym}${Math.abs(pnl).toFixed(2)}`;
             let pnlDisplay = '';
             if (intensity.direction === 'pos') {
-              const valFormatted = Math.abs(pnl).toFixed(0) === '0' ? Math.abs(pnl).toFixed(2) : Math.abs(pnl).toFixed(0);
               cell.classList.add('profit-day', 'has-trades');
               if (intensity.className) cell.classList.add(intensity.className);
-              pnlDisplay = `+${sym}${valFormatted}`;
+              pnlDisplay = isPercentMode ? pctFormatted : fullFormatted;
             } else if (intensity.direction === 'neg') {
-              const valFormatted = Math.abs(pnl).toFixed(0) === '0' ? Math.abs(pnl).toFixed(2) : Math.abs(pnl).toFixed(0);
               cell.classList.add('loss-day', 'has-trades');
               if (intensity.className) cell.classList.add(intensity.className);
-              pnlDisplay = `-${sym}${valFormatted}`;
+              pnlDisplay = isPercentMode ? pctFormatted : fullFormatted;
             } else {
               cell.classList.add('breakeven-day', 'has-trades');
-              pnlDisplay = `${sym}0.00`;
+              pnlDisplay = isPercentMode ? pctFormatted : `${sym}0.00`;
             }
+
+            const crossDisplay = (startingCapital && startingCapital > 0)
+              ? (isPercentMode ? fullFormatted : pctFormatted)
+              : '';
 
             cell.setAttribute('data-date-key', dateKey);
             cell.setAttribute('data-pnl-tier', intensity.className || 'neutral');
@@ -625,8 +759,6 @@ const CalendarManager = {
               ? Number(dayData.losses)
               : (Array.isArray(dayData.tradeList) ? dayData.tradeList.filter(t => (Number(t.profit) || 0) < 0).length : 0);
 
-            const fullFormatted = analytics ? analytics.formatCurrency(pnl, true) : pnlDisplay;
-            const pctFormatted = this.formatPercent(dailyPct);
             const dateDisplay = this.formatDateDisplay(dateKey);
 
             cell.setAttribute(
@@ -638,6 +770,7 @@ const CalendarManager = {
               <div class="day-header-line"><span class="day-number">${dayNum}</span></div>
               <div class="day-pnl-wrap">
                 <div class="day-pnl">${pnlDisplay}</div>
+                ${crossDisplay ? `<div class="day-pnl-sub">${crossDisplay}</div>` : ''}
                 <div class="day-trade-count">${tradeWord}</div>
               </div>
             `;
@@ -652,6 +785,7 @@ const CalendarManager = {
               pnlFormatted: fullFormatted,
               dailyPct,
               pctFormatted,
+              startingCapitalFormatted,
               direction: intensity.direction,
               tier: intensity.tier,
               hasPercentage: intensity.hasPercentage
@@ -690,27 +824,34 @@ const CalendarManager = {
         weekRow.appendChild(cell);
       }
 
-      // Render 8th Column: Weekly Summary Card
+      // Render 8th Column: Weekly Summary Card (with P&L + % cross-verification)
       weekPnL = Math.round(weekPnL * 100) / 100;
       const summaryCell = document.createElement('div');
       summaryCell.className = 'calendar-week-summary-cell';
 
-      let pnlClass = 'neutral';
-      let pnlFormattedText = `${sym}0`;
+      const weekPnlCurrency = weekTradingDays === 0 && Math.abs(weekPnL) < this.HEATMAP_CONFIG.epsilonPnL
+        ? `${sym}0.00`
+        : this.formatPnL(weekPnL, true);
+      const weekPctFormatted = weekTradingDays === 0 && Math.abs(weekPnL) < this.HEATMAP_CONFIG.epsilonPnL
+        ? '0.00%'
+        : this.formatPercent(this.computeDailyReturnPercent(weekPnL, startingCapital));
 
+      let pnlClass = 'neutral';
       if (weekPnL > 0) {
         summaryCell.classList.add('profit-week');
         pnlClass = 'profit';
-        pnlFormattedText = this.formatPnL(weekPnL, false);
       } else if (weekPnL < 0) {
         summaryCell.classList.add('loss-week');
         pnlClass = 'loss';
-        pnlFormattedText = this.formatPnL(weekPnL, false);
       } else {
         summaryCell.classList.add('empty-week');
         pnlClass = 'neutral';
-        pnlFormattedText = `${sym}0`;
       }
+
+      const pnlFormattedText = isPercentMode ? weekPctFormatted : weekPnlCurrency;
+      const weekCrossText = (startingCapital && startingCapital > 0 && weekTradingDays > 0)
+        ? (isPercentMode ? weekPnlCurrency : weekPctFormatted)
+        : '';
 
       const daysWord = `${weekTradingDays} ${weekTradingDays === 1 ? 'day' : 'days'}`;
 
@@ -718,6 +859,7 @@ const CalendarManager = {
         <div class="week-summary-inner">
           <div class="week-summary-label">Week ${w + 1}</div>
           <div class="week-summary-pnl ${pnlClass}">${pnlFormattedText}</div>
+          ${weekCrossText ? `<div class="week-summary-sub">${weekCrossText}</div>` : ''}
           <div class="week-summary-days">
             <span class="week-days-pill">${daysWord}</span>
           </div>

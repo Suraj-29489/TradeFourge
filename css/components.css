@@ -795,6 +795,21 @@ select.form-control option {
   color: var(--cal-days-pill-color);
 }
 
+.cal-stat-pill.cal-stat-cross {
+  background-color: var(--bg-card-alt);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.cal-stat-pill.cal-stat-cross.profit {
+  color: var(--profit);
+}
+
+.cal-stat-pill.cal-stat-cross.loss {
+  color: var(--loss);
+}
+
 .cal-icon-btn {
   width: 28px;
   height: 28px;
@@ -813,6 +828,54 @@ select.form-control option {
   background-color: var(--btn-subtle-hover);
   border-color: var(--btn-subtle-border-hover);
   color: var(--btn-subtle-hover-text);
+}
+
+.cal-unit-toggle {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 2px;
+  gap: 2px;
+  border-radius: var(--radius-sm);
+  background-color: var(--btn-subtle-bg);
+  border: 1px solid var(--btn-subtle-border);
+}
+
+.cal-unit-btn {
+  min-width: 26px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.14s ease;
+}
+
+.cal-unit-btn:hover:not(.active) {
+  color: var(--btn-subtle-hover-text);
+  background-color: var(--btn-subtle-hover);
+}
+
+.cal-unit-btn.active {
+  background-color: var(--btn-primary-bg);
+  background-image: var(--btn-primary-bg-image);
+  border-color: var(--btn-primary-border);
+  color: var(--btn-primary-text);
+  box-shadow: var(--btn-primary-shadow);
+}
+
+.cal-unit-btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 1px;
 }
 
 /* Calendar Grid & Week Rows */
@@ -911,13 +974,38 @@ select.form-control option {
 
 .day-pnl {
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
   line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+}
+
+.day-pnl-sub {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--cal-cell-meta, var(--text-muted));
+  opacity: 0.85;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.calendar-day-cell.profit-day.pnl-tier-pos-4 .day-pnl-sub,
+.calendar-day-cell.profit-day.pnl-tier-pos-5 .day-pnl-sub {
+  color: var(--cal-profit-text-5);
+  opacity: 0.9;
+}
+
+.calendar-day-cell.loss-day.pnl-tier-neg-4 .day-pnl-sub,
+.calendar-day-cell.loss-day.pnl-tier-neg-5 .day-pnl-sub {
+  color: var(--cal-loss-text-5);
+  opacity: 0.9;
 }
 
 .day-trade-count {
@@ -1180,6 +1268,17 @@ select.form-control option {
 
 .week-summary-pnl.neutral {
   color: var(--text-muted);
+}
+
+.week-summary-sub {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .week-summary-days {
@@ -3757,6 +3856,13 @@ select.form-control option {
   }
   .day-trade-count .trade-count-word {
     display: none;
+  }
+  .day-pnl-sub {
+    display: none;
+  }
+  .week-summary-sub {
+    margin: 0 2px;
+    font-size: 0.7rem;
   }
   .toast-container {
     bottom: calc(74px + env(safe-area-inset-bottom, 0px));

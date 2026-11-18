@@ -749,6 +749,7 @@
                 <div class="kpi-visual">
                   <div class="kpi-sub-row">
                     <span id="kpiStartingCapitalLabel">Start: Not set</span>
+                    <span id="kpiNetReturnPnlLabel"></span>
                   </div>
                   <div class="kpi-sub-row" style="margin-top: 4px;">
                     <span id="kpiEndingEquityLabel">End Equity: --</span>
@@ -1080,6 +1081,7 @@
               <div class="cal-stats-group">
                 <span class="cal-stats-label">Monthly stats:</span>
                 <span class="cal-stat-pill cal-stat-pnl" id="calMonthlyPnl">+$0.00</span>
+                <span class="cal-stat-pill cal-stat-cross" id="calMonthlyCrossPnl" style="display: none;">0.00%</span>
                 <span class="cal-stat-pill cal-stat-days" id="calMonthlyDays">0 days</span>
                 <button type="button" class="cal-icon-btn" id="calSettingsBtn" title="Calendar Settings" aria-label="Calendar Settings">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1094,6 +1096,10 @@
                     <line x1="12" y1="8" x2="12.01" y2="8"></line>
                   </svg>
                 </button>
+                <div class="cal-unit-toggle" id="calUnitToggle" role="group" aria-label="Calendar P&amp;L display unit">
+                  <button type="button" class="cal-unit-btn active" id="calUnitCurrencyBtn" data-cal-unit="currency" aria-pressed="true" title="Show calendar P&amp;L in currency">$</button>
+                  <button type="button" class="cal-unit-btn" id="calUnitPercentBtn" data-cal-unit="percent" aria-pressed="false" title="Show calendar P&amp;L in percentage (%)">%</button>
+                </div>
               </div>
             </div>
             <div class="section-body">

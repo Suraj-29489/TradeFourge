@@ -176,13 +176,14 @@ const TradeAnalytics = {
 
     // Expectancy per trade: total realized P&L / total closed trades
     const expectancy = totalTrades > 0 ? totalPnL / totalTrades : 0;
+    const roundedTotalPnL = Math.round(totalPnL * 100) / 100;
 
-    // Net Return % & Calculated Balance based on starting capital
+    // Net Return % & Calculated Balance strictly based on starting capital ("Start" in Net Return Tool)
     let netReturnPercent = null;
     let calculatedBalance = null;
     if (startingCapital && startingCapital > 0) {
-      netReturnPercent = Math.round(((totalPnL / startingCapital) * 100) * 100) / 100;
-      calculatedBalance = Math.round((startingCapital + totalPnL) * 100) / 100;
+      netReturnPercent = Math.round(((roundedTotalPnL / startingCapital) * 100) * 100) / 100;
+      calculatedBalance = Math.round((startingCapital + roundedTotalPnL) * 100) / 100;
     }
 
     // Chronological realized equity curve for Maximum Drawdown calculation
@@ -391,7 +392,6 @@ const TradeAnalytics = {
     const negativeSymbols = symbolsList.filter(s => s.pnl < 0).sort((a, b) => a.pnl - b.pnl);
     const zeroSymbols = symbolsList.filter(s => s.pnl === 0);
 
-    const roundedTotalPnL = Math.round(totalPnL * 100) / 100;
     const isTotalPnLPositive = roundedTotalPnL > 0;
 
     const mapSymbolItem = (s) => {
@@ -863,6 +863,25 @@ const TradeAnalytics = {
       maximumFractionDigits: 2
     });
     return `${sign}${sym}${formatted}`;
+  },
+
+  /**
+   * Compute percentage return of a P&L value relative to authoritative Starting Capital:
+   * (pnl / startingCapital) * 100. Returns null when startingCapital is unset or <= 0.
+   */
+  computeReturnPercent(pnl, startingCapital = null) {
+    const cap = (startingCapital !== null && startingCapital !== undefined)
+      ? Number(startingCapital)
+      : this.getStartingCapital();
+    const num = Number(pnl);
+    if (!Number.isFinite(num) || !Number.isFinite(cap) || cap <= 0) {
+      return null;
+    }
+    if (Math.abs(num) < 0.0001) {
+      return 0;
+    }
+    const pct = (num / cap) * 100;
+    return Number.isFinite(pct) ? pct : null;
   },
 
   /**
