@@ -14,6 +14,7 @@
     "test:sync": "node test/cloud_sync.test.js",
     "test:auth": "node test/auth_ui.test.js",
     "test:theme": "node test/theme_calendar.test.js",
-    "test": "node test/backend_oauth_drive.test.js && node test/cloud_sync.test.js && node test/auth_ui.test.js && node test/theme_calendar.test.js"
+    "test:dedup": "node test/duplicate_reconciliation.test.js",
+    "test": "node test/backend_oauth_drive.test.js && node test/cloud_sync.test.js && node test/auth_ui.test.js && node test/theme_calendar.test.js && node test/duplicate_reconciliation.test.js"
   }
 }

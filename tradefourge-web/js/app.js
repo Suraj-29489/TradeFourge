@@ -139,6 +139,10 @@ const App = {
     } else {
       this.trades = [];
     }
+    if (StorageManager._lastDedupCleanedCount > 0) {
+      const cleaned = StorageManager._lastDedupCleanedCount;
+      this.showToast(`Cleaned ${cleaned} duplicate trade${cleaned > 1 ? 's' : ''} (${this.trades.length} unique synced)`, 'info');
+    }
     this.processTrades();
     this.updateCloudSyncUI();
 
@@ -428,6 +432,12 @@ const App = {
    * Process & filter trades and update all UI components
    */
   processTrades() {
+    if (Array.isArray(this.trades) && this.trades.length > 1 && typeof StorageManager !== 'undefined' && typeof StorageManager.deduplicateTrades === 'function') {
+      const deduped = StorageManager.deduplicateTrades(this.trades);
+      if (deduped.length !== this.trades.length) {
+        this.trades = deduped;
+      }
+    }
     this.renderAccountSelector();
     this.applyDateFilter();
     this.currentMetrics = TradeAnalytics.calculateMetrics(this.filteredTrades);
@@ -4952,14 +4962,17 @@ const App = {
     const isMerge = optMerge ? optMerge.checked : true;
 
     let importedCount = 0;
+    let dedupCount = 0;
     if (isMerge && this.trades.length > 0) {
       const res = StorageManager.mergeTrades(parsedTrades, fileName);
       this.trades = res.trades;
       importedCount = res.addedCount;
+      dedupCount = res.dedupRemovedCount || 0;
     } else {
       StorageManager.saveTrades(parsedTrades, fileName);
       this.trades = StorageManager.getTrades();
       importedCount = this.trades.length;
+      dedupCount = StorageManager._lastDedupCleanedCount || 0;
     }
 
     if (typeof CalendarManager !== 'undefined') {
@@ -4974,7 +4987,13 @@ const App = {
       });
     }
 
-    this.showToast(`Imported ${importedCount} trades from ${fileName} and saved locally! (Total: ${this.trades.length})`, 'success');
+    if (dedupCount > 0) {
+      this.showToast(`Cleaned ${dedupCount} duplicate trade${dedupCount > 1 ? 's' : ''} (${this.trades.length} unique synced)`, 'info');
+    } else if (importedCount > 0) {
+      this.showToast(`Imported ${importedCount} trades from ${fileName} and saved locally! (Total: ${this.trades.length})`, 'success');
+    } else {
+      this.showToast('All trades from CSV already exist in your journal.', 'info');
+    }
   },
 
   closeCSVPreviewModal() {

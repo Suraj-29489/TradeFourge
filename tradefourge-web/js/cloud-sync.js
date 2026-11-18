@@ -279,8 +279,13 @@
         ? settingsObj.mt5Session
         : (accountsObj.mt5Session !== undefined ? accountsObj.mt5Session : null);
 
+      const rawTrades = Array.isArray(tradesObj.trades) ? tradesObj.trades : [];
+      const cleanTrades = typeof StorageManager !== 'undefined' && typeof StorageManager.deduplicateTrades === 'function'
+        ? StorageManager.deduplicateTrades(rawTrades)
+        : rawTrades;
+
       const extracted = {
-        trades: Array.isArray(tradesObj.trades) ? tradesObj.trades : [],
+        trades: cleanTrades,
         lastImport: tradesObj.lastImport || null,
         deletedUids: Array.isArray(tradesObj.deletedUids) ? tradesObj.deletedUids : [],
         mt5Session,
@@ -322,10 +327,22 @@
         const sk = _getTradeSyncKey(t);
         const fp = _getTradeFingerprint(t);
         if (entities.has(sk)) return sk;
+
+        const candidateIds = typeof StorageManager !== 'undefined' && typeof StorageManager.getAllIdentifiersForTrade === 'function'
+          ? StorageManager.getAllIdentifiersForTrade(t)
+          : new Set([sk, fp].filter(Boolean));
+
         for (const [k, ent] of entities.entries()) {
           const ref = ent.remote || ent.local || ent.base;
-          if (ref && (_getTradeSyncKey(ref) === sk || (fp && _getTradeFingerprint(ref) === fp))) {
+          if (!ref) continue;
+          if (_getTradeSyncKey(ref) === sk || (fp && _getTradeFingerprint(ref) === fp)) {
             return k;
+          }
+          if (typeof StorageManager !== 'undefined' && typeof StorageManager.getAllIdentifiersForTrade === 'function') {
+            const refIds = StorageManager.getAllIdentifiersForTrade(ref);
+            for (const cid of candidateIds) {
+              if (refIds.has(cid)) return k;
+            }
           }
         }
         return sk || fp;
@@ -465,10 +482,17 @@
         }
       });
 
+      const dedupedTrades = typeof StorageManager !== 'undefined' && typeof StorageManager.deduplicateTrades === 'function'
+        ? StorageManager.deduplicateTrades(mergedTrades)
+        : mergedTrades;
+      const dedupRemovedCount = Math.max(0, mergedTrades.length - dedupedTrades.length);
+
       return {
-        trades: mergedTrades,
+        trades: dedupedTrades,
         deletedUids: Array.from(mergedDelMap.values()).slice(-2000),
-        conflicts
+        conflicts,
+        dedupRemovedCount,
+        uniqueTradeCount: dedupedTrades.length
       };
     },
 
