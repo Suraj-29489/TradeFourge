@@ -1624,12 +1624,13 @@ async function runAllTests() {
       }
     ], 'nov_weekly.csv');
 
-    // Wait past the old 1.2s auto-sync debounce window -> ZERO automatic cloud uploads or backups!
-    await sleep(1400);
-    assert.strictEqual(CloudSyncManager.getState().hasDirtyChanges, true, 'CSV import must stay local without immediate cloud upload');
-    assert.strictEqual(mockGoogle.state.driveFileCreations, driveFilesBeforeCsv, 'Must NOT create any cloud backup after CSV input');
+    // Wait for auto-sync debounce window -> Live working trades sync to Drive (so phone stays in sync),
+    // but ZERO backup archives are created in Backups/ (backups remain weekly or manual only!).
+    await sleep(1450);
+    await waitForCloudIdle();
+    assert.strictEqual(CloudSyncManager.getState().hasDirtyChanges, false, 'Live trades must auto-sync to Drive so phone gets latest updates');
     const backupsAfterCsv = await CloudSyncManager.listCloudBackups(20);
-    assert.strictEqual(backupsAfterCsv.length, backupsBeforeCsv.length, 'Backup count must NOT increase after CSV upload');
+    assert.strictEqual(backupsAfterCsv.length, backupsBeforeCsv.length, 'Backup archives in Backups/ must NOT increase on CSV upload');
 
     // Verify normal browser offline localStorage (`tradefourge_trades`) IMMEDIATELY has the latest CSV data!
     const rawOfflineTrades = JSON.parse(localStorage.getItem('tradefourge_trades') || '[]');

@@ -905,6 +905,17 @@
         });
       }
 
+      if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible' && !this._booting) {
+            const st = this.getState();
+            if (st.isCloudActive && st.status !== 'migration_pending') {
+              this.syncNow({ reason: 'visibility_change' }).catch(() => {});
+            }
+          }
+        });
+      }
+
       let authState = typeof GoogleAuthManager !== 'undefined' ? GoogleAuthManager.init() : { isSignedIn: false };
 
       if (typeof navigator === 'undefined' || navigator.onLine !== false) {
@@ -983,13 +994,12 @@
 
       this._writeMeta(sub, { dirtyDomains: nextDirty });
 
-      // Persist immediately in browser localStorage only — do NOT auto-upload/backup
-      // to Google Drive on every CSV import or edit. Cloud backups run weekly (every 7 days)
-      // or manually whenever the user clicks Sync Now / Backup Now.
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        this.status = 'offline';
+      if (this.status === 'migration_pending') {
+        this._emit('status');
+        return;
       }
-      this._emit('status', { reason: 'local_saved', domain: event.domain });
+
+      this._scheduleAutoSync();
     },
 
     async _onAuthEvent(authEvent) {
@@ -1216,12 +1226,12 @@
             : { hasAnyData: false, snapshot: {} };
 
           // Returning account session on this browser: pull/reconcile remote changes cleanly,
-          // without auto-pushing local edits unless the weekly backup cycle is due.
+          // pushing local edits if dirty so other devices (e.g. mobile) stay up-to-date.
           if (accountHasData || hasDirty || meta.lastSyncedAt) {
             const weeklyDue = this.isWeeklyBackupDue(sub);
             await this._reconcileAccountWithRemote(account, remoteDb, {
               allowConflictAutoResolve: true,
-              allowPushDirty: weeklyDue,
+              allowPushDirty: true,
               fullCheck: true
             });
 

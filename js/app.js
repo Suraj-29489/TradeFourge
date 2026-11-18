@@ -4968,6 +4968,12 @@ const App = {
     this.processTrades();
     this.closeCSVPreviewModal();
 
+    if (typeof CloudSyncManager !== 'undefined' && CloudSyncManager.getState().isCloudActive) {
+      CloudSyncManager.syncNow({ reason: 'csv_import' }).catch((err) => {
+        console.warn('[TradeFourge] Immediate cloud sync after CSV import deferred:', err);
+      });
+    }
+
     this.showToast(`Imported ${importedCount} trades from ${fileName} and saved locally! (Total: ${this.trades.length})`, 'success');
   },
 
