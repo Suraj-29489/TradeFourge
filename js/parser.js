@@ -5,6 +5,134 @@
  */
 
 const TradeParser = {
+  ACCOUNT_DEFINITIONS: {
+    exness_standard: {
+      id: 'exness_standard',
+      name: 'Exness Account',
+      broker: 'exness',
+      type: 'standard'
+    },
+    exness_cents: {
+      id: 'exness_cents',
+      name: 'Cents Account',
+      broker: 'exness',
+      type: 'cents'
+    }
+  },
+
+  // Standard non-cent instruments whose base ticker naturally ends with uppercase 'C'
+  KNOWN_STANDARD_C_SYMBOLS: new Set([
+    'USTEC', 'USDC', 'MATIC', 'LTC', 'ETC', 'XEC', 'BTTC'
+  ]),
+
+  /**
+   * Normalize instrument symbol while preserving lowercase 'c' suffix for Exness Cents symbols
+   * (e.g. XAUUSDc, BTCUSDc, USOILc) and keeping standard symbols uppercase (e.g. XAUUSD, USTEC).
+   */
+  normalizeSymbol(rawSymbol) {
+    const cleaned = String(rawSymbol || '').trim();
+    if (!cleaned) return '';
+    const upper = cleaned.toUpperCase();
+    if (cleaned.length >= 4 && cleaned.endsWith('c') && !this.KNOWN_STANDARD_C_SYMBOLS.has(upper)) {
+      return cleaned.slice(0, -1).toUpperCase() + 'c';
+    }
+    return upper;
+  },
+
+  /**
+   * Automatically identify trading account for an individual trade record.
+   * Priority:
+   *   1. Primary: Symbol naming convention (ends with 'c' => Cents Account, else => Exness Account;
+   *      standard instruments like USTEC ending in uppercase 'C' remain Exness Account).
+   *   2. Secondary: Ticket digit length (7 digits => Exness Account, 8 digits => Cents Account)
+   *      used for corroboration or fallback when symbol is missing.
+   * Never uses filenames or date ranges, and never lets ticket length override symbol evidence.
+   */
+  identifyTradeAccount(trade) {
+    const rawSym = String((trade && trade.symbol) || '').trim();
+    const upperSym = rawSym.toUpperCase();
+    const rawTicket = String((trade && (trade.ticket || trade.position)) || '').trim();
+
+    let symbolAccountId = null;
+    if (rawSym) {
+      let isCentsSymbol = false;
+      if (rawSym.endsWith('c') && rawSym.length >= 4 && !this.KNOWN_STANDARD_C_SYMBOLS.has(upperSym)) {
+        isCentsSymbol = true;
+      } else if (
+        rawSym === upperSym &&
+        upperSym.endsWith('C') &&
+        upperSym.length >= 6 &&
+        !this.KNOWN_STANDARD_C_SYMBOLS.has(upperSym)
+      ) {
+        // Legacy uppercased cent symbols (e.g. XAUUSDC, BTCUSDC, USOILC)
+        isCentsSymbol = true;
+      }
+      symbolAccountId = isCentsSymbol ? 'exness_cents' : 'exness_standard';
+    }
+
+    let ticketAccountId = null;
+    if (/^\d+$/.test(rawTicket)) {
+      if (rawTicket.length === 7) ticketAccountId = 'exness_standard';
+      else if (rawTicket.length === 8) ticketAccountId = 'exness_cents';
+    }
+
+    let accountId = 'exness_standard';
+    let detectionSource = 'default_fallback';
+    let needsReview = false;
+    let reviewReason = '';
+
+    if (symbolAccountId) {
+      accountId = symbolAccountId;
+      if (ticketAccountId && ticketAccountId !== symbolAccountId) {
+        detectionSource = 'symbol_conflict';
+        needsReview = true;
+        const symName = this.ACCOUNT_DEFINITIONS[symbolAccountId].name;
+        const tkName = this.ACCOUNT_DEFINITIONS[ticketAccountId].name;
+        reviewReason = `Symbol "${rawSym}" indicates ${symName}, while ${rawTicket.length}-digit ticket "${rawTicket}" suggests ${tkName}.`;
+      } else if (ticketAccountId && ticketAccountId === symbolAccountId) {
+        detectionSource = 'symbol+ticket';
+      } else {
+        detectionSource = 'symbol';
+      }
+    } else if (ticketAccountId) {
+      accountId = ticketAccountId;
+      detectionSource = 'ticket_fallback';
+    } else {
+      needsReview = true;
+      reviewReason = 'Missing symbol and recognizable 7/8-digit Exness ticket ID.';
+    }
+
+    const def = this.ACCOUNT_DEFINITIONS[accountId] || this.ACCOUNT_DEFINITIONS.exness_standard;
+    return {
+      accountId: def.id,
+      accountName: def.name,
+      detectionSource,
+      needsReview,
+      reviewReason
+    };
+  },
+
+  /**
+   * Attach automatic account identification metadata to an array of trades (per trade record)
+   */
+  annotateTradesWithAccounts(trades = []) {
+    if (!Array.isArray(trades)) return [];
+    trades.forEach((t) => {
+      if (!t || typeof t !== 'object') return;
+      const info = this.identifyTradeAccount(t);
+      t.accountId = info.accountId;
+      t.accountName = info.accountName;
+      t.accountDetectionSource = info.detectionSource;
+      t.accountNeedsReview = Boolean(info.needsReview);
+      if (info.reviewReason) {
+        t.accountReviewReason = info.reviewReason;
+      } else {
+        delete t.accountReviewReason;
+      }
+    });
+    return trades;
+  },
+
   /**
    * Inspect CSV headers to detect broker format
    * @param {string} csvText
@@ -136,6 +264,7 @@ const TradeParser = {
       }
     });
 
+    this.annotateTradesWithAccounts(trades);
     trades.sort((a, b) => new Date(a.closeTime || a.openTime) - new Date(b.closeTime || b.openTime));
     return trades;
   },
@@ -177,6 +306,7 @@ const TradeParser = {
       throw new Error('No valid unique trades could be parsed from this Zuperior CSV.');
     }
 
+    this.annotateTradesWithAccounts(trades);
     trades.sort((a, b) => new Date(a.closeTime || a.openTime) - new Date(b.closeTime || b.openTime));
     return trades;
   },
@@ -364,7 +494,7 @@ const TradeParser = {
     const ticket = get('ticket');
     const rawType = get('type').toLowerCase();
     const lots = this.parseNumber(get('lots'));
-    const symbol = get('symbol').toUpperCase();
+    const symbol = this.normalizeSymbol(get('symbol'));
     const profit = this.parseNumber(get('profit'));
 
     if (!ticket || !symbol || !Number.isFinite(lots) || lots <= 0 || !Number.isFinite(profit)) {
@@ -1014,12 +1144,16 @@ const TradeParser = {
     const fileType = this.detectFileType(fileName, fileData);
 
     if (fileType === 'mt5_xlsx') {
-      return this.parseMT5XLSX(fileData);
+      const res = this.parseMT5XLSX(fileData);
+      this.annotateTradesWithAccounts(res.trades);
+      return res;
     }
 
     if (fileType === 'mt5_html') {
       const htmlText = typeof fileData === 'string' ? fileData : this.decodeTextBuffer(fileData);
-      return this.parseMT5HTML(htmlText);
+      const res = this.parseMT5HTML(htmlText);
+      this.annotateTradesWithAccounts(res.trades);
+      return res;
     }
 
     // CSV format
@@ -1027,13 +1161,31 @@ const TradeParser = {
     const trades = this.parseCSV(csvText, brokerPreference);
     const broker = brokerPreference || this.detectBroker(csvText);
 
+    const detectedCounts = {};
+    let reviewCount = 0;
+    trades.forEach((t) => {
+      const id = t.accountId || 'exness_standard';
+      detectedCounts[id] = (detectedCounts[id] || 0) + 1;
+      if (t.accountNeedsReview) reviewCount++;
+    });
+    const detectedAccountNames = Object.keys(detectedCounts)
+      .map((id) => (this.ACCOUNT_DEFINITIONS[id] ? this.ACCOUNT_DEFINITIONS[id].name : id));
+    const accountSummaryLabel = detectedAccountNames.length === 1
+      ? detectedAccountNames[0]
+      : detectedAccountNames.map((name) => {
+          const id = Object.keys(this.ACCOUNT_DEFINITIONS).find((k) => this.ACCOUNT_DEFINITIONS[k].name === name);
+          return `${name} (${detectedCounts[id] || 0})`;
+        }).join(', ');
+
     return {
       format: broker === 'zuperior' ? 'zuperior_csv' : 'exness_csv',
       broker,
       metadata: {
         title: 'Trade Log CSV',
         name: '',
-        account: '',
+        account: accountSummaryLabel,
+        detectedAccounts: detectedCounts,
+        reviewCount,
         company: broker === 'zuperior' ? 'Zuperior' : 'Exness',
         currency: 'USD',
         reportDate: ''

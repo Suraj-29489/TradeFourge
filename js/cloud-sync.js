@@ -207,7 +207,7 @@
     },
 
     buildSettingsPayload(snapshot = {}, owner = null, nowIso = new Date().toISOString()) {
-      return {
+      const payload = {
         schemaVersion: SCHEMA_VERSION,
         updatedAt: nowIso,
         ownerSub: owner && owner.sub ? String(owner.sub) : '',
@@ -218,6 +218,10 @@
         mt5Session: snapshot.mt5Session || null,
         theme: snapshot.theme || undefined
       };
+      if (Array.isArray(snapshot.accounts) && snapshot.accounts.length > 0) {
+        payload.tradingAccounts = snapshot.accounts;
+      }
+      return payload;
     },
 
     buildAccountsPayload(snapshot = {}, owner = null, nowIso = new Date().toISOString()) {
@@ -275,7 +279,7 @@
         ? settingsObj.mt5Session
         : (accountsObj.mt5Session !== undefined ? accountsObj.mt5Session : null);
 
-      return {
+      const extracted = {
         trades: Array.isArray(tradesObj.trades) ? tradesObj.trades : [],
         lastImport: tradesObj.lastImport || null,
         deletedUids: Array.isArray(tradesObj.deletedUids) ? tradesObj.deletedUids : [],
@@ -286,6 +290,10 @@
         notes,
         rules
       };
+      if (Array.isArray(settingsObj.tradingAccounts)) {
+        extracted.accounts = settingsObj.tradingAccounts;
+      }
+      return extracted;
     },
 
     mergeTradeCollections({

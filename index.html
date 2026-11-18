@@ -352,29 +352,100 @@
         <div class="header-title-block">
           <div class="header-title-row">
             <h1 class="page-title" id="pageTitle">Dashboard</h1>
-            <span class="terminal-status-pill" id="headerTerminalPill">
-              <span class="status-dot-sm"></span>
-              LIVE JOURNAL ENGINE
-            </span>
+            <div class="account-selector-wrap" id="headerAccountSelectorWrap">
+              <button
+                type="button"
+                class="account-selector-btn"
+                id="headerAccountSelectorBtn"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-controls="headerAccountSelectorMenu"
+                aria-label="Select trading account"
+                title="Switch trading account filter"
+              >
+                <span class="account-selector-icon" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                    <line x1="2" y1="10" x2="22" y2="10"></line>
+                  </svg>
+                </span>
+                <span class="account-selector-label" id="headerAccountSelectorLabel">All Accounts</span>
+                <span class="account-selector-caret" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
+              </button>
+              <div
+                class="account-selector-menu"
+                id="headerAccountSelectorMenu"
+                role="listbox"
+                aria-label="Trading Accounts"
+              ></div>
+            </div>
           </div>
         </div>
       </div>
 
       <div class="header-right">
         <!-- Date Range Filter + Custom Range Popover -->
-        <div class="date-filter-wrapper">
+        <div class="date-filter-wrapper" id="headerDateFilterWrap">
           <div class="date-filter">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
-            <select id="headerDateRangeSelect" aria-label="Date Range Filter">
+            <button
+              type="button"
+              class="date-filter-btn"
+              id="headerDateRangeBtn"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-controls="headerDateRangeMenu"
+              aria-label="Date Range Filter"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <span class="date-filter-label" id="headerDateRangeLabel">All Time</span>
+              <span class="date-filter-caret" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </button>
+            <select id="headerDateRangeSelect" class="sr-only-select" aria-hidden="true" tabindex="-1">
               <option value="all">All Time</option>
               <option value="last30">Last 30 Days</option>
               <option value="custom">Custom</option>
             </select>
+          </div>
+
+          <!-- Styled Date Range Dropdown Menu (Matches TradeFourge Card Dropdown UI) -->
+          <div class="date-range-menu" id="headerDateRangeMenu" role="listbox" aria-label="Date Range Options">
+            <button type="button" class="date-range-item active" role="option" aria-selected="true" data-range="all">
+              <span class="date-range-item-name">All Time</span>
+              <span class="date-range-check" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </span>
+            </button>
+            <button type="button" class="date-range-item" role="option" aria-selected="false" data-range="last30">
+              <span class="date-range-item-name">Last 30 Days</span>
+              <span class="date-range-check" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </span>
+            </button>
+            <button type="button" class="date-range-item" role="option" aria-selected="false" data-range="custom">
+              <span class="date-range-item-name">Custom</span>
+              <span class="date-range-check" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </span>
+            </button>
           </div>
 
           <!-- Custom Date Range Popover -->
@@ -1386,20 +1457,41 @@
               </div>
 
               <div class="analytics-lot-bottom-grid">
-                <div class="section-card">
-                  <div class="section-header">
-                    <div>
-                      <div class="section-title">P&amp;L &amp; VOLUME BY LOT SIZE</div>
-                      <div class="section-subtitle">Net profit and trade frequency per lot size</div>
+                <div class="analytics-lot-left-stack">
+                  <div class="section-card analytics-lot-chart-card">
+                    <div class="section-header">
+                      <div>
+                        <div class="section-title">P&amp;L &amp; VOLUME BY LOT SIZE</div>
+                        <div class="section-subtitle">Net profit and trade frequency per lot size</div>
+                      </div>
+                      <div class="card-tabs">
+                        <button class="card-tab active" id="tabLotPnL">Net P&amp;L</button>
+                        <button class="card-tab" id="tabLotTrades">Trade Count</button>
+                      </div>
                     </div>
-                    <div class="card-tabs">
-                      <button class="card-tab active" id="tabLotPnL">Net P&amp;L</button>
-                      <button class="card-tab" id="tabLotTrades">Trade Count</button>
+                    <div class="section-body">
+                      <div class="analytics-lot-chart-wrap">
+                        <canvas id="lotSizeChart"></canvas>
+                      </div>
                     </div>
                   </div>
-                  <div class="section-body">
-                    <div class="analytics-lot-chart-wrap">
-                      <canvas id="lotSizeChart"></canvas>
+
+                  <div class="section-card analytics-pair-perf-card" id="cardAnalyticsPairPerf">
+                    <div class="section-header analytics-pair-header">
+                      <div>
+                        <div class="section-title">PAIR WIN RATE &amp; TILL-DATE P&amp;L</div>
+                        <div class="section-subtitle" id="analyticsPairPerfSubtitle">Till-date win rate, gross profit, gross loss &amp; net P&amp;L by pair</div>
+                      </div>
+                      <div class="analytics-pair-header-controls">
+                        <div class="card-tabs" role="group" aria-label="Sort pairs">
+                          <button type="button" class="card-tab active" id="tabPairSortPnL">Net P&amp;L</button>
+                          <button type="button" class="card-tab" id="tabPairSortWinRate">Win %</button>
+                        </div>
+                        <span class="analytics-tag" id="analyticsPairCountBadge">0 Pairs</span>
+                      </div>
+                    </div>
+                    <div class="section-body analytics-pair-card-body">
+                      <div class="analytics-pair-list" id="analyticsPairPerfList"></div>
                     </div>
                   </div>
                 </div>

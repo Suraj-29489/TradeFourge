@@ -451,6 +451,9 @@ const StrategyBotManager = {
     if (this.tradesCache && this.tradesCache.length > 0) {
       return this.tradesCache;
     }
+    if (typeof App !== 'undefined' && Array.isArray(App.filteredTrades)) {
+      return App.filteredTrades;
+    }
     if (typeof App !== 'undefined' && App.trades && App.trades.length > 0) {
       return App.trades;
     }

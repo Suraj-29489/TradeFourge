@@ -7,6 +7,7 @@ const App = {
   filteredTrades: [],
   currentMetrics: null,
   activeView: 'dashboard',
+  selectedAccount: 'all', // 'all', 'exness_standard', 'exness_cents'
   dateFilter: 'all', // 'all', 'last30', 'custom'
   customStartDate: '',
   customEndDate: '',
@@ -14,6 +15,7 @@ const App = {
   miniCalYear: new Date().getFullYear(),
   miniCalMonth: new Date().getMonth(),
   _miniCalInitialized: false,
+  analyticsPairSort: 'pnl', // 'pnl' | 'winrate'
 
   // Trade Log Table state
   tradeLogState: {
@@ -116,6 +118,7 @@ const App = {
     }
 
     this.initCurrency();
+    this.initAccountSelector();
     this.initSidebarState();
     this.initMobileViewportHandling();
     this.bindEvents();
@@ -160,9 +163,272 @@ const App = {
   },
 
   /**
+   * Resolve human-readable label for an internal account ID
+   */
+  getAccountLabel(accountId = this.selectedAccount) {
+    if (accountId === 'exness_standard') return 'Exness Account';
+    if (accountId === 'exness_cents') return 'Cents Account';
+    return 'All Accounts';
+  },
+
+  /**
+   * Build the ordered list of account selector options based on detected accounts.
+   * Individual accounts appear automatically once detected; All Accounts is always available.
+   */
+  getAvailableAccountOptions() {
+    const trades = Array.isArray(this.trades) ? this.trades : [];
+    const counts = {
+      exness_standard: 0,
+      exness_cents: 0,
+      all: trades.length
+    };
+
+    trades.forEach((t) => {
+      if (!t || typeof t !== 'object') return;
+      let accId = t.accountId;
+      if (!accId && typeof StorageManager !== 'undefined' && typeof StorageManager.identifyTradeAccount === 'function') {
+        accId = StorageManager.identifyTradeAccount(t).accountId;
+      }
+      if (accId === 'exness_cents') {
+        counts.exness_cents += 1;
+      } else {
+        counts.exness_standard += 1;
+      }
+    });
+
+    const storedAccounts = (typeof StorageManager !== 'undefined' && typeof StorageManager.getAccounts === 'function')
+      ? StorageManager.getAccounts()
+      : [];
+    const storedIds = new Set((storedAccounts || []).map((a) => a && a.id).filter(Boolean));
+
+    const options = [];
+    if (counts.exness_standard > 0 || (trades.length > 0 && storedIds.has('exness_standard'))) {
+      options.push({
+        id: 'exness_standard',
+        name: 'Exness Account',
+        count: counts.exness_standard
+      });
+    }
+    if (counts.exness_cents > 0 || (trades.length > 0 && storedIds.has('exness_cents'))) {
+      options.push({
+        id: 'exness_cents',
+        name: 'Cents Account',
+        count: counts.exness_cents
+      });
+    }
+    options.push({
+      id: 'all',
+      name: 'All Accounts',
+      count: counts.all
+    });
+
+    return options;
+  },
+
+  /**
+   * Return trades filtered strictly by the active Account Selector (without mutating stored trades)
+   */
+  getAccountScopedTrades(sourceTrades = null) {
+    const list = Array.isArray(sourceTrades) ? sourceTrades : (this.trades || []);
+    if (!this.selectedAccount || this.selectedAccount === 'all') {
+      return [...list];
+    }
+    return list.filter((t) => {
+      if (!t || typeof t !== 'object') return false;
+      let accId = t.accountId;
+      if (!accId && typeof StorageManager !== 'undefined' && typeof StorageManager.identifyTradeAccount === 'function') {
+        accId = StorageManager.identifyTradeAccount(t).accountId;
+      }
+      return (accId || 'exness_standard') === this.selectedAccount;
+    });
+  },
+
+  /**
+   * Initialize Header Account Selector dropdown and restore saved account selection
+   */
+  initAccountSelector() {
+    if (typeof StorageManager !== 'undefined' && typeof StorageManager.getSelectedAccount === 'function') {
+      this.selectedAccount = StorageManager.getSelectedAccount() || 'all';
+    } else {
+      this.selectedAccount = 'all';
+    }
+
+    const labelEl = document.getElementById('headerAccountSelectorLabel');
+    if (labelEl) {
+      labelEl.innerText = this.getAccountLabel(this.selectedAccount);
+    }
+
+    if (this._accountSelectorBound) {
+      return;
+    }
+    this._accountSelectorBound = true;
+
+    const wrap = document.getElementById('headerAccountSelectorWrap');
+    const btn = document.getElementById('headerAccountSelectorBtn');
+    const menu = document.getElementById('headerAccountSelectorMenu');
+
+    const closeMenu = () => {
+      if (wrap) wrap.classList.remove('open');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    };
+
+    if (btn && wrap) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = wrap.classList.contains('open');
+        const dateWrap = document.getElementById('headerDateFilterWrap');
+        const dateBtn = document.getElementById('headerDateRangeBtn');
+        if (dateWrap) dateWrap.classList.remove('open');
+        if (dateBtn) dateBtn.setAttribute('aria-expanded', 'false');
+        const googleDrop = document.getElementById('googleAccountDropdown');
+        if (googleDrop) googleDrop.classList.remove('active');
+        if (isOpen) {
+          closeMenu();
+        } else {
+          this.renderAccountSelector();
+          wrap.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    }
+
+    if (menu) {
+      menu.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    document.addEventListener('click', () => {
+      closeMenu();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeMenu();
+      }
+    });
+  },
+
+  /**
+   * Render Header Account Selector label and dropdown menu options
+   */
+  renderAccountSelector() {
+    const wrap = document.getElementById('headerAccountSelectorWrap');
+    const btn = document.getElementById('headerAccountSelectorBtn');
+    const labelEl = document.getElementById('headerAccountSelectorLabel');
+    const menu = document.getElementById('headerAccountSelectorMenu');
+
+    const options = this.getAvailableAccountOptions();
+    const validIds = new Set(options.map((o) => o.id));
+
+    if (!validIds.has(this.selectedAccount)) {
+      this.selectedAccount = 'all';
+      if (typeof StorageManager !== 'undefined' && typeof StorageManager.setSelectedAccount === 'function') {
+        StorageManager.setSelectedAccount('all');
+      }
+    }
+
+    const activeOption = options.find((o) => o.id === this.selectedAccount) || options[options.length - 1];
+    if (labelEl && activeOption) {
+      labelEl.innerText = activeOption.name;
+    }
+    if (btn && activeOption) {
+      btn.setAttribute('data-selected-account', activeOption.id);
+      btn.title = `Active Account: ${activeOption.name} (${activeOption.count} trades)`;
+    }
+
+    if (!menu) return;
+    menu.innerHTML = '';
+
+    options.forEach((opt) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      const isActive = opt.id === this.selectedAccount;
+      item.className = `account-selector-item${isActive ? ' active' : ''}`;
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      item.setAttribute('data-account-id', opt.id);
+      item.innerHTML = `
+        <span class="account-selector-item-left">
+          <span class="account-selector-item-dot" aria-hidden="true"></span>
+          <span class="account-selector-item-name">${this.escapeHTML(opt.name)}</span>
+        </span>
+        <span class="account-selector-item-meta">
+          <span class="account-selector-count">${opt.count}</span>
+          <span class="account-selector-check" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </span>
+        </span>
+      `;
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (wrap) wrap.classList.remove('open');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+        this.setSelectedAccount(opt.id);
+      });
+      menu.appendChild(item);
+    });
+  },
+
+  /**
+   * Switch active trading account filter immediately across the entire site (no page reload)
+   */
+  setSelectedAccount(accountId) {
+    const allowed = ['all', 'exness_standard', 'exness_cents'];
+    const normalized = allowed.includes(accountId) ? accountId : 'all';
+    this.selectedAccount = normalized;
+
+    if (typeof StorageManager !== 'undefined' && typeof StorageManager.setSelectedAccount === 'function') {
+      StorageManager.setSelectedAccount(normalized);
+    }
+
+    // Reset view-local pagination/focus state while preserving active dateFilter composition
+    this.tradeLogState.currentPage = 1;
+    const scopedTrades = this.getAccountScopedTrades();
+    if (this.tradeLogState.symbol !== 'all') {
+      const validSymbols = new Set(scopedTrades.map((t) => t.symbol));
+      if (!validSymbols.has(this.tradeLogState.symbol)) {
+        this.tradeLogState.symbol = 'all';
+        const symEl = document.getElementById('tradeLogSymbolFilter');
+        if (symEl) symEl.value = 'all';
+      }
+    }
+
+    this._miniCalInitialized = false;
+    if (this.dateFilter !== 'custom') {
+      this.customStartDate = '';
+      this.customEndDate = '';
+    }
+
+    if (typeof CalendarManager !== 'undefined') {
+      CalendarManager._initialized = false;
+    }
+
+    if (this.reportState) {
+      this.reportState._presetInitialized = false;
+      this.reportState.startDate = '';
+      this.reportState.endDate = '';
+      this.reportState.preset = 'custom';
+      const repStartEl = document.getElementById('reportStartDate');
+      const repEndEl = document.getElementById('reportEndDate');
+      if (repStartEl) repStartEl.value = '';
+      if (repEndEl) repEndEl.value = '';
+    }
+
+    if (typeof StrategyBotManager !== 'undefined') {
+      StrategyBotManager.tradesCache = null;
+    }
+
+    this.processTrades();
+  },
+
+  /**
    * Process & filter trades and update all UI components
    */
   processTrades() {
+    this.renderAccountSelector();
     this.applyDateFilter();
     this.currentMetrics = TradeAnalytics.calculateMetrics(this.filteredTrades);
 
@@ -188,30 +454,32 @@ const App = {
     this.renderInsightsView();
     this.renderStrategiesView();
     if (typeof StrategyBotManager !== 'undefined') {
+      StrategyBotManager.tradesCache = null;
       StrategyBotManager.updateContext();
     }
     this.updateStorageIndicator();
   },
 
   /**
-   * Date Filter application
+   * Composed Account + Date Filter application
    */
   applyDateFilter() {
+    const accountTrades = this.getAccountScopedTrades();
     if (this.dateFilter === 'all') {
-      this.filteredTrades = [...this.trades];
+      this.filteredTrades = [...accountTrades];
     } else if (this.dateFilter === 'last30') {
       const { maxDate } = this.getAvailableDateRange();
       const baseDate = maxDate ? new Date(maxDate + 'T23:59:59Z') : new Date();
       const cutoff = new Date(baseDate.getTime() - 30 * 24 * 60 * 60 * 1000);
       const cutoffStr = TradeAnalytics.formatDateIst(cutoff);
-      this.filteredTrades = this.trades.filter(t => {
+      this.filteredTrades = accountTrades.filter(t => {
         const dStr = TradeAnalytics.getTradeDate(t);
         return dStr && dStr >= cutoffStr;
       });
     } else if (this.dateFilter === 'custom') {
       const start = this.customStartDate;
       const end = this.customEndDate;
-      this.filteredTrades = this.trades.filter(t => {
+      this.filteredTrades = accountTrades.filter(t => {
         const dStr = TradeAnalytics.getTradeDate(t);
         if (!dStr) return false;
         if (start && dStr < start) return false;
@@ -219,20 +487,21 @@ const App = {
         return true;
       });
     } else {
-      this.filteredTrades = [...this.trades];
+      this.filteredTrades = [...accountTrades];
     }
   },
 
   /**
-   * Determine available date boundaries according to present CSV trade data
+   * Determine available date boundaries according to currently selected account's trade data
    */
   getAvailableDateRange() {
-    if (!this.trades || this.trades.length === 0) {
+    const scopedTrades = this.getAccountScopedTrades();
+    if (!scopedTrades || scopedTrades.length === 0) {
       return { minDate: '', maxDate: '' };
     }
     let minDate = null;
     let maxDate = null;
-    this.trades.forEach(t => {
+    scopedTrades.forEach(t => {
       const dStr = TradeAnalytics.getTradeDate(t);
       if (dStr && dStr.length === 10) {
         if (!minDate || dStr < minDate) minDate = dStr;
@@ -439,6 +708,20 @@ const App = {
         customOpt.innerText = customLabel;
       }
     });
+    const dateRangeLabel = document.getElementById('headerDateRangeLabel');
+    if (dateRangeLabel) dateRangeLabel.innerText = customLabel;
+    const dateRangeMenu = document.getElementById('headerDateRangeMenu');
+    if (dateRangeMenu && typeof dateRangeMenu.querySelectorAll === 'function') {
+      dateRangeMenu.querySelectorAll('.date-range-item').forEach((item) => {
+        const isActive = item.getAttribute('data-range') === 'custom';
+        item.classList.toggle('active', isActive);
+        item.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+    }
+    const dateWrap = document.getElementById('headerDateFilterWrap');
+    const dateBtn = document.getElementById('headerDateRangeBtn');
+    if (dateWrap) dateWrap.classList.remove('open');
+    if (dateBtn) dateBtn.setAttribute('aria-expanded', 'false');
 
     const customPopover = document.getElementById('customDatePopover');
     if (customPopover) {
@@ -1241,16 +1524,24 @@ const App = {
       return sortAsc ? (v1 - v2) : (v2 - v1);
     });
 
-    // Populate Symbol dropdown options if needed
+    // Populate Symbol dropdown options dynamically for active account
     const symbolSelect = document.getElementById('tradeLogSymbolFilter');
-    if (symbolSelect && symbolSelect.children && symbolSelect.children.length <= 1) {
-      const distinctSymbols = [...new Set(this.trades.map(t => t.symbol))].sort();
-      distinctSymbols.forEach(sym => {
-        const opt = document.createElement('option');
-        opt.value = sym;
-        opt.innerText = sym;
-        symbolSelect.appendChild(opt);
-      });
+    if (symbolSelect) {
+      const scopedTrades = this.getAccountScopedTrades();
+      const distinctSymbols = [...new Set(scopedTrades.map(t => t.symbol).filter(Boolean))].sort();
+      const sig = distinctSymbols.join('|');
+      if (symbolSelect.getAttribute('data-symbols-sig') !== sig || (symbolSelect.children && symbolSelect.children.length <= 1 && distinctSymbols.length > 0)) {
+        const prevVal = this.tradeLogState.symbol || 'all';
+        symbolSelect.innerHTML = '<option value="all">All Symbols</option>';
+        distinctSymbols.forEach(sym => {
+          const opt = document.createElement('option');
+          opt.value = sym;
+          opt.innerText = sym;
+          symbolSelect.appendChild(opt);
+        });
+        symbolSelect.setAttribute('data-symbols-sig', sig);
+        symbolSelect.value = distinctSymbols.includes(prevVal) ? prevVal : 'all';
+      }
     }
 
     // Pagination
@@ -1421,9 +1712,10 @@ const App = {
   applyReportPreset(val) {
     const startInput = document.getElementById('reportStartDate');
     const endInput = document.getElementById('reportEndDate');
+    const scopedTrades = this.getAccountScopedTrades();
 
     if (val === 'all') {
-      const dates = (this.trades || []).map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
+      const dates = scopedTrades.map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
       if (dates.length > 0) {
         this.reportState.startDate = dates[0];
         this.reportState.endDate = dates[dates.length - 1];
@@ -1443,14 +1735,14 @@ const App = {
       this.reportState.startDate = `${monthKey}-01`;
       this.reportState.endDate = `${monthKey}-${String(daysInMonth).padStart(2, '0')}`;
     } else if (val === 'last30') {
-      const dates = (this.trades || []).map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
+      const dates = scopedTrades.map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
       const endD = dates.length > 0 ? new Date(dates[dates.length - 1]) : new Date();
       const startD = new Date(endD);
       startD.setDate(startD.getDate() - 30);
       this.reportState.startDate = startD.toISOString().slice(0, 10);
       this.reportState.endDate = endD.toISOString().slice(0, 10);
     } else if (val === 'last90') {
-      const dates = (this.trades || []).map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
+      const dates = scopedTrades.map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
       const endD = dates.length > 0 ? new Date(dates[dates.length - 1]) : new Date();
       const startD = new Date(endD);
       startD.setDate(startD.getDate() - 90);
@@ -1470,11 +1762,12 @@ const App = {
     const instSelect = document.getElementById('reportInstrumentSelect');
     const startInput = document.getElementById('reportStartDate');
     const endInput = document.getElementById('reportEndDate');
+    const scopedTrades = this.getAccountScopedTrades();
 
-    // 1. Populate Range Preset dropdown with distinct months in dataset
+    // 1. Populate Range Preset dropdown with distinct months in active account dataset
     if (presetSelect) {
       const monthMap = {};
-      (this.trades || []).forEach(t => {
+      scopedTrades.forEach(t => {
         const dStr = TradeAnalytics.getTradeDate(t);
         if (dStr && dStr.length >= 7) {
           const mKey = dStr.slice(0, 7);
@@ -1518,7 +1811,7 @@ const App = {
 
       // Restore value or choose initial default
       const optionsList = Array.from(presetSelect.options && presetSelect.options.length ? presetSelect.options : (presetSelect.children || []));
-      if (this.reportState.preset && optionsList.some(o => o.value === this.reportState.preset)) {
+      if (this.reportState.preset && optionsList.some(o => o.value === this.reportState.preset) && (this.reportState._presetInitialized || this.reportState.preset !== 'custom')) {
         presetSelect.value = this.reportState.preset;
       } else if (!this.reportState._presetInitialized && sortedMonths.length > 0) {
         this.reportState.preset = `month:${sortedMonths[0]}`;
@@ -1531,11 +1824,11 @@ const App = {
       }
     }
 
-    // 2. Populate Instrument select with distinct traded symbols
+    // 2. Populate Instrument select with distinct traded symbols in active account
     if (instSelect) {
       const curInst = this.reportState.instrument || 'all';
       const symbolsSet = new Set();
-      (this.trades || []).forEach(t => {
+      scopedTrades.forEach(t => {
         if (t.symbol) symbolsSet.add(t.symbol);
       });
       const sortedSymbols = Array.from(symbolsSet).sort();
@@ -1561,7 +1854,7 @@ const App = {
       if (this.reportState.preset && this.reportState.preset !== 'custom') {
         this.applyReportPreset(this.reportState.preset);
       } else {
-        const dates = (this.trades || []).map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
+        const dates = scopedTrades.map(t => TradeAnalytics.getTradeDate(t)).filter(Boolean).sort();
         if (dates.length > 0) {
           this.reportState.startDate = dates[0];
           this.reportState.endDate = dates[dates.length - 1];
@@ -1589,9 +1882,10 @@ const App = {
     const startDate = this.reportState.startDate;
     const endDate = this.reportState.endDate;
     const instrument = this.reportState.instrument || 'all';
+    const scopedTrades = this.getAccountScopedTrades();
 
-    // Filter trades strictly within the selected date range & instrument
-    const trades = (this.trades || []).filter(t => {
+    // Filter trades strictly within the selected account, date range & instrument
+    const trades = scopedTrades.filter(t => {
       const d = TradeAnalytics.getTradeDate(t);
       if (startDate && d < startDate) return false;
       if (endDate && d > endDate) return false;
@@ -2070,6 +2364,159 @@ const App = {
 
     // Render Performance by Position Size Table
     this.renderLotPerformanceTable(lot);
+
+    // Render Pair Win Rate & Till-Date P&L Box
+    this.renderPairPerformanceCard(metrics);
+  },
+
+  /**
+   * Render Pair Win Rate (circular progress ring %) & Till-Date P&L (Net, Profit, Loss)
+   */
+  renderPairPerformanceCard(metrics) {
+    const listEl = document.getElementById('analyticsPairPerfList');
+    const badgeEl = document.getElementById('analyticsPairCountBadge');
+    const subtitleEl = document.getElementById('analyticsPairPerfSubtitle');
+    if (!listEl) return;
+
+    if (subtitleEl) {
+      subtitleEl.innerText = this.dateFilter === 'all'
+        ? 'Till-date win rate, gross profit, gross loss & net P&L by pair'
+        : 'Win rate, gross profit, gross loss & net P&L by pair (filtered range)';
+    }
+
+    const rawPairs = (metrics && metrics.symbolProfitSource && Array.isArray(metrics.symbolProfitSource.all))
+      ? metrics.symbolProfitSource.all
+      : [];
+
+    if (badgeEl) {
+      badgeEl.innerText = `${rawPairs.length} Pair${rawPairs.length === 1 ? '' : 's'}`;
+    }
+
+    if (rawPairs.length === 0) {
+      listEl.innerHTML = `<div class="analytics-pair-empty">No pair performance data available</div>`;
+      return;
+    }
+
+    const sortMode = this.analyticsPairSort || 'pnl';
+    const sortedPairs = [...rawPairs].sort((a, b) => {
+      if (sortMode === 'winrate') {
+        return (b.winRate - a.winRate) || (b.pnl - a.pnl);
+      }
+      return (b.pnl - a.pnl) || (b.winRate - a.winRate);
+    });
+
+    const escapeHtml = (str) => String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const netLabel = this.dateFilter === 'all' ? 'TILL DATE P&amp;L' : 'NET P&amp;L';
+
+    listEl.innerHTML = sortedPairs.map(p => {
+      const safeSymbol = escapeHtml(p.symbol || 'OTHER');
+      const winRateNum = Math.max(0, Math.min(100, Number(p.winRate) || 0));
+      const winRateLabel = Number.isInteger(winRateNum)
+        ? `${winRateNum}%`
+        : `${winRateNum.toFixed(1)}%`;
+
+      const ringTone = p.trades === 0
+        ? 'is-neutral'
+        : (winRateNum >= 50 ? 'is-win' : 'is-loss');
+      const rowTone = p.pnl > 0 ? 'is-profit' : (p.pnl < 0 ? 'is-loss' : 'is-neutral');
+      const netTone = p.pnl > 0 ? 'profit' : (p.pnl < 0 ? 'loss' : 'neutral');
+
+      const grossProfit = Number.isFinite(p.grossProfit) ? p.grossProfit : (p.pnl > 0 ? p.pnl : 0);
+      const grossLoss = Number.isFinite(p.grossLoss) ? p.grossLoss : (p.pnl < 0 ? Math.abs(p.pnl) : 0);
+
+      const netFormatted = TradeAnalytics.formatCurrency(p.pnl, true);
+      const profitFormatted = grossProfit > 0
+        ? TradeAnalytics.formatCurrency(grossProfit, true)
+        : TradeAnalytics.formatCurrency(0, false);
+      const lossFormatted = grossLoss > 0
+        ? TradeAnalytics.formatCurrency(-grossLoss, true)
+        : TradeAnalytics.formatCurrency(0, false);
+
+      const profitClass = grossProfit > 0 ? 'profit' : 'neutral';
+      const lossClass = grossLoss > 0 ? 'loss' : 'neutral';
+
+      const beSegment = p.breakEven > 0 ? `<span>· ${p.breakEven}BE</span>` : '';
+      const ringRadius = 26;
+      const ringCircumference = +(2 * Math.PI * ringRadius).toFixed(3);
+      const clampedWinRate = Math.max(0, Math.min(100, Number(winRateNum) || 0));
+      const ringOffset = +(ringCircumference * (1 - clampedWinRate / 100)).toFixed(3);
+
+      return `
+        <div class="analytics-pair-row ${rowTone}">
+          <div class="analytics-pair-row-inner">
+            <div
+              class="pair-ring-wrapper ${ringTone}"
+              role="progressbar"
+              aria-label="${safeSymbol} win rate"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="${clampedWinRate}"
+              aria-valuetext="${winRateLabel}"
+            >
+              <svg class="pair-ring-svg" viewBox="0 0 64 64" width="62" height="62" aria-hidden="true">
+                <circle
+                  class="pair-ring-track"
+                  cx="32"
+                  cy="32"
+                  r="${ringRadius}"
+                ></circle>
+                <circle
+                  class="pair-ring-progress ${ringTone}"
+                  cx="32"
+                  cy="32"
+                  r="${ringRadius}"
+                  stroke-dasharray="${ringCircumference}"
+                  stroke-dashoffset="${ringOffset}"
+                  style="${clampedWinRate <= 0 ? 'opacity: 0;' : ''}"
+                ></circle>
+              </svg>
+              <div class="pair-ring-center" aria-hidden="true">
+                <span class="pair-ring-pct">${winRateLabel}</span>
+                <span class="pair-ring-lbl">WIN</span>
+              </div>
+            </div>
+
+            <div class="analytics-pair-details">
+              <div class="analytics-pair-top">
+                <div class="analytics-pair-identity">
+                  <div class="analytics-pair-symbol-line">
+                    <span class="analytics-pair-symbol">${safeSymbol}</span>
+                    <span class="analytics-pair-trades-tag">${p.trades} trade${p.trades === 1 ? '' : 's'}</span>
+                  </div>
+                  <div class="analytics-pair-wl">
+                    <span class="wl-win">${p.wins}W</span>
+                    <span>·</span>
+                    <span class="wl-loss">${p.losses}L</span>
+                    ${beSegment}
+                  </div>
+                </div>
+                <div class="analytics-pair-net">
+                  <span class="analytics-pair-net-lbl">${netLabel}</span>
+                  <span class="analytics-pair-net-val ${netTone}">${netFormatted}</span>
+                </div>
+              </div>
+
+              <div class="analytics-pair-pl-grid">
+                <div class="analytics-pair-stat">
+                  <span class="analytics-pair-stat-lbl">PROFIT</span>
+                  <span class="analytics-pair-stat-val ${profitClass}">${profitFormatted}</span>
+                </div>
+                <div class="analytics-pair-stat">
+                  <span class="analytics-pair-stat-lbl">LOSS</span>
+                  <span class="analytics-pair-stat-val ${lossClass}">${lossFormatted}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
   },
 
   /**
@@ -3417,6 +3864,24 @@ const App = {
       });
     }
 
+    // Analytics Pair Win Rate & Till-Date P&L sort tabs (Net P&L vs Win %)
+    const tabPairSortPnL = document.getElementById('tabPairSortPnL');
+    const tabPairSortWinRate = document.getElementById('tabPairSortWinRate');
+    if (tabPairSortPnL && tabPairSortWinRate) {
+      tabPairSortPnL.addEventListener('click', () => {
+        this.analyticsPairSort = 'pnl';
+        tabPairSortPnL.classList.add('active');
+        tabPairSortWinRate.classList.remove('active');
+        this.renderPairPerformanceCard(this.currentMetrics);
+      });
+      tabPairSortWinRate.addEventListener('click', () => {
+        this.analyticsPairSort = 'winrate';
+        tabPairSortWinRate.classList.add('active');
+        tabPairSortPnL.classList.remove('active');
+        this.renderPairPerformanceCard(this.currentMetrics);
+      });
+    }
+
     // Note: Calendar Navigation buttons (calPrevBtn, calNextBtn, calThisMonthBtn)
     // are attached exclusively in CalendarManager.attachHeaderListeners() to prevent double-stepping.
 
@@ -3615,11 +4080,15 @@ const App = {
     if (addTradeForm) {
       addTradeForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        const rawSymbol = (document.getElementById('formSymbol').value || 'XAUUSD').trim();
+        const normalizedSymbol = (typeof TradeParser !== 'undefined' && typeof TradeParser.normalizeSymbol === 'function')
+          ? TradeParser.normalizeSymbol(rawSymbol)
+          : rawSymbol;
         const newTrade = {
           ticket: `M-${Date.now().toString().slice(-6)}`,
           openTime: document.getElementById('formOpenTime').value || new Date().toISOString(),
           closeTime: document.getElementById('formCloseTime').value || new Date().toISOString(),
-          symbol: (document.getElementById('formSymbol').value || 'XAUUSD').toUpperCase().trim(),
+          symbol: normalizedSymbol,
           type: document.getElementById('formType').value || 'buy',
           lots: parseFloat(document.getElementById('formLots').value) || 0.01,
           openPrice: parseFloat(document.getElementById('formOpenPrice').value) || 0,
@@ -3638,7 +4107,11 @@ const App = {
       });
     }
 
-    // Date Range Presets Dropdown & Custom Range Handler (Desktop + Mobile Toolbar bidirectional sync)
+    // Date Range Presets Dropdown & Custom Range Handler (Desktop Custom Dropdown + Mobile Toolbar bidirectional sync)
+    const dateFilterWrap = document.getElementById('headerDateFilterWrap');
+    const dateRangeBtn = document.getElementById('headerDateRangeBtn');
+    const dateRangeLabel = document.getElementById('headerDateRangeLabel');
+    const dateRangeMenu = document.getElementById('headerDateRangeMenu');
     const dateSelect = document.getElementById('headerDateRangeSelect');
     const mobileDateSelect = document.getElementById('mobileDateRangeSelect');
     const customPopover = document.getElementById('customDatePopover');
@@ -3650,12 +4123,29 @@ const App = {
     const miniPrev = document.getElementById('miniCalPrevBtn');
     const miniNext = document.getElementById('miniCalNextBtn');
 
+    const closeDateRangeMenu = () => {
+      if (dateFilterWrap) dateFilterWrap.classList.remove('open');
+      if (dateRangeBtn) dateRangeBtn.setAttribute('aria-expanded', 'false');
+    };
+
     // Prevent any clicks inside popover from bubbling up to document outside-click handler
     if (customPopover) {
       customPopover.addEventListener('click', (e) => {
         e.stopPropagation();
       });
     }
+
+    const getDateRangeDisplayLabel = (value, customLabelText) => {
+      if (value === 'last30') return 'Last 30 Days';
+      if (value === 'custom') {
+        if (typeof customLabelText === 'string' && customLabelText) return customLabelText;
+        if (this.customStartDate && this.customEndDate && this.dateFilter === 'custom') {
+          return `Custom (${this.formatDateShort(this.customStartDate)} - ${this.formatDateShort(this.customEndDate)})`;
+        }
+        return 'Custom';
+      }
+      return 'All Time';
+    };
 
     const syncDateSelectElements = (value, customLabelText) => {
       [dateSelect, mobileDateSelect].forEach((sel) => {
@@ -3666,9 +4156,20 @@ const App = {
           if (customOpt) customOpt.innerText = customLabelText;
         }
       });
+      if (dateRangeLabel) {
+        dateRangeLabel.innerText = getDateRangeDisplayLabel(value, customLabelText);
+      }
+      if (dateRangeMenu && typeof dateRangeMenu.querySelectorAll === 'function') {
+        dateRangeMenu.querySelectorAll('.date-range-item').forEach((item) => {
+          const isActive = item.getAttribute('data-range') === value;
+          item.classList.toggle('active', isActive);
+          item.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+      }
     };
 
     const openCustomPopover = () => {
+      closeDateRangeMenu();
       if (customPopover) {
         customPopover.style.display = 'flex';
         this.customRangeSelectionStep = 0;
@@ -3691,6 +4192,7 @@ const App = {
     };
 
     const handleDateFilterChange = (val) => {
+      closeDateRangeMenu();
       if (val === 'custom') {
         syncDateSelectElements('custom');
         openCustomPopover();
@@ -3701,6 +4203,51 @@ const App = {
         this.processTrades();
       }
     };
+
+    if (dateRangeBtn && dateFilterWrap) {
+      dateRangeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = dateFilterWrap.classList.contains('open');
+        const acctWrap = document.getElementById('headerAccountSelectorWrap');
+        const acctBtn = document.getElementById('headerAccountSelectorBtn');
+        if (acctWrap) acctWrap.classList.remove('open');
+        if (acctBtn) acctBtn.setAttribute('aria-expanded', 'false');
+        const googleDrop = document.getElementById('googleAccountDropdown');
+        if (googleDrop) googleDrop.classList.remove('active');
+        closeCustomPopover();
+        if (isOpen) {
+          closeDateRangeMenu();
+        } else {
+          dateFilterWrap.classList.add('open');
+          dateRangeBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    }
+
+    if (dateRangeMenu) {
+      dateRangeMenu.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+      if (typeof dateRangeMenu.querySelectorAll === 'function') {
+        dateRangeMenu.querySelectorAll('.date-range-item').forEach((item) => {
+          item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const val = item.getAttribute('data-range') || 'all';
+            handleDateFilterChange(val);
+          });
+        });
+      }
+    }
+
+    document.addEventListener('click', () => {
+      closeDateRangeMenu();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeDateRangeMenu();
+      }
+    });
 
     [dateSelect, mobileDateSelect].forEach((sel) => {
       if (!sel) return;
@@ -4259,14 +4806,21 @@ const App = {
 
     // Populate metadata strip if available
     if (metaStripEl) {
-      const meta = pending.metadata;
-      if (meta && (meta.account || meta.name || meta.company || meta.reportDate)) {
+      const meta = pending.metadata || {};
+      const detectedAccounts = Array.isArray(meta.detectedAccounts) ? meta.detectedAccounts : [];
+      const accountSummary = detectedAccounts.length > 0
+        ? detectedAccounts.map((a) => `${a.name} (${a.count})`).join(', ')
+        : (meta.account || '');
+      if (accountSummary || meta.name || meta.company || meta.reportDate || meta.reviewCount) {
         let metaHtml = '';
         if (meta.company) {
           metaHtml += `<div class="preview-meta-item"><span class="preview-meta-lbl">Broker:</span> <span class="preview-meta-val">${this.escapeHTML(meta.company)}</span></div>`;
         }
-        if (meta.account) {
-          metaHtml += `<div class="preview-meta-item"><span class="preview-meta-lbl">Account:</span> <span class="preview-meta-val">${this.escapeHTML(meta.account)}</span></div>`;
+        if (accountSummary) {
+          metaHtml += `<div class="preview-meta-item"><span class="preview-meta-lbl">${detectedAccounts.length > 1 ? 'Accounts:' : 'Account:'}</span> <span class="preview-meta-val">${this.escapeHTML(accountSummary)}</span></div>`;
+        }
+        if (meta.reviewCount > 0) {
+          metaHtml += `<div class="preview-meta-item"><span class="preview-meta-lbl">Review Flag:</span> <span class="preview-meta-val" style="color: var(--warning, #d29922);">${meta.reviewCount} record${meta.reviewCount === 1 ? '' : 's'} flagged for symbol/ticket check</span></div>`;
         }
         if (meta.name) {
           metaHtml += `<div class="preview-meta-item"><span class="preview-meta-lbl">Trader:</span> <span class="preview-meta-val">${this.escapeHTML(meta.name)}</span></div>`;
@@ -4807,7 +5361,7 @@ const App = {
    * Render and update the Weekly Performance Filter UI and Chart
    */
   renderWeeklyPerformance() {
-    const trades = this.filteredTrades && this.filteredTrades.length > 0 ? this.filteredTrades : this.trades;
+    const trades = Array.isArray(this.filteredTrades) ? this.filteredTrades : [];
     const { months } = this.getWeeklyPerfOptions(trades);
 
     const modeBtn = document.getElementById('weeklyPerfModeBtn');
@@ -5110,7 +5664,7 @@ const App = {
    * Render and update the P&L Performance Filter UI, Metrics, and Chart
    */
   renderPnLPerformance() {
-    const trades = this.filteredTrades && this.filteredTrades.length > 0 ? this.filteredTrades : this.trades;
+    const trades = Array.isArray(this.filteredTrades) ? this.filteredTrades : [];
     const { months, years, minDate, maxDate } = this.getPnLPerfOptions(trades);
 
     const modeBtn = document.getElementById('pnlPerfModeBtn');
@@ -5337,6 +5891,11 @@ const App = {
    */
   reloadWorkspaceFromStorage() {
     this.trades = StorageManager.getTrades();
+    if (typeof StorageManager !== 'undefined' && typeof StorageManager.getSelectedAccount === 'function') {
+      this.selectedAccount = StorageManager.getSelectedAccount() || 'all';
+    } else {
+      this.selectedAccount = 'all';
+    }
     this._miniCalInitialized = false;
     this.customStartDate = '';
     this.customEndDate = '';
@@ -5398,6 +5957,14 @@ const App = {
           return;
         }
         if (dropdown) {
+          const acctWrap = document.getElementById('headerAccountSelectorWrap');
+          const acctBtn = document.getElementById('headerAccountSelectorBtn');
+          if (acctWrap) acctWrap.classList.remove('open');
+          if (acctBtn) acctBtn.setAttribute('aria-expanded', 'false');
+          const dateWrap = document.getElementById('headerDateFilterWrap');
+          const dateBtn = document.getElementById('headerDateRangeBtn');
+          if (dateWrap) dateWrap.classList.remove('open');
+          if (dateBtn) dateBtn.setAttribute('aria-expanded', 'false');
           const next = !dropdown.classList.contains('active');
           dropdown.classList.toggle('active', next);
           triggerBtn.setAttribute('aria-expanded', next ? 'true' : 'false');

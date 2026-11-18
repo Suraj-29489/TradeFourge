@@ -14,10 +14,32 @@ const StorageManager = {
     CURRENCY: 'tradefourge_currency',
     STARTING_CAPITAL: 'tradefourge_starting_capital',
     MT5_SESSION: 'tradefourge_mt5_session',
-    DELETED_UIDS: 'tradefourge_deleted_uids'
+    DELETED_UIDS: 'tradefourge_deleted_uids',
+    ACCOUNTS: 'tradefourge_accounts',
+    SELECTED_ACCOUNT: 'tradefourge_selected_account'
   },
 
   OFFLINE_MIRROR_META_KEY: 'tradefourge_offline_mirror_meta',
+
+  ACCOUNT_DEFINITIONS: {
+    exness_standard: {
+      id: 'exness_standard',
+      name: 'Exness Account',
+      broker: 'exness',
+      type: 'standard'
+    },
+    exness_cents: {
+      id: 'exness_cents',
+      name: 'Cents Account',
+      broker: 'exness',
+      type: 'cents'
+    }
+  },
+
+  // Standard non-cent instruments whose base symbol naturally ends with uppercase 'C'
+  KNOWN_STANDARD_C_SYMBOLS: new Set([
+    'USTEC', 'USDC', 'MATIC', 'LTC', 'ETC', 'XEC', 'BTTC'
+  ]),
 
   DEFAULT_RULES: [
     { id: 1, text: 'Never risk more than 1-2% per trade', checked: true },
@@ -38,7 +60,9 @@ const StorageManager = {
     currency: 'USD',
     startingCapital: null,
     mt5Session: null,
-    deletedUids: []
+    deletedUids: [],
+    accounts: [],
+    selectedAccount: 'all'
   },
 
   /**
@@ -212,7 +236,9 @@ const StorageManager = {
       currency: 'USD',
       startingCapital: null,
       mt5Session: null,
-      deletedUids: []
+      deletedUids: [],
+      accounts: [],
+      selectedAccount: 'all'
     };
     if (!storage) return empty;
 
@@ -227,6 +253,23 @@ const StorageManager = {
             t => t && typeof t === 'object' && (t.ticket !== undefined || t.id !== undefined || t.symbol !== undefined)
           );
         }
+      }
+
+      const rawAccounts = kGet(this.KEYS.ACCOUNTS);
+      if (rawAccounts) {
+        try {
+          const parsedAccounts = JSON.parse(rawAccounts);
+          if (Array.isArray(parsedAccounts)) {
+            empty.accounts = parsedAccounts.filter((a) => a && typeof a === 'object' && a.id);
+          }
+        } catch (e) {
+          empty.accounts = [];
+        }
+      }
+
+      const rawSelectedAccount = kGet(this.KEYS.SELECTED_ACCOUNT);
+      if (rawSelectedAccount === 'all' || rawSelectedAccount === 'exness_standard' || rawSelectedAccount === 'exness_cents') {
+        empty.selectedAccount = rawSelectedAccount;
       }
 
       const rawImport = kGet(this.KEYS.LAST_IMPORT);
@@ -290,9 +333,212 @@ const StorageManager = {
     return empty;
   },
 
+  /**
+   * Automatically identify trading account for a trade record.
+   * Priority:
+   *   1. Primary: Symbol naming convention (ends with 'c' => Cents Account, else => Exness Account;
+   *      standard symbols ending in uppercase 'C' like USTEC remain Exness Account).
+   *   2. Secondary: Ticket digit length (7 digits => Exness Account, 8 digits => Cents Account)
+   *      for corroboration or fallback when symbol is missing.
+   */
+  identifyTradeAccount(trade) {
+    if (typeof TradeParser !== 'undefined' && typeof TradeParser.identifyTradeAccount === 'function') {
+      return TradeParser.identifyTradeAccount(trade);
+    }
+
+    const rawSym = String((trade && trade.symbol) || '').trim();
+    const upperSym = rawSym.toUpperCase();
+    const rawTicket = String((trade && (trade.ticket || trade.position)) || '').trim();
+
+    let symbolAccountId = null;
+    if (rawSym) {
+      let isCentsSymbol = false;
+      if (rawSym.endsWith('c') && rawSym.length >= 4 && !this.KNOWN_STANDARD_C_SYMBOLS.has(upperSym)) {
+        isCentsSymbol = true;
+      } else if (
+        rawSym === upperSym &&
+        upperSym.endsWith('C') &&
+        upperSym.length >= 6 &&
+        !this.KNOWN_STANDARD_C_SYMBOLS.has(upperSym)
+      ) {
+        isCentsSymbol = true;
+      }
+      symbolAccountId = isCentsSymbol ? 'exness_cents' : 'exness_standard';
+    }
+
+    let ticketAccountId = null;
+    if (/^\d+$/.test(rawTicket)) {
+      if (rawTicket.length === 7) ticketAccountId = 'exness_standard';
+      else if (rawTicket.length === 8) ticketAccountId = 'exness_cents';
+    }
+
+    let accountId = 'exness_standard';
+    let detectionSource = 'default_fallback';
+    let needsReview = false;
+    let reviewReason = '';
+
+    if (symbolAccountId) {
+      accountId = symbolAccountId;
+      if (ticketAccountId && ticketAccountId !== symbolAccountId) {
+        detectionSource = 'symbol_conflict';
+        needsReview = true;
+        const symName = this.ACCOUNT_DEFINITIONS[symbolAccountId].name;
+        const tkName = this.ACCOUNT_DEFINITIONS[ticketAccountId].name;
+        reviewReason = `Symbol "${rawSym}" indicates ${symName}, while ${rawTicket.length}-digit ticket "${rawTicket}" suggests ${tkName}.`;
+      } else if (ticketAccountId && ticketAccountId === symbolAccountId) {
+        detectionSource = 'symbol+ticket';
+      } else {
+        detectionSource = 'symbol';
+      }
+    } else if (ticketAccountId) {
+      accountId = ticketAccountId;
+      detectionSource = 'ticket_fallback';
+    } else {
+      needsReview = true;
+      reviewReason = 'Missing symbol and recognizable 7/8-digit Exness ticket ID.';
+    }
+
+    const def = this.ACCOUNT_DEFINITIONS[accountId] || this.ACCOUNT_DEFINITIONS.exness_standard;
+    return {
+      accountId: def.id,
+      accountName: def.name,
+      detectionSource,
+      needsReview,
+      reviewReason
+    };
+  },
+
+  /**
+   * Reconcile stable, deduplicated trading accounts list from stored trades & existing registry.
+   * Only creates an account entry once trades belonging to it exist (reusing stable IDs).
+   */
+  _reconcileAccountsList(trades = [], existingAccounts = []) {
+    const existingById = new Map();
+    if (Array.isArray(existingAccounts)) {
+      existingAccounts.forEach((a) => {
+        if (a && a.id && this.ACCOUNT_DEFINITIONS[a.id]) {
+          existingById.set(a.id, a);
+        }
+      });
+    }
+
+    const counts = { exness_standard: 0, exness_cents: 0 };
+    const reviewCounts = { exness_standard: 0, exness_cents: 0 };
+
+    if (Array.isArray(trades)) {
+      trades.forEach((t) => {
+        if (!t || typeof t !== 'object') return;
+        const id = (t.accountId && this.ACCOUNT_DEFINITIONS[t.accountId])
+          ? t.accountId
+          : this.identifyTradeAccount(t).accountId;
+        counts[id] = (counts[id] || 0) + 1;
+        if (t.accountNeedsReview) {
+          reviewCounts[id] = (reviewCounts[id] || 0) + 1;
+        }
+      });
+    }
+
+    const nowIso = new Date().toISOString();
+    const orderedIds = ['exness_standard', 'exness_cents'];
+    const result = [];
+    orderedIds.forEach((id) => {
+      if (counts[id] > 0) {
+        const def = this.ACCOUNT_DEFINITIONS[id];
+        const prev = existingById.get(id);
+        result.push({
+          id: def.id,
+          name: def.name,
+          broker: def.broker,
+          type: def.type,
+          tradeCount: counts[id],
+          reviewCount: reviewCounts[id] || 0,
+          createdAt: (prev && prev.createdAt) || nowIso,
+          updatedAt: nowIso
+        });
+      }
+    });
+    return result;
+  },
+
+  _persistAccounts() {
+    const storage = this._getStorage();
+    if (!storage) return;
+    const key = this._getKeyForNamespace(this.KEYS.ACCOUNTS);
+    try {
+      const json = JSON.stringify(this.state.accounts || []);
+      storage.setItem(key, json);
+      this._syncKeyToOfflineLocal(storage, this.KEYS.ACCOUNTS, json);
+    } catch (e) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('Could not persist accounts to localStorage:', e);
+      }
+    }
+  },
+
+  getAccounts() {
+    this.state.accounts = this._reconcileAccountsList(this.state.trades, this.state.accounts);
+    return this.state.accounts.map((a) => ({ ...a }));
+  },
+
+  getAccountSummaryCounts(trades = null) {
+    const list = Array.isArray(trades) ? trades : (this.state.trades || []);
+    const counts = { all: list.length, exness_standard: 0, exness_cents: 0 };
+    list.forEach((t) => {
+      if (!t) return;
+      const id = (t.accountId && this.ACCOUNT_DEFINITIONS[t.accountId])
+        ? t.accountId
+        : this.identifyTradeAccount(t).accountId;
+      counts[id] = (counts[id] || 0) + 1;
+    });
+    return counts;
+  },
+
+  getSelectedAccount() {
+    const cur = this.state.selectedAccount;
+    if (cur === 'exness_standard' || cur === 'exness_cents' || cur === 'all') {
+      return cur;
+    }
+    return 'all';
+  },
+
+  setSelectedAccount(accountId, options = {}) {
+    const normalized = (accountId === 'exness_standard' || accountId === 'exness_cents') ? accountId : 'all';
+    this.state.selectedAccount = normalized;
+    const storage = this._getStorage();
+    if (storage) {
+      try {
+        storage.setItem(this._getKeyForNamespace(this.KEYS.SELECTED_ACCOUNT), normalized);
+        this._syncKeyToOfflineLocal(storage, this.KEYS.SELECTED_ACCOUNT, normalized);
+      } catch (e) {}
+    }
+    if (!options.suppressEvent) {
+      this._emit('account_filter', { silentSync: true, reason: 'select_account', accountId: normalized });
+    }
+    return normalized;
+  },
+
   loadFromStorage() {
     const bundle = this._readBundleFromNamespace(this.activeNamespace);
-    this.state.trades = bundle.trades;
+    let migratedLegacyAccounts = false;
+    const migratedTrades = (bundle.trades || []).map((t) => {
+      if (!t || typeof t !== 'object') return t;
+      if (!t.accountId || !this.ACCOUNT_DEFINITIONS[t.accountId]) {
+        migratedLegacyAccounts = true;
+        const info = this.identifyTradeAccount(t);
+        const migrated = {
+          ...t,
+          accountId: info.accountId,
+          accountName: info.accountName,
+          accountDetectionSource: info.detectionSource,
+          accountNeedsReview: Boolean(info.needsReview)
+        };
+        if (info.reviewReason) migrated.accountReviewReason = info.reviewReason;
+        return migrated;
+      }
+      return t;
+    });
+
+    this.state.trades = migratedTrades;
     this.state.lastImport = bundle.lastImport;
     this.state.notes = bundle.notes;
     this.state.rules = bundle.rules;
@@ -300,6 +546,12 @@ const StorageManager = {
     this.state.startingCapital = bundle.startingCapital;
     this.state.mt5Session = bundle.mt5Session;
     this.state.deletedUids = bundle.deletedUids;
+    this.state.accounts = this._reconcileAccountsList(migratedTrades, bundle.accounts);
+    this.state.selectedAccount = bundle.selectedAccount || 'all';
+
+    if (migratedLegacyAccounts && migratedTrades.length > 0) {
+      this._persistTrades();
+    }
   },
 
   /**
@@ -395,11 +647,32 @@ const StorageManager = {
     if (!trade || typeof trade !== 'object') return trade;
     const fp = this.getTradeFingerprint(trade);
     const syncId = trade.syncId || fallbackSyncId || fp;
-    return {
+    const hasValidAccount = Boolean(trade.accountId && this.ACCOUNT_DEFINITIONS[trade.accountId]);
+    const acctInfo = hasValidAccount
+      ? {
+          accountId: trade.accountId,
+          accountName: trade.accountName || this.ACCOUNT_DEFINITIONS[trade.accountId].name,
+          detectionSource: trade.accountDetectionSource || 'stored',
+          needsReview: Boolean(trade.accountNeedsReview),
+          reviewReason: trade.accountReviewReason || ''
+        }
+      : this.identifyTradeAccount(trade);
+
+    const normalized = {
       ...trade,
       syncId,
+      accountId: acctInfo.accountId,
+      accountName: acctInfo.accountName,
+      accountDetectionSource: acctInfo.detectionSource,
+      accountNeedsReview: Boolean(acctInfo.needsReview),
       updatedAt: trade.updatedAt || new Date().toISOString()
     };
+    if (acctInfo.reviewReason) {
+      normalized.accountReviewReason = acctInfo.reviewReason;
+    } else {
+      delete normalized.accountReviewReason;
+    }
+    return normalized;
   },
 
   saveTrades(trades, importFileName = 'Trade Log CSV', options = {}) {
@@ -431,6 +704,8 @@ const StorageManager = {
   },
 
   _persistTrades() {
+    this.state.accounts = this._reconcileAccountsList(this.state.trades, this.state.accounts);
+
     const storage = this._getStorage();
     if (!storage) return;
 
@@ -449,6 +724,7 @@ const StorageManager = {
         storage.removeItem(importKey);
         this._syncKeyToOfflineLocal(storage, this.KEYS.LAST_IMPORT, '', { remove: true });
       }
+      this._persistAccounts();
     } catch (e) {
       if (typeof console !== 'undefined' && console.warn) {
         console.warn('Could not persist trades to localStorage:', e);
@@ -706,13 +982,19 @@ const StorageManager = {
 
     this.state.trades = [];
     this.state.lastImport = null;
+    this.state.accounts = [];
+    this.state.selectedAccount = 'all';
     const storage = this._getStorage();
     if (storage) {
       try {
         storage.removeItem(this._getKeyForNamespace(this.KEYS.TRADES));
         storage.removeItem(this._getKeyForNamespace(this.KEYS.LAST_IMPORT));
+        storage.removeItem(this._getKeyForNamespace(this.KEYS.ACCOUNTS));
+        storage.setItem(this._getKeyForNamespace(this.KEYS.SELECTED_ACCOUNT), 'all');
         this._syncKeyToOfflineLocal(storage, this.KEYS.TRADES, '', { remove: true });
         this._syncKeyToOfflineLocal(storage, this.KEYS.LAST_IMPORT, '', { remove: true });
+        this._syncKeyToOfflineLocal(storage, this.KEYS.ACCOUNTS, '', { remove: true });
+        this._syncKeyToOfflineLocal(storage, this.KEYS.SELECTED_ACCOUNT, 'all');
       } catch (e) {
         if (typeof console !== 'undefined' && console.warn) {
           console.warn('Could not remove trades from localStorage:', e);
@@ -926,7 +1208,8 @@ const StorageManager = {
       rules: this.getRules(),
       currency: this.getCurrency(),
       startingCapital: this.getStartingCapital(),
-      mt5Session: this.getMt5Session()
+      mt5Session: this.getMt5Session(),
+      accounts: this.getAccounts()
     };
   },
 
@@ -940,6 +1223,10 @@ const StorageManager = {
 
     this.state.deletedUids = deletedUids.slice(-2000);
     this._persistDeletedUids();
+
+    if (Array.isArray(snapshot.accounts)) {
+      this.state.accounts = snapshot.accounts;
+    }
 
     this.saveTrades(trades, snapshot.lastImport?.fileName || 'Google Drive Sync', {
       lastImport: snapshot.lastImport || (trades.length > 0 ? { timestamp: new Date().toISOString(), fileName: 'Google Drive Sync', count: trades.length } : null),

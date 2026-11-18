@@ -120,7 +120,7 @@ function buildSettingsPayload(snapshot = {}, owner = null, nowIso = new Date().t
     ? Math.round(Number(cap) * 100) / 100
     : null;
 
-  return {
+  const payload = {
     schemaVersion: SCHEMA_VERSION,
     updatedAt: nowIso,
     ownerSub: owner && owner.sub ? String(owner.sub) : '',
@@ -129,6 +129,10 @@ function buildSettingsPayload(snapshot = {}, owner = null, nowIso = new Date().t
     mt5Session: snapshot.mt5Session && typeof snapshot.mt5Session === 'object' ? snapshot.mt5Session : null,
     theme: snapshot.theme ? normalizeTheme(snapshot.theme) : undefined
   };
+  if (Array.isArray(snapshot.accounts) && snapshot.accounts.length > 0) {
+    payload.tradingAccounts = snapshot.accounts;
+  }
+  return payload;
 }
 
 function buildMetadataPayload({
@@ -174,7 +178,8 @@ function computeDomainChecksums({ tradesPayload, journalPayload, settingsPayload
       currency: settingsPayload.currency,
       startingCapital: settingsPayload.startingCapital,
       mt5Session: settingsPayload.mt5Session,
-      theme: settingsPayload.theme
+      theme: settingsPayload.theme,
+      tradingAccounts: settingsPayload.tradingAccounts
     })
   };
 }
@@ -197,7 +202,7 @@ function extractSnapshotFromRemoteDb(remoteDb = {}) {
     ? settingsObj.mt5Session
     : (accountsObj.mt5Session !== undefined ? accountsObj.mt5Session : null);
 
-  return {
+  const extracted = {
     trades: Array.isArray(tradesObj.trades) ? tradesObj.trades : [],
     lastImport: tradesObj.lastImport || null,
     deletedUids: Array.isArray(tradesObj.deletedUids) ? tradesObj.deletedUids : [],
@@ -208,6 +213,10 @@ function extractSnapshotFromRemoteDb(remoteDb = {}) {
     mt5Session,
     theme: settingsObj.theme ? normalizeTheme(settingsObj.theme) : undefined
   };
+  if (Array.isArray(settingsObj.tradingAccounts)) {
+    extracted.accounts = settingsObj.tradingAccounts;
+  }
+  return extracted;
 }
 
 function buildBackupBundle({ snapshot, owner, reason = 'manual', nowIso = new Date().toISOString() }) {

@@ -150,13 +150,30 @@ const TradeAnalytics = {
       // Symbol breakdown
       const sym = trade.symbol || 'OTHER';
       if (!symbolMap[sym]) {
-        symbolMap[sym] = { symbol: sym, pnl: 0, trades: 0, wins: 0, losses: 0, volume: 0 };
+        symbolMap[sym] = {
+          symbol: sym,
+          pnl: 0,
+          grossProfit: 0,
+          grossLoss: 0,
+          trades: 0,
+          wins: 0,
+          losses: 0,
+          breakEven: 0,
+          volume: 0
+        };
       }
       symbolMap[sym].pnl += pnl;
       symbolMap[sym].trades += 1;
       symbolMap[sym].volume += (Number(trade.lots) || 0);
-      if (pnl > 0) symbolMap[sym].wins++;
-      if (pnl < 0) symbolMap[sym].losses++;
+      if (pnl > 0) {
+        symbolMap[sym].wins++;
+        symbolMap[sym].grossProfit += pnl;
+      } else if (pnl < 0) {
+        symbolMap[sym].losses++;
+        symbolMap[sym].grossLoss += Math.abs(pnl);
+      } else {
+        symbolMap[sym].breakEven++;
+      }
 
       // Type
       const t = trade.type === 'sell' ? 'sell' : 'buy';
@@ -396,6 +413,8 @@ const TradeAnalytics = {
 
     const mapSymbolItem = (s) => {
       const pnl = Math.round(s.pnl * 100) / 100;
+      const grossProfit = Math.round((s.grossProfit || 0) * 100) / 100;
+      const grossLoss = Math.round((s.grossLoss || 0) * 100) / 100;
       const contributionPercent = isTotalPnLPositive && pnl > 0
         ? Math.round((pnl / roundedTotalPnL) * 1000) / 10
         : (pnl === 0 ? 0 : null);
@@ -403,9 +422,12 @@ const TradeAnalytics = {
       return {
         symbol: s.symbol,
         pnl,
+        grossProfit,
+        grossLoss,
         trades: s.trades,
         wins: s.wins,
         losses: s.losses,
+        breakEven: s.breakEven || 0,
         volume: Math.round(s.volume * 100) / 100,
         winRate,
         contributionPercent
@@ -1162,6 +1184,7 @@ const TradeAnalytics = {
    */
   getActiveTrades(tradesInput = null) {
     if (Array.isArray(tradesInput) && tradesInput.length > 0) return tradesInput;
+    if (typeof App !== 'undefined' && Array.isArray(App.filteredTrades)) return App.filteredTrades;
     if (typeof App !== 'undefined' && Array.isArray(App.trades) && App.trades.length > 0) return App.trades;
     if (typeof StorageManager !== 'undefined' && typeof StorageManager.getTrades === 'function') {
       const stored = StorageManager.getTrades();

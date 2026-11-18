@@ -943,27 +943,196 @@ html, body {
   white-space: nowrap;
 }
 
-.terminal-status-pill {
+/* Header Trading Account Selector (Matched to TradeFourge Card Dropdown UI) */
+.account-selector-wrap {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
+  flex-shrink: 0;
+}
+
+.account-selector-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 11px;
   background-color: var(--btn-subtle-bg);
   border: 1px solid var(--btn-subtle-border);
   border-radius: var(--radius-sm);
+  color: var(--text-main);
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.account-selector-btn:hover {
+  border-color: var(--btn-subtle-border-hover);
+  background-color: var(--btn-subtle-hover);
+}
+
+.account-selector-btn:focus-visible {
+  outline: none;
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.account-selector-wrap.open .account-selector-btn {
+  border-color: var(--border-strong);
+  background-color: var(--btn-subtle-hover);
+}
+
+.account-selector-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--btn-subtle-text);
+  flex-shrink: 0;
+}
+
+.account-selector-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 152px;
+}
+
+.account-selector-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-muted);
+  margin-left: 2px;
+  transition: transform 0.16s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.account-selector-wrap.open .account-selector-caret {
+  transform: rotate(180deg);
+  color: var(--text-main);
+}
+
+.account-selector-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 244px;
+  padding: 10px;
+  background-color: var(--bg-card);
+  background-image: var(--card-bg-gradient);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 1250;
+}
+
+.account-selector-wrap.open .account-selector-menu {
+  display: flex;
+}
+
+.account-selector-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-lowest);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.account-selector-item:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-strong);
+}
+
+.account-selector-item.active {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-strong);
+  color: var(--text-main);
+}
+
+.account-selector-item-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.account-selector-item-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.account-selector-item.active .account-selector-item-dot {
+  background-color: var(--primary);
+}
+
+.account-selector-item[data-account-id="exness_standard"] .account-selector-item-dot {
+  background-color: var(--primary);
+}
+
+.account-selector-item[data-account-id="exness_cents"] .account-selector-item-dot {
+  background-color: var(--profit-chart);
+}
+
+.account-selector-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.status-dot-sm {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--profit-chart);
+.account-selector-item-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.account-selector-count {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.account-selector-item.active .account-selector-count {
+  color: var(--text-main);
+  border-color: var(--border-strong);
+}
+
+.account-selector-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  opacity: 0;
+}
+
+.account-selector-item.active .account-selector-check {
+  opacity: 1;
 }
 
 .header-right {
@@ -1505,7 +1674,13 @@ html, body {
 }
 
 .date-filter {
-  display: flex;
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.date-filter-btn {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   height: 34px;
@@ -1513,31 +1688,133 @@ html, body {
   border: 1px solid var(--btn-subtle-border);
   padding: 0 11px;
   border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  color: var(--btn-subtle-text);
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.76rem;
+  color: var(--text-main);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
-.date-filter:hover {
+.date-filter-btn svg {
+  color: var(--btn-subtle-text);
+  flex-shrink: 0;
+}
+
+.date-filter-btn:hover {
   background-color: var(--btn-subtle-hover);
   border-color: var(--btn-subtle-border-hover);
 }
 
-.date-filter select {
-  background: transparent;
-  border: none;
-  color: var(--text-main);
-  font-family: var(--font-mono);
-  font-weight: 600;
-  font-size: 0.76rem;
+.date-filter-btn:focus-visible {
   outline: none;
-  cursor: pointer;
-  color-scheme: var(--color-scheme);
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
-.date-filter select option {
-  background-color: var(--bg-card);
+.date-filter-wrapper.open .date-filter-btn {
+  background-color: var(--btn-subtle-hover);
+  border-color: var(--border-strong);
+}
+
+.date-filter-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 195px;
+}
+
+.date-filter-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  margin-left: 2px;
+  transition: transform 0.16s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.date-filter-wrapper.open .date-filter-caret {
+  transform: rotate(180deg);
   color: var(--text-main);
+}
+
+.sr-only-select {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  pointer-events: none !important;
+}
+
+.date-range-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 214px;
+  padding: 10px;
+  background-color: var(--bg-card);
+  background-image: var(--card-bg-gradient);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 1250;
+}
+
+.date-filter-wrapper.open .date-range-menu {
+  display: flex;
+}
+
+.date-range-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-lowest);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.date-range-item:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-strong);
+}
+
+.date-range-item.active {
+  background-color: var(--bg-elevated);
+  border-color: var(--border-strong);
+  color: var(--text-main);
+}
+
+.date-range-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.date-range-item.active .date-range-check {
+  opacity: 1;
 }
 
 .btn-upload-csv {
@@ -2523,7 +2800,6 @@ body.mobile-keyboard-open .content-scroll {
   .settings-grid {
     grid-template-columns: 1fr;
   }
-  .terminal-status-pill,
   .btn-label-desktop {
     display: none;
   }
@@ -2593,11 +2869,39 @@ body.mobile-keyboard-open .content-scroll {
     gap: 8px;
   }
 
-  .header-title-block,
-  #headerTerminalPill,
+  .page-title,
   .top-header .date-filter,
   .btn-mobile-add-top {
     display: none !important;
+  }
+
+  .header-title-block {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .header-title-row {
+    gap: 6px;
+  }
+
+  .account-selector-btn {
+    height: 30px;
+    padding: 0 8px 0 7px;
+    gap: 5px;
+    font-size: 0.72rem;
+    max-width: 146px;
+  }
+
+  .account-selector-label {
+    max-width: 96px;
+  }
+
+  .account-selector-menu {
+    left: auto;
+    right: 0;
+    min-width: 205px;
+    max-width: calc(100vw - 24px);
   }
 
   .header-left {

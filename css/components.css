@@ -3,6 +3,12 @@
    Solid Obsidian & Slate Block System (Zero Glassmorphism on Panels)
    ========================================================================== */
 
+@property --pair-winrate {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
 /* ==================== 1. CURRENCY SLIDER TOGGLE ($ / ₹) ==================== */
 .currency-slider-toggle {
   position: relative;
@@ -1628,11 +1634,345 @@ select.form-control option {
   font-size: 1.4rem;
 }
 
-.analytics-duration-middle-grid,
+.analytics-duration-middle-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
 .analytics-lot-bottom-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
+  align-items: start;
+}
+
+.analytics-lot-left-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-inline-size: 0;
+}
+
+.analytics-lot-chart-card {
+  flex: 0 0 auto;
+}
+
+.analytics-lot-chart-card .section-body {
+  padding: 16px 18px 18px;
+}
+
+.analytics-lot-chart-wrap canvas {
+  display: block;
+}
+
+/* Pair Win Rate & Till-Date P&L Card */
+.analytics-pair-header {
+  gap: 10px;
+}
+
+.analytics-pair-header-controls {
+  display: flex;
+  align-items: safe center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.analytics-pair-card-body {
+  padding: 14px 16px 16px;
+}
+
+.analytics-pair-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-block-size: 460px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  padding-inline-end: 2px;
+}
+
+.analytics-pair-empty {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  padding: 28px 12px;
+}
+
+.analytics-pair-row {
+  container: pair-row / inline-size;
+  background-color: var(--bg-lowest);
+  border: 1px solid var(--border-color);
+  border-inline-start-width: 3px;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.analytics-pair-row:hover {
+  border-color: var(--border-strong);
+  background-color: var(--bg-card-hover);
+}
+
+.analytics-pair-row.is-profit {
+  border-inline-start-color: var(--profit-chart);
+}
+
+.analytics-pair-row.is-loss {
+  border-inline-start-color: var(--loss-chart);
+}
+
+.analytics-pair-row.is-neutral {
+  border-inline-start-color: var(--border-strong);
+}
+
+.analytics-pair-row-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-inline-size: 0;
+}
+
+/* Circular Win Rate Progress Ring (Crisp Vector SVG Donut — Zero Native Bar Artifacts) */
+.pair-ring-wrapper {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  flex-shrink: 0;
+}
+
+.pair-ring-svg {
+  width: 62px;
+  height: 62px;
+  display: block;
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+
+.pair-ring-track {
+  fill: none;
+  stroke: var(--bg-highest);
+  stroke-width: 5.5;
+}
+
+.pair-ring-progress {
+  fill: none;
+  stroke: var(--profit-chart);
+  stroke-width: 5.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s ease, stroke 0.2s ease;
+}
+
+.pair-ring-progress.is-win {
+  stroke: var(--profit-chart);
+}
+
+.pair-ring-progress.is-loss {
+  stroke: var(--loss-chart);
+}
+
+.pair-ring-progress.is-neutral {
+  stroke: var(--neutral);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pair-ring-progress {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .pair-ring-progress {
+    stroke: CanvasText;
+  }
+  .pair-ring-track {
+    stroke: Canvas;
+  }
+}
+
+.pair-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.pair-ring-pct {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.05;
+}
+
+.pair-ring-lbl {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-block-start: 1px;
+}
+
+.analytics-pair-details {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.analytics-pair-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  min-inline-size: 0;
+}
+
+.analytics-pair-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-inline-size: 0;
+}
+
+.analytics-pair-symbol-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.analytics-pair-symbol {
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: 0.03em;
+}
+
+.analytics-pair-trades-tag {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+
+.analytics-pair-wl {
+  font-family: var(--font-mono);
+  font-size: 0.69rem;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.analytics-pair-wl .wl-win {
+  color: var(--profit);
+  font-weight: 600;
+}
+
+.analytics-pair-wl .wl-loss {
+  color: var(--loss);
+  font-weight: 600;
+}
+
+.analytics-pair-net {
+  margin-inline-start: auto;
+  text-align: end;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.analytics-pair-net-lbl {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.analytics-pair-net-val {
+  font-family: var(--font-mono);
+  font-size: 0.96rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--text-main);
+}
+
+.analytics-pair-net-val.profit { color: var(--profit); }
+.analytics-pair-net-val.loss { color: var(--loss); }
+.analytics-pair-net-val.neutral { color: var(--text-muted); }
+
+.analytics-pair-pl-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.analytics-pair-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 3px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  min-inline-size: 0;
+}
+
+.analytics-pair-stat-lbl {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.analytics-pair-stat-val {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analytics-pair-stat-val.profit { color: var(--profit); }
+.analytics-pair-stat-val.loss { color: var(--loss); }
+.analytics-pair-stat-val.neutral { color: var(--text-dim); }
+
+@container pair-row (inline-size < 340px) {
+  .analytics-pair-row-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pair-ring-wrapper {
+    align-self: flex-start;
+  }
+  .analytics-pair-pl-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .duration-outcome-split {
